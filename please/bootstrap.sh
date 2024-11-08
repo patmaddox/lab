@@ -8,10 +8,14 @@ trunk="master"
 trunkdir="${trunk}.jj"
 
 main() {
+    local curdir=$(pwd)
+
     jj::clone
     jj::workspace
     go::path
     plz::bootstrap
+
+    echo "alias plz=${curdir}/${tagdir}/plz-out/bin/src/please"
 }
 
 jj::clone() {
