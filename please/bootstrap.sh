@@ -20,7 +20,7 @@ main() {
 
 jj::clone() {
     if [ ! -d ${trunkdir} ]; then
-	jj --ignore-immutable git clone ${repo} ${trunkdir}
+	jj git clone ${repo} ${trunkdir}
     fi
 }
 
