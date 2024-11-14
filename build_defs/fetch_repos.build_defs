@@ -2,7 +2,7 @@ def fetch_repos(repos:list):
     for r in repos:
         repo_cmds = [
             f"cd ./$(dirname $(location :fetch-{r.name}))",
-            f"if [ ! -d {r.name}.jj ]; then jj git clone {r.repo} {r.name}.jj; fi",
+            f"if [ ! -d {r.name}.jj ]; then jj git clone {r.url} {r.name}.jj; fi",
             f"cd {r.name}.jj"
         ]
 
