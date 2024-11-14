@@ -1,16 +1,5 @@
-sh_cmd(
-    name = "fetch",
-    visibility = ["PUBLIC"],
-    deps = [":fetch-please"],
-    cmd = [
-        "sh $(out_location :fetch-please)"
-    ]
-)
+subinclude("//build_defs:fetch_repos")
 
-sh_cmd(
-    name = "fetch-please",
-    cmd = [
-        "cd ./$(dirname $(location :fetch-please))",
-        "if [ ! -d please.jj ]; then jj git clone https://github.com/thought-machine/please.git please.jj; fi"
-    ]
-)
+fetch_repos([
+    {"name": "please", "repo": "https://github.com/thought-machine/please.git"}
+])

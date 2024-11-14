@@ -1,0 +1,19 @@
+def fetch_repos(repos:list):
+    for r in repos:
+        sh_cmd(
+            name = f"fetch-{r.name}",
+            cmd = [
+                f"cd ./$(dirname $(location :fetch-{r.name}))",
+                f"if [ ! -d {r.name}.jj ]; then jj git clone {r.repo} {r.name}.jj; fi"
+            ]
+        )
+
+    deps = map(lambda r : f":fetch-{r.name}", repos)
+    cmds = map(lambda d : f"sh $(out_location {d})", deps)
+
+    sh_cmd(
+        name = "fetch",
+        deps = deps,
+        cmd = cmds,
+        visibility = ["PUBLIC"]
+    )
