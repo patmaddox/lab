@@ -9,6 +9,7 @@ fetch_repos([
             "url": "https://github.com/freebsd/freebsd-ports.git",
         }],
     },
+    {"name": "freebsd-src", "url": "https://github.com/freebsd/freebsd-src.git"},
     {"name": "jj", "url": "https://github.com/martinvonz/jj.git"},
     {"name": "please", "url": "https://github.com/thought-machine/please.git"}
 ])

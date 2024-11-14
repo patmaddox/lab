@@ -10,7 +10,9 @@
 
 [parse]
 preloadsubincludes = ///shell//build_defs:shell
+
 blacklistdirs = repos/freebsd-ports.jj
+blacklistdirs = repos/freebsd-src.jj
 blacklistdirs = repos/jj.jj
 blacklistdirs = repos/please.jj
 
