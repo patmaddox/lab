@@ -16,5 +16,8 @@ blacklistdirs = repos/freebsd-src.jj
 blacklistdirs = repos/jj.jj
 blacklistdirs = repos/please.jj
 
+[build]
+path = /sbin:/bin:/usr/sbin:/usr/bin:/usr/local/sbin:/usr/local/bin
+
 [Plugin "shell"]
 Target = //please-plugins:shell
