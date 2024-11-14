@@ -1,11 +1,17 @@
 def fetch_repos(repos:list):
     for r in repos:
+        repo_cmds = [
+            f"cd ./$(dirname $(location :fetch-{r.name}))",
+            f"if [ ! -d {r.name}.jj ]; then jj git clone {r.repo} {r.name}.jj; fi",
+            f"cd {r.name}.jj"
+        ]
+
+        remotes = r.get("remotes", [])
+        remote_cmds = map(lambda rem: f"if ! jj git remote list | awk -v r={rem.name} '\\\$1 == r' | grep -q {rem.name}; then jj git remote add {rem.name} {rem.url}; fi", remotes)
+        
         sh_cmd(
             name = f"fetch-{r.name}",
-            cmd = [
-                f"cd ./$(dirname $(location :fetch-{r.name}))",
-                f"if [ ! -d {r.name}.jj ]; then jj git clone {r.repo} {r.name}.jj; fi"
-            ]
+            cmd = repo_cmds + remote_cmds
         )
 
     deps = map(lambda r : f":fetch-{r.name}", repos)
