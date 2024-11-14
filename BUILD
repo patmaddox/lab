@@ -1,6 +1,7 @@
 ## fetch everything
 fetch_deps = [
     "//freebsd-ports:fetch",
+    "//freebsd-src:fetch",
     "//jj:fetch",
     "//please:fetch",
 ]
