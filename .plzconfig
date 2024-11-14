@@ -7,3 +7,10 @@
 ; when you change it all users will automatically get updated.
 ; [please]
 ; version = 17.12.4
+
+[parse]
+preloadsubincludes = ///shell//build_defs:shell
+blacklistdirs = please/master.jj
+
+[Plugin "shell"]
+Target = //please-plugins:shell
