@@ -10,7 +10,7 @@
 
 [parse]
 preloadsubincludes = ///shell//build_defs:shell
-blacklistdirs = please/master.jj
+blacklistdirs = please/please.jj
 
 [Plugin "shell"]
 Target = //please-plugins:shell
