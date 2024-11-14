@@ -1,13 +1,17 @@
+## fetch everything
+fetch_deps = [
+    "//freebsd-ports:fetch",
+    "//jj:fetch",
+    "//please:fetch",
+]
+
+fetch_cmds = map(
+    lambda d: f"sh $(out_location {d})",
+    fetch_deps,
+)
+
 sh_cmd(
     name = "fetch",
-    deps = [
-        "//freebsd-ports:fetch",
-        "//jj:fetch",
-        "//please:fetch",
-    ],
-    cmd = [
-        "sh $(out_location //freebsd-ports:fetch)",
-        "sh $(out_location //jj:fetch)",
-        "sh $(out_location //please:fetch)"
-    ]
+    cmd = fetch_cmds,
+    deps = fetch_deps,
 )
