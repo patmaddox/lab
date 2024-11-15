@@ -22,3 +22,4 @@ def freebsd_build(name:str, version:str):
     )
 
 freebsd_build(name = "stabweek-2024-10", version = "525a177c1657")
+freebsd_build(name = "releng-14.2", version = "releng/14.2")
