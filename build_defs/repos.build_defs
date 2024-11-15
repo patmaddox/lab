@@ -31,7 +31,8 @@ def jj_repo(name:str, version:str=None):
     version_flag = ""
 
     if version:
-        target_name = f"{name}-{version}"
+        clean_version = version.replace("/", "-")
+        target_name = f"{name}-{clean_version}"
         version_flag = f"-r {version}"
 
     cmd = " && ".join([

@@ -2,6 +2,7 @@ subinclude("//build_defs:repos")
 
 def freebsd_build(name:str, version:str):
     jj_repo(name = "freebsd-src", version = version)
+    version = version.replace("/", "-")
     
     genrule(
         name = name,
