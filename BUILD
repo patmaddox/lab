@@ -1,8 +1,6 @@
 ## fetch everything
 fetch_deps = [
-    "//freebsd-ports:fetch",
-    "//jj:fetch",
-    "//please:fetch",
+    "//repos:fetch",
 ]
 
 fetch_cmds = map(
