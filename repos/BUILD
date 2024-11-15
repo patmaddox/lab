@@ -1,4 +1,4 @@
-subinclude("//build_defs:repos")
+subinclude("//build/defs:repos")
 
 fetch_repos([
     {
