@@ -19,6 +19,8 @@ main() {
 	     TZ=UTC \
 	     __MAKE_CONF=/dev/null \
 	     ${t}
+
+	touch ${BUILDDIR}/done.${t}
     done
 }
 
