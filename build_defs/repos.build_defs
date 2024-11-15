@@ -35,6 +35,8 @@ def jj_repo(name:str, version:str=None):
         version_flag = f"-r {version}"
 
     cmd = " && ".join([
+        # forget workspace at first, in case a previous run failed
+        f"jj -R $(plz query reporoot)/repos/{name}.jj workspace forget __plz 2> /dev/null || true",
         f"jj -R $(plz query reporoot)/repos/{name}.jj workspace add --name __plz {version_flag} {target_name}",
         f"jj -R $(plz query reporoot)/repos/{name}.jj workspace forget __plz",
         f"rm -rf {target_name}/.jj"
