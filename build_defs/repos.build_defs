@@ -8,11 +8,13 @@ def fetch_repos(repos:list):
 
         remotes = r.get("remotes", [])
         remote_cmds = map(lambda rem: f"if ! jj git remote list | awk -v r={rem.name} '\\\$1 == r' | grep -q {rem.name}; then jj git remote add {rem.name} {rem.url}; fi", remotes)
-        
+
         sh_cmd(
             name = f"fetch-{r.name}",
             cmd = repo_cmds + remote_cmds
         )
+
+        jj_repo(name = r.name)
 
     deps = map(lambda r : f":fetch-{r.name}", repos)
     cmds = map(lambda d : f"sh $(out_location {d})", deps)
@@ -22,4 +24,30 @@ def fetch_repos(repos:list):
         deps = deps,
         cmd = cmds,
         visibility = ["PUBLIC"]
+    )
+
+def jj_repo(name:str, version:str=None):
+    target_name = name
+    version_flag = ""
+
+    if version:
+        target_name = f"{name}-{version}"
+        version_flag = f"-r {version}"
+
+    cmd = " && ".join([
+        f"jj -R $(plz query reporoot)/repos/{name}.jj workspace add --name __plz {version_flag} {target_name}",
+        f"jj -R $(plz query reporoot)/repos/{name}.jj workspace forget __plz",
+        f"rm -rf {target_name}/.jj"
+    ])
+
+    workspace_rule = build_rule(
+        name = target_name,
+        cmd = cmd,
+        outs = [target_name],
+        _subrepo = True
+    )
+
+    return subrepo(
+        name = target_name,
+        dep = workspace_rule
     )
