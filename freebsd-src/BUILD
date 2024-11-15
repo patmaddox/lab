@@ -14,7 +14,7 @@ def freebsd_build(name:str, version:str):
         cmd = [
             "mkdir _build",
             f"echo {version} > _build/VERSION",
-            "env -i PATH=${PATH} BUILDDIR=${TMP_DIR}/_build sh ${SRCS_BUILD_SH} ${SRCS_FREEBSD_SRC} > _build/stabweek.log 2> _build/stabweek.error.log",
+            "env -i PATH=${PATH} BUILDDIR=${TMP_DIR}/_build sh ${SRCS_BUILD_SH} ${SRCS_FREEBSD_SRC} > _build/build.log 2> _build/error.log",
             f"mv _build {name}"
         ],
         outs = [name]
