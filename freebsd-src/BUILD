@@ -1,5 +1,10 @@
 subinclude("//build_defs:repos")
 
+filegroup(
+    name = "freebsd-src",
+    deps = [":freebsd-src-releng-14.2"]
+)
+
 def freebsd_build(name:str, version:str):
     jj_repo(name = "freebsd-src", version = version)
     version = version.replace("/", "-")
