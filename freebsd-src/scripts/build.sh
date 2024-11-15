@@ -6,16 +6,20 @@ set -eu
 main() {
     local srcdir
     srcdir="${1}"; shift
-    DISTDIR=${BUILDDIR}/rel
 
-    make="make -s -C ${srcdir} -j $(sysctl -n hw.ncpu) -D NO_ROOT TZ=UTC SRCCONF=/dev/null __MAKE_CONF=/dev/null DISTDIR=${DISTDIR} OBJTOP=${BUILDDIR}/obj"
-
-    ${make} buildworld
-    ${make} buildkernel
-    ${make} distributeworld
-    ${make} distributekernel
-    ${make} packageworld
-    ${make} packagekernel
+    local t
+    for t in buildworld buildkernel distributeworld distributekernel packageworld packagekernel; do
+	make -s \
+	     -C ${srcdir} \
+	     -D NO_ROOT \
+	     -j $(sysctl -n hw.ncpu) \
+	     DISTDIR=${BUILDDIR}/rel \
+	     OBJTOP=${BUILDDIR}/obj \
+	     SRCCONF=/dev/null \
+	     TZ=UTC \
+	     __MAKE_CONF=/dev/null \
+	     ${t}
+    done
 }
 
 main "${@}"
