@@ -5,6 +5,7 @@ main() {
     local freebsd_txz outfile distfiles
 
     freebsd_txz=${1}; shift
+    distfiles=${1}; shift
     outfile=${1}; shift
 
     rootzfs=${BUILDDIR}/root.zfs
@@ -12,6 +13,7 @@ main() {
     mkdir ${rootdir}
 
     build::extract
+    build::config
     build::makefs
 
     mv ${rootzfs} ${BUILDDIR}/${outfile}
@@ -20,6 +22,10 @@ main() {
 build::extract() {
     tar -C ${rootdir} -xf ${freebsd_txz}/base.txz
     tar -C ${rootdir} -xf ${freebsd_txz}/kernel.txz
+}
+
+build::config() {
+    tar -c -C ${distfiles} . | tar -x -C ${rootdir} --gid 0 --uid 0
 }
 
 build::makefs() {
