@@ -1,3 +1,5 @@
+*#*
 *.jj
+*~
 .plzconfig.local
 plz-out
