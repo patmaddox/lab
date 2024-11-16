@@ -23,3 +23,7 @@ However, it seems that the build process creates symlinks to absolute
 paths.
 When `plz` moves the output out of the tmp dir, it breaks the symlink
 and the distribution targets fail.
+
+## TODO
+
+- [ ] speed up the build using CCACHE, memdisk, etc - [vermaden article](https://vermaden.wordpress.com/2023/12/09/personal-freebsd-pkgbase-update-server/)
