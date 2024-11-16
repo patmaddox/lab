@@ -26,7 +26,8 @@ def freebsd_release(name:str, version:str):
             f"cp -Rp _build/pkgbase {name}/",
             "doas chflags -R noschg _build && doas rm -rf _build"
         ],
-        outs = [name]
+        outs = [name],
+        visibility = ["//infra/images/..."]
     )
 
 freebsd_release(name = "rel--15.0-stabweek-2024-10", version = "525a177c")
