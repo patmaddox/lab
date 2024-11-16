@@ -22,6 +22,18 @@ main() {
 
 	touch ${BUILDDIR}/done.${t}
     done
+
+    # some of the other vars (DISTDIR?) cause it to not find create-kernel-packages
+    make -s \
+	 -C ${srcdir} \
+	 -D NO_ROOT \
+	 -j $(sysctl -n hw.ncpu) \
+	 OBJTOP=${BUILDDIR}/obj \
+	 REPODIR=${BUILDDIR}/pkgbase \
+	 TZ=UTC \
+	 packages
+
+    touch ${BUILDDIR}/done.packages
 }
 
 main "${@}"
