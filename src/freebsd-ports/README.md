@@ -4,8 +4,9 @@ Build me some ports.
 
 Commands:
 
-| `please run :list-ports` | save list of installed ports to `$(hostname).ports` |
-| `please run :bulk`       | build all ports in *.ports using poudriere          |
+| `please run :list-ports`                 | save list of installed ports to `$(hostname).ports`   |
+| `please run :bulk <args>`                | run a poudriere build                                 |
+| `please build :packages--14-stable-main` | build all ports in `*.ports` for `14-stable` / `main` |
 
 ## TODO
 

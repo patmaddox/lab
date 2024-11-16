@@ -18,10 +18,27 @@ sh_cmd(
     ],
 )
 
+filegroup(
+    name = "ports-files",
+    srcs = glob(["*.ports"])
+)
+
 sh_cmd(
     name = "bulk",
     cmd = [
-        "cd $(dir :bulk)",
-        "ls *.ports | sed -e 's/^/-f /' | xargs doas poudriere bulk -b latest -j 14-stable -p main",
+        "doas poudriere bulk -b latest -j 14-stable -p main \\\${@}",
     ],
+)
+
+genrule(
+    name = "packages--14-stable-main",
+    srcs = {
+        "BULK_SH": ":bulk",
+        "PORTS_FILES": ":ports-files"
+    },
+    cmd = [
+        "echo ${SRCS_PORTS_FILES} | sed -e 's/[[:space:]]/ -f /g' -e 's/^/-f /' | xargs ./${SRCS_BULK_SH} -N",
+        "pkg repo -o packages/14-stable-main /usr/local/poudriere/data/packages/14-stable-main/.latest/All"
+    ],
+    outs = ["packages/14-stable-main"]
 )
