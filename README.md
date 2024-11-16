@@ -1,3 +1,3 @@
-# my src
+# patmaddox lab
 
-`please run :fetch`
+Each dir in `src` has a fetch target to clone the repo.

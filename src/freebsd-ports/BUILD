@@ -1,3 +1,15 @@
+subinclude("//build/defs:repos")
+
+fetch_jj_cmd(
+    name = "fetch",
+    repo = "freebsd-ports",
+    url = "git@github.com:patmaddox/freebsd-ports.git",
+    remotes = [{
+        "name": "upstream",
+        "url": "https://github.com/freebsd/freebsd-ports.git",
+    }]
+)
+
 sh_cmd(
     name = "list-ports",
     cmd = [

@@ -1,56 +1,48 @@
-def fetch_repos(repos:list):
-    for r in repos:
-        repo_cmds = [
-            f"cd ./$(dir :fetch-{r.name})",
-            f"if [ ! -d {r.name}.jj ]; then jj git clone {r.url} {r.name}.jj; fi",
-            f"cd {r.name}.jj"
-        ]
+def fetch_jj_cmd(name:str, repo:str, url:str, remotes:list=[]):
+    jj_repo_dir = f"{repo}.jj"
+    
+    repo_cmds = [
+        "cd repos",
+        f"if [ ! -d {jj_repo_dir} ]; then jj git clone {url} {jj_repo_dir}; fi"
+    ]
 
-        remotes = r.get("remotes", [])
-        remote_cmds = map(lambda rem: f"if ! jj git remote list | awk -v r={rem.name} '\\\$1 == r' | grep -q {rem.name}; then jj git remote add {rem.name} {rem.url}; fi", remotes)
-
-        sh_cmd(
-            name = f"fetch-{r.name}",
-            cmd = repo_cmds + remote_cmds
-        )
-
-        jj_repo(name = r.name)
-
-    deps = map(lambda r : f":fetch-{r.name}", repos)
-    cmds = map(lambda d : f"sh $(out_location {d})", deps)
+    remote_cmds = map(lambda rem: f"if ! jj -R {jj_repo_dir} git remote list | awk -v r={rem.name} '\\\$1 == r' | grep -q {rem.name}; then jj -R {jj_repo_dir} git remote add {rem.name} {rem.url}; fi", remotes)
 
     sh_cmd(
-        name = "fetch",
-        deps = deps,
-        cmd = cmds,
-        visibility = ["PUBLIC"]
+        name = name,
+        cmd = repo_cmds + remote_cmds
     )
 
-def jj_repo(name:str, version:str=None):
-    target_name = name
+    jj_repo(name = "repo", repo = repo)
+
+def jj_repo(name:str, repo:str, version:str=None):
     version_flag = ""
+    version_suffix = ""
 
     if version:
         clean_version = version.replace("/", "-")
-        target_name = f"{name}-{clean_version}"
         version_flag = f"-r {version}"
+        version_suffix = f"--{version}"
 
+    jj_repo = f"{repo}.jj"
+    jj_workspace = f"{repo}{version_suffix}.jj"
+    
     cmd = " && ".join([
         # forget workspace at first, in case a previous run failed
-        f"jj -R $(plz query reporoot)/repos/{name}.jj workspace forget __plz 2> /dev/null || true",
-        f"jj -R $(plz query reporoot)/repos/{name}.jj workspace add --name __plz {version_flag} {target_name}",
-        f"jj -R $(plz query reporoot)/repos/{name}.jj workspace forget __plz",
-        f"rm -rf {target_name}/.jj"
+        f"jj -R $(plz query reporoot)/repos/{jj_repo} workspace forget __plz 2> /dev/null || true",
+        f"jj -R $(plz query reporoot)/repos/{jj_repo} workspace add --name __plz{version_suffix} {jj_workspace}",
+        f"jj -R $(plz query reporoot)/repos/{jj_repo} workspace forget __plz{version_suffix}",
+        f"rm -rf {jj_workspace}/.jj"
     ])
 
     workspace_rule = build_rule(
-        name = target_name,
+        name = name,
         cmd = cmd,
-        outs = [target_name],
+        outs = [jj_workspace],
         _subrepo = True
     )
 
     return subrepo(
-        name = target_name,
+        name = name,
         dep = workspace_rule
     )
