@@ -7,11 +7,13 @@ main() {
     local srcdir
     srcdir="${1}"; shift
 
+    # distribute* fails if the target dir does not exit
+    mkdir ${BUILDDIR}/rel
+
     local t
     for t in buildworld buildkernel distributeworld distributekernel packageworld packagekernel; do
 	make -s \
 	     -C ${srcdir} \
-	     -D NO_ROOT \
 	     -j $(sysctl -n hw.ncpu) \
 	     DISTDIR=${BUILDDIR}/rel \
 	     OBJTOP=${BUILDDIR}/obj \
@@ -26,7 +28,6 @@ main() {
     # some of the other vars (DISTDIR?) cause it to not find create-kernel-packages
     make -s \
 	 -C ${srcdir} \
-	 -D NO_ROOT \
 	 -j $(sysctl -n hw.ncpu) \
 	 OBJTOP=${BUILDDIR}/obj \
 	 REPODIR=${BUILDDIR}/pkgbase \
