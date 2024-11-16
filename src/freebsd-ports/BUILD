@@ -24,6 +24,16 @@ jj_repo(
     version = "main"
 )
 
+genrule(
+    name = "poudriere-ports--main",
+    deps = [":repo--main"],
+    cmd = [
+        "doas poudriere ports -c -p main -m null -M $(plz query reporoot)/$(out_location :repo--main)",
+        "poudriere ports -l -q | grep '^main[[:space:]]' > main.txt"
+    ],
+    outs = ["main.txt"]
+)
+
 filegroup(
     name = "ports-files",
     srcs = glob(["*.ports"])
@@ -31,6 +41,7 @@ filegroup(
 
 sh_cmd(
     name = "bulk",
+    deps = [":poudriere-ports--main"],
     cmd = [
         "doas poudriere bulk -b latest -j 14-stable -p main \\\${@}",
     ],
