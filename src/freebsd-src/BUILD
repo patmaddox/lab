@@ -27,5 +27,5 @@ def freebsd_release(name:str, version:str):
         outs = [name]
     )
 
-freebsd_release(name = "rel--stabweek-2024-10", version = "525a177c1657")
+freebsd_release(name = "rel--15.0-stabweek-2024-10", version = "525a177c")
 freebsd_release(name = "rel--14.2-BETA3", version = "bcd5f957")
