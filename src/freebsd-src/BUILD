@@ -6,11 +6,6 @@ fetch_jj_cmd(
     url = "https://github.com/freebsd/freebsd-src.git"
 )
 
-filegroup(
-    name = "freebsd-src",
-    deps = [":repo--releng-14.2"]
-)
-
 def freebsd_release(name:str, version:str):
     clean_version = version.replace("/", "-")
     jj_repo(name = f"repo--{clean_version}", repo = "freebsd-src", version = version)
@@ -33,4 +28,4 @@ def freebsd_release(name:str, version:str):
     )
 
 freebsd_release(name = "rel--stabweek-2024-10", version = "525a177c1657")
-freebsd_release(name = "rel--releng-14.2", version = "releng/14.2")
+freebsd_release(name = "rel--14.2-BETA3", version = "bcd5f957")
