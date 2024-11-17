@@ -14,6 +14,7 @@ main() {
 	     -C ${SRCDIR} \
 	     -j $(sysctl -n hw.ncpu) \
 	     DISTDIR=${BUILDDIR}/rel \
+	     KERNCONF=${KERNCONF} \
 	     OBJTOP=${BUILDDIR}/obj \
 	     SRCCONF=${SRCCONF} \
 	     TZ=UTC \
