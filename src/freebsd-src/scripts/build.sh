@@ -4,6 +4,7 @@
 set -eu
 
 main() {
+    curdir=$(pwd)
     mkdir ${BUILDDIR}/rel
 
     tar -C ${SRCDIR} -s '|^|usr/src/|' -cf ${BUILDDIR}/rel/src.txz --uid 0 --gid 0 .
@@ -24,6 +25,12 @@ main() {
 
 	touch ${BUILDDIR}/done.${t}
     done
+
+    cp ${SRCDIR}/release/scripts/make-manifest.sh ${BUILDDIR}/rel
+    cd ${BUILDDIR}/rel
+    sh make-manifest.sh *.txz > MANIFEST
+    touch done.manifest
+    cd ${curdir}
 
     # some of the other vars (DISTDIR?) cause it to not find create-kernel-packages
     make -s \

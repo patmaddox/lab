@@ -27,7 +27,7 @@ def freebsd_release(name:str, version:str, kernconf:str="GENERIC"):
             f"doas env -i PATH=${PATH} BUILDDIR=$(realpath _build) SRCDIR=$(realpath ${SRCS_FREEBSD_SRC}) SRCCONF=$(realpath ${SRCS_SRCCONF}) KERNCONF={kernconf} sh ${SRCS_BUILD_SH} > _build/build.log 2> _build/error.log",
             f"mkdir {name}",
             f"echo {name}:{clean_version} > {name}/VERSION",
-            f"cp _build/rel/*.txz _build/*.log {name}/",
+            f"cp _build/rel/*.txz _build/rel/MANIFEST _build/*.log {name}/",
             f"cp -Rp _build/pkgbase {name}/",
             "doas chflags -R noschg _build && doas rm -rf _build"
         ],
