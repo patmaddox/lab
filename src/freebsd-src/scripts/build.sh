@@ -5,7 +5,8 @@ set -eu
 
 main() {
     mkdir ${BUILDDIR}/rel
-    tar -C ${SRCDIR} -cf ${BUILDDIR}/rel/src.txz .
+
+    tar -C ${SRCDIR} -s '|^|usr/src/|' -cf ${BUILDDIR}/rel/src.txz --uid 0 --gid 0 .
     touch ${BUILDDIR}/done.src
 
     local t

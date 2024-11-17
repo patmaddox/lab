@@ -20,9 +20,10 @@ main() {
 }
 
 build::extract() {
-    tar -C ${rootdir} -xf ${freebsd_txz}/base.txz
-    tar -C ${rootdir} -xf ${freebsd_txz}/kernel.txz
-    tar -C ${rootdir}/usr/src -xf ${freebsd_txz}/src.txz
+    local p
+    for p in base kernel src; do
+	tar -C ${rootdir} -xf ${freebsd_txz}/${p}.txz
+    done
 
     mkdir ${rootdir}/usr/ports
     tar -c -C ${PORTSDIR} . | tar -x -C ${rootdir}/usr/ports --gid 0 --uid 0
