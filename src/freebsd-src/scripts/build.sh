@@ -4,16 +4,14 @@
 set -eu
 
 main() {
-    local srcdir
-    srcdir="${1}"; shift
-
-    # distribute* fails if the target dir does not exit
     mkdir ${BUILDDIR}/rel
+    tar -C ${SRCDIR} -cf ${BUILDDIR}/rel/src.txz .
+    touch ${BUILDDIR}/done.src
 
     local t
     for t in buildworld buildkernel distributeworld distributekernel packageworld packagekernel; do
 	make -s \
-	     -C ${srcdir} \
+	     -C ${SRCDIR} \
 	     -j $(sysctl -n hw.ncpu) \
 	     DISTDIR=${BUILDDIR}/rel \
 	     OBJTOP=${BUILDDIR}/obj \
@@ -27,7 +25,7 @@ main() {
 
     # some of the other vars (DISTDIR?) cause it to not find create-kernel-packages
     make -s \
-	 -C ${srcdir} \
+	 -C ${SRCDIR} \
 	 -j $(sysctl -n hw.ncpu) \
 	 OBJTOP=${BUILDDIR}/obj \
 	 REPODIR=${BUILDDIR}/pkgbase \

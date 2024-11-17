@@ -21,7 +21,8 @@ sh_cmd(
 jj_repo(
     name = "repo--main",
     repo = "freebsd-ports",
-    version = "main"
+    version = "main",
+    visibility = ["//infra/images/..."]
 )
 
 genrule(

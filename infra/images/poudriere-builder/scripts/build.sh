@@ -22,6 +22,10 @@ main() {
 build::extract() {
     tar -C ${rootdir} -xf ${freebsd_txz}/base.txz
     tar -C ${rootdir} -xf ${freebsd_txz}/kernel.txz
+    tar -C ${rootdir}/usr/src -xf ${freebsd_txz}/src.txz
+
+    mkdir ${rootdir}/usr/ports
+    tar -c -C ${PORTSDIR} . | tar -x -C ${rootdir}/usr/ports --gid 0 --uid 0
 }
 
 build::config() {
@@ -38,6 +42,8 @@ build::makefs() {
 	   -o fs=zroot/tmp\;mountpoint=/tmp\;exec=on\;setuid=off \
 	   -o fs=zroot/usr\;mountpoint=/usr\;canmount=off \
 	   -o fs=zroot/usr/ports\;setuid=off \
+	   -o fs=zroot/usr/src \
+	   -o fs=zroot/usr/obj \
 	   -o fs=zroot/var\;mountpoint=/var\;canmount=off \
 	   -o fs=zroot/var/audit\;setuid=off\;exec=off \
 	   -o fs=zroot/var/crash\;setuid=off\;exec=off \

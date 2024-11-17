@@ -8,7 +8,11 @@ fetch_jj_cmd(
 
 def freebsd_release(name:str, version:str):
     clean_version = version.replace("/", "-")
-    jj_repo(name = f"repo--{clean_version}", repo = "freebsd-src", version = version)
+    jj_repo(
+        name = f"repo--{clean_version}",
+        repo = "freebsd-src",
+        version = version,
+    )
 
     genrule(
         name = name,
@@ -19,9 +23,9 @@ def freebsd_release(name:str, version:str):
         },
         cmd = [
             "mkdir _build",
-            "doas env -i PATH=${PATH} BUILDDIR=$(realpath _build) sh ${SRCS_BUILD_SH} ${SRCS_FREEBSD_SRC} > _build/build.log 2> _build/error.log",
+            "doas env -i PATH=${PATH} BUILDDIR=$(realpath _build) SRCDIR=$(realpath ${SRCS_FREEBSD_SRC}) sh ${SRCS_BUILD_SH} > _build/build.log 2> _build/error.log",
             f"mkdir {name}",
-            f"echo {clean_version} > {name}/VERSION",
+            f"echo {name}:{clean_version} > {name}/VERSION",
             f"cp _build/rel/*.txz _build/*.log {name}/",
             f"cp -Rp _build/pkgbase {name}/",
             "doas chflags -R noschg _build && doas rm -rf _build"
