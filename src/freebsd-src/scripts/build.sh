@@ -15,7 +15,7 @@ main() {
 	     -j $(sysctl -n hw.ncpu) \
 	     DISTDIR=${BUILDDIR}/rel \
 	     OBJTOP=${BUILDDIR}/obj \
-	     SRCCONF=/dev/null \
+	     SRCCONF=${SRCCONF} \
 	     TZ=UTC \
 	     __MAKE_CONF=/dev/null \
 	     ${t}
