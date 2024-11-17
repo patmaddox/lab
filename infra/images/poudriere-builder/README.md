@@ -22,6 +22,11 @@ doas bhyve -c 16 -m 32G -A -H -P \
   pb-15.0
 ```
 
+## Bootstrap script
+
+The image includes a bootstrap script at `/opt/bin/bootstrap.sh`.
+It does the following things:
+
 Expand the zpool to use the entire drive:
 
 ```sh
