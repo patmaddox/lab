@@ -3,20 +3,22 @@
 Build one of the builder images and copy the outfile somewhere:
 
 ```sh
-plz build //infra/images/poudriere-builder:poudriere-builder-15.0-stabweek-2024-10
+plz build //infra/images/poudriere-builder:poudriere-builder-15.0-stabweek-2024-10 //infra/images/poudriere-builder:zdata
 mkdir /tmp/bhyve-pb
 cp plz-out/gen/infra/images/poudriere-builder/poudriere-builder-15.0-stabweek-2024-10.* /tmp/bhyve-pb
+cp plz-out/gen/infra/images/poudriere-builder/zdata.* /tmp/bhyve-pb
 ```
 
 Run it with bhyve. Resize it first so it has room to build ports.
 
 ```sh
-truncate -s 120G /tmp/bhyve-pb/poudriere-builder-15.0-stabweek-2024-10.img
+truncate -s 120G /tmp/bhyve-pb/zdata.img
 
 bhyve -c 16 -m 32G -A -H -P \
   -s 0:0,hostbridge \
   -s 1:0,virtio-net,tap1 \
   -s 2:0,ahci-hd,/tmp/bhyve-pb/poudriere-builder-15.0-stabweek-2024-10.img \
+  -s 3:0,ahci-hd,/tmp/bhyve-pb/zdata.img \
   -s 31,lpc -l com1,stdio \
   -l bootrom,/usr/local/share/uefi-firmware/BHYVE_UEFI.fd \
   pb

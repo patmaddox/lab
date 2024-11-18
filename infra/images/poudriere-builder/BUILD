@@ -31,3 +31,15 @@ def poudriere_builder(version:str):
 
 poudriere_builder(version = "14.2-BETA3")
 poudriere_builder(version = "15.0-stabweek-2024-10")
+
+genrule(
+    name = "zdata",
+    srcs = {"BUILD_ZDATA_SH": "scripts/build_zdata.sh"},
+    cmd = [
+        "mkdir _build",
+        "doas env -i PATH=${PATH} BUILDDIR=_build sh ${SRCS_BUILD_ZDATA_SH} > build_zdata.log 2> error_zdata.log",
+        "cp _build/zdata.zfs _build/zdata.img .",
+        "doas rm -rf _build"
+    ],
+    outs = ["zdata.img", "zdata.zfs"]
+)
