@@ -14,6 +14,7 @@ main() {
 
     build::extract
     build::config
+    build::freebsd-rel
     build::makefs
 
     mv ${rootzfs} ${BUILDDIR}/${outfile}
@@ -33,8 +34,18 @@ build::config() {
     tar -c -C ${distfiles} . | tar -x -C ${rootdir} --gid 0 --uid 0
 }
 
+build::freebsd-rel() {
+    mkdir -p ${rootdir}/opt/distfiles/freebsd-rel
+
+    local rel cleanname
+    for rel in ${FREEBSD_REL}; do
+	cleanname=$(basename ${rel} | sed -e 's/^rel--//')
+	mv ${rel} ${rootdir}/opt/distfiles/freebsd-rel/${cleanname}
+    done
+}
+
 build::makefs() {
-    makefs -t zfs -s 10g \
+    makefs -t zfs -s 20g \
 	   -o poolname=zroot -o bootfs=zroot/ROOT/default -o rootpath=/ \
 	   -o fs=zroot\;mountpoint=none \
 	   -o fs=zroot/ROOT\;mountpoint=none \

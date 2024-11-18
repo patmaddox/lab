@@ -41,3 +41,12 @@ for p in ports-mgmt/pkg ports-mgmt/poudriere-devel; do
   make -D BATCH install
 done
 ```
+
+## Create jails
+
+The image includes release `.txz` files in `/opt/distfiles/freebsd-rel`.
+Use these to create a jail:
+
+```sh
+poudriere jail -c -j 141 -K GENERIC -m url=file:///opt/distfiles/freebsd-rel/14.1-RELEASE-p6 -v 14.1-RELEASE-p6
+```
