@@ -21,12 +21,12 @@ def poudriere_builder(version:str):
         },
         cmd = [
             "mkdir _build",
-            f"doas env -i PATH=${PATH} BUILDDIR=$(realpath _build) PORTSDIR=${SRCS_PORTS} FREEBSD_REL=\"${SRCS_FREEBSD_REL}\" sh ${SRCS_BUILD_SH} ${SRCS_FREEBSD_TXZ} $(dir :{name})/dist {name}.zfs > _build/build.log 2> _build/error.log",
-            f"cp _build/{name}.zfs .",
+            f"doas env -i PATH=${PATH} BUILDDIR=$(realpath _build) PORTSDIR=${SRCS_PORTS} FREEBSD_REL=\"${SRCS_FREEBSD_REL}\" sh ${SRCS_BUILD_SH} ${SRCS_FREEBSD_TXZ} $(dir :{name})/dist {name} > _build/build.log 2> _build/error.log",
+            f"cp _build/{name}.img _build/{name}.zfs .",
             "doas chflags -R noschg _build",
             "doas rm -rf _build"
         ],
-        outs = [f"{name}.zfs"]
+        outs = [f"{name}.img", f"{name}.zfs"]
     )
 
 poudriere_builder(version = "14.2-BETA3")

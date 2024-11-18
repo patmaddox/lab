@@ -8,7 +8,7 @@ main() {
 }
 
 expand-zpool() {
-    zpool online -e zroot ada0
+    zpool online -e zroot ada0p2
 }
 
 bootstrap-poudriere() {
