@@ -29,7 +29,6 @@ def poudriere_builder(version:str):
         outs = [f"{name}.img", f"{name}.zfs"]
     )
 
-poudriere_builder(version = "14.2-BETA3")
 poudriere_builder(version = "15.0-stabweek-2024-10")
 
 genrule(
