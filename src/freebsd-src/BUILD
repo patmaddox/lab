@@ -38,3 +38,16 @@ def freebsd_release(name:str, version:str, kernconf:str="GENERIC"):
 freebsd_release(name = "rel--15.0-stabweek-2024-10", version = "525a177c", kernconf ="GENERIC-NODEBUG")
 freebsd_release(name = "rel--14.2-BETA3", version = "bcd5f957")
 freebsd_release(name = "rel--14.1-RELEASE-p6", version = "74b6c983")
+
+genrule(
+    name = "workspace-3",
+    srcs = {
+        "MAKESRC_SH": "scripts/make-src.sh",
+        "SRCCONF": "src.conf",
+    },
+    cmd = [
+        "cp ${SRCS_MAKESRC_SH} make-src.sh",
+        "chmod +x make-src.sh",
+        "./make-src.sh clone 525a177c"
+    ]
+)
