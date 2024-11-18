@@ -3,4 +3,5 @@
 *.jj
 *~
 .plzconfig.local
+_build
 plz-out
