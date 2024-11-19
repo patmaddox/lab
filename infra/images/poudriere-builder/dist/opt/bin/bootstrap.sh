@@ -2,13 +2,14 @@
 set -eu
 
 main() {
-    expand-zpool
+    resize-gpt
     bootstrap-poudriere
     touch /var/bootstrap.done
 }
 
-expand-zpool() {
-    zpool online -e zroot ada0p2
+resize-gpt() {
+    gpart recover ada0
+    gpart resize -i 2 ada0
 }
 
 bootstrap-poudriere() {

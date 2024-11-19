@@ -26,7 +26,7 @@ build::create-zpool() {
     truncate -s 20g ${outfileroot}
     mdid=$(mdconfig -a -f ${outfileroot} | grep -o '[[:digit:]]*')
 
-    zpool create -m none -t plz-pb--zroot -R ${rootdir} zroot /dev/md${mdid}
+    zpool create -m none -o autoexpand=on -t plz-pb--zroot -R ${rootdir} zroot /dev/md${mdid}
     zfs create -o mountpoint=none plz-pb--zroot/ROOT
     zfs create -o mountpoint=/ plz-pb--zroot/ROOT/default
     zfs create -o mountpoint=/home plz-pb--zroot/home
