@@ -2,7 +2,7 @@
 set -eu
 
 main() {
-    local freebsd_txz outfile distfiles
+    local freebsd_txz outfile distfiles mdid
 
     freebsd_txz=${1}; shift
     distfiles=${1}; shift
@@ -11,11 +11,37 @@ main() {
     outfileroot=${BUILDDIR}/${outfile}.zfs
     rootdir=${BUILDDIR}/imgroot
     mkdir ${rootdir}
+    rootdir=$(realpath ${rootdir})
 
+    build::create-zpool
     build::extract
     build::config
-    build::freebsd-rel
-    build::img-root
+    build::copy-freebsd-rel
+    build::efi-partition
+    build::export-zpool
+    build::finalize-image
+}
+
+build::create-zpool() {
+    truncate -s 20g ${outfileroot}
+    mdid=$(mdconfig -a -f ${outfileroot} | grep -o '[[:digit:]]*')
+
+    zpool create -m none -t plz-pb--zroot -R ${rootdir} zroot /dev/md${mdid}
+    zfs create -o mountpoint=none plz-pb--zroot/ROOT
+    zfs create -o mountpoint=/ plz-pb--zroot/ROOT/default
+    zfs create -o mountpoint=/home plz-pb--zroot/home
+    zfs create -o mountpoint=/tmp -o exec=on -o setuid=off plz-pb--zroot/tmp
+    zfs create -o mountpoint=/usr -o canmount=off plz-pb--zroot/usr
+    zfs create -o setuid=off plz-pb--zroot/usr/ports
+    zfs create plz-pb--zroot/usr/src
+    zfs create plz-pb--zroot/usr/obj
+    zfs create -o mountpoint=/var -o canmount=off plz-pb--zroot/var
+    zfs create -o setuid=off -o exec=off plz-pb--zroot/var/audit
+    zfs create -o setuid=off -o exec=off plz-pb--zroot/var/crash
+    zfs create -o setuid=off -o exec=off plz-pb--zroot/var/log
+    zfs create -o atime=on plz-pb--zroot/var/mail
+    zfs create -o setuid=off plz-pb--zroot/var/tmp
+    zpool set bootfs=plz-pb--zroot/ROOT/default plz-pb--zroot
 }
 
 build::extract() {
@@ -24,7 +50,6 @@ build::extract() {
 	tar -C ${rootdir} -xf ${freebsd_txz}/${p}.txz
     done
 
-    mkdir ${rootdir}/usr/ports
     tar -c -C ${PORTSDIR} . | tar -x -C ${rootdir}/usr/ports --gid 0 --uid 0
 }
 
@@ -32,7 +57,7 @@ build::config() {
     tar -c -C ${distfiles} . | tar -x -C ${rootdir} --gid 0 --uid 0
 }
 
-build::freebsd-rel() {
+build::copy-freebsd-rel() {
     mkdir -p ${rootdir}/opt/distfiles/freebsd-rel
 
     local rel cleanname
@@ -42,43 +67,24 @@ build::freebsd-rel() {
     done
 }
 
-build::img-root() {
-    makefs -t zfs -s 20g \
-	   -o poolname=zroot -o bootfs=zroot/ROOT/default -o rootpath=/ \
-	   -o fs=zroot\;mountpoint=none \
-	   -o fs=zroot/ROOT\;mountpoint=none \
-	   -o fs=zroot/ROOT/default\;mountpoint=/ \
-	   -o fs=zroot/home\;mountpoint=/home \
-	   -o fs=zroot/tmp\;mountpoint=/tmp\;exec=on\;setuid=off \
-	   -o fs=zroot/usr\;mountpoint=/usr\;canmount=off \
-	   -o fs=zroot/usr/ports\;setuid=off \
-	   -o fs=zroot/usr/src \
-	   -o fs=zroot/usr/obj \
-	   -o fs=zroot/var\;mountpoint=/var\;canmount=off \
-	   -o fs=zroot/var/audit\;setuid=off\;exec=off \
-	   -o fs=zroot/var/crash\;setuid=off\;exec=off \
-	   -o fs=zroot/var/log\;setuid=off\;exec=off \
-	   -o fs=zroot/var/mail\;atime=on \
-	   -o fs=zroot/var/tmp\;setuid=off \
-	   ${outfileroot} ${rootdir}
-
-    # reguid since makefs creates images with a static guid
-    mdid=$(mdconfig -a -f ${outfileroot} | grep -o '[[:digit:]]*')
-    zpool import -t -R /tmp/plz-pb--zroot zroot plz-pb--zroot
-    zpool reguid plz-pb--zroot
-    zpool export plz-pb--zroot
-    mdconfig -d -u ${mdid}
-
+build::efi-partition() {
     local efidir
     efidir=${BUILDDIR}/efistage
     mkdir -p ${efidir}/efi/boot
 
     cp ${rootdir}/boot/loader.efi ${efidir}/efi/boot/bootx64.efi
     makefs -t msdos \
-	 -o fat_type=32 -o sectors_per_cluster=1 -o volume_label=EFISYS \
-	 -s 50m \
-	 ${BUILDDIR}/boot.part ${efidir}
+	   -o fat_type=32 -o sectors_per_cluster=1 -o volume_label=EFISYS \
+	   -s 50m \
+	   ${BUILDDIR}/boot.part ${efidir}
+}
 
+build::export-zpool() {
+    zpool export plz-pb--zroot
+    mdconfig -d -u ${mdid}
+}
+
+build::finalize-image() {
     mkimg -s gpt -p efi/esp:=${BUILDDIR}/boot.part \
 	  -p freebsd-zfs:=${outfileroot} -o ${BUILDDIR}/${outfile}.img --capacity 21G
 }
