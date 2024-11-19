@@ -14,6 +14,7 @@ main() {
     zfs create -o mountpoint=/usr -o canmount=off plz-pb--zdata/usr
     zfs create -o canmount=off plz-pb--zdata/usr/local
     zfs create plz-pb--zdata/usr/local/poudriere
+    zfs snapshot -r plz-pb--zdata@init
     zpool export plz-pb--zdata
     mdconfig -d -u ${mdid}
 

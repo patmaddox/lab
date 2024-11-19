@@ -41,6 +41,7 @@ build::create-zpool() {
     zfs create -o setuid=off -o exec=off plz-pb--zroot/var/log
     zfs create -o atime=on plz-pb--zroot/var/mail
     zfs create -o setuid=off plz-pb--zroot/var/tmp
+    zfs snapshot -r plz-pb--zroot@init
     zpool set bootfs=plz-pb--zroot/ROOT/default plz-pb--zroot
 }
 
