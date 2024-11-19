@@ -43,6 +43,7 @@ clean-zfs:
 _build/zroot.zfs: _build/zroot/COPYRIGHT
 	makefs -t zfs \
 		-s 10g \
+		-o bootfs=zroot \
 		-o poolname=zroot \
 		${.TARGET} _build/zroot
 
