@@ -5,7 +5,6 @@ main() {
     local freebsd_txz outfile distfiles mdid
 
     freebsd_txz=${1}; shift
-    distfiles=${1}; shift
     outfile=${1}; shift
 
     outfileroot=${BUILDDIR}/${outfile}.zfs
@@ -41,7 +40,6 @@ build::create-zpool() {
     zfs create -o setuid=off -o exec=off plz-pb--zroot/var/log
     zfs create -o atime=on plz-pb--zroot/var/mail
     zfs create -o setuid=off plz-pb--zroot/var/tmp
-    zfs snapshot -r plz-pb--zroot@init
     zpool set bootfs=plz-pb--zroot/ROOT/default plz-pb--zroot
 }
 
@@ -55,7 +53,7 @@ build::extract() {
 }
 
 build::config() {
-    tar -c -C ${distfiles} . | tar -x -C ${rootdir} --gid 0 --uid 0
+    tar -c -C ${DISTDIR} . | tar -x -C ${rootdir} --gid 0 --uid 0
 }
 
 build::copy-freebsd-rel() {
@@ -81,6 +79,7 @@ build::efi-partition() {
 }
 
 build::export-zpool() {
+    zfs snapshot -r plz-pb--zroot@init
     zpool export plz-pb--zroot
     mdconfig -d -u ${mdid}
 }

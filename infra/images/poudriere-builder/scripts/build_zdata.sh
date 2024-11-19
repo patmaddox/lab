@@ -11,9 +11,9 @@ main() {
     rootdir=$(realpath ${rootdir})
 
     zpool create -m none -o autoexpand=on -t plz-pb--zdata -R ${rootdir} zdata /dev/md${mdid}
-    zfs create -o mountpoint=/usr -o canmount=off plz-pb--zdata/usr
-    zfs create -o canmount=off plz-pb--zdata/usr/local
-    zfs create plz-pb--zdata/usr/local/poudriere
+    zfs create -o mountpoint=/usr/local/poudriere plz-pb--zdata/poudriere-data
+    zfs create -o mountpoint=/usr/local/etc/poudriere.d plz-pb--zdata/etc-poudriere-d
+    tar -c -C ${DISTDIR} . | tar -x -C ${rootdir} --gid 0 --uid 0
     zfs snapshot -r plz-pb--zdata@init
     zpool export plz-pb--zdata
     mdconfig -d -u ${mdid}
