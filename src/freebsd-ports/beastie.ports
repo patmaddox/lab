@@ -8,6 +8,7 @@ deskutils/i3lock
 deskutils/just
 devel/atf
 devel/autoconf
+devel/ccache
 devel/cmake
 devel/fossil
 devel/git
