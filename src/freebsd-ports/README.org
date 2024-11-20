@@ -1,4 +1,4 @@
-# freebsd-ports
+* freebsd-ports
 
 Build me some ports.
 
@@ -8,8 +8,7 @@ Commands:
 | `please run :bulk <args>`                | run a poudriere build                                 |
 | `please build :packages--14-stable-main` | build all ports in `*.ports` for `14-stable` / `main` |
 
-## TODO
-
-- [ ] create a jail
-- [ ] create a ports tree
-- [x] build ports from multiple files
+* Tasks
+** TODO create a jail
+** TODO create a ports tree
+** TODO build ports from multiple files
