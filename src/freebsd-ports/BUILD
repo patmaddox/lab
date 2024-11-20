@@ -49,6 +49,18 @@ sh_cmd(
 )
 
 genrule(
+    name = "packages--141-default",
+    srcs = {
+        "REPOS_DIR": "repos"
+    },
+    cmd = [
+        "mkdir -p pkgroot packages/141-default",
+        "env REPOS_DIR=$(realpath ${SRCS_REPOS_DIR}) INSTALL_AS_USER=yes pkg -r pkgroot fetch -a -y -r 141-default -o $(realpath packages/141-default)"
+    ],
+    outs = ["packages/141-default"]
+)
+
+genrule(
     name = "packages--14-stable-main",
     srcs = {
         "BULK_SH": ":bulk",
