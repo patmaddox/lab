@@ -48,6 +48,7 @@ new_user_body() {
     atf_check ${sync_pw} from-root to-root u user1 user2
     atf_check -o match:"user1-pw-hash" pw -V to-root user show user1
     atf_check -o match:"user2-pw-hash" pw -V to-root user show user2
+    atf_check -o ignore grep user1 to-root/passwd
 }
 
 atf_test_case existing_user

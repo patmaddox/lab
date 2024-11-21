@@ -41,6 +41,8 @@ sync-pw::users() {
 	    pw -V ${from_root} user show ${u} >> ${to_root}/master.passwd
 	fi
     done
+
+    pwd_mkdb -p -d ${to_root} ${to_root}/master.passwd
 }
 
 sync-pw::groups() {
