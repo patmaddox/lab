@@ -1,0 +1,160 @@
+#!/usr/bin/env atf-sh
+sync_pw=$(atf_get_srcdir)/sync-pw
+
+atf_init_test_cases() {
+    atf_add_test_case new_user
+    atf_add_test_case existing_user
+    atf_add_test_case root
+    atf_add_test_case root_existing_passwd
+    atf_add_test_case root_disabled
+
+    atf_add_test_case new_group
+    atf_add_test_case existing_group
+}
+
+test::setup-db() {
+    mkdir from-root
+    touch from-root/group from-root/master.passwd
+    pwd_mkdb -p -d from-root from-root/master.passwd
+
+    mkdir to-root
+    touch to-root/group to-root/master.passwd
+    pwd_mkdb -p -d to-root to-root/master.passwd
+}
+
+test::add-user() {
+    echo "${2:?}" | pw -V from-root user add -H 0 -n ${1:?}
+}
+
+test::add-user-root() {
+    echo "${1:?}" | pw -V from-root user add -H 0 -n root -u 0
+}
+
+test::add-group() {
+    pw -V from-root group add -n ${1:?} -M ${2:?}
+}
+
+atf_test_case new_user
+new_user_head() {
+    atf_set "descr" "Sync a user that exists in <from> but not <to>"
+    atf_set "require.user" "root"
+}
+
+new_user_body() {
+    test::setup-db
+    test::add-user user1 "user1-pw-hash"
+    test::add-user user2 "user2-pw-hash"
+
+    atf_check ${sync_pw} from-root to-root u user1 user2
+    atf_check -o match:"user1-pw-hash" pw -V to-root user show user1
+    atf_check -o match:"user2-pw-hash" pw -V to-root user show user2
+}
+
+atf_test_case existing_user
+existing_user_head() {
+    atf_set "descr" "Sync a user that also exists in <to>"
+    atf_set "require.user" "root"
+}
+
+existing_user_body() {
+    test::setup-db
+    test::add-user user1 "ignore-this"
+
+    echo "existing-pw-hash" | pw -V to-root user add -H 0 -n user1
+    atf_check ${sync_pw} from-root to-root u user1
+    atf_check -o match:"existing-pw-hash" pw -V to-root user show user1
+    lines=$(wc -l to-root/master.passwd | cut -w -f 2)
+    atf_check_equal 1 ${lines}
+}
+
+atf_test_case root
+root_head() {
+    atf_set "descr" "Write root password if unset in <to>"
+    atf_set "require.user" "root"
+}
+
+root_body() {
+    test::setup-db
+    test::add-user-root "root-pw-hash"
+
+    pw -V to-root user add -n root -u 0 -w none
+    atf_check ${sync_pw} from-root to-root u root
+    atf_check -o match:"root-pw-hash" pw -V to-root user show root
+    lines=$(wc -l to-root/master.passwd | cut -w -f 2)
+    atf_check_equal 1 ${lines}
+}
+
+atf_test_case root_existing_passwd
+root_existing_passwd_head() {
+    atf_set "descr" "Do not overwrite root password if set in <to>"
+    atf_set "require.user" "root"
+}
+
+root_existing_passwd_body() {
+    test::setup-db
+    test::add-user-root "root-pw-hash"
+
+    echo "do-not-overwrite" | pw -V to-root user add -n root -u 0 -H 0
+    atf_check ${sync_pw} from-root to-root u root
+    atf_check -o match:"do-not-overwrite" pw -V to-root user show root
+    lines=$(wc -l to-root/master.passwd | cut -w -f 2)
+    atf_check_equal 1 ${lines}
+}
+
+atf_test_case root_disabled
+root_disabled_head() {
+    atf_set "descr" "Do not overwrite root password if it is * in <to>"
+    atf_set "require.user" "root"
+}
+
+root_disabled_body() {
+    test::setup-db
+    test::add-user-root "root-pw-hash"
+
+    pw -V to-root user add -n root -u 0 -w no
+    atf_check ${sync_pw} from-root to-root u root
+    root_pw=$(pw -V to-root user show root | cut -d : -f 2)
+    atf_check_equal "*" "${root_pw}"
+}
+
+atf_test_case new_group
+new_group_head() {
+    atf_set "descr" "Sync a group that exists in <from> but not <to>"
+    atf_set "require.user" "root"
+}
+
+new_group_body() {
+    test::setup-db
+    test::add-user user1 "user1-pw-hash"
+    test::add-user user2 "user2-pw-hash"
+    test::add-group group1 user1
+    test::add-group group2 user1,user2
+
+    atf_check ${sync_pw} from-root to-root g group1 group2
+
+    users=$(pw -V to-root group show group1 | cut -d : -f 4)
+    atf_check_equal "user1" "${users}"
+    users=$(pw -V to-root group show group2 | cut -d : -f 4)
+    atf_check_equal "user1,user2" "${users}"
+}
+
+atf_test_case existing_group
+existing_group_head() {
+    atf_set "descr" "Merge a group that already exists in <to>"
+    atf_set "require.user" "root"
+}
+
+existing_group_body() {
+    test::setup-db
+    test::add-user user1 "user1-pw-hash"
+    test::add-group group1 user1
+
+    pw -V to-root user add -n legacy-user
+    pw -V to-root group add -n group1 -M legacy-user
+    pw -V to-root user add -n user1
+
+    atf_check ${sync_pw} from-root to-root g group1
+
+    users=$(pw -V to-root group show group1 | cut -d : -f 4)
+    atf_check_equal "legacy-user,user1" "${users}"
+}

@@ -1,0 +1,4 @@
+syntax(2)
+
+test_suite('sync-pw')
+atf_test_program{name='tests'}

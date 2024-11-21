@@ -1,0 +1,96 @@
+#!/bin/sh
+set -eu
+
+main() {
+    sync-pw::parse_args "${@}"
+
+    case "${command}" in
+	u)
+            sync-pw::users
+            ;;
+	g)
+            sync-pw::groups
+            ;;
+	*)
+	    sync-pw::usage
+	    exit 1
+	    ;;
+    esac
+}
+
+sync-pw::users() {
+    local existing
+    local u
+    local from_root_pw
+    local to_root_pw
+    for u in ${list}; do
+	if [ "${u}" = "root" ]; then
+	    to_root_pw=$(pw -V ${to_root} user show -n ${u} | cut -d : -f 2)
+	    if [ -z "${to_root_pw}" ]; then
+		from_root_pw=$(pw -V ${from_root} user show -n ${u} | cut -d : -f 2)
+		echo "${from_root_pw}" | pw -V ${to_root} user mod -n ${u} -H 0
+	    fi
+	    continue
+	fi
+
+	existing=$(pw -V ${to_root} user show ${u} 2>/dev/null || true)
+	if [ -n "${existing}" ]; then
+	    awk -F : -v user=${u} -v existing="${existing}" '$1 == user { print existing }' ${to_root}/master.passwd > ${to_root}/master.passwd.new
+	    mv ${to_root}/master.passwd.new ${to_root}/master.passwd
+	else
+	    pw -V ${from_root} user show ${u} >> ${to_root}/master.passwd
+	fi
+    done
+}
+
+sync-pw::groups() {
+    local g
+    local from_group
+    local new_users
+
+    for g in ${list}; do
+	from_group=$(pw -V ${from_root} group show -n ${g})
+
+	if pw -V ${to_root} group show -n ${g} > /dev/null 2>&1; then
+	    new_users=$(echo "${from_group}" | cut -d : -f 4)
+	    pw -V ${to_root} group mod -n ${g} -m ${new_users}
+	else
+	    echo "${from_group}" >> ${to_root}/group
+	fi
+    done
+}
+
+sync-pw::parse_args() {
+    from_root="${1:-}"
+    if [ -z "{from_root}" ]; then
+	sync-pw::usage
+	exit 1
+    fi
+    shift
+
+    to_root="${1:-}"
+    if [ -z "{to_root}" ]; then
+	sync-pw::usage
+	exit 1
+    fi
+    shift
+
+    command="${1:-}"
+    if [ -z "{command}" ]; then
+	sync-pw::usage
+	exit 1
+    fi
+    shift
+
+    list="${@}"
+}
+
+sync-pw::usage() {
+    cat<<EOF
+Usage:
+  sync-pw <from-root> <to-root> u <user1> ...
+  sync-pw <from-root> <to-root> g <group1> ...
+EOF
+}
+
+main "${@}"
