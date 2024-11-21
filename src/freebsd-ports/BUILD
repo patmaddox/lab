@@ -55,9 +55,11 @@ genrule(
     },
     cmd = [
         "mkdir -p pkgroot packages/141-default",
-        "env REPOS_DIR=$(realpath ${SRCS_REPOS_DIR}) INSTALL_AS_USER=yes pkg -r pkgroot fetch -a -y -r 141-default -o $(realpath packages/141-default)"
+        "env REPOS_DIR=$(realpath ${SRCS_REPOS_DIR}) INSTALL_AS_USER=yes pkg -r pkgroot fetch -a -y -r 141-default -o $(realpath packages/141-default) > packages/141-default/build.log 2>packages/141-default/error.log",
+        "pkg repo -o $(realpath packages/141-default) packages/141-default"
     ],
-    outs = ["packages/141-default"]
+    outs = ["packages/141-default"],
+    visibility = ["//infra/..."]
 )
 
 genrule(
