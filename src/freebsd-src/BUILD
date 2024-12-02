@@ -36,5 +36,5 @@ def freebsd_release(name:str, version:str, kernconf:str="GENERIC"):
     )
 
 freebsd_release(name = "rel--15.0-stabweek-2024-10", version = "525a177c", kernconf ="GENERIC-NODEBUG")
-freebsd_release(name = "rel--14.2-BETA3", version = "bcd5f957")
+freebsd_release(name = "rel--14.2-RC1", version = "5395ddd7")
 freebsd_release(name = "rel--14.1-RELEASE-p6", version = "74b6c983")

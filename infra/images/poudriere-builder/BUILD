@@ -2,7 +2,7 @@ filegroup(
     name = "freebsd-rel",
     srcs = {
         "FREEBSD_15_STABWEEK_2024_10": "//src/freebsd-src:rel--15.0-stabweek-2024-10",
-        "FREEBSD_142_BETA3": "//src/freebsd-src:rel--14.2-BETA3",
+        "FREEBSD_142_RC1": "//src/freebsd-src:rel--14.2-RC1",
         "FREEBSD_141_RELEASE_P6": "//src/freebsd-src:rel--14.1-RELEASE-p6"        
     }
 )
