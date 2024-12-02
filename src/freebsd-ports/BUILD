@@ -18,6 +18,18 @@ sh_cmd(
     ],
 )
 
+export_file(
+    name = "portfiles--beastie",
+    src = "beastie.ports",
+    visibility = ["//infra/images/..."]
+)
+
+filegroup(
+    name = "portfiles",
+    srcs = [":portfiles--beastie"],
+    visibility = ["//infra/images/..."]
+)
+
 jj_repo(
     name = "repo--main",
     repo = "freebsd-ports",

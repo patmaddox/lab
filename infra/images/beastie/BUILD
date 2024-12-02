@@ -4,7 +4,7 @@ genrule(
     srcs = {
         "FREEBSD_REL": "//src/freebsd-src:rel--14.1-RELEASE-p6",
         "PACKAGES": "//src/freebsd-ports:packages--141-default",
-        "PORTSFILE": "beastie.ports",
+        "PORTSFILE": "//src/freebsd-ports:portfiles--beastie",
         "DISTDIR": "dist",
         "BUILD_SH": "scripts/build.sh",
         "SYNC_PW_SH": "//src/sync-pw"
