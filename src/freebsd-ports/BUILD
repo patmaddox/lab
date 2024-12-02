@@ -33,7 +33,7 @@ filegroup(
 jj_repo(
     name = "repo--main",
     repo = "freebsd-ports",
-    version = "main",
+    version = "7fd38b1a",
     visibility = ["//infra/images/..."]
 )
 
