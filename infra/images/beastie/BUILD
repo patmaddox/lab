@@ -2,8 +2,8 @@ genrule(
     name = "beastie",
     outs = ["beastie.zfs", "build.log", "error.log"],
     srcs = {
-        "FREEBSD_REL": "//src/freebsd-src:rel--14.1-RELEASE-p6",
-        "PACKAGES": "//src/freebsd-ports:packages--141-default",
+        "FREEBSD_REL": "//src/freebsd-src:rel--14.2-RC1",
+        "PACKAGES": "//src/freebsd-ports:packages--142-default",
         "PORTSFILE": "//src/freebsd-ports:portfiles--beastie",
         "DISTDIR": "dist",
         "BUILD_SH": "scripts/build.sh",
