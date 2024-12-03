@@ -13,8 +13,7 @@ fetch_jj_cmd(
 sh_cmd(
     name = "list-ports",
     cmd = [
-        "cd $(dir :list-ports)",
-        "sh scripts/list-ports.sh > $(hostname -s).ports",
+        "sh $(dir :list-ports)/scripts/list-ports.sh",
     ],
 )
 
