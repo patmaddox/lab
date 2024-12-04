@@ -19,12 +19,13 @@ def freebsd_release(name:str, version:str, kernconf:str="GENERIC"):
         timeout = 60 * 60 * 4, # 4 hours max
         srcs = {
             "BUILD_SH": "scripts/build.sh",
+            "CCACHE_CONF": "ccache.conf",
             "FREEBSD_SRC": f":repo--{clean_version}",
             "SRCCONF": "src.conf",
         },
         cmd = [
             "mkdir _build",
-            f"doas env -i PATH=${PATH} BUILDDIR=$(realpath _build) SRCDIR=$(realpath ${SRCS_FREEBSD_SRC}) SRCCONF=$(realpath ${SRCS_SRCCONF}) KERNCONF={kernconf} sh ${SRCS_BUILD_SH} > _build/build.log 2> _build/error.log",
+            f"doas env -i PATH=${PATH} BUILDDIR=$(realpath _build) SRCDIR=$(realpath ${SRCS_FREEBSD_SRC}) SRCCONF=$(realpath ${SRCS_SRCCONF}) KERNCONF={kernconf} CCACHE_CONFIGPATH=$(realpath ${SRCS_CCACHE_CONF}) sh ${SRCS_BUILD_SH} > _build/build.log 2> _build/error.log",
             f"mkdir {name}",
             f"echo {name}:{clean_version} > {name}/VERSION",
             f"cp _build/rel/*.txz _build/rel/MANIFEST _build/*.log {name}/",
