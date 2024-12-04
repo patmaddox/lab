@@ -77,16 +77,3 @@ def built_packages(name:str):
 
 built_packages("141-default")
 built_packages("142-default")
-
-genrule(
-    name = "packages--14-stable-main",
-    srcs = {
-        "BULK_SH": ":bulk",
-        "PORTS_FILES": ":ports-files"
-    },
-    cmd = [
-        "echo ${SRCS_PORTS_FILES} | sed -e 's/[[:space:]]/ -f /g' -e 's/^/-f /' | xargs ./${SRCS_BULK_SH} -N",
-        "pkg repo -o packages/14-stable-main /usr/local/poudriere/data/packages/14-stable-main/.latest/All"
-    ],
-    outs = ["packages/14-stable-main"]
-)
