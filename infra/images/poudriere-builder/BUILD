@@ -7,6 +7,11 @@ filegroup(
     ]
 )
 
+export_file(
+    name = "portsfile",
+    src = "poudriere-builder.ports"
+)
+
 def poudriere_builder(version:str):
     name = f"poudriere-builder-{version}"
     

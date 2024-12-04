@@ -22,6 +22,7 @@ filegroup(
     name = "portsfiles",
     srcs = [
         "//infra/images/beastie:portsfile",
+        "//infra/images/poudriere-builder:portsfile"
     ],
     visibility = ["//infra/images/..."]
 )

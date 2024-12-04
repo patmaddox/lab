@@ -1,0 +1,5 @@
+ports-mgmt/pkg
+ports-mgmt/poudriere-devel
+sysutils/htop
+sysutils/tmux
+www/nginx
