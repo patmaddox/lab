@@ -18,15 +18,11 @@ sh_cmd(
     ],
 )
 
-export_file(
-    name = "portfiles--beastie",
-    src = "beastie.ports",
-    visibility = ["//infra/images/..."]
-)
-
 filegroup(
-    name = "portfiles",
-    srcs = [":portfiles--beastie"],
+    name = "portsfiles",
+    srcs = [
+        "//infra/images/beastie:portsfile",
+    ],
     visibility = ["//infra/images/..."]
 )
 
@@ -45,11 +41,6 @@ genrule(
         "poudriere ports -l -q | grep '^main[[:space:]]' > main.txt"
     ],
     outs = ["main.txt"]
-)
-
-filegroup(
-    name = "ports-files",
-    srcs = glob(["*.ports"])
 )
 
 sh_cmd(

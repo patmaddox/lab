@@ -1,10 +1,16 @@
+export_file(
+    name = "portsfile",
+    src = "beastie.ports",
+    visibility = ["//infra/images/poudriere-builder:portsfiles"]
+)
+
 genrule(
     name = "beastie",
     outs = ["beastie.zfs", "build.log", "error.log"],
     srcs = {
         "FREEBSD_REL": "//src/freebsd-src:rel--14.2-RELEASE",
         "PACKAGES": "//src/freebsd-ports:packages--142-default",
-        "PORTSFILE": "//src/freebsd-ports:portfiles--beastie",
+        "PORTSFILE": ":portsfile",
         "DISTDIR": "dist",
         "BUILD_SH": "scripts/build.sh",
         "SYNC_PW_SH": "//src/sync-pw"
