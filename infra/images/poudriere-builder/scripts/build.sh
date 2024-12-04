@@ -54,6 +54,12 @@ build::extract() {
 
 build::config() {
     tar -c -C ${DISTDIR} . | tar -x -C ${rootdir} --gid 0 --uid 0
+
+    mkdir -p ${rootdir}/opt/etc
+    local f
+    for f in ${PORTSFILES}; do
+	cp ${f} ${rootdir}/opt/etc/
+    done
 }
 
 build::copy-freebsd-rel() {
