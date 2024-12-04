@@ -4,3 +4,7 @@ help:
 # list installed port origins
 list-ports:
   sh scripts/list-ports.sh
+
+# run poudriere testport on all unmerged commits
+test-pending:
+  sh scripts/test-pending.sh $(realpath ../../repos/freebsd-ports.jj)
