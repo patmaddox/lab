@@ -1,0 +1,7 @@
+export MAKEOBJDIR := "_build"
+
+make *args: make-build
+  make {{args}}
+
+@make-build:
+  mkdir -p $MAKEOBJDIR

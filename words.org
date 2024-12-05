@@ -1,0 +1,163 @@
+* manuals, tutorials, handbooks, etc
+- manuals tell you all the functionality
+- provide little or nothing in the way of creative operation
+- tutorials provide step-by-step instructions on exercising functionality to produce a result
+- handbook is higher level, more about possibilities
+- field manual, guidebook, etc
+- what about tips and tricks?
+- bag of tricks
+* pat's jj bag of tricks
+- ~new -A~ and ~rebase -A~ to make a new trunk
+* my dev machine is production
+- need it to be reliable and repeatable
+- want my config to be in a repo, tested before deploy
+- should be something similar to `make && make install`
+* just as a command runner
+- it has documentation
+- wrap everything? even jj commands?
+- could always use modules
+- compare ~jj gpa~ to ~just jj push all~
+- jj has command aliases, but are they discoverable?
+- just makes every single tool discoverable
+- layered architecture - well-constructed CLI tools, wrapped by just
+- can integrate this with please
+  - please build to build and test the tool
+  - just to provide context-specific invocations
+- utilities can include justmods for easier invocation
+* jj supports many workflows
+- heavily trunk-based like what I'm doing with my lab repo
+- freebsd-ports: lots of leaves
+- no reason it needs to be linear
+- could all be separate, and pulled together with a merge
+- how to save if not for a merge? maybe just push
+- I guess you can push to save something, and then rename it with a bookmark
+- all leaves lets JJ sort them by last modified
+- it would be nice if merge did that as well, but I don't know if it's possible
+- it just means that I `jj git push -c` a lot to save work
+* jj is nimble
+- I can rearrange commits on the fly, in a way that makes sense to me
+- I don't have to commit to a particular structure or workflow
+- I can see what pijul is getting at - I want a commit, and its dependencies
+* jj doesn't need to rebase
+- NOTE: when I publish this, remove ~just rebase~ - it's no longer necessary
+- old way of thinking
+  - add a commit
+  - rebase all the other commits on top of it
+- new way of thinking
+  - add a commit after trunk
+  - squash into it
+  - or even easier - rebase after trunk with ~jj rebase -s myrev -A trunk~
+    - this effectively becomes the new trunk
+    - then just need to update the bookmark
+    - new trunk is the commit with multiple children
+* thinking in unix - everything is a function or a library
+- every CLI tool is main
+- every CLI tool can be a function used in a bigger main
+- can do simple remote execution with SSH
+* please test and the hard links
+I'm not quite sure what happened.
+It seemed like ~please build~ was not producing new files.
+At some point I did ~ls -l~ and saw there were four hard links.
+I think a server was still running, and held a reference.
+
+I think ~plz build~ uses hard links in test mode, so that you can edit the tests.
+Or maybe something funky just happened.
+* please just build my software
+layered repo development
+please to provide consistent structure
+just to provide ergonomic interface
+the framework helps you design things well internally
+* ramblings (musings?), lab notes, articles, essays
+- ramblings
+  - shit that's in my head
+  - May have no value whatsoever
+  - prognostications
+- lab notes
+  - problems I've solved, results I got
+  - intended to be useful, but not fully baked
+  - good for inspiration, rather than direction
+  - I don't check my work
+- articles
+  - information intended to help you produce a result
+  - I check my work
+  - reliable in context
+- essays
+  - intentional effort on my part to elevate (?) my thinking
+  - akin to Paul Graham in the early days
+    - before he conflated capital wealth with societal effectiveness
+- really exist on a spectrum
+  - ramblings can become essays
+  - lab notes can become articles
+  - lab notes / articles are me sharing my experience to help you
+  - ramblings and essays are an effort to develop my thinking
+  - objectis with different levels of effort and intentionality
+- two objectives: help you, develop my thinking
+  - feedback loop between them
+  - then one day I'll be dead
+- all forms of "words"
+* blog platforms are generally insufficient
+- want VCS-aware platform
+- fossil is really nice - can link to versions etc
+* what does freebsd release process actually do?
+- a few methods to determine it
+  - read the source code
+  - read the docs
+  - exercise the behavior and examine the results
+- how to exercise the behavior
+  - create a VM with everything on ZFS
+  - snapshot before each step
+  - diff after each step
+* building assets - when to rebuild vs not
+I want to build stuff, but I don't want to build stuff needlessly.
+I only need to build things that change.
+A FreeBSD release doesn't change.
+The only thing that might change are the assets I produce from it.
+e.g. I may start with txz release, and then add pkgbase.
+
+But just because I change the build script, doesn't mean I want to rebuild the txz.
+Ideally, I produce the exact same txz as what FreeBSD does.
+This way I can fetch official release tarballs, or produce my own.
+
+After I've produced a release asset, I can remove it from the build.
+I can fetch it from its deployed location.
+* Why generate config files instead of checking them in directly
+You have to ignore a lot of stuff in your home dir!
+It can be easy to miss things.
+Plus what about system-specific configs?
+* chaos service - forcefully power off the VM (reliability wise)
+What happens when the machine goes down?
+
+avert disaster
+before it happens
+get reliability wise
+* static lib, dynamic tests
+Why not write the core in static, and tests in dynamic?
+Gleam for lib, Elixir for tests.
+* root privileged elixir processes
+The basic problem with root privileged elixir processes is messages.
+If you have a message that takes a function, it becomes possible to execute anything as roo.
+It's basically a shell.
+Then there's remoting into the system - which absolutely is a shell.
+
+So, make two different processes that connect via unix domain sockets.
+The root process does not connect to the manager nodes.
+They communicate with each other via domain sockets.
+* running personal freebsd ports and src build infrastructure
+fwiw it's evident to me that for anyone making ports or src changes is
+that our personal work queues cycle faster than the project queues -
+because there are so many people contributing to the project queue in
+the first place (and thinking of it as a tidy queue is probably pretty
+generous...)
+
+so the practical reality is that you must have some build
+infrastructure for whichever repo you're active in, if you want to use
+it.
+
+and I think that can become more normalized, even if it seems out of
+reach / unnecessary / heavy-handed for a lot of people. Because it's
+really not - we need to document the effective practices that
+individuals already use. That's something that I'm personally working
+on, so I can at least share my experience with others.
+
+And I'm not saying that we shouldn't try to streamline things within
+the project... just that most people's attitude towards open source

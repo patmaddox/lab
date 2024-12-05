@@ -1,0 +1,129 @@
+#+TODO: TODO(t) NEXT(n) ACTV(a) HOLD(h) | DONE(d)
+
+** lab                                                                  :lab:
+*** ACTV [#A] backup
+:BRANCH: beastie
+*** TODO jj danger - show changes that aren't saved to a remote
+*** TODO import my fossil repo
+Probably do it in a commit ahead of WIP, or possibly just in a dir in
+WIP. Gradually import it in.
+*** HOLD make a TODO finder across branches?
+*** HOLD test the documentation (or generate it)
+A README file contains information about how to use some commands.
+When I change the commands, the docs get out of date.
+It would be nice to have a mechanism to verify that the documentation is accurate.
+
+Maybe this is something with emacs and org-babel?
+That would be pretty neat with please...
+Run a command to load the documentation into a clean env, run it, verify it.
+*** HOLD global ~pm~ or ~lab~ tool?
+- it's not automation... it's patamation - patamatic
+- wrap the builders and runners
+- does this like ~pm desktop video start~
+- basically a subcommand runner for all stuff I care about
+- could use just and just-mods
+- install production version via package instead of whatever is in src at the time
+** build                                                              :build:
+*** HOLD make `plz query changes` work with jj
+** emacs                                                              :emacs:
+*** NEXT org-agenda using lab todo.org
+*** NEXT build and test emacs config using please
+*** NEXT inbox.org for quick capture
+*** TODO org-agenda priorities
+*** HOLD markdown list-aware sorting (if an item contains multiple lines, it breaks sort)
+*** HOLD sentence-aware line wrapping
+** elixir                                                            :elixir:
+*** NEXT livebook
+** freebsd community                                      :freebsd:community:
+*** TODO bugcrush - firehose tool
+- quickly preview, CC, ignore bugzilla
+- follow phabricator
+- other things?
+** freebsd-ports                                              :freebsd:ports:
+*** TODO port muffet (I use it in urlcheck)
+*** NEXT update `please`
+*** TODO build a poudriere jail
+*** NEXT tar the ports dir
+- I think this will be a bit faster since please will not have to check every file
+*** TODO update my maintained ports
+*** TODO create a jail
+*** TODO create a ports tree
+*** HOLD build ports from multiple files
+** freebsd-src                                                  :freebsd:src:
+*** TODO set the version number (commit count and hash)
+*** HOLD extend makefs to support additional pool layouts
+** infra: beastie                                             :infra:beastie:
+*** NEXT fix beastie tzetup call
+$ file /etc/localtime
+/etc/localtime: broken symbolic link to /tmp/plz-beastie//usr/share/zoneinfo/America/Los_Angeles
+
+need to chroot the call instead
+*** HOLD deploy an elixir app to GCP / AWS (CC Jesse)
+** infra: network                                             :infra:network:
+*** TODO configure unbound on the router
+** infra: poudriere-builder                                 :infra:poudriere:
+*** TODO poudriere-builder: auto-recover GPT on boot
+*** TODO poudriere-builder: configure nginx
+*** TODO poudriere-builder: configure pkg repos
+*** TODO poudriere-builder: create a separate data volume
+*** TODO poudriere-builder: exclude lib32 and dbg when building a jail
+** jj                                                                    :jj:
+*** TODO ~file export~ to a path
+https://github.com/martinvonz/jj/issues/4884
+** patmaddox.com                                              :patmaddox:com:
+- write in markdown (and maybe org)
+- content is agnostic of the deployment tool - keep it all in a dir
+- eventually I would like a LiveView app, that integrates with libjj to show commit history
+- it could also be cool to build the site with multiple engines
+- sitemap with validator - make sure that if I change URLs, old URLs still work (redirect)
+- make a section called "labnotes" - labnotes vs articles
+*** NEXT [#A] update SSL cert
+*** NEXT [#A] evaluate static site generators
+- [ ] write a BUILD file to convert content to HTML
+- [ ] plz test will build the site and make sure that it produces the right content
+  at some point it will also do a sitemap check
+
+- goals
+  - articles / blog posts
+  - books
+  - export as PDF
+  - pretty much want to do what freebsd.org does
+  - freebsd.org uses asciidoctor
+  - vale as a style checker
+
+([awesome](https://github.com/myles/awesome-static-generators))
+
+| name      | port | lang | description                                                              |
+|-----------+------+------+--------------------------------------------------------------------------|
+| [[https://cobalt-org.github.io/][cobalt]]    | yes  | rust | blog                                                                     |
+| [[https://github.com/spf13/hugo][hugo]]      | yes  | go   | framework - optimized for speed, easy use and configurability            |
+| [[https://github.com/rust-lang/mdBook][mdbook]]    | yes  | rust | wiki - Create book from markdown files                                   |
+| [[https://www.getzola.org/][zola]]      | yes  | rust | framework - Rust powered static site generator                           |
+| [[https://adduce.vale.rocks/][adduce]]    | no   | rust | blogs and standard pages                                                 |
+| [[https://github.com/Doctave/doctave][doctave]]   | no   | rust | developer documentation site generator (last updated 2 years ago)        |
+| [[https://github.com/FooSoft/goldsmith][goldsmith]] | no   | go   | framework - pipeline-based static site generator, extensible via plugins |
+| [[https://github.com/dannyvankooten/gozer][gozer]]     | no   | go   | blog - single static binary                                              |
+| [[https://git.mills.io/prologic/zs][zs]]        | no   | go   | tool - extremely minimal static site generator                           |
+
+- [ ] adduce
+  - ~#rust~ ~#indieweb~
+  - A versatile static site generator that handles both blogs and standard pages
+  - "extend it with whatever scripting system you want"
+- [ ] cobalt
+- [ ] doctave
+- [ ] goldsmith
+  I seem to be aligned with how this guy thinks
+  https://foosoft.net/posts/leaving-github/  
+- [ ] gozer
+- [ ] hugo
+- [ ] mdbook
+- [ ] zola
+- [ ] zs
+
+*** NEXT [#A] migrate HTML content
+*** TODO produce a sitemap of published links
+*** TODO migrate src content
+** poudriere                                                      :poudriere:
+*** HOLD make ~MUTUALLY_EXCLUSIVE_BUILD_PACKAGES~ know about stages
+They shouldn't be in the same build stage, but once one gets into
+package then it's fair to kick another off.
