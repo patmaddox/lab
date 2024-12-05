@@ -6,7 +6,7 @@ main() {
     contentdir=${1}; shift
 
     mkdir -p ${outdir}
-    touch ${outdir}/index.html
+    echo "This is my home page" > ${outdir}/index.html
 }
 
 main "${@}"

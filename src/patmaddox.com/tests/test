@@ -1,0 +1,17 @@
+#!/usr/bin/env atf-sh
+
+root=${ROOTDIR:?}
+
+atf_init_test_cases() {
+    atf_add_test_case index
+}
+
+atf_test_case index
+index_head() {
+    atf_set "descr" "Check index page presence and content"
+}
+
+index_body() {
+    atf_check test -f ${root}/index.html
+    atf_check grep -q 'This is my home page' ${root}/index.html
+}

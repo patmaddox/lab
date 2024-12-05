@@ -16,10 +16,12 @@ gentest(
     name = "test",
     data = {
         "ROOT": ":patmaddox.com",
-        "TEST_RUNNER": ":test-script"
+        "TESTSUITE": ":testsuite"
     },
     no_test_output = True,
-    test_cmd = "./${DATA_TEST_RUNNER} ${DATA_ROOT}"
+    test_cmd = [
+        "ROOTDIR=$(realpath ${DATA_ROOT}) kyua test --kyuafile ${DATA_TESTSUITE}/Kyuafile"
+    ]
 )
 
 export_file(
@@ -33,6 +35,6 @@ export_file(
 )
 
 export_file(
-    name = "test-script",
-    src = "tests/test.sh"
+    name = "testsuite",
+    src = "tests"
 )
