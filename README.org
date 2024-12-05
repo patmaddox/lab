@@ -1,3 +1,13 @@
 * patmaddox lab
 
 Each dir in ~src~ has a fetch target to clone the repo.
+
+** Just commands
+
+The top-level [[https://just.systems/][Justfile]] provides primary commands for interacting with the repo and workstation.
+
+** Source Roadmap
+
+| Directory     | Description                                                |
+|---------------+------------------------------------------------------------|
+| src/just-mods | Just modules that are loaded into the top-level ~Justfile~ |

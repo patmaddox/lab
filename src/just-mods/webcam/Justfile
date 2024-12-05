@@ -1,0 +1,10 @@
+help:
+  @just -l
+
+# list the processes that have open files on /dev/video*
+ls:
+  sh release-video.sh ls
+
+# kill firefox processes that have opened /dev/video*
+kill:
+  sh release-video.sh kill
