@@ -10,13 +10,6 @@ fetch_jj_cmd(
     }]
 )
 
-sh_cmd(
-    name = "list-ports",
-    cmd = [
-        "sh $(dir :list-ports)/scripts/list-ports.sh",
-    ],
-)
-
 filegroup(
     name = "portsfiles",
     srcs = [

@@ -1,0 +1,6 @@
+help:
+  @just -l
+
+# list installed port origins
+list-ports:
+  sh scripts/list-ports.sh
