@@ -20,7 +20,7 @@ gentest(
     },
     no_test_output = True,
     test_cmd = [
-        "ROOTDIR=$(realpath ${DATA_ROOT}) kyua test --kyuafile ${DATA_TESTSUITE}/Kyuafile"
+        "ROOTDIR=$(realpath ${DATA_ROOT}) KYUAFILE=$(realpath ${DATA_TESTSUITE}/Kyuafile) ./${DATA_TESTSUITE}/kyua-wrapper.sh"
     ]
 )
 
