@@ -5,7 +5,7 @@ serve:
   zola -r generators/zola serve
 
 test:
-  plz test -s :test
+  plz test :test
 
 debug +args:
-  plz test -s :debug {{args}}
+  plz test :debug {{args}}
