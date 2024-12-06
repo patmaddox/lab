@@ -2,10 +2,11 @@ genrule(
     name = "patmaddox.com",
     srcs = {
         "CONTENT": ":content",
-        "GENERATOR": ":generator--basic"
+        "ZOLA": ":generator--zola"
     },
     cmd = [
-        "./${SRCS_GENERATOR} _out ${SRCS_CONTENT}"
+        "zola -r ${SRCS_ZOLA} build",
+        "mv ${SRCS_ZOLA}/public _out"
     ],
     outs = [
         "_out"
@@ -45,6 +46,11 @@ export_file(
 export_file(
     name = "generator--basic",
     src = "generators/basic.sh"
+)
+
+export_file(
+    name = "generator--zola",
+    src = "generators/zola"
 )
 
 export_file(
