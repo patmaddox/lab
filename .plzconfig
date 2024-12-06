@@ -19,5 +19,8 @@ blacklistdirs = repos/please.jj
 [build]
 path = /sbin:/bin:/usr/sbin:/usr/bin:/usr/local/sbin:/usr/local/bin
 
+[buildconfig]
+muffet-tool = /home/patmaddox/go/bin/muffet
+
 [Plugin "shell"]
 Target = //build/please-plugins:shell

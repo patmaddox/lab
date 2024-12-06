@@ -24,7 +24,7 @@ gentest(
         "MUFFET=${TOOLS_MUFFET} URLCHECK=${TOOLS_URLCHECK} ROOTDIR=$(realpath ${DATA_ROOT}) kyua test --kyuafile=${DATA_TESTSUITE}/Kyuafile"
     ],
     test_tools = {
-        "MUFFET": "/home/patmaddox/go/bin/muffet",
+        "MUFFET": CONFIG.MUFFET_TOOL,
         "URLCHECK": "//src/urlcheck:urlcheck"
     }
 )
@@ -40,7 +40,7 @@ gentest(
         "MUFFET=${TOOLS_MUFFET} URLCHECK=${TOOLS_URLCHECK} ROOTDIR=$(realpath ${DATA_ROOT}) kyua debug --kyuafile=${DATA_TESTSUITE}/Kyuafile"
     ],
     test_tools = {
-        "MUFFET": "/home/patmaddox/go/bin/muffet",
+        "MUFFET": CONFIG.MUFFET_TOOL,
         "URLCHECK": "//src/urlcheck:urlcheck"
     },
     labels = ["manual"]
