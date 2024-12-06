@@ -1,6 +1,7 @@
 export_file(
     name = "urlcheck",
-    src = "urlcheck.sh"
+    src = "urlcheck.sh",
+    visibility = ["//src/patmaddox.com/..."]
 )
 
 gentest(

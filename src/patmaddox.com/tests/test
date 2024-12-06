@@ -19,6 +19,7 @@ check_get() {
     local url
     url=${1}; shift
 
+    atf_check ${URLCHECK} ${www} ${url}
     atf_check fetch -q -o ${outfile} ${url}
 }
 
