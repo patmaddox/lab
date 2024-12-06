@@ -1,65 +1,41 @@
-genrule(
-    name = "patmaddox.com",
-    srcs = {
-        "CONTENT": ":content",
-        "ZOLA": ":generator--zola"
-    },
-    cmd = [
-        "zola -r ${SRCS_ZOLA} build",
-        "mv ${SRCS_ZOLA}/public patmaddox.com"
-    ],
-    outs = [
-        "patmaddox.com"
-    ]
-)
+def build_site(name:str, args:str=None):
+    genrule(
+        name = name,
+        srcs = {
+            "CONTENT": ":content",
+            "ZOLA": ":generator--zola"
+        },
+        cmd = [
+            f"zola -r ${SRCS_ZOLA} build {args}",
+            f"mv ${SRCS_ZOLA}/public {name}"
+        ],
+        outs = [
+            name
+        ]
+    )
 
-genrule(
-    name = "localhost",
-    srcs = {
-        "CONTENT": ":content",
-        "ZOLA": ":generator--zola"
-    },
-    cmd = [
-        "zola -r ${SRCS_ZOLA} build -u http://localhost:62123",
-        "mv ${SRCS_ZOLA}/public localhost"
-    ],
-    outs = [
-        "localhost"
-    ]
-)
+build_site("patmaddox.com")
+build_site("localhost", args="-u http://localhost:62123")
 
-gentest(
-    name = "test",
-    data = {
-        "ROOT": ":localhost",
-        "TESTSUITE": ":testsuite"
-    },
-    no_test_output = True,
-    test_cmd = [
-        "MUFFET=${TOOLS_MUFFET} URLCHECK=${TOOLS_URLCHECK} ROOTDIR=$(realpath ${DATA_ROOT}) kyua test --kyuafile=${DATA_TESTSUITE}/Kyuafile"
-    ],
-    test_tools = {
-        "MUFFET": CONFIG.MUFFET_TOOL,
-        "URLCHECK": "//src/urlcheck:urlcheck"
-    }
-)
+def test_cmd(name:str):
+    gentest(
+        name = name,
+        data = {
+            "ROOT": ":localhost",
+            "TESTSUITE": ":testsuite"
+        },
+        no_test_output = True,
+        test_cmd = [
+            f"MUFFET=${TOOLS_MUFFET} URLCHECK=${TOOLS_URLCHECK} ROOTDIR=$(realpath ${DATA_ROOT}) kyua {name} --kyuafile=${DATA_TESTSUITE}/Kyuafile"
+        ],
+        test_tools = {
+            "MUFFET": CONFIG.MUFFET_TOOL,
+            "URLCHECK": "//src/urlcheck:urlcheck"
+        }
+    )
 
-gentest(
-    name = "debug",
-    data = {
-        "ROOT": ":localhost",
-        "TESTSUITE": ":testsuite"
-    },
-    no_test_output = True,
-    test_cmd = [
-        "MUFFET=${TOOLS_MUFFET} URLCHECK=${TOOLS_URLCHECK} ROOTDIR=$(realpath ${DATA_ROOT}) kyua debug --kyuafile=${DATA_TESTSUITE}/Kyuafile"
-    ],
-    test_tools = {
-        "MUFFET": CONFIG.MUFFET_TOOL,
-        "URLCHECK": "//src/urlcheck:urlcheck"
-    },
-    labels = ["manual"]
-)
+test_cmd("test")
+test_cmd("debug")
 
 export_file(
     name = "content",
