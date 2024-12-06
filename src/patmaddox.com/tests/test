@@ -1,17 +1,35 @@
 #!/usr/bin/env atf-sh
 
 root=${ROOTDIR:?}
+port=62123
+www=http://localhost:${port}
+
+httpd::start() {
+    thttpd -p ${port} -dd ${root} -i thttpd.pid
+    # it would be nice if it didn't return until after it was done
+    # binding, but it doesn't, so wait
+    sleep 0.2
+}
+
+httpd::stop() {
+    kill $(cat thttpd.pid)
+}
 
 atf_init_test_cases() {
     atf_add_test_case index
 }
 
-atf_test_case index
+atf_test_case index cleanup
 index_head() {
     atf_set "descr" "Check index page presence and content"
 }
 
 index_body() {
-    atf_check test -f ${root}/index.html
-    atf_check grep -q 'This is my home page' ${root}/index.html
+    httpd::start
+    fetch -q -o output.html ${www}
+    atf_check grep -q 'This is my home page' output.html
+}
+
+index_cleanup() {
+    httpd::stop
 }
