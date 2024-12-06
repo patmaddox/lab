@@ -17,26 +17,32 @@ gentest(
     name = "test",
     data = {
         "ROOT": ":patmaddox.com",
-        "TESTSUITE": ":testsuite",
-        "URLCHECK": "//src/urlcheck:urlcheck"
+        "TESTSUITE": ":testsuite"
     },
     no_test_output = True,
     test_cmd = [
-        "URLCHECK=$(realpath ${DATA_URLCHECK}) ROOTDIR=$(realpath ${DATA_ROOT}) kyua test --kyuafile=${DATA_TESTSUITE}/Kyuafile"
-    ]
+        "MUFFET=${TOOLS_MUFFET} URLCHECK=${TOOLS_URLCHECK} ROOTDIR=$(realpath ${DATA_ROOT}) kyua test --kyuafile=${DATA_TESTSUITE}/Kyuafile"
+    ],
+    test_tools = {
+        "MUFFET": "/home/patmaddox/go/bin/muffet",
+        "URLCHECK": "//src/urlcheck:urlcheck"
+    }
 )
 
 gentest(
     name = "debug",
     data = {
         "ROOT": ":patmaddox.com",
-        "TESTSUITE": ":testsuite",
-        "URLCHECK": "//src/urlcheck:urlcheck"
+        "TESTSUITE": ":testsuite"
     },
     no_test_output = True,
     test_cmd = [
-        "URLCHECK=$(realpath ${DATA_URLCHECK}) ROOTDIR=$(realpath ${DATA_ROOT}) kyua debug --kyuafile=${DATA_TESTSUITE}/Kyuafile"
+        "MUFFET=${TOOLS_MUFFET} URLCHECK=${TOOLS_URLCHECK} ROOTDIR=$(realpath ${DATA_ROOT}) kyua debug --kyuafile=${DATA_TESTSUITE}/Kyuafile"
     ],
+    test_tools = {
+        "MUFFET": "/home/patmaddox/go/bin/muffet",
+        "URLCHECK": "//src/urlcheck:urlcheck"
+    },
     labels = ["manual"]
 )
 

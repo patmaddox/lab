@@ -1,11 +1,13 @@
 #!/bin/sh
 set -eu
 
+muffet=${MUFFET:-muffet}
+
 main() {
     host=${1}; shift
     url=${1}; shift
 
-    /home/patmaddox/go/bin/muffet --color=never -i ${host} ${url}
+    ${muffet} --color=never -i ${host} ${url}
 }
 
 main "${@}"
