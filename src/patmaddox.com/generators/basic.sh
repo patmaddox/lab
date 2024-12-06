@@ -6,7 +6,11 @@ main() {
     contentdir=${1}; shift
 
     mkdir -p ${outdir}
-    echo "This is my home page" > ${outdir}/index.html
+    cp ${contentdir}/*.txt ${outdir}
+    local p
+    for p in $(ls ${contentdir}/*.md); do
+	cp ${p} ${outdir}/$(basename ${p} .md).html
+    done
 }
 
 main "${@}"

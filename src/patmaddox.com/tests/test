@@ -3,6 +3,7 @@
 root=${ROOTDIR:?}
 port=62123
 www=http://localhost:${port}
+outfile=output.html
 
 httpd::start() {
     thttpd -p ${port} -dd ${root} -i thttpd.pid
@@ -12,13 +13,24 @@ httpd::start() {
 }
 
 httpd::stop() {
-    kill $(cat thttpd.pid)
+    if [ -f thttpd.pid ]; then
+	kill $(cat thttpd.pid)
+    fi
+}
+
+check_get() {
+    local url
+    url=${1}; shift
+
+    atf_check fetch -q -o ${outfile} ${url}
 }
 
 atf_init_test_cases() {
     atf_add_test_case index
+    atf_add_test_case sitemap
 }
 
+## index
 atf_test_case index cleanup
 index_head() {
     atf_set "descr" "Check index page presence and content"
@@ -26,10 +38,34 @@ index_head() {
 
 index_body() {
     httpd::start
-    fetch -q -o output.html ${www}
-    atf_check grep -q 'This is my home page' output.html
+    check_get ${www}
+    atf_check grep -q 'This is my home page' ${outfile}
 }
 
 index_cleanup() {
+    httpd::stop
+}
+
+## sitemap
+atf_test_case sitemap cleanup
+sitemap_head() {
+    atf_set "descr" "Check all pages in the sitemap"
+}
+
+sitemap_body() {
+    atf_check grep -q https://www.patmaddox.com ${root}/sitemap.txt
+
+    httpd::start
+    local urls
+    urls=$(sed -e "s|^https://www.patmaddox.com|${www}|" < ${root}/sitemap.txt)
+    for u in ${urls}; do
+	check_get ${u}
+    done
+
+    # make sure that something got got
+    atf_check test -f ${outfile}
+}
+
+sitemap_cleanup() {
     httpd::stop
 }
