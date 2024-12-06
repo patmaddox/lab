@@ -1,5 +1,11 @@
+set positional-arguments
+
 help:
   @just -l
+
+# insert a new commit at the end of the current patch series
+new *args:
+  jj new --no-edit -B org "${@}"
 
 serve:
   zola -r generators/zola serve
