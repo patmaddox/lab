@@ -6,17 +6,32 @@ genrule(
     },
     cmd = [
         "zola -r ${SRCS_ZOLA} build",
-        "mv ${SRCS_ZOLA}/public _out"
+        "mv ${SRCS_ZOLA}/public patmaddox.com"
     ],
     outs = [
-        "_out"
+        "patmaddox.com"
+    ]
+)
+
+genrule(
+    name = "localhost",
+    srcs = {
+        "CONTENT": ":content",
+        "ZOLA": ":generator--zola"
+    },
+    cmd = [
+        "zola -r ${SRCS_ZOLA} build -u http://localhost:62123",
+        "mv ${SRCS_ZOLA}/public localhost"
+    ],
+    outs = [
+        "localhost"
     ]
 )
 
 gentest(
     name = "test",
     data = {
-        "ROOT": ":patmaddox.com",
+        "ROOT": ":localhost",
         "TESTSUITE": ":testsuite"
     },
     no_test_output = True,
@@ -32,7 +47,7 @@ gentest(
 gentest(
     name = "debug",
     data = {
-        "ROOT": ":patmaddox.com",
+        "ROOT": ":localhost",
         "TESTSUITE": ":testsuite"
     },
     no_test_output = True,

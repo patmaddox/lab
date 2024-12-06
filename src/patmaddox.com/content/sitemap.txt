@@ -7,3 +7,5 @@ https://patmaddox.com/doc/trunk/www/lenovo-t14-gen2-amd-a-fine-laptop-for-freebs
 https://patmaddox.com/doc/trunk/www/open-source-contributions/
 https://patmaddox.com/doc/trunk/www/programming-freebsd-reading-process-information/
 https://patmaddox.com/doc/trunk/www/sh-relative-shell-script-includes-with-realpath-on-freebsd/
+https://patmaddox.com/doc/trunk/www/what-i-like-about-fossil.md
+https://patmaddox.com/doc/trunk/www/why-monorepo.md

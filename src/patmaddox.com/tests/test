@@ -6,7 +6,7 @@ www=http://localhost:${port}
 outfile=output.html
 
 httpd::start() {
-    darkhttpd ${root} --daemon --pidfile httpd.pid --port ${port} || exit 1
+    darkhttpd ${root} --addr 127.0.0.1 --daemon --pidfile httpd.pid --port ${port} || exit 1
 }
 
 httpd::stop() {
@@ -37,7 +37,8 @@ index_body() {
     httpd::start
     check_get ${www}
     atf_check fetch -q -o ${outfile} ${www}
-    atf_check grep -q 'This is my home page' ${outfile}
+    # check for at least one internal link
+    atf_check grep -q ${www} ${outfile}
 }
 
 index_cleanup() {
@@ -61,7 +62,7 @@ sitemap_body() {
     done
 
     # make sure that something got got
-    atf_check test -f ${outfile}
+    atf_check grep -q ${www} ${outfile}
 }
 
 sitemap_cleanup() {
