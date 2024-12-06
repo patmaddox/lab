@@ -1,0 +1,11 @@
+help:
+  @just -l
+
+serve:
+  zola -r generators/zola serve
+
+test:
+  plz test -s :test
+
+debug +args:
+  plz test -s :debug {{args}}

@@ -6,15 +6,12 @@ www=http://localhost:${port}
 outfile=output.html
 
 httpd::start() {
-    thttpd -p ${port} -dd ${root} -i thttpd.pid
-    # it would be nice if it didn't return until after it was done
-    # binding, but it doesn't, so wait
-    sleep 0.2
+    darkhttpd ${root} --daemon --pidfile httpd.pid --port ${port} || exit 1
 }
 
 httpd::stop() {
-    if [ -f thttpd.pid ]; then
-	kill $(cat thttpd.pid)
+    if [ -f httpd.pid ]; then
+	kill $(cat httpd.pid)
     fi
 }
 
