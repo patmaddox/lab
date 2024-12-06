@@ -1,0 +1,11 @@
+help:
+  @just -l
+
+ls-tests:
+  kyua list --kyuafile=test/Kyuafile
+
+test:
+  plz test -s :test
+
+debug +args:
+  plz test -s :debug {{args}}

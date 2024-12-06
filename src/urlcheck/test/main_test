@@ -1,0 +1,96 @@
+#!/usr/bin/env atf-sh
+port=62123
+www=http://localhost:${port}
+
+httpd::start() {
+    darkhttpd $(atf_get_srcdir)/html --daemon --pidfile httpd.pid --port ${port} || exit 1
+}
+
+httpd::stop() {
+    if [ -f httpd.pid ]; then
+	kill $(cat httpd.pid)
+    fi
+}
+
+atf_init_test_cases() {
+    atf_add_test_case invalid_starting_link
+    atf_add_test_case valid_links_same_host
+    atf_add_test_case broken_links_same_host
+    atf_add_test_case skip_links_off_host
+    atf_add_test_case recursion
+}
+
+# invalid_starting_link
+atf_test_case invalid_starting_link cleanup
+invalid_starting_link_head() {
+    atf_set "descr" "Error when the starting link is not known"
+}
+
+invalid_starting_link_body() {
+    httpd::start
+    atf_check -s exit:1 -e match:"failed to fetch root page: 404" ${URLCHECK} ${www} ${www}/not-found
+}
+
+invalid_starting_link_cleanup() {
+    httpd::stop
+}
+
+# valid_links_same_host
+atf_test_case valid_links_same_host cleanup
+valid_links_same_host_head() {
+    atf_set "descr" "Check valid links on the same host"
+}
+
+valid_links_same_host_body() {
+    httpd::start
+    atf_check ${URLCHECK} ${www} ${www}/valid-same-host.html
+}
+
+valid_links_same_host_cleanup() {
+    httpd::stop
+}
+
+# broken_links_same_host
+atf_test_case broken_links_same_host cleanup
+broken_links_same_host_head() {
+    atf_set "descr" "Check broken links on the same host"
+}
+
+broken_links_same_host_body() {
+    httpd::start
+    atf_check -s exit:1 -o match:"404.*broken-foo.html" ${URLCHECK} ${www} ${www}/broken-same-host.html
+}
+
+broken_links_same_host_cleanup() {
+    httpd::stop
+}
+
+# skip_links_off_host
+atf_test_case skip_links_off_host cleanup
+skip_links_off_host_head() {
+    atf_set "descr" "Skip links to a different host"
+}
+
+skip_links_off_host_body() {
+    httpd::start
+    atf_check -s exit:0 ${URLCHECK} ${www} ${www}/broken-different-host.html
+}
+
+skip_links_off_host_cleanup() {
+    httpd::stop
+}
+
+# recursion
+atf_test_case recursion cleanup
+recursion_head() {
+    atf_set "descr" "Check recursive (root -> valid -> broken)"
+}
+
+recursion_body() {
+    httpd::start
+    atf_check -s exit:1 -o match:"404.*broken-foo.html" ${URLCHECK} ${www} ${www}/broken-recursion.html
+}
+
+recursion_cleanup() {
+    httpd::stop
+}

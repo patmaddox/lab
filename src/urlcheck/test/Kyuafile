@@ -1,0 +1,4 @@
+syntax(2)
+
+test_suite('urlcheck')
+atf_test_program{name='main_test'}
