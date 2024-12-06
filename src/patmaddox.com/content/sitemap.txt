@@ -1,1 +1,9 @@
-https://www.patmaddox.com
+https://patmaddox.com
+https://patmaddox.com/doc/trunk/www/
+https://patmaddox.com/doc/trunk/www/2023-04-lenovo-t14-gen2-amd-a-fine-laptop-for-freebsd.md
+https://patmaddox.com/doc/trunk/www/2023-12-sh-relative-shell-script-includes-with-realpath-on-freebsd.md
+https://patmaddox.com/doc/trunk/www/2023-12-sh-relative-shell-script-includes-with-realpath-on-freebsd/
+https://patmaddox.com/doc/trunk/www/lenovo-t14-gen2-amd-a-fine-laptop-for-freebsd.md
+https://patmaddox.com/doc/trunk/www/open-source-contributions/
+https://patmaddox.com/doc/trunk/www/programming-freebsd-reading-process-information/
+https://patmaddox.com/doc/trunk/www/sh-relative-shell-script-includes-with-realpath-on-freebsd/

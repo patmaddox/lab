@@ -51,11 +51,11 @@ sitemap_head() {
 }
 
 sitemap_body() {
-    atf_check grep -q https://www.patmaddox.com ${root}/sitemap.txt
+    atf_check grep -q https://patmaddox.com ${root}/sitemap.txt
 
     httpd::start
     local urls
-    urls=$(sed -e "s|^https://www.patmaddox.com|${www}|" < ${root}/sitemap.txt)
+    urls=$(sed -e "s|^https://patmaddox.com|${www}|" < ${root}/sitemap.txt)
     for u in ${urls}; do
 	check_get ${u}
     done
