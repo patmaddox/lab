@@ -5,15 +5,6 @@ aliases = [
 ]
 +++
 
-# Home
-
-<center>
-<form action='$ROOT/docsrch' method='GET'>
-<input type="text" name="s" size="40" autofocus>
-<input type="submit" value="Search">
-</form>
-</center>
-
 This is my [monorepo](@/_old/why-monorepo.md).
 
 ## Writing
@@ -46,13 +37,3 @@ I ended up getting a FreeBSD laptop instead, and I'm happier for it.
 
 - [What I like about Fossil](@/_old/what-i-like-about-fossil.md)
 - [Why a monorepo?](@/_old/why-monorepo.md)
-
-## Subprojects
-
-### ports
-
-- [ ] use an overlay dir instead of git worktrees
-  - I had stopped using it because of some problem with poudriere.
-    I forget what it was.
-    Git worktrees are kind of a pain to maintain though.
-    I can either go back to poudriere overlays, or construct my own with a bare ports dir and rsync.
