@@ -20,7 +20,6 @@ check_get() {
     url=${1}; shift
 
     atf_check ${URLCHECK} ${www} ${url}
-    atf_check fetch -q -o ${outfile} ${url}
 }
 
 atf_init_test_cases() {
@@ -37,6 +36,7 @@ index_head() {
 index_body() {
     httpd::start
     check_get ${www}
+    atf_check fetch -q -o ${outfile} ${www}
     atf_check grep -q 'This is my home page' ${outfile}
 }
 
@@ -51,13 +51,13 @@ sitemap_head() {
 }
 
 sitemap_body() {
-    atf_check grep -q https://patmaddox.com ${root}/sitemap.txt
-
     httpd::start
+
     local urls
     urls=$(sed -e "s|^https://patmaddox.com|${www}|" < ${root}/sitemap.txt)
     for u in ${urls}; do
 	check_get ${u}
+	echo "${u}" >> ${outfile}
     done
 
     # make sure that something got got
