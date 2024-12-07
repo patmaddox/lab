@@ -2,7 +2,7 @@
 set -eu
 
 repo="https://github.com/thought-machine/please.git"
-tag="v17.12.4"
+tag="v17.12.5"
 tagdir="${tag}.jj"
 trunk="master"
 trunkdir="${trunk}.jj"
