@@ -3,58 +3,39 @@ set -eu
 
 repo="https://github.com/thought-machine/please.git"
 tag="v17.12.5"
-tagdir="${tag}.jj"
 trunk="master"
 trunkdir="${trunk}.jj"
 
 main() {
-    local curdir=$(pwd)
+    local curdir cmd repodir destdir
+    curdir=$(pwd)
+    repodir=${1:?missing repodir arg}; shift
+    destdir=${1:?missing destdir arg}; shift
 
-    jj::clone
-    jj::workspace
-    go::path
-    plz::bootstrap
+    clone
 
-    echo "alias plz=${curdir}/${tagdir}/plz-out/bin/src/please"
-}
-
-jj::clone() {
-    if [ ! -d ${trunkdir} ]; then
-	jj git clone ${repo} ${trunkdir}
+    if [ ! -f ${destdir}/plz ]; then
+	bootstrap
+	install
     fi
 }
 
-jj::workspace() {
-    if [ ! -d ${tagdir} ]; then
-	jj -R ${trunkdir} workspace add --name ${tag} -r ${tag} ${tagdir}
+clone() {
+    if [ ! -d ${repodir} ]; then
+	jj git clone ${repo} ${repodir}
     fi
+    repodir=$(realpath ${repodir})
 }
 
-go::path() {
-    local gobin
-    local goversion=$(awk '$1 == "go" { sub("\\.", "", $2); print($2) }' ${tagdir}/go.mod)
-
-    if [ -z "${goversion}" ]; then
-	error "no go version found in ${tagdir}/go.mod"
-    fi
-
-    gobin="/usr/local/go${goversion}/bin/go"
-    if [ ! -x "${gobin}" ]; then
-	error "no file ${gobin}"
-    fi
-
-    export PATH=$(dirname ${gobin}):${PATH}
-}
-
-plz::bootstrap() {
-    cd ${tag}.jj
+bootstrap() {
+    cd ${repodir}
+    jj new ${tag}
     ./bootstrap.sh --skip_tests
+    cd ${curdir}
 }
 
-error() {
-    local message="${1}"
-    echo "E: ${message}" 1>&2
-    exit 1
+install() {
+    cp ${repodir}/plz-out/bin/src/please ${destdir}/plz
 }
 
 main "${@}"

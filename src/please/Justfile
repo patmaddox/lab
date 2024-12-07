@@ -1,0 +1,5 @@
+help:
+  @just -l
+
+bootstrap:
+  ./bootstrap.sh ../../repos/please.jj ../../bin/

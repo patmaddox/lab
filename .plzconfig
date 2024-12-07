@@ -15,8 +15,6 @@ blacklistdirs = repos/freebsd-ports.jj
 blacklistdirs = repos/freebsd-src.jj
 blacklistdirs = repos/jj.jj
 blacklistdirs = repos/please.jj
-blacklistdirs = src/please/master.jj
-blacklistdirs = src/please/v17.12.5.jj
 
 [build]
 path = /sbin:/bin:/usr/sbin:/usr/bin:/usr/local/sbin:/usr/local/bin
