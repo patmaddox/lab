@@ -12,19 +12,16 @@ main() {
     repodir=${1:?missing repodir arg}; shift
     destdir=${1:?missing destdir arg}; shift
 
-    clone
+    if [ ! -d ${repodir} ]; then
+	echo "E: clone ${repodir} first" 1>&2
+	exit 1
+    fi
 
+    repodir=$(realpath ${repodir})
     if [ ! -f ${destdir}/plz ]; then
 	bootstrap
 	install
     fi
-}
-
-clone() {
-    if [ ! -d ${repodir} ]; then
-	jj git clone ${repo} ${repodir}
-    fi
-    repodir=$(realpath ${repodir})
 }
 
 bootstrap() {

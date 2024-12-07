@@ -1,20 +1,3 @@
-def fetch_jj_cmd(name:str, repo:str, url:str, remotes:list=[]):
-    jj_repo_dir = f"{repo}.jj"
-    
-    repo_cmds = [
-        "cd repos",
-        f"if [ ! -d {jj_repo_dir} ]; then jj git clone {url} {jj_repo_dir}; fi"
-    ]
-
-    remote_cmds = map(lambda rem: f"if ! jj -R {jj_repo_dir} git remote list | awk -v r={rem.name} '\\\$1 == r' | grep -q {rem.name}; then jj -R {jj_repo_dir} git remote add {rem.name} {rem.url}; fi", remotes)
-
-    sh_cmd(
-        name = name,
-        cmd = repo_cmds + remote_cmds
-    )
-
-    jj_repo(name = "repo", repo = repo)
-
 def jj_repo(name:str, repo:str, version:str=None, visibility:list=None):
     version_flag = ""
     version_suffix = ""

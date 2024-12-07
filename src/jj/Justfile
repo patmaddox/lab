@@ -1,0 +1,5 @@
+help:
+  @just -l
+
+clone:
+  if [ ! -d ../../repos/jj.jj ]; then jj git clone https://github.com/martinvonz/jj.git ../../repos/jj.jj; fi

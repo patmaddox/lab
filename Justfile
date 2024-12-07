@@ -7,3 +7,7 @@ help:
 # rebase given commits onto trunk
 rebase +commits:
   echo {{commits}} | sed -e 's/ / -b /g' -e 's/^/-b /' | xargs jj rebase -d trunk
+
+# clone all repositories
+clone:
+  for d in src/freebsd-ports src/freebsd-src src/jj src/please; do just -f ${d}/Justfile clone; done

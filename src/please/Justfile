@@ -1,5 +1,8 @@
 help:
   @just -l
 
-bootstrap:
+bootstrap: clone
   ./bootstrap.sh ../../repos/please.jj ../../bin/
+
+clone:
+  if [ ! -d ../../repos/please.jj ]; then jj git clone https://github.com/thought-machine/please.git ../../repos/please.jj; fi

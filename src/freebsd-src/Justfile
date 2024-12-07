@@ -3,3 +3,6 @@ help:
 
 ccache +args:
   CCACHE_CONFIGPATH=$(realpath ccache.conf) ccache {{args}}
+
+clone:
+  if [ ! -d ../../repos/freebsd-src.jj ]; then jj git clone https://github.com/freebsd/freebsd-src.git ../../repos/freebsd-src.jj; fi
