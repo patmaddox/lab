@@ -1,0 +1,5 @@
+help:
+  @just -l
+
+ccache +args:
+  CCACHE_CONFIGPATH=$(realpath ccache.conf) ccache {{args}}
