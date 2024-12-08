@@ -12,3 +12,6 @@ test-pending:
 clone:
   if [ ! -d ../../repos/freebsd-ports.jj ]; then jj git clone git@github.com:patmaddox/freebsd-ports.git ../../repos/freebsd-ports.jj; fi
   jj -R ../../repos/freebsd-ports.jj git remote add upstream https://github.com/freebsd/freebsd-ports.git 2>&1 || true
+
+testport *args:
+  doas poudriere testport -j 142 -p dev {{args}}
