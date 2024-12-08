@@ -1,4 +1,4 @@
-def build_site(name:str, args:str=None):
+def build_site(name:str, args=""):
     genrule(
         name = name,
         srcs = {
