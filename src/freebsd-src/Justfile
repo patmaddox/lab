@@ -4,5 +4,8 @@ help:
 ccache +args:
   CCACHE_CONFIGPATH=$(realpath ccache.conf) ccache {{args}}
 
+ccache-watch wait='5':
+  while true; do clear; just ccache -s; sleep {{wait}}; done
+
 clone:
   if [ ! -d ../../repos/freebsd-src.jj ]; then jj git clone https://github.com/freebsd/freebsd-src.git ../../repos/freebsd-src.jj; fi
