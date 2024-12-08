@@ -28,7 +28,12 @@ def release(name:str, kernconf:str="GENERIC", env:dict={}, srcs:dict={}):
         }
     )
 
-release(name = "dev", env = {"SRCS_FREEBSD": "/home/patmaddox/lab.jj/repos/freebsd-src.jj"})
+# build the local tree in repos/freebsd-src.jj
+release(
+    name = "dev",
+    srcs = {"DEV_HEAD": "dev-head"},
+    env = {"SRCS_FREEBSD": "/home/patmaddox/lab.jj/repos/freebsd-src.jj"}
+)
 
 release(name = "14.2-RELEASE", srcs = {"FREEBSD": ":repo--releng-142--c8918d6c"})
 jj_repo(

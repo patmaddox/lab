@@ -9,3 +9,7 @@ ccache-watch wait='5':
 
 clone:
   if [ ! -d ../../repos/freebsd-src.jj ]; then jj git clone https://github.com/freebsd/freebsd-src.git ../../repos/freebsd-src.jj; fi
+
+build-dev *args:
+  jj -R ../../repos/freebsd-src.jj show > dev-head
+  plz build :rel--dev {{args}}
