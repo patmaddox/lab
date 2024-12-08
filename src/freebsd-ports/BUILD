@@ -1,14 +1,5 @@
 subinclude("//build/defs:repos")
 
-filegroup(
-    name = "portsfiles",
-    srcs = [
-        "//infra/images/beastie:portsfile",
-        "//infra/images/poudriere-builder:portsfile"
-    ],
-    visibility = ["//infra/images/..."]
-)
-
 jj_repo(
     name = "repo--main",
     repo = "freebsd-ports",
@@ -24,14 +15,6 @@ genrule(
         "poudriere ports -l -q | grep '^main[[:space:]]' > main.txt"
     ],
     outs = ["main.txt"]
-)
-
-sh_cmd(
-    name = "bulk",
-    deps = [":poudriere-ports--main"],
-    cmd = [
-        "doas poudriere bulk -b latest -j 14-stable -p main \\\${@}",
-    ],
 )
 
 def built_packages(name:str):

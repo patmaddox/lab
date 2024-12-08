@@ -17,7 +17,7 @@ def build_site(name:str, args=""):
 build_site("patmaddox.com")
 build_site("localhost", args="-u http://localhost:62123")
 
-def test_cmd(name:str):
+def test_cmd(name:str, labels=[]):
     gentest(
         name = name,
         data = {
@@ -31,11 +31,12 @@ def test_cmd(name:str):
         test_tools = {
             "MUFFET": CONFIG.MUFFET_TOOL,
             "URLCHECK": "//src/urlcheck:urlcheck"
-        }
+        },
+        labels = labels
     )
 
 test_cmd("test")
-test_cmd("debug")
+test_cmd("debug", labels = ["manual"])
 
 export_file(
     name = "content",

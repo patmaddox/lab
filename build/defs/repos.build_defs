@@ -13,9 +13,9 @@ def jj_repo(name:str, repo:str, version:str=None, visibility:list=None):
     
     cmd = " && ".join([
         # forget workspace at first, in case a previous run failed
-        f"jj -R $(plz query reporoot)/repos/{jj_repo} workspace forget __plz{version_suffix} 2> /dev/null || true",
-        f"jj -R $(plz query reporoot)/repos/{jj_repo} workspace add -r {rev} --name __plz{version_suffix} {jj_workspace}",
-        f"jj -R $(plz query reporoot)/repos/{jj_repo} workspace forget __plz{version_suffix}",
+        f"${TOOLS_JJ} -R $(${TOOLS_PLEASE} query reporoot)/repos/{jj_repo} workspace forget __plz{version_suffix} 2> /dev/null || true",
+        f"${TOOLS_JJ} -R $(${TOOLS_PLEASE} query reporoot)/repos/{jj_repo} workspace add -r {rev} --name __plz{version_suffix} {jj_workspace}",
+        f"${TOOLS_JJ} -R $(${TOOLS_PLEASE} query reporoot)/repos/{jj_repo} workspace forget __plz{version_suffix}",
         f"rm -rf {jj_workspace}/.jj"
     ])
 
@@ -24,7 +24,11 @@ def jj_repo(name:str, repo:str, version:str=None, visibility:list=None):
         cmd = cmd,
         outs = [jj_workspace],
         visibility = visibility,
-        _subrepo = True
+        _subrepo = True,
+        tools = {
+            "JJ": "jj",
+            "PLEASE": "please"
+        }
     )
 
     return subrepo(

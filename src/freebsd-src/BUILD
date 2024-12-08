@@ -25,17 +25,20 @@ def release(name:str, kernconf:str="GENERIC", env:dict={}, srcs:dict={}):
         outs = {
             "PKGBASE_DIR": [f"pkgbase/{name}"],
             "REL_DIR": [f"rel/{name}"],
-        }
+        },
+        visibility = ["//infra/images/..."]
     )
 
 # build the local tree in repos/freebsd-src.jj
 release(
     name = "dev",
-    srcs = {"DEV_HEAD": "dev-head"},
     env = {"SRCS_FREEBSD": "/home/patmaddox/lab.jj/repos/freebsd-src.jj"}
 )
 
-release(name = "14.2-RELEASE", srcs = {"FREEBSD": ":repo--releng-142--c8918d6c"})
+release(
+    name = "14.2-RELEASE",
+    srcs = {"FREEBSD": ":repo--releng-142--c8918d6c"},
+)
 jj_repo(
     name = f"repo--releng-142--c8918d6c",
     repo = "freebsd-src",
