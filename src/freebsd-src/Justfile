@@ -13,3 +13,10 @@ clone:
 build-dev *args:
   jj -R ../../repos/freebsd-src.jj show > dev-head
   plz build :rel--dev {{args}}
+
+[no-cd]
+format-patch change="":
+  #!/bin/sh
+  set -eu
+  commit=$(jj -R ../../repos/freebsd-src.jj show {{change}} -T 'commit_id ++ "\n"' -s | head -n 1)
+  git -C ../../repos/freebsd-src.jj format-patch -o $(pwd)/patches -U99999 ${commit}^..${commit}
