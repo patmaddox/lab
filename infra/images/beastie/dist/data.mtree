@@ -1,0 +1,11 @@
+# This mtree describes files that need to be read from /
+# tar -C / -c @/path/to/data.mtree
+
+/set type=file uname=root gname=wheel mode=0644
+
+./etc/ssh/ssh_host_ecdsa_key mode=0600
+./etc/ssh/ssh_host_ecdsa_key.pub
+./etc/ssh/ssh_host_ed25519_key mode=0600
+./etc/ssh/ssh_host_ed25519_key.pub
+./etc/ssh/ssh_host_rsa_key mode=0600
+./etc/ssh/ssh_host_rsa_key.pub
