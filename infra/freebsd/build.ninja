@@ -1,0 +1,9 @@
+subninja ../../root.ninja
+
+url_base = https://download.freebsd.org/releases/amd64/14.2-RELEASE
+
+rule fetch
+  command = fetch -o $out $url_base/$$(basename $out)
+
+build ${builddir}/base.txz: fetch
+build ${builddir}/kernel.txz: fetch

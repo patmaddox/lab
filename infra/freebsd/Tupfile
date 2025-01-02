@@ -1,0 +1,2 @@
+: |> fetch -o %o https://download.freebsd.org/releases/amd64/14.2-RELEASE/base.txz |> base.txz
+#: |> fetch -o %o https://download.freebsd.org/releases/amd64/14.2-RELEASE/kernel.txz |> tup-out/14.2-RELEASE/kernel.txz

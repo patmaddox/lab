@@ -1,0 +1,17 @@
+builddir = _build
+root = .
+
+download_base = https://download.freebsd.org/releases/amd64/14.2-RELEASE
+
+rule fetch
+  command = fetch -o $out ${download_base}/${file}
+
+build ${builddir}/14.2-RELEASE/base.txz: fetch
+  file = base.txz
+
+build ${builddir}/14.2-RELEASE/kernel.txz: fetch
+  file = kernel.txz
+
+build ${builddir}/beastie.txz: build_beastie
+  base_txz = ${builddir}/14.2-RELEASE/base.txz
+  kernel_txz = ${builddir}/14.2-RELEASE/kernel.txz

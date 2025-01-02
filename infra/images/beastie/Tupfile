@@ -1,0 +1,10 @@
+include ../../../Tuprules.tup
+
+: ../../freebsd/base.txz |> echo "the top is $(TUPOUT)" | tee %o |> beastie.log
+
+#: |> ./build.sh makebe %o |> tup-out/0_start.log
+#: tup-out/0_start.log |> ./build.sh freebsd %o |> tup-out/1_freebsd.log
+#: tup-out/1_freebsd.log |> ./build.sh freebsd_config %o |> tup-out/2_freebsd_config.log
+#: tup-out/2_freebsd_config.log |> ./build.sh packages %o |> tup-out/3_packages.log
+#: tup-out/3_packages.log |> ./build.sh packages_config %o |> tup-out/4_packages_config.log
+#: tup-out/4_packages_config.log |> ./build.sh data %o |> tup-out/5_data.log

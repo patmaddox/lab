@@ -3,6 +3,8 @@
 *.jj
 *~
 .plzconfig.local
+/.tup
 _build
 bin
 plz-out
+tup-out

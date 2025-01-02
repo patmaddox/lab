@@ -1,0 +1,7 @@
+subninja ../../../root.ninja
+subninja ../../freebsd/build.ninja
+
+rule build
+  command = echo "sha256sum ${in}" | tee ${out}
+
+build ${builddir}/beastie.log: build ${builddir}/base.txz ${builddir}/kernel.txz

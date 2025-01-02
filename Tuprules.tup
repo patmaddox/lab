@@ -1,0 +1,2 @@
+TUPROOT=$(TUP_CWD)
+TUPOUT=$(TUP_CWD)/tup-out
