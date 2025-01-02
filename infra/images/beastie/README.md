@@ -1,6 +1,6 @@
 # beastie
 
-`doas ./install.sh`
+`make`
 
 zfs snapshots look like:
 
