@@ -8,7 +8,14 @@ ccache-watch wait='5':
   while true; do clear; just ccache -s; sleep {{wait}}; done
 
 clone:
-  if [ ! -d ../../repos/freebsd-src.jj ]; then jj git clone --colocate https://github.com/freebsd/freebsd-src.git ../../repos/freebsd-src.jj; fi
+  if [ ! -d main.jj ]; then jj git clone --colocate https://github.com/freebsd/freebsd-src.git main.jj; fi
+
+bootstrap:
+  doas make -C main.jj obj
+  doas make -C main.jj -j$(sysctl -n hw.ncpu) -s buildworld buildkernel
+
+build:
+  doas make -C main.jj -j$(sysctl -n hw.ncpu) -s -DWORLDFAST -DKERNFAST buildworld buildkernel
 
 build-dev *args:
   jj -R ../../repos/freebsd-src.jj show > dev-head
