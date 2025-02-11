@@ -17,6 +17,9 @@ bootstrap:
 build:
   doas env CCACHE_CONFIGPATH=$(pwd)/ccache.conf make -C main.jj -j$(sysctl -n hw.ncpu) -s -DWORLDFAST -DKERNFAST __MAKE_CONF=/dev/null SRCCONF=$(pwd)/src.conf buildworld buildkernel
 
+clean:
+  doas make -C main.jj -s cleanworld
+
 build-dev *args:
   jj -R ../../repos/freebsd-src.jj show > dev-head
   plz build :rel--dev {{args}}
