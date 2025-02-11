@@ -20,6 +20,13 @@ build:
 clean:
   doas make -C main.jj -s cleanworld
 
+release:
+  doas make -C main.jj/release obj
+  doas make -C main.jj/release -j$(sysctl -n hw.ncpu) -s -DNOPORTS __MAKE_CONF=/dev/null SRCCONF=$(pwd)/src.conf packagesystem
+
+clean-release:
+  doas make -C main.jj/release clean
+
 build-dev *args:
   jj -R ../../repos/freebsd-src.jj show > dev-head
   plz build :rel--dev {{args}}
