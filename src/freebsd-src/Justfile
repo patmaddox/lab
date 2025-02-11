@@ -10,22 +10,22 @@ ccache-watch wait='5':
 clone:
   if [ ! -d main.jj ]; then jj git clone --colocate https://github.com/freebsd/freebsd-src.git main.jj; fi
 
-bootstrap:
-  doas make -C main.jj obj
-  doas env CCACHE_CONFIGPATH=$(pwd)/ccache.conf make -C main.jj -j$(sysctl -n hw.ncpu) -s __MAKE_CONF=/dev/null SRCCONF=$(pwd)/src.conf buildworld buildkernel
+bootstrap target="main.jj":
+  doas make -C {{target}} obj
+  doas env CCACHE_CONFIGPATH=$(pwd)/ccache.conf make -C {{target}} -j$(sysctl -n hw.ncpu) -s __MAKE_CONF=/dev/null SRCCONF=$(pwd)/src.conf buildworld buildkernel
 
-build:
-  doas env CCACHE_CONFIGPATH=$(pwd)/ccache.conf make -C main.jj -j$(sysctl -n hw.ncpu) -s -DWORLDFAST -DKERNFAST __MAKE_CONF=/dev/null SRCCONF=$(pwd)/src.conf buildworld buildkernel
+build target="main.jj":
+  doas env CCACHE_CONFIGPATH=$(pwd)/ccache.conf make -C {{target}} -j$(sysctl -n hw.ncpu) -s -DWORLDFAST -DKERNFAST __MAKE_CONF=/dev/null SRCCONF=$(pwd)/src.conf buildworld buildkernel
 
-clean:
-  doas make -C main.jj -s cleanworld
+clean target="main.jj":
+  doas make -C {{target}} -s cleanworld
 
-release:
-  doas make -C main.jj/release obj
-  doas make -C main.jj/release -j$(sysctl -n hw.ncpu) -s -DNOPORTS __MAKE_CONF=/dev/null SRCCONF=$(pwd)/src.conf packagesystem
+release target="main.jj":
+  doas make -C {{target}}/release obj
+  doas make -C {{target}}/release -j$(sysctl -n hw.ncpu) -s -DNOPORTS __MAKE_CONF=/dev/null SRCCONF=$(pwd)/src.conf packagesystem
 
-clean-release:
-  doas make -C main.jj/release clean
+clean-release target="main.jj":
+  doas make -C {{target}}/release clean
 
 build-dev *args:
   jj -R ../../repos/freebsd-src.jj show > dev-head
