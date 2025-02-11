@@ -12,10 +12,10 @@ clone:
 
 bootstrap:
   doas make -C main.jj obj
-  doas make -C main.jj -j$(sysctl -n hw.ncpu) -s buildworld buildkernel
+  doas env CCACHE_CONFIGPATH=$(pwd)/ccache.conf make -C main.jj -j$(sysctl -n hw.ncpu) -s __MAKE_CONF=/dev/null SRCCONF=$(pwd)/src.conf buildworld buildkernel
 
 build:
-  doas make -C main.jj -j$(sysctl -n hw.ncpu) -s -DWORLDFAST -DKERNFAST buildworld buildkernel
+  doas env CCACHE_CONFIGPATH=$(pwd)/ccache.conf make -C main.jj -j$(sysctl -n hw.ncpu) -s -DWORLDFAST -DKERNFAST __MAKE_CONF=/dev/null SRCCONF=$(pwd)/src.conf buildworld buildkernel
 
 build-dev *args:
   jj -R ../../repos/freebsd-src.jj show > dev-head
