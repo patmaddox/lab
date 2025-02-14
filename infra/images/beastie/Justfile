@@ -22,3 +22,7 @@ new-be name:
 # Import any dist files that have been edited on the local system
 import-config:
   ./scripts/import-config.sh dist/base.mtree dist/packages.mtree
+
+# Update portsfile with list of manually-installed ports
+update-ports:
+  sh ../../../src/freebsd-ports/scripts/list-ports.sh | tee beastie.ports
