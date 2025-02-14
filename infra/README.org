@@ -1,0 +1,27 @@
+* Infrastructure
+The goal:
+
+- build my infrastructure entirely from source
+- easily
+- document it well
+
+Systems:
+
+- [ ] beastie (workstation)
+- [ ] gulliver (laptop)
+- [ ] andre (server)
+- [ ] rowdy (router)
+- [ ] patmaddox.com
+- [ ] poudriere?
+
+Challenges:
+
+- Need a stable, backwards-compatible kernel to install packages,
+  because some packages run software
+- Build systems are annoying
+- How do I know when ~make buildworld buildkernel~ has completed
+  successfully? I suppose I could run it through ~tee~ and grep the
+  output, or write a sentinel file.  Sentinel file seems the easiest -
+  delete it when the build starts, write it when build finishes.
+- Building ~freebsd-src~ really wants it to go under ~/usr/obj~ rather
+  than wherever I want it to build.
