@@ -18,3 +18,7 @@ new-be name:
     ${packages}/base.txz \
     ${packages}/kernel.txz \
     ${packages}/tests.txz
+
+# Import any dist files that have been edited on the local system
+import-config:
+  ./scripts/import-config.sh dist/base.mtree dist/packages.mtree
