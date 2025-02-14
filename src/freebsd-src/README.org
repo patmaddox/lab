@@ -1,0 +1,12 @@
+* freebsd-src
+
+Goals:
+
+- build, package, distribute multiple trees
+- track my contributions
+
+** Usage
+
+- ~just clone~ - clone the repo
+- ~just bootstrap main.jj~ - build the given source tree from scratch
+- ~just build main.jj~ - build the given source tree

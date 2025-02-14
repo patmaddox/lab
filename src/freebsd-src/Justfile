@@ -1,3 +1,5 @@
+default_tree := "main.jj"
+
 help:
   @just -l
 
@@ -10,22 +12,20 @@ ccache-watch wait='5':
 clone:
   if [ ! -d main.jj ]; then jj git clone --colocate https://github.com/freebsd/freebsd-src.git main.jj; fi
 
-bootstrap target="main.jj":
-  doas make -C {{target}} obj
-  doas env CCACHE_CONFIGPATH=$(pwd)/ccache.conf make -C {{target}} -j$(sysctl -n hw.ncpu) -s __MAKE_CONF=/dev/null SRCCONF=$(pwd)/src.conf buildworld buildkernel
+bootstrap tree=default_tree:
+  ./scripts/build.sh bootstrap {{tree}}
 
-build target="main.jj":
-  doas env CCACHE_CONFIGPATH=$(pwd)/ccache.conf make -C {{target}} -j$(sysctl -n hw.ncpu) -s -DWORLDFAST -DKERNFAST __MAKE_CONF=/dev/null SRCCONF=$(pwd)/src.conf buildworld buildkernel
+build tree=default_tree:
+  ./scripts/build.sh build {{tree}}
 
-clean target="main.jj":
-  doas make -C {{target}} -s cleanworld
+clean tree=default_tree:
+  ./scripts/build.sh clean {{tree}}
 
-release target="main.jj":
-  doas make -C {{target}}/release obj
-  doas make -C {{target}}/release -j$(sysctl -n hw.ncpu) -s -DNOPORTS __MAKE_CONF=/dev/null SRCCONF=$(pwd)/src.conf packagesystem
+release tree=default_tree:
+  ./scripts/build.sh release {{tree}}
 
-clean-release target="main.jj":
-  doas make -C {{target}}/release clean
+clean-release tree="main.jj":
+  ./scripts/build.sh clean-release {{tree}}
 
 build-dev *args:
   jj -R ../../repos/freebsd-src.jj show > dev-head
