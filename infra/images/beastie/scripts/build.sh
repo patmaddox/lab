@@ -112,9 +112,16 @@ install_base() {
 
 install_packages() {
     if [ -n "${PORTFILE}" ]; then
+	local PKG_CACHE
+	PKG_CACHE=/var/cache/pkg
+	${DOAS} mkdir -p ${TMPROOT}${PKG_CACHE}
+	${DOAS} mount_nullfs ${PKG_CACHE} ${TMPROOT}${PKG_CACHE}
+
 	local origins
 	origins=$(paste -s -d ' ' ${PORTFILE})
 	${DOAS} pkg -c ${TMPROOT} install -y ${origins}
+
+	${DOAS} umount ${TMPROOT}${PKG_CACHE}
     fi
 
     if [ -n "${PACKAGES_MTREE}" ]; then
