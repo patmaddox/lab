@@ -3,11 +3,12 @@ The goal:
 
 - build my infrastructure entirely from source
 - easily
+- from any system
 - document it well
 
 Systems:
 
-- [ ] beastie (workstation)
+- [X] beastie (workstation)
 - [ ] gulliver (laptop)
 - [ ] andre (server)
 - [ ] rowdy (router)
