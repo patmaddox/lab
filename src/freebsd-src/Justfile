@@ -27,10 +27,6 @@ release tree=default_tree:
 clean-release tree="main.jj":
   ./scripts/build.sh clean-release {{tree}}
 
-build-dev *args:
-  jj -R ../../repos/freebsd-src.jj show > dev-head
-  plz build :rel--dev {{args}}
-
 [no-cd]
 format-patch change="":
   #!/bin/sh
