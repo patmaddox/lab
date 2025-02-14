@@ -20,46 +20,40 @@ main() {
 
 sync-pw::users() {
     local existing
-    local u
     local from_root_pw
     local to_root_pw
-    for u in ${list}; do
-	if [ "${u}" = "root" ]; then
-	    to_root_pw=$(pw -V ${to_root} user show -n ${u} | cut -d : -f 2)
-	    if [ -z "${to_root_pw}" ]; then
-		from_root_pw=$(pw -V ${from_root} user show -n ${u} | cut -d : -f 2)
-		echo "${from_root_pw}" | pw -V ${to_root} user mod -n ${u} -H 0
-	    fi
-	    continue
-	fi
 
-	existing=$(pw -V ${to_root} user show ${u} 2>/dev/null || true)
+    if [ "${object}" = "root" ]; then
+	to_root_pw=$(pw -V ${to_root} user show -n ${object} | cut -d : -f 2)
+	if [ -z "${to_root_pw}" ]; then
+	    from_root_pw=$(pw -V ${from_root} user show -n ${object} | cut -d : -f 2)
+	    echo "${from_root_pw}" | pw -V ${to_root} user mod -n ${object} -H 0
+	fi
+    else
+	existing=$(pw -V ${to_root} user show ${object} 2>/dev/null || true)
 	if [ -n "${existing}" ]; then
-	    awk -F : -v user=${u} -v existing="${existing}" '$1 == user { print existing }' ${to_root}/master.passwd > ${to_root}/master.passwd.new
+	    awk -F : -v user=${object} -v existing="${existing}" '$1 == user { print existing }' ${to_root}/master.passwd > ${to_root}/master.passwd.new
 	    mv ${to_root}/master.passwd.new ${to_root}/master.passwd
 	else
-	    pw -V ${from_root} user show ${u} >> ${to_root}/master.passwd
+	    pw -V ${from_root} user show ${object} >> ${to_root}/master.passwd
 	fi
-    done
+    fi
 
     pwd_mkdb -p -d ${to_root} ${to_root}/master.passwd
 }
 
 sync-pw::groups() {
-    local g
     local from_group
     local new_users
 
-    for g in ${list}; do
-	from_group=$(pw -V ${from_root} group show -n ${g})
+    from_group=$(pw -V ${from_root} group show -n ${object})
 
-	if pw -V ${to_root} group show -n ${g} > /dev/null 2>&1; then
-	    new_users=$(echo "${from_group}" | cut -d : -f 4)
-	    pw -V ${to_root} group mod -n ${g} -m ${new_users}
-	else
-	    echo "${from_group}" >> ${to_root}/group
-	fi
-    done
+    if pw -V ${to_root} group show -n ${object} > /dev/null 2>&1; then
+	new_users=$(echo "${from_group}" | cut -d : -f 4)
+	pw -V ${to_root} group mod -n ${object} -m ${new_users}
+    else
+	echo "${from_group}" >> ${to_root}/group
+    fi
 }
 
 sync-pw::parse_args() {
@@ -84,14 +78,18 @@ sync-pw::parse_args() {
     fi
     shift
 
-    list="${@}"
+    object=${1:-}
+    if [ -z "{object}" ]; then
+	sync-pw::usage
+	exit 1
+    fi
 }
 
 sync-pw::usage() {
     cat<<EOF
 Usage:
-  sync-pw <from-root> <to-root> u <user1> ...
-  sync-pw <from-root> <to-root> g <group1> ...
+  sync-pw <from-root> <to-root> u <user1>
+  sync-pw <from-root> <to-root> g <group1>
 EOF
 }
 

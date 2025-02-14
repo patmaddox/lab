@@ -45,7 +45,8 @@ new_user_body() {
     test::add-user user1 "user1-pw-hash"
     test::add-user user2 "user2-pw-hash"
 
-    atf_check ${sync_pw} from-root to-root u user1 user2
+    atf_check ${sync_pw} from-root to-root u user1
+    atf_check ${sync_pw} from-root to-root u user2
     atf_check -o match:"user1-pw-hash" pw -V to-root user show user1
     atf_check -o match:"user2-pw-hash" pw -V to-root user show user2
     atf_check -o ignore grep user1 to-root/passwd
@@ -131,7 +132,8 @@ new_group_body() {
     test::add-group group1 user1
     test::add-group group2 user1,user2
 
-    atf_check ${sync_pw} from-root to-root g group1 group2
+    atf_check ${sync_pw} from-root to-root g group1
+    atf_check ${sync_pw} from-root to-root g group2
 
     users=$(pw -V to-root group show group1 | cut -d : -f 4)
     atf_check_equal "user1" "${users}"
