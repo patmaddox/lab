@@ -1,0 +1,9 @@
+/set type=file uname=root gname=wheel mode=0644
+
+./boot/loader.conf
+./etc/fstab
+./etc/hosts
+./etc/pf.conf
+./etc/rc.conf
+./etc/resolv.conf
+./usr/local/etc/pkg/repos/FreeBSD.conf
