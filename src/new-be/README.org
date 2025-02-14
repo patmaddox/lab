@@ -1,0 +1,18 @@
+* new-be - create a new boot environment with distfiles and data
+
+Usage:
+
+- ~new-be <name>~   # Create a new, fully-configured boot environment
+- ~import-config~   # Import any dist files that have been edited on the local system
+- ~list-ports~      # List manually-installed ports and their origins
+
+TODO:
+
+- [ ] when extracting .mtree files, error if the source file isn't present
+- [ ] ~import-config~ should not error if a config file isn't present
+- [ ] multiple output formats (.txz, zfs snapshot)
+- [ ] deploy to remote machine
+- [ ] poudriere backend for producing the boot environments
+- [ ] jail environments
+- [ ] bhyve images
+- [ ] declarative config files (Makefile ?)

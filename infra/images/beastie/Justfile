@@ -1,3 +1,4 @@
+newbe_src := "../../../src/new-be"
 freebsd_src := "../../../src/freebsd-src"
 release := "releng-14.2"
 
@@ -7,7 +8,7 @@ help:
 # Create a new, fully-configured boot environment
 new-be name:
   packages="{{freebsd_src}}/_build/{{release}}/amd64.amd64/release"; \
-  ./scripts/build.sh \
+  {{newbe_src}}/new-be \
     -u root,patmaddox \
     -g wheel,operator,video,webcamd,patmaddox \
     -B dist/base.mtree \
@@ -21,8 +22,8 @@ new-be name:
 
 # Import any dist files that have been edited on the local system
 import-config:
-  ./scripts/import-config.sh dist/base.mtree dist/packages.mtree
+  {{newbe_src}}/import-config dist/base.mtree dist/packages.mtree
 
 # Update portsfile with list of manually-installed ports
 update-ports:
-  sh ../../../src/freebsd-ports/scripts/list-ports.sh | tee beastie.ports
+  {{newbe_src}}/list-ports | tee $(hostname -s).ports
