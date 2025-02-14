@@ -1,0 +1,20 @@
+freebsd_src := "../../../src/freebsd-src"
+release := "releng-14.2"
+
+help:
+  just -l
+
+# Create a new, fully-configured boot environment
+new-be name:
+  packages="{{freebsd_src}}/_build/{{release}}/amd64.amd64/release"; \
+  ./scripts/build.sh \
+    -u root,patmaddox \
+    -g wheel,operator,video,webcamd,patmaddox \
+    -B dist/base.mtree \
+    -D dist/data.mtree \
+    -p beastie.ports \
+    -P dist/packages.mtree \
+    {{name}} \
+    ${packages}/base.txz \
+    ${packages}/kernel.txz \
+    ${packages}/tests.txz

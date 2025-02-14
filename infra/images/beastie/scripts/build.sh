@@ -1,72 +1,138 @@
 #!/bin/sh
 set -eu
+set -o pipefail
+
+DOAS="/usr/local/bin/doas"
+TOOLS_SYNC_PW=$(realpath ../../../src/sync-pw/sync-pw)
+
+USERS=""
+GROUPS=""
+PORTFILE=""
+BASEFILES=""
+BASE_MTREE=""
+DATA_MTREE=""
+PACKAGES_MTREE=""
 
 main() {
-    local zpoolfile zfsroot
-    zpool=plz-beastie
-    zpoolfile=${BUILDDIR}/${zpool}-tmp.zfs
-    zfsroot=/tmp/${zpool}
-    outfile=${BUILDDIR}/beastie.zfs
+    parse_args "${@}"
 
-    create-zpool
-    extract-base
-    copy-config
-    copy-datafiles
-    install-packages
-    copy-usergroup
-    finalize
+    validate_users
+    validate_groups
+    validate_files
+
+    create_be
+    install_base
+    install_packages
+    sync_pw
+    umount_be
 }
 
-create-zpool() {
-    truncate -s 30g ${zpoolfile}
-    zpool create -m / -R ${zfsroot} ${zpool} ${zpoolfile}
+parse_args() {
+    local opt ifs
+
+    while getopts u:g:B:D:p:P: opt; do
+	case ${opt} in
+	    u)
+		USERS=${OPTARG}
+		;;
+	    g)
+		GROUPS=${OPTARG}
+		;;
+	    B)
+		BASE_MTREE=$(realpath ${OPTARG})
+		;;
+	    D)
+		DATA_MTREE=$(realpath ${OPTARG})
+		;;
+	    p)
+		PORTFILE=$(realpath ${OPTARG})
+		;;
+	    P)
+		PACKAGES_MTREE=$(realpath ${OPTARG})
+		;;
+	    "?")
+		exit 1
+		;;
+	esac
+    done
+
+    shift $((OPTIND - 1))
+
+    NAME=${1}; shift
+    TMPROOT=/tmp/new-be-${NAME}
+    BASEFILES="${@}"
 }
 
-extract-base() {
-    local t
-    for t in base kernel; do
-	tar -C ${zfsroot} -xf ${FREEBSD_REL}/${t}.txz
+validate_users() {
+    local IFS
+    IFS=","
+
+    for u in ${USERS}; do
+	pw usershow ${u} > /dev/null
     done
 }
 
-copy-config() {
-    tar -c -C ${DISTDIR} . | tar -x -C ${zfsroot} --gid 0 --uid 0
+validate_groups() {
+    local IFS
+    IFS=","
+
+    for g in ${GROUPS}; do
+	pw groupshow ${g} > /dev/null
+    done
 }
 
-copy-usergroup() {
-    sh ${SYNC_PW_SH} /etc ${zfsroot}/etc u root patmaddox
-    sh ${SYNC_PW_SH} /etc ${zfsroot}/etc g wheel patmaddox video webcamd
+validate_files() {
+    for f in ${BASEFILES}; do
+	realpath ${f} > /dev/null
+    done
 }
 
-copy-datafiles() {
-    tzsetup -C ${zfsroot} America/Los_Angeles
-    cp /etc/ssh/ssh_host_*_key* ${zfsroot}/etc/ssh
+create_be() {
+    ${DOAS} zfs create -o canmount=noauto -o mountpoint=none zroot/ROOT/${NAME}
+    ${DOAS} bectl mount ${NAME} ${TMPROOT}
 }
 
-install-packages() {
-    mkdir ${zfsroot}/packages
-    mount_nullfs ${PACKAGES} ${zfsroot}/packages
-
-    pkgrepos=${zfsroot}/usr/local/etc/pkg/repos
-    mkdir -p ${pkgrepos}
-    cat <<EOF > ${pkgrepos}/plz.conf
-    plz {
-      url: "file:///packages",
-      enabled: yes
-    }
-EOF
-
-    pkg -c ${zfsroot} install -y -r plz $(cat ${PORTSFILE} | xargs)
-    rm ${pkgrepos}/plz.conf
-    umount ${zfsroot}/packages
-    rmdir ${zfsroot}/packages
+umount_be() {
+    ${DOAS} bectl umount ${NAME}
 }
 
-finalize() {
-    zfs set mountpoint=none ${zpool}
-    zfs snapshot ${zpool}@init
-    zfs send ${zpool}@init > ${outfile}
-    zpool export ${zpool}
+install_base() {
+    for f in ${BASEFILES}; do
+	${DOAS} tar -C ${TMPROOT} -xf ${f}
+    done
+
+    if [ -n "${BASE_MTREE}" ]; then
+	tar -C $(dirname ${BASE_MTREE}) -c @${BASE_MTREE} | ${DOAS} tar -C ${TMPROOT} -x
+    fi
+
+    if [ -n "${DATA_MTREE}" ]; then
+	${DOAS} tar -C / -c @${DATA_MTREE} | ${DOAS} tar -C ${TMPROOT} -x
+    fi
 }
 
-main
+install_packages() {
+    if [ -n "${PORTFILE}" ]; then
+	local origins
+	origins=$(paste -s -d ' ' ${PORTFILE})
+	${DOAS} pkg -c ${TMPROOT} install -y ${origins}
+    fi
+
+    if [ -n "${PACKAGES_MTREE}" ]; then
+	tar -C $(dirname ${PACKAGES_MTREE}) -c @${PACKAGES_MTREE} | ${DOAS} tar -C ${TMPROOT} -x
+    fi
+}
+
+sync_pw() {
+    local IFS
+    IFS=","
+
+    for u in ${USERS}; do
+	${DOAS} ${TOOLS_SYNC_PW} /etc ${TMPROOT}/etc u ${u}
+    done
+
+    for g in ${GROUPS}; do
+	${DOAS} ${TOOLS_SYNC_PW} /etc ${TMPROOT}/etc g ${g}
+    done
+}
+
+main "${@}"

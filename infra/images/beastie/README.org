@@ -1,0 +1,5 @@
+* beastie
+
+Usage:
+
+- ~just new-be <name>~ - create a new, fully-configured boot environment
