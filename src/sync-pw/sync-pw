@@ -30,12 +30,8 @@ sync-pw::users() {
 	    echo "${from_root_pw}" | pw -V ${to_root} user mod -n ${object} -H 0
 	fi
     else
-	existing=$(pw -V ${to_root} user show ${object} 2>/dev/null || true)
-	if [ -n "${existing}" ]; then
-	    awk -F : -v user=${object} -v existing="${existing}" '$1 == user { print existing }' ${to_root}/master.passwd > ${to_root}/master.passwd.new
-	    mv ${to_root}/master.passwd.new ${to_root}/master.passwd
-	else
-	    pw -V ${from_root} user show ${object} >> ${to_root}/master.passwd
+	if ! pw -V ${to_root} user show ${object} > /dev/null 2>&1; then
+ 	    pw -V ${from_root} user show ${object} >> ${to_root}/master.passwd
 	fi
     fi
 

@@ -63,10 +63,14 @@ existing_user_body() {
     test::add-user user1 "ignore-this"
 
     echo "existing-pw-hash" | pw -V to-root user add -H 0 -n user1
+    echo "user2-pw-hash" | pw -V to-root user add -H 0 -n user2
+
     atf_check ${sync_pw} from-root to-root u user1
     atf_check -o match:"existing-pw-hash" pw -V to-root user show user1
-    lines=$(wc -l to-root/master.passwd | cut -w -f 2)
-    atf_check_equal 1 ${lines}
+    atf_check -o match:"user2-pw-hash" pw -V to-root user show user2
+
+    num_lines=$(wc -l to-root/master.passwd | awk '{print $1}')
+    atf_check_equal 2 ${num_lines}
 }
 
 atf_test_case root
