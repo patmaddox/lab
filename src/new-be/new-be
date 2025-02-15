@@ -7,8 +7,10 @@ TOOLS_SYNC_PW=$(realpath ../../../src/sync-pw/sync-pw)
 
 USERS=""
 GROUPS=""
-PORTFILE=""
+
 BASEFILES=""
+PORTFILE=""
+
 BASE_MTREE=""
 DATA_MTREE=""
 PACKAGES_MTREE=""
@@ -28,61 +30,24 @@ main() {
 }
 
 parse_args() {
-    local opt ifs
-
-    while getopts u:g:B:D:p:P: opt; do
-	case ${opt} in
-	    u)
-		USERS=${OPTARG}
-		;;
-	    g)
-		GROUPS=${OPTARG}
-		;;
-	    B)
-		BASE_MTREE=$(realpath ${OPTARG})
-		;;
-	    D)
-		DATA_MTREE=$(realpath ${OPTARG})
-		;;
-	    p)
-		PORTFILE=$(realpath ${OPTARG})
-		;;
-	    P)
-		PACKAGES_MTREE=$(realpath ${OPTARG})
-		;;
-	    "?")
-		exit 1
-		;;
-	esac
-    done
-
-    shift $((OPTIND - 1))
-
-    NAME=${1}; shift
+    . ${1}; shift
     TMPROOT=/tmp/new-be-${NAME}
-    BASEFILES="${@}"
 }
 
 validate_users() {
-    local IFS
-    IFS=","
-
     for u in ${USERS}; do
 	pw usershow ${u} > /dev/null
     done
 }
 
 validate_groups() {
-    local IFS
-    IFS=","
-
     for g in ${GROUPS}; do
 	pw groupshow ${g} > /dev/null
     done
 }
 
 validate_files() {
-    for f in ${BASEFILES}; do
+    for f in ${BASEFILES} ${PORTFILE} ${BASE_MTREE} ${DATA_MTREE} ${PACKAGES_MTREE}; do
 	realpath ${f} > /dev/null
     done
 }
@@ -130,9 +95,6 @@ install_packages() {
 }
 
 sync_pw() {
-    local IFS
-    IFS=","
-
     for u in ${USERS}; do
 	${DOAS} ${TOOLS_SYNC_PW} /etc ${TMPROOT}/etc u ${u}
     done

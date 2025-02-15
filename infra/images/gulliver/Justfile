@@ -8,17 +8,7 @@ help:
 # Create a new, fully-configured boot environment
 new-be name:
   packages="{{freebsd_src}}/_build/{{release}}/amd64.amd64/release"; \
-  {{newbe_src}}/new-be \
-    -u root,patmaddox \
-    -g wheel,operator,video,patmaddox \
-    -B dist/base.mtree \
-    -D dist/data.mtree \
-    -p gulliver.ports \
-    -P dist/packages.mtree \
-    {{name}} \
-    ${packages}/base.txz \
-    ${packages}/kernel.txz \
-    ${packages}/tests.txz
+  {{newbe_src}}/new-be gulliver.conf
 
 # Import any dist files that have been edited on the local system
 import-config:
