@@ -25,10 +25,6 @@ defmodule XBS do
     %{targets: targets}
   end
 
-  def new_store(store \\ %{}) do
-    store
-  end
-
   def get(store, key) do
     Map.get(store, key) || raise KeyNotFoundError, key: key
   end
