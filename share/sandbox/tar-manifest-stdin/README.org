@@ -1,0 +1,8 @@
+* tar file read manifest from stdin
+
+It's possible to create tar files using a mtree / manifest file
+provided at the command line. Can I provide the manifest file via
+stdin? That would make it possible to create manifest tar files over
+SSH.
+
+It works!!
