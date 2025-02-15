@@ -2,6 +2,61 @@ defmodule DBSTest do
   use ExUnit.Case
   doctest DBS
 
+  describe "compute/3" do
+    test "with no inputs" do
+      store = DBS.new_store()
+
+      build =
+        DBS.new_build(%{
+          foo: %{inputs: [], compute: fn _store -> "I am foo" end}
+        })
+
+      assert DBS.compute(build, store, %{}) == %{foo: "I am foo"}
+    end
+
+    test "when input is satisfied" do
+      store = DBS.new_store()
+
+      build =
+        DBS.new_build(%{
+          foo: %{
+            inputs: [:bar],
+            compute: fn store -> "I am foo, you are #{store.bar}" end
+          }
+        })
+
+      assert DBS.compute(build, store, %{bar: "bar"}) == %{foo: "I am foo, you are bar"}
+    end
+
+    test "when input comes from store" do
+      store = DBS.new_store(%{bar: "bar"})
+
+      build =
+        DBS.new_build(%{
+          foo: %{
+            inputs: [:bar],
+            compute: fn store -> "I am foo, you are #{store.bar}" end
+          }
+        })
+
+      assert DBS.compute(build, store, %{}) == %{foo: "I am foo, you are bar"}
+    end
+
+    test "skip when input is not satisfied" do
+      store = DBS.new_store()
+
+      build =
+        DBS.new_build(%{
+          foo: %{
+            inputs: [:bar],
+            compute: fn store -> "I am foo, you are #{store.bar}" end
+          }
+        })
+
+      assert DBS.compute(build, store, %{}) == %{}
+    end
+  end
+
   test "calculate value from input values" do
     store = DBS.new_store()
 
