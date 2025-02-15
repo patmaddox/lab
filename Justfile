@@ -11,3 +11,7 @@ rebase +commits:
 # clone all repositories
 clone:
   for d in src/freebsd-ports src/freebsd-src src/jj src/please; do just -f ${d}/Justfile clone; done
+
+cleanup:
+  find . -name '*~' -delete
+  find . -type d -empty -delete
