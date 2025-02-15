@@ -54,32 +54,6 @@ defmodule XBSTest do
     end
   end
 
-  describe "update/3" do
-    test "calculate value from input values" do
-      store = XBS.new_store()
-
-      build =
-        XBS.new_build(%{
-          bar: fn store -> XBS.get(store, :foo) * 2 end,
-          baz: fn _store -> "I am baz" end
-        })
-
-      assert XBS.update(build, store, %{foo: 1}) == %{bar: 2, baz: "I am baz"}
-    end
-
-    test "do not re-calculate values" do
-      store = XBS.new_store(%{bar: 123})
-
-      build =
-        XBS.new_build(%{
-          bar: fn store -> XBS.get(store, :foo) * 2 end,
-          baz: fn _store -> "I am baz" end
-        })
-
-      assert XBS.update(build, store, %{foo: 1}) == %{bar: 123, baz: "I am baz"}
-    end
-  end
-
   describe "get/2" do
     test "raise error on missing value" do
       store = XBS.new_store()

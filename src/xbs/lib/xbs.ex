@@ -21,14 +21,6 @@ defmodule XBS do
     |> Map.take(Map.keys(targets))
   end
 
-  def update(%{targets: targets}, store, inputs) do
-    targets
-    |> Enum.reduce(Map.merge(store, inputs), fn {k, task}, s ->
-      Map.put_new_lazy(s, k, fn -> task.(s) end)
-    end)
-    |> Map.take(Map.keys(targets))
-  end
-
   def new_build(targets) do
     %{targets: targets}
   end
