@@ -2,6 +2,8 @@
 set -eu
 set -o pipefail
 
+NEWBE_ROOT=$(dirname $(realpath $0))
+
 DOAS="/usr/local/bin/doas"
 TOOLS_SYNC_PW=$(realpath ../../../src/sync-pw/sync-pw)
 
@@ -18,47 +20,70 @@ PACKAGES_MTREE=""
 main() {
     parse_args "${@}"
 
-    validate_users
-    validate_groups
     validate_files
+    # maybe remote
+    validate_users_and_groups
 
     create_be
+
     install_base
+    config_base
     install_packages
-    sync_pw
+    config_packages
+
+    # maybe remote
+    sync_host_data
+
     umount_be
 }
 
 parse_args() {
     . ${1}; shift
     TMPROOT=/tmp/new-be-${NAME}
-}
 
-validate_users() {
-    for u in ${USERS}; do
-	pw usershow ${u} > /dev/null
-    done
-}
+    # after syncing data, snapshot needs to happen on remote
+    REMOTE_SNAPSHOT=""
 
-validate_groups() {
-    for g in ${GROUPS}; do
-	pw groupshow ${g} > /dev/null
-    done
+    if [ "${HOSTNAME}" = $(hostname) ]; then
+	REMOTE_MODE=""
+	. ${NEWBE_ROOT}/libexec/libnewbe.sh
+    else
+	REMOTE_MODE="yes"
+	NAME="${HOSTNAME}--${NAME}"
+	. ${NEWBE_ROOT}/libexec/libnewbe-remote.sh
+    fi
 }
 
 validate_files() {
-    for f in ${BASEFILES} ${PORTFILE} ${BASE_MTREE} ${DATA_MTREE} ${PACKAGES_MTREE}; do
+    for f in ${BASEFILES} ${PORTFILE}; do
 	realpath ${f} > /dev/null
     done
+
+    if [ -n "${BASE_MTREE}" ]; then
+	BASE_MTREE=$(realpath ${BASE_MTREE})
+    fi
+
+    if [ -n "${DATA_MTREE}" ]; then
+	DATA_MTREE=$(realpath ${DATA_MTREE})
+    fi
+
+    if [ -n "${PACKAGES_MTREE}" ]; then
+	PACKAGES_MTREE=$(realpath ${PACKAGES_MTREE})
+    fi
 }
 
 create_be() {
-    ${DOAS} zfs create -o canmount=noauto -o mountpoint=none zroot/ROOT/${NAME}
+    BE=zroot/ROOT/${NAME}
+    ${DOAS} zfs create -o canmount=noauto -o mountpoint=none ${BE}
+    snapshot_be init
     ${DOAS} bectl mount ${NAME} ${TMPROOT}
 }
 
 umount_be() {
     ${DOAS} bectl umount ${NAME}
+    if [ "${REMOTE_MODE}" = "yes" ]; then
+	ssh ${HOSTNAME} "${DOAS} bectl umount ${NAME}"
+    fi
 }
 
 install_base() {
@@ -66,12 +91,21 @@ install_base() {
 	${DOAS} tar -C ${TMPROOT} -xf ${f}
     done
 
+    # need this tool in place for remote deploys
+    local opt_bin
+    opt_bin="${TMPROOT}/opt/bin"
+
+    INSTALLED_SYNC_PW="${opt_bin}/sync-pw"
+    ${DOAS} mkdir -p ${opt_bin}
+    ${DOAS} cp ${TOOLS_SYNC_PW} ${INSTALLED_SYNC_PW}
+
+    snapshot_be base
+}
+
+config_base() {
     if [ -n "${BASE_MTREE}" ]; then
 	tar -C $(dirname ${BASE_MTREE}) -c @${BASE_MTREE} | ${DOAS} tar -C ${TMPROOT} -x
-    fi
-
-    if [ -n "${DATA_MTREE}" ]; then
-	${DOAS} tar -C / -c @${DATA_MTREE} | ${DOAS} tar -C ${TMPROOT} -x
+	snapshot_be config-base
     fi
 }
 
@@ -87,21 +121,41 @@ install_packages() {
 	${DOAS} pkg -c ${TMPROOT} install -y ${origins}
 
 	${DOAS} umount ${TMPROOT}${PKG_CACHE}
-    fi
-
-    if [ -n "${PACKAGES_MTREE}" ]; then
-	tar -C $(dirname ${PACKAGES_MTREE}) -c @${PACKAGES_MTREE} | ${DOAS} tar -C ${TMPROOT} -x
+	snapshot_be packages
     fi
 }
 
-sync_pw() {
-    for u in ${USERS}; do
-	${DOAS} ${TOOLS_SYNC_PW} /etc ${TMPROOT}/etc u ${u}
-    done
+config_packages() {
+    if [ -n "${PACKAGES_MTREE}" ]; then
+	tar -C $(dirname ${PACKAGES_MTREE}) -c @${PACKAGES_MTREE} | ${DOAS} tar -C ${TMPROOT} -x
+	snapshot_be config-packages
+    fi
+}
 
-    for g in ${GROUPS}; do
-	${DOAS} ${TOOLS_SYNC_PW} /etc ${TMPROOT}/etc g ${g}
-    done
+sync_host_data() {
+    if [ "${REMOTE_MODE}" = "yes" ];
+    then
+	${DOAS} zfs send ${BE}@${LATEST_SNAPSHOT} | ssh ${HOSTNAME} "${DOAS} zfs receive ${BE}"
+	ssh ${HOSTNAME} "${DOAS} bectl mount ${BE} ${TMPROOT}"
+	REMOTE_SNAPSHOT="yes"
+    fi
+
+    sync_pw
+    if [ -n "${DATA_MTREE}" ]; then
+	sync_data_files
+    fi
+    snapshot_be data
+}
+
+snapshot_be() {
+    local name
+    name=${1}; shift
+    if [ "${REMOTE_SNAPSHOT}" = "yes" ]; then
+	ssh ${HOSTNAME} "${DOAS} zfs snapshot ${BE}@${name}"
+    else
+	${DOAS} zfs snapshot ${BE}@${name}
+    fi
+    LATEST_SNAPSHOT=${name}
 }
 
 main "${@}"
