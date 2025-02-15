@@ -7,22 +7,18 @@ defmodule XBS do
     end
   end
 
-  def compute(%{targets: targets}, store, inputs) do
+  def compute(tasks, store, inputs) do
     big_store = Map.merge(store, inputs)
 
-    targets
-    |> Enum.reduce(big_store, fn {k, target}, s ->
+    tasks
+    |> Enum.reduce(big_store, fn {k, t}, s ->
       try do
-        put(s, k, target.compute.(s))
+        put(s, k, t.compute.(s))
       rescue
         KeyNotFoundError -> s
       end
     end)
-    |> Map.take(Map.keys(targets))
-  end
-
-  def new_build(targets) do
-    %{targets: targets}
+    |> Map.take(Map.keys(tasks))
   end
 
   def get(store, key) do
