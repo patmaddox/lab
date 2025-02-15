@@ -1,13 +1,21 @@
 defmodule DBS do
+  defmodule KeyNotFoundError do
+    defexception [:key]
+
+    def message(exception) do
+      ":#{exception.key}"
+    end
+  end
+
   def compute(%{targets: targets}, store, inputs) do
     big_store = Map.merge(store, inputs)
 
     targets
     |> Enum.reduce(big_store, fn {k, target}, s ->
-      if has_all_inputs?(big_store, target) do
-        Map.put(s, k, target.compute.(s))
-      else
-        s
+      try do
+        put(s, k, target.compute.(s))
+      rescue
+        KeyNotFoundError -> s
       end
     end)
     |> Map.take(Map.keys(targets))
@@ -30,10 +38,10 @@ defmodule DBS do
   end
 
   def get(store, key) do
-    Map.get(store, key) || raise "unable to resolve :#{key}"
+    Map.get(store, key) || raise KeyNotFoundError, key: key
   end
 
-  defp has_all_inputs?(store, %{inputs: inputs}) do
-    Enum.all?(inputs, fn i -> Map.has_key?(store, i) end)
+  def put(store, key, value) do
+    Map.put(store, key, value)
   end
 end

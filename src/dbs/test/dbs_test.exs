@@ -20,8 +20,7 @@ defmodule DBSTest do
       build =
         DBS.new_build(%{
           foo: %{
-            inputs: [:bar],
-            compute: fn store -> "I am foo, you are #{store.bar}" end
+            compute: fn store -> "I am foo, you are #{DBS.get(store, :bar)}" end
           }
         })
 
@@ -34,8 +33,7 @@ defmodule DBSTest do
       build =
         DBS.new_build(%{
           foo: %{
-            inputs: [:bar],
-            compute: fn store -> "I am foo, you are #{store.bar}" end
+            compute: fn store -> "I am foo, you are #{DBS.get(store, :bar)}" end
           }
         })
 
@@ -48,8 +46,7 @@ defmodule DBSTest do
       build =
         DBS.new_build(%{
           foo: %{
-            inputs: [:bar],
-            compute: fn store -> "I am foo, you are #{store.bar}" end
+            compute: fn store -> "I am foo, you are #{DBS.get(store, :bar)}" end
           }
         })
 
@@ -87,7 +84,7 @@ defmodule DBSTest do
     test "raise error on missing value" do
       store = DBS.new_store()
 
-      assert_raise RuntimeError, ~r/unable to resolve :foo/, fn ->
+      assert_raise DBS.KeyNotFoundError, ~r/:foo/, fn ->
         DBS.get(store, :foo)
       end
     end
