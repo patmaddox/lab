@@ -1,0 +1,19 @@
+* tusk - a Tcl-based build system and task runner
+
+Inspired by:
+
+- make
+- just
+- please
+
+** Example
+
+#+BEGIN_SRC tcl
+  tusk::task ls "ls the files in the directory" {} {
+      exec ls
+  }
+
+  tusk::target myproject "The project I built" {} {
+      exec make
+  } {foo.c include/*.h} {mycode mylib}
+#+END_SRC
