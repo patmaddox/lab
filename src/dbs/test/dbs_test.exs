@@ -23,4 +23,12 @@ defmodule DBSTest do
 
     assert DBS.build(build, store, %{foo: 1}) == %{bar: 123, baz: "I am baz"}
   end
+
+  test "raise error on missing value" do
+    store = DBS.new_store()
+
+    assert_raise RuntimeError, ~r/unable to resolve :foo/, fn ->
+      DBS.get(store, :foo)
+    end
+  end
 end

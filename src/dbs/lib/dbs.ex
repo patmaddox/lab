@@ -12,6 +12,6 @@ defmodule DBS do
   end
 
   def get(store, key) do
-    Map.get(store, key)
+    Map.get(store, key) || raise "unable to resolve :#{key}"
   end
 end
