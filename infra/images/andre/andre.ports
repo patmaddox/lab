@@ -1,0 +1,8 @@
+devel/fossil
+devel/jujutsu
+net/rsync
+ports-mgmt/pkg
+security/doas
+sysutils/htop
+sysutils/sanoid
+sysutils/tmux

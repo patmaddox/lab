@@ -1,0 +1,7 @@
+* andre
+
+Usage:
+
+- ~just new-be~   # Create a new, fully-configured boot environment
+- ~just import-config~   # Import any dist files that have been edited on the local system
+- ~just update-ports~    # Update portsfile with list of manually-installed ports

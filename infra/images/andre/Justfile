@@ -1,0 +1,16 @@
+newbe_src := "../../../src/new-be"
+
+help:
+  just -l
+
+# Create a new, fully-configured boot environment
+new-be:
+  {{newbe_src}}/new-be andre.conf
+
+# Import any dist files that have been edited on the local system
+import-config:
+  {{newbe_src}}/import-config dist/base.mtree dist/packages.mtree
+
+# Update portsfile with list of manually-installed ports
+update-ports:
+  {{newbe_src}}/list-ports | tee $(hostname -s).ports
