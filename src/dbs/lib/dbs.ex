@@ -13,7 +13,7 @@ defmodule DBS do
     |> Map.take(Map.keys(targets))
   end
 
-  def build(%{targets: targets}, store, inputs) do
+  def update(%{targets: targets}, store, inputs) do
     targets
     |> Enum.reduce(Map.merge(store, inputs), fn {k, task}, s ->
       Map.put_new_lazy(s, k, fn -> task.(s) end)

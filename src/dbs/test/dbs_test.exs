@@ -57,7 +57,7 @@ defmodule DBSTest do
     end
   end
 
-  describe "build/3" do
+  describe "update/3" do
     test "calculate value from input values" do
       store = DBS.new_store()
 
@@ -67,7 +67,7 @@ defmodule DBSTest do
           baz: fn _store -> "I am baz" end
         })
 
-      assert DBS.build(build, store, %{foo: 1}) == %{bar: 2, baz: "I am baz"}
+      assert DBS.update(build, store, %{foo: 1}) == %{bar: 2, baz: "I am baz"}
     end
 
     test "do not re-calculate values" do
@@ -79,7 +79,7 @@ defmodule DBSTest do
           baz: fn _store -> "I am baz" end
         })
 
-      assert DBS.build(build, store, %{foo: 1}) == %{bar: 123, baz: "I am baz"}
+      assert DBS.update(build, store, %{foo: 1}) == %{bar: 123, baz: "I am baz"}
     end
   end
 
