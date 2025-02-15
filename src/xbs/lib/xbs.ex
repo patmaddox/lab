@@ -1,4 +1,4 @@
-defmodule DBS do
+defmodule XBS do
   defmodule KeyNotFoundError do
     defexception [:key]
 

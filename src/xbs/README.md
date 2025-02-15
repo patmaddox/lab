@@ -1,4 +1,4 @@
-# DBS
+# XBS
 
 **TODO: Add description**
 
@@ -10,7 +10,7 @@ by adding `dbs` to your list of dependencies in `mix.exs`:
 ```elixir
 def deps do
   [
-    {:dbs, "~> 0.1.0"}
+    {:xbs, "~> 0.1.0"}
   ]
 end
 ```
