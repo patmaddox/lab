@@ -5,9 +5,9 @@ defmodule XBS.Build do
     %{tasks: tasks}
   end
 
-  def calculate(build, inputs) do
+  def compute(build, inputs) do
     store = Store.new(inputs)
-    Enum.each(build.tasks, fn {k, t} -> Store.add_task(store, k, t.calculate) end)
+    Enum.each(build.tasks, fn {k, t} -> Store.add_task(store, k, t.compute) end)
 
     Enum.reduce(build.tasks, %{}, fn {k, _v}, acc ->
       try do
@@ -19,7 +19,7 @@ defmodule XBS.Build do
   end
 
   def current?(build, inputs, old_state) do
-    result = calculate(build, inputs)
+    result = compute(build, inputs)
     result == old_state && Map.keys(result) == Map.keys(build.tasks)
   end
 

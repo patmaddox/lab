@@ -12,37 +12,37 @@ defmodule XBS.StoreTest do
       end
     end
 
-    test "calculates the value when there is a task" do
+    test "compute the value when there is a task" do
       store = Store.new()
       Store.add_task(store, :foo, fn _store -> {:ok, "hello"} end)
       assert Store.get(store, :foo) == "hello"
     end
 
-    test "calculate the value with a dependency" do
+    test "compute the value with a dependency" do
       store = Store.new()
       Store.add_task(store, :foo, fn _store -> {:ok, "foo"} end)
       Store.add_task(store, :foobar, fn s -> {:ok, "hello #{Store.get(s, :foo)}"} end)
       assert Store.get(store, :foobar) == "hello foo"
     end
 
-    test "calculate the value from initial state" do
+    test "compute the value from initial state" do
       store = Store.new(%{foo: "foo"})
       Store.add_task(store, :foobar, fn s -> {:ok, "hello #{Store.get(s, :foo)}"} end)
       assert Store.get(store, :foobar) == "hello foo"
     end
 
-    test "caches a calculated value" do
+    test "caches a computed value" do
       pid = self()
 
       store = Store.new()
 
       Store.add_task(store, :foo, fn _store ->
-        send(pid, :calculated)
+        send(pid, :computed)
         {:ok, "hello"}
       end)
 
       assert Store.get(store, :foo) == "hello"
-      assert_received :calculated
+      assert_received :computed
 
       assert Store.get(store, :foo) == "hello"
       refute_received _
