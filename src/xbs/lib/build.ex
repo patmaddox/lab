@@ -22,5 +22,14 @@ defmodule XBS.Build do
     result = calculate(build, inputs)
     result == old_state && Map.keys(result) == Map.keys(build.tasks)
   end
+
+  def update(build, inputs) do
+    store = Store.new(inputs)
+    Enum.each(build.tasks, fn {k, t} -> Store.add_task(store, k, t) end)
+
+    Enum.each(build.tasks, fn {_k, t} ->
+      t.update(store)
+    end)
+  end
 end
 

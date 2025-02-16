@@ -1,34 +1,56 @@
+defmodule XBSTest.MakeFoo do
+  def update(store) do
+    outdir = XBS.Store.get(store, :outdir)
+
+    outfile = "#{outdir}/foo"
+    File.write!(outfile, "foo")
+    outfile
+  end
+end
+
+defmodule XBSTest.MakeBar do
+  def update(store) do
+    outdir = XBS.Store.get(store, :outdir)
+
+    outfile = "#{outdir}/bar"
+    File.write!(outfile, "bar")
+    outfile
+  end
+end
+
+defmodule XBSTest.MakeFooBar do
+  def update(store) do
+    outdir = XBS.Store.get(store, :outdir)
+    foo = XBS.Store.get(store, :foo) |> File.read!()
+    bar = XBS.Store.get(store, :bar) |> File.read!()
+
+    outfile = "#{outdir}/foobar"
+    File.write!(outfile, "this is #{foo}#{bar}")
+    outfile
+  end
+end
+
 defmodule XBSTest do
   use ExUnit.Case
   doctest XBS
 
-  describe "compute/3" do
-    test "with no inputs" do
-      tasks = %{foo: %{inputs: [], compute: fn _store -> "I am foo" end}}
-      assert XBS.compute(tasks, %{}, %{}) == %{foo: "I am foo"}
-    end
+  describe "update" do
+    test "success" do
+      build =
+        XBS.new_build(%{
+          foo: XBSTest.MakeFoo,
+          bar: XBSTest.MakeBar,
+          foobar: XBSTest.MakeFooBar
+        })
 
-    test "when input is satisfied" do
-      tasks = %{foo: %{compute: fn store -> "I am foo, you are #{XBS.get(store, :bar)}" end}}
-      assert XBS.compute(tasks, %{}, %{bar: "bar"}) == %{foo: "I am foo, you are bar"}
-    end
+      Temp.track!()
+      tmp_dir = Temp.mkdir!("xbs")
 
-    test "when input comes from store" do
-      tasks = %{foo: %{compute: fn store -> "I am foo, you are #{XBS.get(store, :bar)}" end}}
-      assert XBS.compute(tasks, %{bar: "bar"}, %{}) == %{foo: "I am foo, you are bar"}
-    end
+      assert :ok == XBS.update(build, %{outdir: tmp_dir})
 
-    test "skip when input is not satisfied" do
-      tasks = %{foo: %{compute: fn store -> "I am foo, you are #{XBS.get(store, :bar)}" end}}
-      assert XBS.compute(tasks, %{}, %{}) == %{}
-    end
-  end
-
-  describe "get/2" do
-    test "raise error on missing value" do
-      assert_raise XBS.KeyNotFoundError, ~r/:foo/, fn ->
-        XBS.get(%{}, :foo)
-      end
+      assert File.read!("#{tmp_dir}/foo") == "foo"
+      assert File.read!("#{tmp_dir}/bar") == "bar"
+      assert File.read!("#{tmp_dir}/foobar") == "this is foobar"
     end
   end
 end

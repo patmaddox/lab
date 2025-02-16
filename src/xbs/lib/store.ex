@@ -4,15 +4,24 @@ defmodule XBS.Store do
     Enum.each(state, fn {k, v} -> :ets.insert(store, {k, :val, v}) end)
     store
   end
-  
+
   def get(store, key) do
     case :ets.lookup(store, key) do
-      [] -> raise XBS.KeyNotFoundError, key: key
-      [{^key, :val, val}] -> val
+      [] ->
+        raise XBS.KeyNotFoundError, key: key
+
+      [{^key, :val, val}] ->
+        val
+
       [{^key, :task, task}] ->
-	result = task.(store)
-	:ets.insert(store, {key, :val, result})
-	result
+        result =
+          case task do
+            t when is_function(t) -> t.(store)
+            t -> t.update(store)
+          end
+
+        :ets.insert(store, {key, :val, result})
+        result
     end
   end
 

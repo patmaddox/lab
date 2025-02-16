@@ -1,4 +1,6 @@
 defmodule XBS do
+  alias XBS.Build
+
   defmodule KeyNotFoundError do
     defexception [:key]
 
@@ -7,25 +9,11 @@ defmodule XBS do
     end
   end
 
-  def compute(tasks, store, inputs) do
-    big_store = Map.merge(store, inputs)
-
-    tasks
-    |> Enum.reduce(big_store, fn {k, t}, s ->
-      try do
-        put(s, k, t.compute.(s))
-      rescue
-        KeyNotFoundError -> s
-      end
-    end)
-    |> Map.take(Map.keys(tasks))
+  def new_build(tasks) do
+    Build.new(tasks)
   end
 
-  def get(store, key) do
-    Map.get(store, key) || raise KeyNotFoundError, key: key
-  end
-
-  def put(store, key, value) do
-    Map.put(store, key, value)
+  def update(build, inputs) do
+    Build.update(build, inputs)
   end
 end
