@@ -7,7 +7,7 @@ defmodule XBS.BuildTest do
     test "calculate using inputs" do
       b =
         Build.new(%{
-          hello: %{calculate: fn store -> "hello #{XBS.Store.get(store, :foo)}" end}
+          hello: %{calculate: fn store -> {:ok, "hello #{XBS.Store.get(store, :foo)}"} end}
         })
 
       assert Build.calculate(b, %{foo: "foo"}) == %{hello: "hello foo"}
@@ -16,7 +16,7 @@ defmodule XBS.BuildTest do
     test "no result on missing input" do
       b =
         Build.new(%{
-          hello: %{calculate: fn store -> "hello #{XBS.Store.get(store, :foo)}" end}
+          hello: %{calculate: fn store -> {:ok, "hello #{XBS.Store.get(store, :foo)}"} end}
         })
 
       assert Build.calculate(b, %{}) == %{}
@@ -27,7 +27,7 @@ defmodule XBS.BuildTest do
     test "true when matches given state" do
       b =
         Build.new(%{
-          hello: %{calculate: fn store -> "hello #{XBS.Store.get(store, :foo)}" end}
+          hello: %{calculate: fn store -> {:ok, "hello #{XBS.Store.get(store, :foo)}"} end}
         })
 
       assert Build.current?(b, %{foo: "foo"}, %{hello: "hello foo"})
@@ -36,7 +36,7 @@ defmodule XBS.BuildTest do
     test "false when different from given state" do
       b =
         Build.new(%{
-          hello: %{calculate: fn store -> "hello #{XBS.Store.get(store, :foo)}" end}
+          hello: %{calculate: fn store -> {:ok, "hello #{XBS.Store.get(store, :foo)}"} end}
         })
 
       refute Build.current?(b, %{foo: "foo"}, %{hello: "hello bar"})
@@ -45,11 +45,10 @@ defmodule XBS.BuildTest do
     test "false when calculated state is incomplete" do
       b =
         Build.new(%{
-          hello: %{calculate: fn store -> "hello #{XBS.Store.get(store, :foo)}" end}
+          hello: %{calculate: fn store -> {:ok, "hello #{XBS.Store.get(store, :foo)}"} end}
         })
 
       refute Build.current?(b, %{}, %{})
     end
   end
 end
-

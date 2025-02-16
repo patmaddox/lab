@@ -14,12 +14,7 @@ defmodule XBS.Store do
         val
 
       [{^key, :task, task}] ->
-        result =
-          case task do
-            t when is_function(t) -> t.(store)
-            t -> t.update(store)
-          end
-
+        {:ok, result} = compute_result(task, store)
         :ets.insert(store, {key, :val, result})
         result
     end
@@ -27,5 +22,16 @@ defmodule XBS.Store do
 
   def add_task(store, key, task) do
     :ets.insert(store, {key, :task, task})
+  end
+
+  def compute_result(task, store) when is_function(task) do
+    task.(store)
+  end
+
+  def compute_result(task, store) do
+    case task.compute(store) do
+      {:ok, result} -> {:ok, result}
+      :update -> task.update(store)
+    end
   end
 end

@@ -27,9 +27,8 @@ defmodule XBS.Build do
     store = Store.new(inputs)
     Enum.each(build.tasks, fn {k, t} -> Store.add_task(store, k, t) end)
 
-    Enum.each(build.tasks, fn {_k, t} ->
-      t.update(store)
+    Enum.each(build.tasks, fn {k, _t} ->
+      XBS.Store.get(store, k)
     end)
   end
 end
-
