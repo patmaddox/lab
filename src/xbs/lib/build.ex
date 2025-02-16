@@ -17,5 +17,10 @@ defmodule XBS.Build do
       end
     end)
   end
+
+  def current?(build, inputs, old_state) do
+    result = calculate(build, inputs)
+    result == old_state && Map.keys(result) == Map.keys(build.tasks)
+  end
 end
 

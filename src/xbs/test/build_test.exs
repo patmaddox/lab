@@ -22,5 +22,34 @@ defmodule XBS.BuildTest do
       assert Build.calculate(b, %{}) == %{}
     end
   end
+
+  describe "current?/3" do
+    test "true when matches given state" do
+      b =
+        Build.new(%{
+          hello: %{calculate: fn store -> "hello #{XBS.Store.get(store, :foo)}" end}
+        })
+
+      assert Build.current?(b, %{foo: "foo"}, %{hello: "hello foo"})
+    end
+
+    test "false when different from given state" do
+      b =
+        Build.new(%{
+          hello: %{calculate: fn store -> "hello #{XBS.Store.get(store, :foo)}" end}
+        })
+
+      refute Build.current?(b, %{foo: "foo"}, %{hello: "hello bar"})
+    end
+
+    test "false when calculated state is incomplete" do
+      b =
+        Build.new(%{
+          hello: %{calculate: fn store -> "hello #{XBS.Store.get(store, :foo)}" end}
+        })
+
+      refute Build.current?(b, %{}, %{})
+    end
+  end
 end
 
