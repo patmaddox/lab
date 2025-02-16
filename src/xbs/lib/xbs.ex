@@ -17,8 +17,8 @@ defmodule XBS do
     end
   end
 
-  def new_build(tasks) do
-    Build.new(tasks)
+  def new_build(targets) do
+    Build.new(targets)
   end
 
   def compute(build, inputs) do

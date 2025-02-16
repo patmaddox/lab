@@ -1,5 +1,5 @@
 defmodule XBSTest.MakeFoo do
-  import XBS.Task
+  import XBS.Target
 
   def compute(store) do
     outdir = get(store, :outdir)
@@ -22,7 +22,7 @@ defmodule XBSTest.MakeFoo do
 end
 
 defmodule XBSTest.MakeBar do
-  import XBS.Task
+  import XBS.Target
 
   def compute(_store), do: :update
 
@@ -36,7 +36,7 @@ defmodule XBSTest.MakeBar do
 end
 
 defmodule XBSTest.MakeFooBar do
-  import XBS.Task
+  import XBS.Target
 
   def compute(_store), do: :update
 

@@ -14,23 +14,23 @@ defmodule XBS.Store do
       [{^key, :val, val}] ->
         val
 
-      [{^key, :task, task}] ->
-        {:ok, result} = compute_result(key, task, store)
+      [{^key, :target, target}] ->
+        {:ok, result} = compute_result(key, target, store)
         :ets.insert(store, {key, :val, result})
         result
     end
   end
 
-  def add_task(store, key, task) do
-    :ets.insert(store, {key, :task, task})
+  def add_target(store, key, target) do
+    :ets.insert(store, {key, :target, target})
   end
 
-  def compute_result(key, task, store) when is_map(task) do
-    compute_result(key, task.compute, task.update, store)
+  def compute_result(key, target, store) when is_map(target) do
+    compute_result(key, target.compute, target.update, store)
   end
 
-  def compute_result(key, task, store) do
-    compute_result(key, &task.compute/1, &task.update/1, store)
+  def compute_result(key, target, store) do
+    compute_result(key, &target.compute/1, &target.update/1, store)
   end
 
   def compute_result(key, compute_fn, update_fn, store) do
