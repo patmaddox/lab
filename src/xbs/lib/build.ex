@@ -7,7 +7,7 @@ defmodule XBS.Build do
 
   def compute(build, inputs) do
     store = Store.new(inputs)
-    Enum.each(build.tasks, fn {k, t} -> Store.add_task(store, k, t.compute) end)
+    Enum.each(build.tasks, fn {k, t} -> Store.add_task(store, k, t) end)
 
     Enum.reduce(build.tasks, %{}, fn {k, _v}, acc ->
       try do

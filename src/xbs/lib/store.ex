@@ -24,8 +24,8 @@ defmodule XBS.Store do
     :ets.insert(store, {key, :task, task})
   end
 
-  def compute_result(task, store) when is_function(task) do
-    task.(store)
+  def compute_result(%{compute: compute}, store) do
+    compute.(store)
   end
 
   def compute_result(task, store) do
