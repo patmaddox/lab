@@ -1,8 +1,6 @@
 defmodule XBS.Target do
   use GenServer
 
-  alias XBS.{KeyNotFoundError, NeedsUpdateError}
-
   def get(store, key) do
     XBS.Store.get(store, key)
   end
@@ -11,27 +9,32 @@ defmodule XBS.Target do
     # it would be nice to catch the exception from GenServer.call
     # instead of using GenServer.whereis, but I'm not sure what the
     # exception is
-    if GenServer.whereis(name) do
-      case compute(name) do
-        {:ok, result} -> result
-        :update -> raise NeedsUpdateError, key: name
-      end
-    else
-      raise KeyNotFoundError, key: name
+    if !GenServer.whereis(name) do
+      throw({:error, {:key_not_found, name}})
+    end
+
+    case Process.get(:mode) do
+      :compute ->
+        case compute(name) do
+          {:ok, result} ->
+            result
+
+          :update ->
+            throw({:error, {:needs_update, name}})
+        end
+
+      :update ->
+        {:ok, result} = update(name)
+        result
     end
   end
 
   def new(name, props) when is_map(props) do
-    state =
-      props
-      |> Map.put(:state, :init)
-      |> Map.put(:result, nil)
-
-    GenServer.start_link(__MODULE__, state, name: name)
+    GenServer.start_link(__MODULE__, props, name: name)
   end
 
   def new(name, module) do
-    new(name, %{compute: &module.compute/0})
+    new(name, %{compute: &module.compute/0, update: &module.update/0})
   end
 
   def init(props) do
@@ -42,19 +45,41 @@ defmodule XBS.Target do
     GenServer.call(name, :compute)
   end
 
-  def handle_call(:compute, _from, state = %{state: :init}) do
+  def update(name) do
+    GenServer.call(name, :update)
+  end
+
+  def handle_call(:compute, _from, state = %{result: result}) do
+    {:reply, result, state}
+  end
+
+  def handle_call(:compute, _from, state) do
+    Process.put(:mode, :compute)
+
     result =
       try do
         state.compute.()
-      rescue
-        KeyNotFoundError -> :update
-        NeedsUpdateError -> :update
+      catch
+        {:error, {reason, _}} when reason in [:key_not_found, :needs_update] -> :update
       end
 
-    {:reply, result, %{state | state: :computed, result: result}}
+    {:reply, result, Map.put(state, :result, result)}
   end
 
-  def handle_call(:compute, _from, state = %{state: :computed}) do
-    {:reply, state.result, state}
+  def handle_call(:update, _from, state = %{result: result}) when result != :update do
+    {:reply, result, state}
+  end
+
+  def handle_call(:update, _from, state) do
+    Process.put(:mode, :update)
+
+    result =
+      try do
+        state.update.()
+      catch
+        e = {:error, {:key_not_found, _}} -> e
+      end
+
+    {:reply, result, Map.put(state, :result, result)}
   end
 end
