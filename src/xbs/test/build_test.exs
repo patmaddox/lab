@@ -8,8 +8,8 @@ defmodule XBS.BuildTest do
       b =
         Build.new(%{
           hello: %{
-            compute: fn store -> {:ok, "hello #{XBS.Store.get(store, :foo)}"} end,
-            update: fn _s -> raise "never get here" end
+            compute: fn -> {:ok, "hello #{XBS.Target.get!(:foo)}"} end,
+            update: fn -> raise "never get here" end
           }
         })
 
@@ -20,8 +20,8 @@ defmodule XBS.BuildTest do
       b =
         Build.new(%{
           hello: %{
-            compute: fn store -> {:ok, "hello #{XBS.Store.get(store, :foo)}"} end,
-            update: fn _s -> raise "never get here" end
+            compute: fn -> {:ok, "hello #{XBS.Target.get!(:foo)}"} end,
+            update: fn -> raise "never get here" end
           }
         })
 

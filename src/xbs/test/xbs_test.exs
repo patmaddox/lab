@@ -1,8 +1,8 @@
 defmodule XBSTest.MakeFoo do
   import XBS.Target
 
-  def compute(store) do
-    outdir = get(store, :outdir)
+  def compute do
+    outdir = get!(:outdir)
     outfile = "#{outdir}/foo"
 
     if File.exists?(outfile) do
@@ -12,8 +12,8 @@ defmodule XBSTest.MakeFoo do
     end
   end
 
-  def update(store) do
-    outdir = get(store, :outdir)
+  def update do
+    outdir = get!(:outdir)
 
     outfile = "#{outdir}/foo"
     File.write!(outfile, "foo")
@@ -24,10 +24,10 @@ end
 defmodule XBSTest.MakeBar do
   import XBS.Target
 
-  def compute(_store), do: :update
+  def compute, do: :update
 
-  def update(store) do
-    outdir = get(store, :outdir)
+  def update do
+    outdir = get!(:outdir)
 
     outfile = "#{outdir}/bar"
     File.write!(outfile, "bar")
@@ -38,12 +38,12 @@ end
 defmodule XBSTest.MakeFooBar do
   import XBS.Target
 
-  def compute(_store), do: :update
+  def compute, do: :update
 
-  def update(store) do
-    outdir = get(store, :outdir)
-    foo = get(store, :foo) |> File.read!()
-    bar = get(store, :bar) |> File.read!()
+  def update do
+    outdir = get!(:outdir)
+    foo = get!(:foo) |> File.read!()
+    bar = get!(:bar) |> File.read!()
 
     outfile = "#{outdir}/foobar"
     File.write!(outfile, "this is #{foo}#{bar}")
@@ -55,15 +55,17 @@ defmodule XBSTest do
   use ExUnit.Case
   doctest XBS
 
+  alias XBS.Target
+
   describe "compute/2" do
     test "return basic ok/update info" do
       build =
         XBS.new_build(%{
           foo: %{
-            compute: fn _store -> {:ok, "some result"} end,
-            update: fn _s -> raise "never get here" end
+            compute: fn -> {:ok, "some result"} end,
+            update: fn -> raise "never get here" end
           },
-          bar: %{compute: fn _store -> :update end, update: fn _s -> raise "never get here" end}
+          bar: %{compute: fn -> :update end, update: fn -> raise "never get here" end}
         })
 
       assert XBS.compute(build, %{}) == %{
@@ -76,12 +78,12 @@ defmodule XBSTest do
       build =
         XBS.new_build(%{
           foo: %{
-            compute: fn _store -> :update end,
-            update: fn _s -> raise "never get here" end
+            compute: fn -> :update end,
+            update: fn -> raise "never get here" end
           },
           bar: %{
-            compute: fn store -> {:ok, XBS.Store.get(store, :foo)} end,
-            update: fn _s -> raise "never get here" end
+            compute: fn -> {:ok, Target.get!(:foo)} end,
+            update: fn -> raise "never get here" end
           }
         })
 

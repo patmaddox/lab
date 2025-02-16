@@ -1,34 +1,44 @@
 defmodule XBS.Build do
-  alias XBS.{Store, KeyNotFoundError, NeedsUpdateError}
+  alias XBS.Target
 
   def new(targets) do
     %{targets: targets}
   end
 
   def compute(build, inputs) do
-    store = Store.new(inputs)
-    Enum.each(build.targets, fn {k, t} -> Store.add_target(store, k, t) end)
+    init_inputs(inputs)
+    init_targets(build)
 
-    Enum.reduce(build.targets, %{ok: [], update: []}, fn {k, _v}, acc ->
-      try do
-        Store.get(store, k)
-        %{acc | ok: [k | acc.ok]}
-      rescue
-        KeyNotFoundError ->
-          %{acc | update: [k | acc.update]}
-
-        NeedsUpdateError ->
-          %{acc | update: [k | acc.update]}
+    build.targets
+    |> Map.keys()
+    |> Enum.reduce(%{ok: [], update: []}, fn k, acc ->
+      case Target.compute(k) do
+        {:ok, _} -> %{acc | ok: [k | acc.ok]}
+        :update -> %{acc | update: [k | acc.update]}
       end
     end)
   end
 
   def update(build, inputs) do
-    store = Store.new(inputs, :update)
-    Enum.each(build.targets, fn {k, t} -> Store.add_target(store, k, t) end)
+    compute(build, inputs)
 
-    Enum.each(build.targets, fn {k, _t} ->
-      XBS.Store.get(store, k)
+    build.targets
+    |> Map.keys()
+    |> Enum.each(fn k ->
+      {:ok, _result} = Target.update(k)
     end)
+
+    :ok
+  end
+
+  def init_inputs(inputs) do
+    Enum.each(inputs, fn {k, v} ->
+      result_fn = fn -> {:ok, v} end
+      {:ok, _} = Target.new(k, %{compute: result_fn, update: result_fn})
+    end)
+  end
+
+  def init_targets(%{targets: targets}) do
+    Enum.each(targets, fn {k, t} -> {:ok, _} = Target.new(k, t) end)
   end
 end
