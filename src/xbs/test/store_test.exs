@@ -14,20 +14,39 @@ defmodule XBS.StoreTest do
 
     test "compute the value when there is a task" do
       store = Store.new()
-      Store.add_task(store, :foo, %{compute: fn _store -> {:ok, "hello"} end})
+
+      Store.add_task(store, :foo, %{
+        compute: fn _store -> {:ok, "hello"} end,
+        update: fn _s -> raise "never get here" end
+      })
+
       assert Store.get(store, :foo) == "hello"
     end
 
     test "compute the value with a dependency" do
       store = Store.new()
-      Store.add_task(store, :foo, %{compute: fn _store -> {:ok, "foo"} end})
-      Store.add_task(store, :foobar, %{compute: fn s -> {:ok, "hello #{Store.get(s, :foo)}"} end})
+
+      Store.add_task(store, :foo, %{
+        compute: fn _store -> {:ok, "foo"} end,
+        update: fn _s -> raise "never get here" end
+      })
+
+      Store.add_task(store, :foobar, %{
+        compute: fn s -> {:ok, "hello #{Store.get(s, :foo)}"} end,
+        update: fn _s -> raise "never get here" end
+      })
+
       assert Store.get(store, :foobar) == "hello foo"
     end
 
     test "compute the value from initial state" do
       store = Store.new(%{foo: "foo"})
-      Store.add_task(store, :foobar, %{compute: fn s -> {:ok, "hello #{Store.get(s, :foo)}"} end})
+
+      Store.add_task(store, :foobar, %{
+        compute: fn s -> {:ok, "hello #{Store.get(s, :foo)}"} end,
+        update: fn _s -> raise "never get here" end
+      })
+
       assert Store.get(store, :foobar) == "hello foo"
     end
 
@@ -40,7 +59,8 @@ defmodule XBS.StoreTest do
         compute: fn _store ->
           send(pid, :computed)
           {:ok, "hello"}
-        end
+        end,
+        update: fn _s -> raise "never get here" end
       })
 
       assert Store.get(store, :foo) == "hello"
@@ -48,6 +68,45 @@ defmodule XBS.StoreTest do
 
       assert Store.get(store, :foo) == "hello"
       refute_received _
+    end
+  end
+
+  describe "get (compute mode)" do
+    test "raises an error if an update is needed" do
+      store = Store.new(%{})
+
+      Store.add_task(store, :foo, %{
+        compute: fn _store -> :update end,
+        update: fn _store -> {:ok, "got an update"} end
+      })
+
+      assert_raise XBS.NeedsUpdateError, ~r/:foo/, fn ->
+        Store.get(store, :foo)
+      end
+    end
+  end
+
+  describe "get (update mode)" do
+    test "calls function-style update(store) if task needs an update" do
+      store = Store.new(%{}, :update)
+
+      Store.add_task(store, :foo, %{
+        compute: fn _store -> :update end,
+        update: fn _store -> {:ok, "got an update"} end
+      })
+
+      assert Store.get(store, :foo) == "got an update"
+    end
+
+    test "returns computed value if no update needed" do
+      store = Store.new(%{}, :update)
+
+      Store.add_task(store, :foo, %{
+        compute: fn _store -> {:ok, "no update needed"} end,
+        update: fn _s -> raise "never get here" end
+      })
+
+      assert Store.get(store, :foo) == "no update needed"
     end
 
     test "calls module.update(store) if task needs an update" do
@@ -61,7 +120,7 @@ defmodule XBS.StoreTest do
         end
       end
 
-      store = Store.new(%{})
+      store = Store.new(%{}, :update)
       Store.add_task(store, :foo, JustReturn)
       assert Store.get(store, :foo) == "just return something"
     end
@@ -77,7 +136,7 @@ defmodule XBS.StoreTest do
         end
       end
 
-      store = Store.new(%{})
+      store = Store.new(%{}, :update)
       Store.add_task(store, :foo, NoUpdateNeeded)
       assert Store.get(store, :foo) == "no update needed"
     end

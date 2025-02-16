@@ -1,5 +1,5 @@
 defmodule XBS.Build do
-  alias XBS.{Store, KeyNotFoundError}
+  alias XBS.{Store, KeyNotFoundError, NeedsUpdateError}
 
   def new(tasks) do
     %{tasks: tasks}
@@ -9,22 +9,22 @@ defmodule XBS.Build do
     store = Store.new(inputs)
     Enum.each(build.tasks, fn {k, t} -> Store.add_task(store, k, t) end)
 
-    Enum.reduce(build.tasks, %{}, fn {k, _v}, acc ->
+    Enum.reduce(build.tasks, %{ok: [], update: []}, fn {k, _v}, acc ->
       try do
-        Map.put(acc, k, Store.get(store, k))
+        Store.get(store, k)
+        %{acc | ok: [k | acc.ok]}
       rescue
-        KeyNotFoundError -> acc
+        KeyNotFoundError ->
+          %{acc | update: [k | acc.update]}
+
+        NeedsUpdateError ->
+          %{acc | update: [k | acc.update]}
       end
     end)
   end
 
-  def current?(build, inputs, old_state) do
-    result = compute(build, inputs)
-    result == old_state && Map.keys(result) == Map.keys(build.tasks)
-  end
-
   def update(build, inputs) do
-    store = Store.new(inputs)
+    store = Store.new(inputs, :update)
     Enum.each(build.tasks, fn {k, t} -> Store.add_task(store, k, t) end)
 
     Enum.each(build.tasks, fn {k, _t} ->

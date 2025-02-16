@@ -55,7 +55,44 @@ defmodule XBSTest do
   use ExUnit.Case
   doctest XBS
 
-  describe "update" do
+  describe "compute/2" do
+    test "return basic ok/update info" do
+      build =
+        XBS.new_build(%{
+          foo: %{
+            compute: fn _store -> {:ok, "some result"} end,
+            update: fn _s -> raise "never get here" end
+          },
+          bar: %{compute: fn _store -> :update end, update: fn _s -> raise "never get here" end}
+        })
+
+      assert XBS.compute(build, %{}) == %{
+               ok: [:foo],
+               update: [:bar]
+             }
+    end
+
+    test "targets need updating if their dependencies do" do
+      build =
+        XBS.new_build(%{
+          foo: %{
+            compute: fn _store -> :update end,
+            update: fn _s -> raise "never get here" end
+          },
+          bar: %{
+            compute: fn store -> {:ok, XBS.Store.get(store, :foo)} end,
+            update: fn _s -> raise "never get here" end
+          }
+        })
+
+      assert XBS.compute(build, %{}) == %{
+               ok: [],
+               update: [:bar, :foo]
+             }
+    end
+  end
+
+  describe "update/2" do
     test "success" do
       build =
         XBS.new_build(%{
