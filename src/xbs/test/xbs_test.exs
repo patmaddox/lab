@@ -1,6 +1,8 @@
 defmodule XBSTest.MakeFoo do
+  import XBS.Task
+
   def update(store) do
-    outdir = XBS.Store.get(store, :outdir)
+    outdir = get(store, :outdir)
 
     outfile = "#{outdir}/foo"
     File.write!(outfile, "foo")
@@ -9,8 +11,10 @@ defmodule XBSTest.MakeFoo do
 end
 
 defmodule XBSTest.MakeBar do
+  import XBS.Task
+
   def update(store) do
-    outdir = XBS.Store.get(store, :outdir)
+    outdir = get(store, :outdir)
 
     outfile = "#{outdir}/bar"
     File.write!(outfile, "bar")
@@ -19,10 +23,12 @@ defmodule XBSTest.MakeBar do
 end
 
 defmodule XBSTest.MakeFooBar do
+  import XBS.Task
+
   def update(store) do
-    outdir = XBS.Store.get(store, :outdir)
-    foo = XBS.Store.get(store, :foo) |> File.read!()
-    bar = XBS.Store.get(store, :bar) |> File.read!()
+    outdir = get(store, :outdir)
+    foo = get(store, :foo) |> File.read!()
+    bar = get(store, :bar) |> File.read!()
 
     outfile = "#{outdir}/foobar"
     File.write!(outfile, "this is #{foo}#{bar}")
