@@ -20,6 +20,12 @@ defmodule EFEWeb.Router do
     get "/", PageController, :home
   end
 
+  scope "/api", EFEWeb do
+    pipe_through :api
+
+    resources "/documents", DocumentController
+  end
+
   # Other scopes may use custom stacks.
   # scope "/api", EFEWeb do
   #   pipe_through :api
