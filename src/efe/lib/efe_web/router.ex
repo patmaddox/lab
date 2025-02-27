@@ -18,6 +18,7 @@ defmodule EFEWeb.Router do
     pipe_through :browser
 
     get "/", PageController, :home
+    resources "/documents", DocumentController
   end
 
   scope "/api", EFEWeb do

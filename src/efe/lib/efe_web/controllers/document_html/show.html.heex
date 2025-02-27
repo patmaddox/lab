@@ -1,0 +1,15 @@
+<.header>
+  Document {@document.id}
+  <:subtitle>This is a document record from your database.</:subtitle>
+  <:actions>
+    <.link href={~p"/documents/#{@document}/edit"}>
+      <.button>Edit document</.button>
+    </.link>
+  </:actions>
+</.header>
+
+<.list>
+  <:item title="File name">{@document.file_name}</:item>
+</.list>
+
+<.back navigate={~p"/documents"}>Back to documents</.back>

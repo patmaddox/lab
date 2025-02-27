@@ -1,0 +1,23 @@
+<.header>
+  Listing Documents
+  <:actions>
+    <.link href={~p"/documents/new"}>
+      <.button>New Document</.button>
+    </.link>
+  </:actions>
+</.header>
+
+<.table id="documents" rows={@documents} row_click={&JS.navigate(~p"/documents/#{&1}")}>
+  <:col :let={document} label="File name">{document.file_name}</:col>
+  <:action :let={document}>
+    <div class="sr-only">
+      <.link navigate={~p"/documents/#{document}"}>Show</.link>
+    </div>
+    <.link navigate={~p"/documents/#{document}/edit"}>Edit</.link>
+  </:action>
+  <:action :let={document}>
+    <.link href={~p"/documents/#{document}"} method="delete" data-confirm="Are you sure?">
+      Delete
+    </.link>
+  </:action>
+</.table>
