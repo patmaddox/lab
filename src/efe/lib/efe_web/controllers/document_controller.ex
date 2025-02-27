@@ -42,28 +42,24 @@ defmodule EFEWeb.DocumentController do
   end
 
   def bytes(conn, %{"path" => path}) do
-    case safe_path(path) do
-      {:ok, path} ->
-        if File.regular?(path) do
-          send_download(conn, {:file, path}, disposition: :inline)
-        else
-          send_resp(conn, :not_found, "")
-        end
-
-      :error ->
-        send_resp(conn, :forbidden, "")
+    with {:ok, path} <- safe_path(path) do
+      if File.regular?(path) do
+        send_download(conn, {:file, path}, disposition: :inline)
+      else
+        send_resp(conn, :not_found, "")
+      end
+    else
+      :error -> send_resp(conn, :forbidden, "")
     end
   end
 
   def write(conn, %{"path" => path}) do
-    case safe_path(path) do
-      {:ok, path} ->
-        {:ok, body, conn} = read_body(conn)
-        File.write!(path, body, [:write])
-        send_resp(conn, :ok, "")
-
-      :error ->
-        send_resp(conn, :forbidden, "")
+    with {:ok, path} <- safe_path(path) do
+      {:ok, body, conn} = read_body(conn)
+      File.write!(path, body, [:write])
+      send_resp(conn, :ok, "")
+    else
+      :error -> send_resp(conn, :forbidden, "")
     end
   end
 
