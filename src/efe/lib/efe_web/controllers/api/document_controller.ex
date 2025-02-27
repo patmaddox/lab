@@ -41,8 +41,8 @@ defmodule EFEWeb.API.DocumentController do
     end
   end
 
-  def bytes(conn, %{"path" => path}) do
-    with {:ok, path} <- safe_path(path) do
+  def read(conn, %{"path" => path}) do
+    with {:ok, path} <- Documents.safe_file_path(path) do
       if File.regular?(path) do
         send_download(conn, {:file, path}, disposition: :inline)
       else
@@ -53,28 +53,23 @@ defmodule EFEWeb.API.DocumentController do
     end
   end
 
-  def write(conn, %{"path" => path}) do
-    with {:ok, path} <- safe_path(path) do
-      {:ok, body, conn} = read_body(conn)
-      File.write!(path, body, [:write])
-      send_resp(conn, :ok, "")
-    else
-      :error -> send_resp(conn, :forbidden, "")
-    end
+  def write(conn, %{"status" => 1}) do
+    json(conn, %{error: 0})
   end
 
-  def safe_path(path) do
-    docroot = Application.fetch_env!(:efe, :docroot)
+  # 2 = save after close
+  # 6 = force save
+  def write(conn, %{"path" => path, "status" => status, "url" => url}) when status in [2, 6] do
+    with {:ok, path} <- Documents.safe_file_path(path) do
+      response =
+        [url: url]
+        |> Keyword.merge(Application.get_env(:efe, :req_options, []))
+        |> Req.request!()
 
-    path
-    |> Path.join()
-    |> Path.safe_relative(docroot)
-    |> case do
-      {:ok, path} ->
-        {:ok, Path.join(docroot, path)}
-
-      :error ->
-        :error
+      File.write!(path, response.body, [:write])
+      json(conn, %{error: 0})
+    else
+      :error -> send_resp(conn, :forbidden, "")
     end
   end
 end

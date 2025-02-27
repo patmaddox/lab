@@ -19,7 +19,8 @@ config :efe, EFE.Repo,
 # Binding to loopback ipv4 address prevents access from other machines.
 config :efe, EFEWeb.Endpoint,
   # Change to `ip: {0, 0, 0, 0}` to allow access from other machines.
-  http: [ip: {127, 0, 0, 1}, port: 4000],
+  http: [ip: {0, 0, 0, 0}, port: 4000],
+  url: [host: "172.21.1.30"],
   check_origin: false,
   code_reloader: true,
   debug_errors: true,
@@ -29,7 +30,9 @@ config :efe, EFEWeb.Endpoint,
     tailwind: {Tailwind, :install_and_run, [:efe, ~w(--watch)]}
   ]
 
-config :efe, docroot: "/tmp/eferoot"
+config :efe,
+  docroot: "/tmp/eferoot",
+  document_server_url: "http://172.21.1.40"
 
 # ## SSL Support
 #

@@ -1,0 +1,20 @@
+<div id="placeholder"></div>
+<script type="text/javascript" src={"#{@document_server_url}/web-apps/apps/api/documents/api.js"}></script>
+<script type="text/javascript">
+  const config = {
+    document: {
+      fileType: "docx",
+      title: "Example Document Title.docx",
+      url: "<%= "#{@base_url}/api/documents/read/#{@doc_path}" %>",
+    },
+    documentType: "word",
+    editorConfig: {
+      callbackUrl: "<%= "#{@base_url}/api/documents/write/#{@doc_path}" %>",
+      customization: {
+        forcesave: true
+      }
+    },
+  }
+  
+  const docEditor = new DocsAPI.DocEditor("placeholder", config)
+</script>

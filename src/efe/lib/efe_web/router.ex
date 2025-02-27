@@ -19,13 +19,14 @@ defmodule EFEWeb.Router do
 
     get "/", PageController, :home
     resources "/documents", DocumentController
+    get "/documents/edit/*path", DocumentController, :editor
   end
 
   scope "/api", EFEWeb do
     pipe_through :api
 
-    get "/documents/bytes/*path", API.DocumentController, :bytes
-    post "/documents/bytes/*path", API.DocumentController, :write
+    get "/documents/read/*path", API.DocumentController, :read
+    post "/documents/write/*path", API.DocumentController, :write
     resources "/documents", API.DocumentController
   end
 

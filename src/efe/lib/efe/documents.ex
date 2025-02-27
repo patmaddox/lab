@@ -101,4 +101,22 @@ defmodule EFE.Documents do
   def change_document(%Document{} = document, attrs \\ %{}) do
     Document.changeset(document, attrs)
   end
+
+  def safe_relative_path(path) do
+    docroot = Application.fetch_env!(:efe, :docroot)
+
+    path
+    |> Path.join()
+    |> Path.safe_relative(docroot)
+  end
+
+  def safe_file_path(path) do
+    docroot = Application.fetch_env!(:efe, :docroot)
+
+    with {:ok, path} <- safe_relative_path(path) do
+      {:ok, Path.join(docroot, path)}
+    else
+      :error -> :error
+    end
+  end
 end

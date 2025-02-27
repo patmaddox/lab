@@ -38,6 +38,21 @@ defmodule EFEWeb.DocumentControllerTest do
     end
   end
 
+  describe "edit document with editor" do
+    test "renders editor page", %{conn: conn} do
+      conn = get(conn, ~p"/documents/edit/subdir/foo.txt")
+      result = assert html_response(conn, 200)
+      assert result =~ "http://document-server/web-apps/apps/api/documents/api.js"
+      assert result =~ "http://localhost:4002/api/documents/read/subdir/foo.txt"
+      assert result =~ "http://localhost:4002/api/documents/write/subdir/foo.txt"
+    end
+
+    test "error on path traversal", %{conn: conn} do
+      conn = get(conn, ~p"/documents/edit/../foo.txt")
+      assert response(conn, 403)
+    end
+  end
+
   describe "edit document" do
     setup [:create_document]
 

@@ -31,6 +31,20 @@ defmodule EFEWeb.DocumentController do
     render(conn, :show, document: document)
   end
 
+  def editor(conn, %{"path" => path}) do
+    with {:ok, path} <- Documents.safe_relative_path(path) do
+      conn
+      |> put_root_layout(false)
+      |> put_layout(false)
+      |> assign(:document_server_url, Application.fetch_env!(:efe, :document_server_url))
+      |> assign(:base_url, EFEWeb.Endpoint.url())
+      |> assign(:doc_path, path)
+      |> render(:editor)
+    else
+      :error -> send_resp(conn, :forbidden, "")
+    end
+  end
+
   def edit(conn, %{"id" => id}) do
     document = Documents.get_document!(id)
     changeset = Documents.change_document(document)

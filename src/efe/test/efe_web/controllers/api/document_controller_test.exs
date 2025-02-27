@@ -24,46 +24,73 @@ defmodule EFEWeb.API.DocumentControllerTest do
     end
   end
 
-  describe "get bytes" do
+  describe "read" do
     test "returns the bytes", %{conn: conn} do
-      conn = get(conn, ~p"/api/documents/bytes/subdir/foo.txt")
+      conn = get(conn, ~p"/api/documents/read/subdir/foo.txt")
 
       assert response(conn, 200) == "hello foo\n"
     end
 
     test "404", %{conn: conn} do
-      conn = get(conn, ~p"/api/documents/bytes/missing.txt")
+      conn = get(conn, ~p"/api/documents/read/missing.txt")
 
       assert response(conn, 404)
     end
 
     test "error on path traversal", %{conn: conn} do
-      conn = get(conn, ~p"/api/documents/bytes/../foo.txt")
+      conn = get(conn, ~p"/api/documents/read/../foo.txt")
 
       assert response(conn, 403)
     end
   end
 
-  describe "post bytes" do
+  describe "write (status 1 = no-op)" do
     setup do
-      %{docroot: Application.fetch_env!(:efe, :docroot)}
-    end
-
-    test "writes the bytes", %{conn: conn, docroot: docroot} do
+      docroot = Application.fetch_env!(:efe, :docroot)
       out_file = Path.join(docroot, "out.txt")
       if File.exists?(out_file), do: File.rm!(out_file)
+      %{out_file: out_file}
+    end
+
+    test "returns success, does not modify file", %{conn: conn, out_file: out_file} do
+      conn = post(conn, ~p"/api/documents/write/out.txt", %{status: 1})
+      assert json_response(conn, 200) == %{"error" => 0}
+      refute File.exists?(out_file)
+    end
+  end
+
+  describe "write (status 2 = write)" do
+    setup do
+      docroot = Application.fetch_env!(:efe, :docroot)
+      out_file = Path.join(docroot, "out.txt")
+      if File.exists?(out_file), do: File.rm!(out_file)
+      %{out_file: out_file}
+    end
+
+    test "writes the bytes", %{conn: conn, out_file: out_file} do
+      Req.Test.verify_on_exit!()
+
+      Req.Test.expect(EFEWeb.API.DocumentController, fn c ->
+        assert Plug.Conn.request_url(c) == "http://doc-location/my-doc.txt"
+        Req.Test.text(c, "this is a new foo")
+      end)
 
       conn =
-        conn
-        |> put_req_header("content-type", "multipart/form-data")
-        |> post(~p"/api/documents/bytes/out.txt", "this is a new foo")
+        post(conn, ~p"/api/documents/write/out.txt", %{
+          status: 2,
+          url: "http://doc-location/my-doc.txt"
+        })
 
-      assert response(conn, 200)
+      assert json_response(conn, 200) == %{"error" => 0}
       assert File.read!(out_file) == "this is a new foo"
     end
 
     test "error on path traversal", %{conn: conn} do
-      conn = post(conn, ~p"/api/documents/bytes/../foo.txt")
+      conn =
+        post(conn, ~p"/api/documents/write/../out.txt", %{
+          status: 2,
+          url: "http://doc-location/my-doc.txt"
+        })
 
       assert response(conn, 403)
     end
