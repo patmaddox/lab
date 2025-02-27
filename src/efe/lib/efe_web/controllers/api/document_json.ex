@@ -1,4 +1,4 @@
-defmodule EFEWeb.DocumentJSON do
+defmodule EFEWeb.API.DocumentJSON do
   alias EFE.Documents.Document
 
   @doc """

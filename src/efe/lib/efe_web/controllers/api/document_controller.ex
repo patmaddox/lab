@@ -1,4 +1,4 @@
-defmodule EFEWeb.DocumentController do
+defmodule EFEWeb.API.DocumentController do
   use EFEWeb, :controller
 
   alias EFE.Documents

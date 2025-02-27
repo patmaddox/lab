@@ -23,9 +23,9 @@ defmodule EFEWeb.Router do
   scope "/api", EFEWeb do
     pipe_through :api
 
-    get "/documents/bytes/*path", DocumentController, :bytes
-    post "/documents/bytes/*path", DocumentController, :write
-    resources "/documents", DocumentController
+    get "/documents/bytes/*path", API.DocumentController, :bytes
+    post "/documents/bytes/*path", API.DocumentController, :write
+    resources "/documents", API.DocumentController
   end
 
   # Other scopes may use custom stacks.

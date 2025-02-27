@@ -1,4 +1,4 @@
-defmodule EFEWeb.DocumentControllerTest do
+defmodule EFEWeb.API.DocumentControllerTest do
   use EFEWeb.ConnCase
 
   import EFE.DocumentsFixtures
