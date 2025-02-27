@@ -40,4 +40,25 @@ defmodule EFEWeb.DocumentController do
       send_resp(conn, :no_content, "")
     end
   end
+
+  def bytes(conn, %{"path" => path}) do
+    docroot = Application.fetch_env!(:efe, :docroot)
+
+    path
+    |> Path.join()
+    |> Path.safe_relative(docroot)
+    |> case do
+      {:ok, path} ->
+        path = Path.join(docroot, path)
+
+        if File.regular?(path) do
+          send_download(conn, {:file, path}, disposition: :inline)
+        else
+          send_resp(conn, :not_found, "")
+        end
+
+      :error ->
+        send_resp(conn, :forbidden, "")
+    end
+  end
 end

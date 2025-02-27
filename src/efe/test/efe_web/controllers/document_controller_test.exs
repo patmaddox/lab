@@ -24,6 +24,26 @@ defmodule EFEWeb.DocumentControllerTest do
     end
   end
 
+  describe "get bytes" do
+    test "returns the bytes", %{conn: conn} do
+      conn = get(conn, ~p"/api/documents/bytes/subdir/foo.txt")
+
+      assert response(conn, 200) == "hello foo\n"
+    end
+
+    test "404", %{conn: conn} do
+      conn = get(conn, ~p"/api/documents/bytes/missing.txt")
+
+      assert response(conn, 404)
+    end
+
+    test "error on path traversal", %{conn: conn} do
+      conn = get(conn, ~p"/api/documents/bytes/../foo.txt")
+
+      assert response(conn, 403)
+    end
+  end
+
   describe "create document" do
     test "renders document when data is valid", %{conn: conn} do
       conn = post(conn, ~p"/api/documents", document: @create_attrs)
@@ -46,7 +66,10 @@ defmodule EFEWeb.DocumentControllerTest do
   describe "update document" do
     setup [:create_document]
 
-    test "renders document when data is valid", %{conn: conn, document: %Document{id: id} = document} do
+    test "renders document when data is valid", %{
+      conn: conn,
+      document: %Document{id: id} = document
+    } do
       conn = put(conn, ~p"/api/documents/#{document}", document: @update_attrs)
       assert %{"id" => ^id} = json_response(conn, 200)["data"]
 

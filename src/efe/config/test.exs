@@ -23,6 +23,8 @@ config :efe, EFEWeb.Endpoint,
 # In test we don't send emails
 config :efe, EFE.Mailer, adapter: Swoosh.Adapters.Test
 
+config :efe, docroot: Path.expand("../test/support/fixtures/docroot", __DIR__)
+
 # Disable swoosh api client as it is only required for production adapters
 config :swoosh, :api_client, false
 

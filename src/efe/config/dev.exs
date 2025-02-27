@@ -29,6 +29,8 @@ config :efe, EFEWeb.Endpoint,
     tailwind: {Tailwind, :install_and_run, [:efe, ~w(--watch)]}
   ]
 
+config :efe, docroot: "/tmp/eferoot"
+
 # ## SSL Support
 #
 # In order to use HTTPS in development, a self-signed

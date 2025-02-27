@@ -23,6 +23,7 @@ defmodule EFEWeb.Router do
   scope "/api", EFEWeb do
     pipe_through :api
 
+    get "/documents/bytes/*path", DocumentController, :bytes
     resources "/documents", DocumentController
   end
 
