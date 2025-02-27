@@ -44,6 +44,31 @@ defmodule EFEWeb.DocumentControllerTest do
     end
   end
 
+  describe "post bytes" do
+    setup do
+      %{docroot: Application.fetch_env!(:efe, :docroot)}
+    end
+
+    test "writes the bytes", %{conn: conn, docroot: docroot} do
+      out_file = Path.join(docroot, "out.txt")
+      if File.exists?(out_file), do: File.rm!(out_file)
+
+      conn =
+        conn
+        |> put_req_header("content-type", "multipart/form-data")
+        |> post(~p"/api/documents/bytes/out.txt", "this is a new foo")
+
+      assert response(conn, 200)
+      assert File.read!(out_file) == "this is a new foo"
+    end
+
+    test "error on path traversal", %{conn: conn} do
+      conn = post(conn, ~p"/api/documents/bytes/../foo.txt")
+
+      assert response(conn, 403)
+    end
+  end
+
   describe "create document" do
     test "renders document when data is valid", %{conn: conn} do
       conn = post(conn, ~p"/api/documents", document: @create_attrs)

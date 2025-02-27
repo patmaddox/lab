@@ -24,6 +24,7 @@ defmodule EFEWeb.Router do
     pipe_through :api
 
     get "/documents/bytes/*path", DocumentController, :bytes
+    post "/documents/bytes/*path", DocumentController, :write
     resources "/documents", DocumentController
   end
 

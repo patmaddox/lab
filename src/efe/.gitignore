@@ -35,3 +35,4 @@ efe-*.tar
 npm-debug.log
 /assets/node_modules/
 
+/test/support/fixtures/docroot/out.txt

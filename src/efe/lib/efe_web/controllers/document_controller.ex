@@ -42,15 +42,8 @@ defmodule EFEWeb.DocumentController do
   end
 
   def bytes(conn, %{"path" => path}) do
-    docroot = Application.fetch_env!(:efe, :docroot)
-
-    path
-    |> Path.join()
-    |> Path.safe_relative(docroot)
-    |> case do
+    case safe_path(path) do
       {:ok, path} ->
-        path = Path.join(docroot, path)
-
         if File.regular?(path) do
           send_download(conn, {:file, path}, disposition: :inline)
         else
@@ -59,6 +52,33 @@ defmodule EFEWeb.DocumentController do
 
       :error ->
         send_resp(conn, :forbidden, "")
+    end
+  end
+
+  def write(conn, %{"path" => path}) do
+    case safe_path(path) do
+      {:ok, path} ->
+        {:ok, body, conn} = read_body(conn)
+        File.write!(path, body, [:write])
+        send_resp(conn, :ok, "")
+
+      :error ->
+        send_resp(conn, :forbidden, "")
+    end
+  end
+
+  def safe_path(path) do
+    docroot = Application.fetch_env!(:efe, :docroot)
+
+    path
+    |> Path.join()
+    |> Path.safe_relative(docroot)
+    |> case do
+      {:ok, path} ->
+        {:ok, Path.join(docroot, path)}
+
+      :error ->
+        :error
     end
   end
 end
