@@ -10,4 +10,5 @@
 ./etc/rc.conf
 ./etc/resolv.conf
 ./usr/local/etc/pkg/repos/FreeBSD.conf
+./usr/local/etc/pkg/repos/poudriere.conf
 ./var/unbound/conf.d/ts.net.conf
