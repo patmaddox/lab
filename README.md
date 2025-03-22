@@ -1,5 +1,7 @@
 # patmaddox lab
 
+wiki: https://man.sr.ht/~patmaddox/lab/
+
 Each dir in `src` has a fetch target to clone the repo.
 
 ## Just commands
