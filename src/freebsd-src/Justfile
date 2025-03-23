@@ -1,4 +1,4 @@
-default_tree := "main.jj"
+default_config := "config/main.conf"
 
 help:
   @just -l
@@ -12,20 +12,28 @@ ccache-watch wait='5':
 clone:
   if [ ! -d main.jj ]; then jj git clone --colocate https://github.com/freebsd/freebsd-src.git main.jj; fi
 
-bootstrap tree=default_tree:
+bootstrap tree=default_config:
   ./scripts/build.sh bootstrap {{tree}}
 
-build tree=default_tree:
-  ./scripts/build.sh build {{tree}}
+build config=default_config:
+  ./scripts/build.sh build {{config}}
 
-clean tree=default_tree:
-  ./scripts/build.sh clean {{tree}}
+clean config=default_config:
+  ./scripts/build.sh clean {{config}}
 
-release tree=default_tree:
-  ./scripts/build.sh release {{tree}}
+release config=default_config:
+  ./scripts/build.sh release {{config}}
 
-clean-release tree="main.jj":
-  ./scripts/build.sh clean-release {{tree}}
+clean-release config=default_config:
+  ./scripts/build.sh clean-release {{config}}
+
+# print .OBJDIR for the build
+objdir config=default_config:
+  ./scripts/build.sh objdir {{config}}
+
+# print .OBJDIR/release for the build
+objdir-release config=default_config:
+  ./scripts/build.sh objdir-release {{config}}
 
 [no-cd]
 format-patch change="":
