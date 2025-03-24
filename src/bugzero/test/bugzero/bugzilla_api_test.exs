@@ -4,14 +4,16 @@ defmodule Bugzero.BugzillaApiTest do
   alias Bugzero.BugzillaApi
 
   setup do
-    %{api: BugzillaApi.new("api_token")}
+    %{api: BugzillaApi.new(email: "test@example.com", api_key: "SECRET")}
   end
 
-  test "version/1", %{api: api} do
+  test "version/1" do
+    api = BugzillaApi.new(%{api_key: "SECRET"})
+
     Req.Test.stub(BugzillaApi, fn conn ->
       assert conn.method == "GET"
       assert conn.request_path == "/bugzilla/rest/version"
-      assert conn.params == %{"api_key" => "api_token"}
+      assert conn.params == %{"api_key" => "SECRET"}
 
       Req.Test.json(conn, %{"version" => "5.0.4.1"})
     end)
@@ -23,7 +25,7 @@ defmodule Bugzero.BugzillaApiTest do
     Req.Test.stub(BugzillaApi, fn conn ->
       assert conn.method == "GET"
       assert conn.request_path == "/bugzilla/rest/bug/123"
-      assert conn.params == %{"api_key" => "api_token", "include_fields" => "_default,tags"}
+      assert conn.params == %{"api_key" => "SECRET", "include_fields" => "_default,tags"}
 
       bug_resp = %{
         "id" => 123,
@@ -38,5 +40,22 @@ defmodule Bugzero.BugzillaApiTest do
     assert bug.id == 123
     assert bug.tags == ["tag1", "tag2"]
     assert bug.summary == "bug summary"
+  end
+
+  test "subscribe/2", %{api: api} do
+    Req.Test.stub(BugzillaApi, fn conn ->
+      json_body = JSON.encode!(%{"cc" => %{"add" => ["test@example.com"]}})
+
+      assert conn.method == "PUT"
+      assert conn.request_path == "/bugzilla/rest/bug/123"
+      assert conn.params == %{"api_key" => "SECRET"}
+
+      {:ok, body, conn} = Plug.Conn.read_body(conn)
+      assert body == json_body
+
+      Req.Test.json(conn, %{})
+    end)
+
+    assert :ok = BugzillaApi.subscribe(api, 123)
   end
 end

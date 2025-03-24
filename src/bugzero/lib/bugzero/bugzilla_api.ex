@@ -1,10 +1,10 @@
 defmodule Bugzero.BugzillaApi do
-  defstruct [:api_key]
+  defstruct [:email, :api_key]
 
   alias Req.Response
 
-  def new(api_key) do
-    %__MODULE__{api_key: api_key}
+  def new(attrs) do
+    struct(__MODULE__, attrs)
   end
 
   def version(api) do
@@ -23,6 +23,18 @@ defmodule Bugzero.BugzillaApi do
       |> Req.get!(url: "/bug/#{id}?include_fields=_default,tags")
 
     {:ok, parse_bug(bug)}
+  end
+
+  def subscribe(api, id) do
+    %Response{status: 200} =
+      api
+      |> json_req()
+      |> Req.put!(
+        url: "/bug/#{id}",
+        body: JSON.encode!(%{"cc" => %{"add" => [api.email]}})
+      )
+
+    :ok
   end
 
   defp parse_bug(bug) do

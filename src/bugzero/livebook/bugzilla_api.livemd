@@ -3,9 +3,10 @@
 ## Config API
 
 ```elixir
-api =
-  System.fetch_env!("LB_BUGZILLA_API_KEY")
-  |> Bugzero.BugzillaApi.new()
+api = Bugzero.BugzillaApi.new(
+  email: "pat@patmaddox.com", 
+  api_key: System.fetch_env!("LB_BUGZILLA_API_KEY")
+)
 ```
 
 ## Bugzilla version
@@ -17,5 +18,11 @@ Bugzero.BugzillaApi.version(api)
 ## Get bug
 
 ```elixir
-Bugzero.BugzillaApi.bug(api, 282634)
+{:ok, _} = Bugzero.BugzillaApi.bug(api, 282634)
+```
+
+## Subscribe bug
+
+```elixir
+:ok = Bugzero.BugzillaApi.subscribe(api, 282634)
 ```
