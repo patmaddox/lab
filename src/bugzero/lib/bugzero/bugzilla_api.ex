@@ -1,5 +1,5 @@
 defmodule Bugzero.BugzillaApi do
-  defstruct [:email, :api_key]
+  defstruct [:email, :api_key, :searches]
 
   @bugzilla_url "https://bugs.freebsd.org/bugzilla"
 
@@ -59,6 +59,16 @@ defmodule Bugzero.BugzillaApi do
       )
 
     :ok
+  end
+
+  def fetch_searches(api) do
+    %Response{status: 200, body: %{"users" => [%{"saved_searches" => searches}]}} =
+      api
+      |> json_req()
+      |> Req.get!(url: "/user/#{api.email}")
+
+    searches = Enum.map(searches, &Map.take(&1, ~w(name query)))
+    {:ok, %{api | searches: searches}}
   end
 
   defp parse_bug(bug) do

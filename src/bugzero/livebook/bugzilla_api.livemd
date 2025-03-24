@@ -32,3 +32,9 @@ Bugzero.BugzillaApi.version(api)
 ```elixir
 :ok = Bugzero.BugzillaApi.ignore(api, 282634)
 ```
+
+## Fetch searches
+
+```elixir
+{:ok, api} = Bugzero.BugzillaApi.fetch_searches(api)
+```

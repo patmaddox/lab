@@ -85,4 +85,30 @@ defmodule Bugzero.BugzillaApiTest do
 
     assert :ok = BugzillaApi.ignore(api, 123)
   end
+
+  test "fetch_searches/1", %{api: api} do
+    Req.Test.stub(BugzillaApi, fn conn ->
+      assert conn.method == "GET"
+      assert conn.request_path == "/bugzilla/rest/user/test@example.com"
+      assert conn.params == %{"api_key" => "SECRET"}
+
+      Req.Test.json(conn, %{
+        "users" => [
+          %{
+            "saved_searches" => [
+              %{"name" => "search 1", "query" => "foo=bar", "ignore" => "this"},
+              %{"name" => "search 2", "query" => "bar=baz", "ignore" => "that"}
+            ]
+          }
+        ]
+      })
+    end)
+
+    assert {:ok, api} = BugzillaApi.fetch_searches(api)
+
+    assert api.searches == [
+             %{"name" => "search 1", "query" => "foo=bar"},
+             %{"name" => "search 2", "query" => "bar=baz"}
+           ]
+  end
 end
