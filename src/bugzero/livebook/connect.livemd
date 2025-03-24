@@ -17,6 +17,14 @@ json_req =
   |> Req.new()
   |> Req.Request.put_header("accept", "application/json")
   |> Req.Request.put_header("content-type", "application/json")
+
+json_rpc_req =
+  [
+    base_url: "https://bugs.freebsd.org/bugzilla/jsonrpc.cgi",
+  ]
+  |> Req.new()
+  |> Req.Request.put_header("accept", "application/json")
+  |> Req.Request.put_header("content-type", "application/json")
 ```
 
 ## Request version
@@ -62,5 +70,8 @@ update_resp = Req.put!(json_req, url: "/bug/282634", body: JSON.encode!(%{"cc" =
 
 
 ```
+
+```elixir
+update_tags_resp = Req.post!(json_rpc_req, body: JSON.encode!(%{"id" => "update_tags", "method" => "Bug.update_tags", "params" => [%{"Bugzilla_api_key" => System.fetch_env!("LB_BUGZILLA_API_KEY"), "ids" => [282634], "tags" => %{"add" => ["test"]}}]}))
 
 ```
