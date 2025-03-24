@@ -71,7 +71,7 @@ defmodule Bugzero.BugzillaApi do
     searches =
       Enum.reduce(searches, %{}, fn s, acc ->
         name = Map.fetch!(s, "name")
-        vals = Map.take(s, ~w(query))
+        vals = Map.take(s, ~w(name query))
         Map.put(acc, name, vals)
       end)
 

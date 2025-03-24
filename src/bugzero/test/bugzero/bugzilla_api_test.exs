@@ -107,8 +107,8 @@ defmodule Bugzero.BugzillaApiTest do
     assert {:ok, api} = BugzillaApi.fetch_searches(api)
 
     assert api.searches == %{
-             "search 1" => %{"query" => "foo=bar"},
-             "search 2" => %{"query" => "bar=baz"}
+             "search 1" => %{"name" => "search 1", "query" => "foo=bar"},
+             "search 2" => %{"name" => "search 2", "query" => "bar=baz"}
            }
   end
 
