@@ -1,9 +1,21 @@
 # Bugzero.BugzillaApi
 
+## Config API
+
+```elixir
+api =
+  System.fetch_env!("LB_BUGZILLA_API_KEY")
+  |> Bugzero.BugzillaApi.new()
+```
+
 ## Bugzilla version
 
 ```elixir
-System.fetch_env!("LB_BUGZILLA_API_KEY")
-|> Bugzero.BugzillaApi.new()
-|> Bugzero.BugzillaApi.version()
+Bugzero.BugzillaApi.version(api)
+```
+
+## Get bug
+
+```elixir
+Bugzero.BugzillaApi.bug(api, 282634)
 ```
