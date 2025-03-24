@@ -1,0 +1,56 @@
+# Connect to Bugzilla API
+
+```elixir
+Mix.install([
+  {:req, "~> 0.5.10"}
+])
+```
+
+## Setup Req
+
+```elixir
+json_req =
+  [
+    base_url: "https://bugs.freebsd.org/bugzilla/rest",
+    params: [api_key: System.fetch_env!("LB_BUGZILLA_API_KEY")]
+  ]
+  |> Req.new()
+  |> Req.Request.put_header("accept", "application/json")
+  |> Req.Request.put_header("content-type", "application/json")
+```
+
+## Request version
+
+```elixir
+Req.get!(json_req, url: "/version")
+```
+
+## Request a single bug
+
+```elixir
+Req.get!(json_req, url: "/bug/277488")
+```
+
+## Saved searches
+
+```elixir
+%Req.Response{status: 200, body: body} = Req.get!(json_req, url: "/user/pat@patmaddox.com")
+%{"users" => [user]} = body
+searches = Enum.reduce(Map.fetch!(user, "saved_searches"), %{}, fn s, acc ->
+  Map.put(acc, Map.fetch!(s, "name"), s)
+end)
+search = Map.fetch!(searches, "untracked (base)")
+search_params = Map.fetch!(search, "query")
+```
+
+```elixir
+bugs_resp = Req.get!(json_req, url: "/bug?limit=10&#{search_params}")
+```
+
+```elixir
+bugs = bugs_resp.body["bugs"]
+```
+
+```elixir
+length(bugs)
+```
