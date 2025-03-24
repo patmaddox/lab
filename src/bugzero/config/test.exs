@@ -20,6 +20,11 @@ config :bugzero, BugzeroWeb.Endpoint,
 # In test we don't send emails
 config :bugzero, Bugzero.Mailer, adapter: Swoosh.Adapters.Test
 
+config :bugzero,
+  bugzilla_api_options: [
+    plug: {Req.Test, Bugzero.BugzillaApi}
+  ]
+
 # Disable swoosh api client as it is only required for production adapters
 config :swoosh, :api_client, false
 

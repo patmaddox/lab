@@ -20,6 +20,8 @@ if System.get_env("PHX_SERVER") do
   config :bugzero, BugzeroWeb.Endpoint, server: true
 end
 
+config :bugzero, :bugzilla_api_options, []
+
 if config_env() == :prod do
   database_path =
     System.get_env("DATABASE_PATH") ||
