@@ -38,3 +38,9 @@ Bugzero.BugzillaApi.version(api)
 ```elixir
 {:ok, api} = Bugzero.BugzillaApi.fetch_searches(api)
 ```
+
+## Perform search
+
+```elixir
+{:ok, bugs} = Bugzero.BugzillaApi.search(api, "untracked (base)")
+```

@@ -106,9 +106,67 @@ defmodule Bugzero.BugzillaApiTest do
 
     assert {:ok, api} = BugzillaApi.fetch_searches(api)
 
-    assert api.searches == [
-             %{"name" => "search 1", "query" => "foo=bar"},
-             %{"name" => "search 2", "query" => "bar=baz"}
-           ]
+    assert api.searches == %{
+             "search 1" => %{"query" => "foo=bar"},
+             "search 2" => %{"query" => "bar=baz"}
+           }
+  end
+
+  describe "search/2" do
+    setup %{api: api} do
+      Req.Test.stub(BugzillaApi, fn conn ->
+        assert conn.method == "GET"
+        assert conn.request_path == "/bugzilla/rest/user/test@example.com"
+        assert conn.params == %{"api_key" => "SECRET"}
+
+        Req.Test.json(conn, %{
+          "users" => [
+            %{
+              "saved_searches" => [
+                %{"name" => "foo search", "query" => "foo=bar&baz=qux", "ignore" => "this"}
+              ]
+            }
+          ]
+        })
+      end)
+
+      {:ok, api} = BugzillaApi.fetch_searches(api)
+      %{api: api}
+    end
+
+    test "error when searches not loaded" do
+      api = BugzillaApi.new(api_key: "foobar")
+      assert {:error, :searches_not_loaded} = BugzillaApi.search(api, "foo")
+    end
+
+    test "error when search is unknown", %{api: api} do
+      assert {:error, :unknown_search} = BugzillaApi.search(api, "unknown")
+    end
+
+    test "perform search", %{api: api} do
+      Req.Test.stub(BugzillaApi, fn conn ->
+        assert conn.method == "GET"
+        assert conn.request_path == "/bugzilla/rest/bug"
+
+        assert conn.params == %{
+                 "api_key" => "SECRET",
+                 "limit" => "10",
+                 "include_fields" => "_default,tags",
+                 "foo" => "bar",
+                 "baz" => "qux"
+               }
+
+        Req.Test.json(conn, %{
+          "bugs" => [
+            %{"id" => 1, "summary" => "bug 1", "tags" => []},
+            %{"id" => 2, "summary" => "bug 2", "tags" => ["tag1"]}
+          ]
+        })
+      end)
+
+      assert {:ok, [bug1, bug2]} = BugzillaApi.search(api, "foo search")
+      assert %{id: 1, summary: "bug 1", tags: []} = bug1
+      assert %{id: 2, summary: "bug 2", tags: ["tag1"]} = bug2
+    end
   end
 end

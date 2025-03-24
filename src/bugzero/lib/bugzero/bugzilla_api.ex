@@ -2,6 +2,7 @@ defmodule Bugzero.BugzillaApi do
   defstruct [:email, :api_key, :searches]
 
   @bugzilla_url "https://bugs.freebsd.org/bugzilla"
+  @num_search_results 10
 
   alias Req.Response
 
@@ -67,15 +68,48 @@ defmodule Bugzero.BugzillaApi do
       |> json_req()
       |> Req.get!(url: "/user/#{api.email}")
 
-    searches = Enum.map(searches, &Map.take(&1, ~w(name query)))
+    searches =
+      Enum.reduce(searches, %{}, fn s, acc ->
+        name = Map.fetch!(s, "name")
+        vals = Map.take(s, ~w(query))
+        Map.put(acc, name, vals)
+      end)
+
     {:ok, %{api | searches: searches}}
+  end
+
+  def search(api, search_name) do
+    search(api, search_name, @num_search_results)
+  end
+
+  def search(%__MODULE__{searches: nil}, _search_name, _limit) do
+    {:error, :searches_not_loaded}
+  end
+
+  def search(%__MODULE__{searches: searches}, search_name, _limit)
+      when not is_map_key(searches, search_name) do
+    {:error, :unknown_search}
+  end
+
+  def search(api = %__MODULE__{searches: searches}, search_name, limit) do
+    query =
+      searches
+      |> Map.fetch!(search_name)
+      |> Map.fetch!("query")
+
+    %Response{status: 200, body: %{"bugs" => bugs}} =
+      api
+      |> json_req()
+      |> Req.get!(url: "bug?limit=#{limit}&include_fields=_default,tags&#{query}")
+
+    {:ok, Enum.map(bugs, &parse_bug/1)}
   end
 
   defp parse_bug(bug) do
     %{
       id: Map.fetch!(bug, "id"),
-      tags: Map.fetch!(bug, "tags"),
-      summary: Map.fetch!(bug, "summary")
+      summary: Map.fetch!(bug, "summary"),
+      tags: Map.fetch!(bug, "tags")
     }
   end
 
