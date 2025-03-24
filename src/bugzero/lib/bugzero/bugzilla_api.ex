@@ -1,6 +1,8 @@
 defmodule Bugzero.BugzillaApi do
   defstruct [:email, :api_key]
 
+  @bugzilla_url "https://bugs.freebsd.org/bugzilla"
+
   alias Req.Response
 
   def new(attrs) do
@@ -37,6 +39,28 @@ defmodule Bugzero.BugzillaApi do
     :ok
   end
 
+  def ignore(api, id) do
+    %Response{status: 200} =
+      [base_url: "#{@bugzilla_url}/jsonrpc.cgi"]
+      |> bugzilla_req()
+      |> Req.post!(
+        body:
+          JSON.encode!(%{
+            "id" => "update_tags_#{id}",
+            "method" => "Bug.update_tags",
+            "params" => [
+              %{
+                "Bugzilla_api_key" => api.api_key,
+                "ids" => [id],
+                "tags" => %{"add" => ["ignore"]}
+              }
+            ]
+          })
+      )
+
+    :ok
+  end
+
   defp parse_bug(bug) do
     %{
       id: Map.fetch!(bug, "id"),
@@ -47,9 +71,14 @@ defmodule Bugzero.BugzillaApi do
 
   defp json_req(%__MODULE__{api_key: api_key}) do
     [
-      base_url: "https://bugs.freebsd.org/bugzilla/rest",
+      base_url: "#{@bugzilla_url}/rest",
       params: [api_key: api_key]
     ]
+    |> bugzilla_req()
+  end
+
+  def bugzilla_req(options) do
+    options
     |> Keyword.merge(Application.fetch_env!(:bugzero, :bugzilla_api_options))
     |> Req.new()
     |> Req.Request.put_header("accept", "application/json")

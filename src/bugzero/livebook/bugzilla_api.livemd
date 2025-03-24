@@ -24,5 +24,11 @@ Bugzero.BugzillaApi.version(api)
 ## Subscribe bug
 
 ```elixir
-:ok = Bugzero.BugzillaApi.subscribe(api, 282634)
+:ok = Bugzero.BugzillaApi.subscribe(api, 282852)
+```
+
+## Ignore bug
+
+```elixir
+:ok = Bugzero.BugzillaApi.ignore(api, 282634)
 ```

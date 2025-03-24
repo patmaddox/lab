@@ -58,4 +58,31 @@ defmodule Bugzero.BugzillaApiTest do
 
     assert :ok = BugzillaApi.subscribe(api, 123)
   end
+
+  test "ignore/2", %{api: api} do
+    Req.Test.stub(BugzillaApi, fn conn ->
+      json = %{
+        "id" => "update_tags_123",
+        "method" => "Bug.update_tags",
+        "params" => [
+          %{
+            "Bugzilla_api_key" => "SECRET",
+            "ids" => [123],
+            "tags" => %{"add" => ["ignore"]}
+          }
+        ]
+      }
+
+      assert conn.method == "POST"
+      assert conn.request_path == "/bugzilla/jsonrpc.cgi"
+      assert conn.params == %{}
+
+      {:ok, body, conn} = Plug.Conn.read_body(conn)
+      assert body == JSON.encode!(json)
+
+      Req.Test.json(conn, %{})
+    end)
+
+    assert :ok = BugzillaApi.ignore(api, 123)
+  end
 end
