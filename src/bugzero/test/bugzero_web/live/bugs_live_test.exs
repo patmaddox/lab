@@ -5,7 +5,7 @@ defmodule BugzeroWeb.BugsLiveTest do
 
   alias Bugzero.BugzillaApi
 
-  setup do
+  setup %{conn: conn} do
     Req.Test.stub(BugzillaApi, fn conn ->
       assert conn.method == "GET"
       assert conn.request_path == "/bugzilla/rest/user/test@example.com"
@@ -21,24 +21,18 @@ defmodule BugzeroWeb.BugsLiveTest do
         ]
       })
     end)
-  end
 
-  test "authenticate shows searches", %{conn: conn} do
-    {:ok, view, _html} = live(conn, ~p"/bugs")
+    conn =
+      conn
+      |> Phoenix.ConnTest.init_test_session(%{})
+      |> Plug.Conn.put_session("email", "test@example.com")
+      |> Plug.Conn.put_session("api_key", "SECRET")
 
-    view
-    |> form("#auth-input", %{email: "test@example.com", api_key: "SECRET"})
-    |> render_submit()
-
-    assert has_element?(view, "#searches")
+    %{conn: conn}
   end
 
   test "select search shows bugs", %{conn: conn} do
     {:ok, view, _html} = live(conn, ~p"/bugs")
-
-    view
-    |> form("#auth-input", %{email: "test@example.com", api_key: "SECRET"})
-    |> render_submit()
 
     assert has_element?(view, "#searches")
 

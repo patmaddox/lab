@@ -18,6 +18,7 @@ defmodule BugzeroWeb.Router do
     pipe_through :browser
 
     get "/", PageController, :home
+    post "/", PageController, :auth
     live "/bugs", BugsLive, :index
   end
 

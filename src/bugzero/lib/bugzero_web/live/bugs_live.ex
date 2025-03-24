@@ -5,36 +5,33 @@ defmodule BugzeroWeb.BugsLive do
 
   alias Bugzero.BugzillaApi
 
+  def mount(_params, session, socket) do
+    if connected?(socket) do
+      socket = assign(socket, :api, api(session))
+      {:ok, socket}
+    else
+      {:ok, socket}
+    end
+  end
+
   def handle_params(_params, _uri, socket) do
     socket =
       socket
-      |> assign(:auth_form, to_form(%{}))
       |> assign(:search_form, to_form(%{}))
       |> assign(:bugs, [])
-      |> assign(:searches, [])
+      |> assign(:search_names, [])
 
-    {:noreply, socket}
-  end
+    if connected?(socket) do
+      search_names =
+        socket.assigns.api.searches
+        |> Map.keys()
+        |> Enum.sort()
 
-  def handle_event("auth", %{"api_key" => api_key, "email" => email}, socket) do
-    {:ok, api} =
-      BugzillaApi.new(email: email, api_key: api_key)
-      |> BugzillaApi.fetch_searches()
-
-    searches = searches(api)
-
-    search_names =
-      searches
-      |> Enum.map(&Map.fetch!(&1, "name"))
-      |> Enum.sort()
-
-    socket =
-      socket
-      |> assign(:api, api)
-      |> assign(:searches, searches)
-      |> assign(:search_names, search_names)
-
-    {:noreply, socket}
+      socket = assign(socket, :search_names, search_names)
+      {:noreply, socket}
+    else
+      {:noreply, socket}
+    end
   end
 
   def handle_event("select_search", %{"selected_search" => selected_search}, socket) do
@@ -49,7 +46,11 @@ defmodule BugzeroWeb.BugsLive do
     {:noreply, socket}
   end
 
-  defp searches(api) do
-    Map.values(api.searches)
+  def api(%{"api_key" => api_key, "email" => email}) do
+    {:ok, api} =
+      BugzillaApi.new(email: email, api_key: api_key)
+      |> BugzillaApi.fetch_searches()
+
+    api
   end
 end

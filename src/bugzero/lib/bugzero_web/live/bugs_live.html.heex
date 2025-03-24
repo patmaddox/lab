@@ -1,10 +1,4 @@
-<.simple_form for={@auth_form} id="auth-input" phx-submit="auth">
-  <.input field={@auth_form[:email]} label="Email" />
-  <.input field={@auth_form[:api_key]} label="API Key" type="password" />
-  <button>Authenticate</button>
-</.simple_form>
-
-<%= if Enum.any?(@searches) do %>
+<%= if Enum.any?(@search_names) do %>
   <.simple_form for={@search_form} id="searches" phx-change="select_search">
     <.input field={@search_form[:selected_search]} label="Search" type="select" prompt="-- select search --" options={@search_names} />
   </.simple_form>
