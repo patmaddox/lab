@@ -1,0 +1,9 @@
+# Bugzero.BugzillaApi
+
+## Bugzilla version
+
+```elixir
+System.fetch_env!("LB_BUGZILLA_API_KEY")
+|> Bugzero.BugzillaApi.new()
+|> Bugzero.BugzillaApi.version()
+```
