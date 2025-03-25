@@ -17,9 +17,9 @@ defmodule BugzeroWeb.BugsLive do
   def mount(_params, session, socket) do
     socket =
       socket
-      |> assign(:search_form, to_form(%{}))
       |> assign(:bugs, [])
       |> assign(:search_names, [])
+      |> assign(:search_form, to_form(%{}))
 
     if connected?(socket) do
       {:ok, load_api(session, socket)}
@@ -41,12 +41,10 @@ defmodule BugzeroWeb.BugsLive do
   end
 
   def handle_params(%{"search" => selected_search}, _uri, socket, :search) do
-    search_form = to_form(%{"selected_search" => selected_search})
-
     socket =
       socket
-      |> assign(:search_form, search_form)
       |> assign(:selected_search, selected_search)
+      |> assign(:search_form, to_form(%{"selected_search" => selected_search}))
       |> refresh_bugs()
 
     {:noreply, socket}
