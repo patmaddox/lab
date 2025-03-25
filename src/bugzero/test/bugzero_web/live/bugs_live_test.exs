@@ -89,6 +89,16 @@ defmodule BugzeroWeb.BugsLiveTest do
       assert_push_event(view, "open_bug", %{id: 1})
     end
 
+    test "r to refresh", %{view: view} do
+      # navigate down one to make sure it's a reload
+      render_keyup(view, "key_up", %{"key" => "k"})
+      assert has_element?(view, "#bugs #bug-2.selected")
+
+      render_keyup(view, "key_up", %{"key" => "r"})
+      assert_push_event(view, "focus_bug", %{id: 1})
+      assert has_element?(view, "#bugs #bug-1.selected")
+    end
+
     test "ignore other keys", %{view: view} do
       render_keyup(view, "key_up", %{"key" => "`"})
     end

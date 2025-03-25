@@ -127,5 +127,6 @@ defmodule Bugzero.BugzillaApi do
     |> Req.new()
     |> Req.Request.put_header("accept", "application/json")
     |> Req.Request.put_header("content-type", "application/json")
+    |> Req.Request.put_header("cache-control", "no-cache")
   end
 end

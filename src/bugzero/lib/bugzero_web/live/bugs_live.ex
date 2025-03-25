@@ -36,13 +36,12 @@ defmodule BugzeroWeb.BugsLive do
 
   def handle_event("select_search", %{"selected_search" => selected_search}, socket) do
     search_form = Map.put(socket.assigns.search_form, "selected_search", selected_search)
-    {:ok, bugs} = BugzillaApi.search(socket.assigns.api, selected_search)
 
     socket =
       socket
       |> assign(:search_form, search_form)
-      |> assign(:bugs, bugs)
-      |> assign_current_bug_index(0)
+      |> assign(:selected_search, selected_search)
+      |> assign_bugs()
 
     {:noreply, socket}
   end
@@ -73,6 +72,10 @@ defmodule BugzeroWeb.BugsLive do
     {:noreply, push_event(socket, "open_bug", %{id: bug_id})}
   end
 
+  def handle_event("key_up", %{"key" => "r"}, socket) do
+    {:noreply, assign_bugs(socket)}
+  end
+
   def handle_event("key_up", %{"key" => _}, socket), do: {:noreply, socket}
 
   defp api(%{"api_key" => api_key, "email" => email}) do
@@ -89,5 +92,13 @@ defmodule BugzeroWeb.BugsLive do
     socket
     |> assign(:current_bug_index, index)
     |> push_event("focus_bug", %{id: bug_id})
+  end
+
+  defp assign_bugs(socket) do
+    {:ok, bugs} = BugzillaApi.search(socket.assigns.api, socket.assigns.selected_search)
+
+    socket
+    |> assign(:bugs, bugs)
+    |> assign_current_bug_index(0)
   end
 end
