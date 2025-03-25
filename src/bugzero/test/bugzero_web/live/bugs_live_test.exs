@@ -167,11 +167,12 @@ defmodule BugzeroWeb.BugsLiveTest do
       :ok
     end
 
-    test "i to ignore", %{conn: conn} do
+    test "i to ignore and advance", %{conn: conn} do
       {:ok, view, _html} = live(conn, ~p"/bugs/foo search")
 
       render_keyup(view, "key_up", %{"key" => "i"})
-      assert has_element?(view, "#bugs #bug-1.selected.ignored")
+      assert has_element?(view, "#bugs #bug-1.ignored")
+      assert has_element?(view, "#bugs #bug-2.selected")
 
       # moving doesn't clear ignore status
       render_keyup(view, "key_up", %{"key" => "k"})
@@ -197,11 +198,12 @@ defmodule BugzeroWeb.BugsLiveTest do
       :ok
     end
 
-    test "s to subscribe", %{conn: conn} do
+    test "s to subscribe and advance", %{conn: conn} do
       {:ok, view, _html} = live(conn, ~p"/bugs/foo search")
 
       render_keyup(view, "key_up", %{"key" => "s"})
-      assert has_element?(view, "#bugs #bug-1.selected.subscribed")
+      assert has_element?(view, "#bugs #bug-1.subscribed")
+      assert has_element?(view, "#bugs #bug-2.selected")
     end
   end
 end

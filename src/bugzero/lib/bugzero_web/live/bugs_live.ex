@@ -148,7 +148,9 @@ defmodule BugzeroWeb.BugsLive do
       :ok = BugzillaApi.ignore(socket.assigns.api, bug.id)
     end)
 
-    update_current_bug(socket, bug)
+    socket
+    |> update_current_bug(bug)
+    |> next_bug()
   end
 
   defp subscribe_current_bug(socket) do
@@ -161,7 +163,9 @@ defmodule BugzeroWeb.BugsLive do
       :ok = BugzillaApi.subscribe(socket.assigns.api, bug.id)
     end)
 
-    update_current_bug(socket, bug)
+    socket
+    |> update_current_bug(bug)
+    |> next_bug()
   end
 
   defp add_css_class(bug, css_class) do
