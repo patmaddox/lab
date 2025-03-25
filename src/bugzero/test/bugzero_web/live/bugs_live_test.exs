@@ -6,7 +6,7 @@ defmodule BugzeroWeb.BugsLiveTest do
   alias Bugzero.BugzillaApi
 
   setup %{conn: conn} do
-    Req.Test.stub(BugzillaApi, fn conn ->
+    Req.Test.expect(BugzillaApi, fn conn ->
       assert conn.method == "GET"
       assert conn.request_path == "/bugzilla/rest/user/test@example.com"
       assert conn.params == %{"api_key" => "SECRET"}
@@ -22,6 +22,26 @@ defmodule BugzeroWeb.BugsLiveTest do
       })
     end)
 
+    Req.Test.expect(BugzillaApi, 2, fn conn ->
+      assert conn.method == "GET"
+      assert conn.request_path == "/bugzilla/rest/bug"
+
+      assert conn.params == %{
+               "api_key" => "SECRET",
+               "limit" => "20",
+               "include_fields" => "id,summary,tags",
+               "foo" => "bar",
+               "baz" => "qux"
+             }
+
+      Req.Test.json(conn, %{
+        "bugs" => [
+          %{"id" => 1, "summary" => "bug 1", "tags" => []},
+          %{"id" => 2, "summary" => "bug 2", "tags" => ["tag1"]}
+        ]
+      })
+    end)
+
     conn =
       conn
       |> Phoenix.ConnTest.init_test_session(%{})
@@ -31,34 +51,19 @@ defmodule BugzeroWeb.BugsLiveTest do
     %{conn: conn}
   end
 
-  describe "selecting a search" do
+  test "selecting a search sets params", %{conn: conn} do
+    {:ok, view, _html} = live(conn, ~p"/bugs")
+
+    view
+    |> form("#searches", %{selected_search: "foo search"})
+    |> render_change()
+
+    assert_patched(view, ~p"/bugs/foo search")
+  end
+
+  describe "selecting a search (original)" do
     setup %{conn: conn} do
-      {:ok, view, _html} = live(conn, ~p"/bugs")
-
-      Req.Test.stub(BugzillaApi, fn conn ->
-        assert conn.method == "GET"
-        assert conn.request_path == "/bugzilla/rest/bug"
-
-        assert conn.params == %{
-                 "api_key" => "SECRET",
-                 "limit" => "20",
-                 "include_fields" => "id,summary,tags",
-                 "foo" => "bar",
-                 "baz" => "qux"
-               }
-
-        Req.Test.json(conn, %{
-          "bugs" => [
-            %{"id" => 1, "summary" => "bug 1", "tags" => []},
-            %{"id" => 2, "summary" => "bug 2", "tags" => ["tag1"]}
-          ]
-        })
-      end)
-
-      view
-      |> form("#searches", %{selected_search: "foo search"})
-      |> render_change()
-
+      {:ok, view, _html} = live(conn, ~p"/bugs/foo search")
       %{view: view}
     end
 

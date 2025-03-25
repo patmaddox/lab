@@ -20,6 +20,7 @@ defmodule BugzeroWeb.Router do
     get "/", PageController, :home
     post "/", PageController, :auth
     live "/bugs", BugsLive, :index
+    live "/bugs/:search", BugsLive, :search
   end
 
   # Other scopes may use custom stacks.

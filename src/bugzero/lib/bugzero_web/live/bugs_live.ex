@@ -6,15 +6,6 @@ defmodule BugzeroWeb.BugsLive do
   alias Bugzero.BugzillaApi
 
   def mount(_params, session, socket) do
-    if connected?(socket) do
-      socket = assign(socket, :api, api(session))
-      {:ok, socket}
-    else
-      {:ok, socket}
-    end
-  end
-
-  def handle_params(_params, _uri, socket) do
     socket =
       socket
       |> assign(:search_form, to_form(%{}))
@@ -22,19 +13,25 @@ defmodule BugzeroWeb.BugsLive do
       |> assign(:search_names, [])
 
     if connected?(socket) do
-      search_names =
-        socket.assigns.api.searches
-        |> Map.keys()
-        |> Enum.sort()
+      {:ok, load_api(session, socket)}
+    else
+      {:ok, socket}
+    end
+  end
 
-      socket = assign(socket, :search_names, search_names)
-      {:noreply, socket}
+  def handle_params(params, uri, socket) do
+    if connected?(socket) do
+      handle_params(params, uri, socket, socket.assigns.live_action)
     else
       {:noreply, socket}
     end
   end
 
-  def handle_event("select_search", %{"selected_search" => selected_search}, socket) do
+  def handle_params(_params, _uri, socket, :index) do
+    {:noreply, socket}
+  end
+
+  def handle_params(%{"search" => selected_search}, _uri, socket, :search) do
     search_form = Map.put(socket.assigns.search_form, "selected_search", selected_search)
 
     socket =
@@ -43,6 +40,11 @@ defmodule BugzeroWeb.BugsLive do
       |> assign(:selected_search, selected_search)
       |> refresh_bugs()
 
+    {:noreply, socket}
+  end
+
+  def handle_event("select_search", %{"selected_search" => selected_search}, socket) do
+    socket = push_patch(socket, to: "/bugs/#{URI.encode(selected_search)}")
     {:noreply, socket}
   end
 
@@ -73,12 +75,19 @@ defmodule BugzeroWeb.BugsLive do
 
   def handle_event("key_up", %{"key" => _}, socket), do: {:noreply, socket}
 
-  defp api(%{"api_key" => api_key, "email" => email}) do
+  defp load_api(%{"api_key" => api_key, "email" => email}, socket) do
     {:ok, api} =
       BugzillaApi.new(email: email, api_key: api_key)
       |> BugzillaApi.fetch_searches()
 
-    api
+    search_names =
+      api.searches
+      |> Map.keys()
+      |> Enum.sort()
+
+    socket
+    |> assign(:api, api)
+    |> assign(:search_names, search_names)
   end
 
   defp assign_current_bug(socket, new_index) do
