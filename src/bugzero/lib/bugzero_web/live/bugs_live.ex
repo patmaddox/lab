@@ -42,9 +42,33 @@ defmodule BugzeroWeb.BugsLive do
       socket
       |> assign(:search_form, search_form)
       |> assign(:bugs, bugs)
+      |> assign(:current_bug_index, 0)
 
     {:noreply, socket}
   end
+
+  def handle_event("key_up", %{"key" => "k"}, socket) do
+    current_bug_index = socket.assigns.current_bug_index + 1
+
+    if current_bug_index == length(socket.assigns.bugs) do
+      {:noreply, socket}
+    else
+      {:noreply, assign(socket, :current_bug_index, current_bug_index)}
+    end
+  end
+
+  def handle_event("key_up", %{"key" => "j"}, socket) do
+    current_bug_index = socket.assigns.current_bug_index
+
+    if current_bug_index == 0 do
+      {:noreply, socket}
+    else
+      current_bug_index = current_bug_index - 1
+      {:noreply, assign(socket, :current_bug_index, current_bug_index)}
+    end
+  end
+
+  def handle_event("key_up", %{"key" => _}, socket), do: {:noreply, socket}
 
   def api(%{"api_key" => api_key, "email" => email}) do
     {:ok, api} =

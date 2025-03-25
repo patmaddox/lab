@@ -31,35 +31,57 @@ defmodule BugzeroWeb.BugsLiveTest do
     %{conn: conn}
   end
 
-  test "select search shows bugs", %{conn: conn} do
-    {:ok, view, _html} = live(conn, ~p"/bugs")
+  describe "selecting a search" do
+    setup %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/bugs")
 
-    assert has_element?(view, "#searches")
+      Req.Test.stub(BugzillaApi, fn conn ->
+        assert conn.method == "GET"
+        assert conn.request_path == "/bugzilla/rest/bug"
 
-    Req.Test.stub(BugzillaApi, fn conn ->
-      assert conn.method == "GET"
-      assert conn.request_path == "/bugzilla/rest/bug"
+        assert conn.params == %{
+                 "api_key" => "SECRET",
+                 "limit" => "10",
+                 "include_fields" => "_default,tags",
+                 "foo" => "bar",
+                 "baz" => "qux"
+               }
 
-      assert conn.params == %{
-               "api_key" => "SECRET",
-               "limit" => "10",
-               "include_fields" => "_default,tags",
-               "foo" => "bar",
-               "baz" => "qux"
-             }
+        Req.Test.json(conn, %{
+          "bugs" => [
+            %{"id" => 1, "summary" => "bug 1", "tags" => []},
+            %{"id" => 2, "summary" => "bug 2", "tags" => ["tag1"]}
+          ]
+        })
+      end)
 
-      Req.Test.json(conn, %{
-        "bugs" => [
-          %{"id" => 1, "summary" => "bug 1", "tags" => []},
-          %{"id" => 2, "summary" => "bug 2", "tags" => ["tag1"]}
-        ]
-      })
-    end)
+      view
+      |> form("#searches", %{selected_search: "foo search"})
+      |> render_change()
 
-    view
-    |> form("#searches", %{selected_search: "foo search"})
-    |> render_change()
+      %{view: view}
+    end
 
-    assert has_element?(view, "#bugs")
+    test "select first bug by default", %{view: view} do
+      assert has_element?(view, "#bugs")
+      assert has_element?(view, "#bugs #bug-1.selected")
+    end
+
+    test "keyboard navigation", %{view: view} do
+      render_keyup(view, "key_up", %{"key" => "k"})
+      assert has_element?(view, "#bugs #bug-2.selected")
+      render_keyup(view, "key_up", %{"key" => "k"})
+      assert has_element?(view, "#bugs #bug-2.selected")
+
+      render_keyup(view, "key_up", %{"key" => "j"})
+      assert has_element?(view, "#bugs #bug-1.selected")
+      render_keyup(view, "key_up", %{"key" => "j"})
+      assert has_element?(view, "#bugs #bug-1.selected")
+    end
+
+    test "ignore other keys", %{view: view} do
+      render_keyup(view, "key_up", %{"key" => "`"})
+      assert has_element?(view, "#bugs #bug-1.selected")
+    end
   end
 end
