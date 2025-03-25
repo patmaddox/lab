@@ -82,25 +82,19 @@ defmodule BugzeroWeb.BugsLive do
   end
 
   defp assign_current_bug(socket, new_index) do
-    bugs = socket.assigns.bugs
-    current_index = socket.assigns.current_bug_index
-    current_bug = Enum.at(bugs, current_index)
-
     current_bug =
-      Map.put(current_bug, :css_classes, MapSet.delete(current_bug.css_classes, "selected"))
-
-    new_bug = Enum.at(bugs, new_index)
+      socket
+      |> current_bug()
+      |> remove_css_class("selected")
 
     new_bug =
-      Map.put(new_bug, :css_classes, MapSet.put(new_bug.css_classes, "selected"))
-
-    bugs =
-      bugs
-      |> List.replace_at(current_index, current_bug)
-      |> List.replace_at(new_index, new_bug)
+      socket
+      |> bug_at(new_index)
+      |> add_css_class("selected")
 
     socket
-    |> assign(:bugs, bugs)
+    |> update_current_bug(current_bug)
+    |> update_bug_at(new_index, new_bug)
     |> assign(:current_bug_index, new_index)
     |> push_event("focus_bug", %{id: new_bug.id})
   end
@@ -135,16 +129,46 @@ defmodule BugzeroWeb.BugsLive do
     end
   end
 
-  defp ignore_current_bug(socket), do: add_current_bug_css_class(socket, "ignored")
-  defp subscribe_current_bug(socket), do: add_current_bug_css_class(socket, "subscribed")
+  defp ignore_current_bug(socket) do
+    bug =
+      socket
+      |> current_bug()
+      |> add_css_class("ignored")
 
-  defp add_current_bug_css_class(socket, css_class) do
-    bugs = socket.assigns.bugs
-    index = socket.assigns.current_bug_index
+    update_current_bug(socket, bug)
+  end
 
-    bug = Enum.at(bugs, index)
-    bug = %{bug | css_classes: MapSet.put(bug.css_classes, css_class)}
+  defp subscribe_current_bug(socket) do
+    bug =
+      socket
+      |> current_bug()
+      |> add_css_class("subscribed")
 
-    assign(socket, :bugs, List.replace_at(bugs, index, bug))
+    update_current_bug(socket, bug)
+  end
+
+  defp add_css_class(bug, css_class) do
+    %{bug | css_classes: MapSet.put(bug.css_classes, css_class)}
+  end
+
+  defp remove_css_class(bug, css_class) do
+    %{bug | css_classes: MapSet.delete(bug.css_classes, css_class)}
+  end
+
+  defp bug_at(socket, index) do
+    Enum.at(socket.assigns.bugs, index)
+  end
+
+  defp current_bug(socket) do
+    bug_at(socket, socket.assigns.current_bug_index)
+  end
+
+  defp update_bug_at(socket, index, bug) do
+    bugs = List.replace_at(socket.assigns.bugs, index, bug)
+    assign(socket, :bugs, bugs)
+  end
+
+  defp update_current_bug(socket, bug) do
+    update_bug_at(socket, socket.assigns.current_bug_index, bug)
   end
 end
