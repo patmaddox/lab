@@ -100,16 +100,20 @@ defmodule Bugzero.BugzillaApi do
     %Response{status: 200, body: %{"bugs" => bugs}} =
       api
       |> json_req()
-      |> Req.get!(url: "bug?limit=#{limit}&include_fields=id,summary,tags&#{query}")
+      |> Req.get!(url: "bug?limit=#{limit}&include_fields=id,summary,tags,creation_time&#{query}")
 
     {:ok, Enum.map(bugs, &parse_bug/1)}
   end
 
   defp parse_bug(bug) do
+    {:ok, creation_time, 0} =
+      bug |> Map.fetch!("creation_time") |> DateTime.from_iso8601()
+
     %{
       id: Map.fetch!(bug, "id"),
       summary: Map.fetch!(bug, "summary"),
-      tags: Map.fetch!(bug, "tags")
+      tags: Map.fetch!(bug, "tags"),
+      creation_time: creation_time
     }
   end
 

@@ -31,15 +31,25 @@ defmodule BugzeroWeb.BugsLiveTest do
       assert conn.params == %{
                "api_key" => "SECRET",
                "limit" => "20",
-               "include_fields" => "id,summary,tags",
+               "include_fields" => "id,summary,tags,creation_time",
                "foo" => "bar",
                "baz" => "qux"
              }
 
       Req.Test.json(conn, %{
         "bugs" => [
-          %{"id" => 1, "summary" => "bug 1", "tags" => []},
-          %{"id" => 2, "summary" => "bug 2", "tags" => ["tag1"]}
+          %{
+            "id" => 1,
+            "summary" => "bug 1",
+            "creation_time" => "2024-03-18T12:38:20Z",
+            "tags" => []
+          },
+          %{
+            "id" => 2,
+            "summary" => "bug 2",
+            "creation_time" => "2024-03-18T12:38:20Z",
+            "tags" => ["tag1"]
+          }
         ]
       })
     end)
@@ -73,7 +83,7 @@ defmodule BugzeroWeb.BugsLiveTest do
 
     assert_push_event(view, "focus_bug", %{id: 1})
     assert has_element?(view, "#bugs")
-    assert has_element?(view, "#bugs #bug-1.selected")
+    assert has_element?(view, "#bugs #bug-1.selected", "[2024-03-18]")
   end
 
   test "keyboard navigation", %{conn: conn} do
@@ -115,15 +125,25 @@ defmodule BugzeroWeb.BugsLiveTest do
       assert conn.params == %{
                "api_key" => "SECRET",
                "limit" => "20",
-               "include_fields" => "id,summary,tags",
+               "include_fields" => "id,summary,tags,creation_time",
                "foo" => "bar",
                "baz" => "qux"
              }
 
       Req.Test.json(conn, %{
         "bugs" => [
-          %{"id" => 1, "summary" => "bug 1", "tags" => []},
-          %{"id" => 2, "summary" => "bug 2", "tags" => ["tag1"]}
+          %{
+            "id" => 1,
+            "summary" => "bug 1",
+            "creation_time" => "2024-03-18T12:38:20Z",
+            "tags" => []
+          },
+          %{
+            "id" => 2,
+            "summary" => "bug 2",
+            "creation_time" => "2024-03-18T12:38:20Z",
+            "tags" => ["tag1"]
+          }
         ]
       })
     end)

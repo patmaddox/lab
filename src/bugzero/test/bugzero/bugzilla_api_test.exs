@@ -30,7 +30,8 @@ defmodule Bugzero.BugzillaApiTest do
       bug_resp = %{
         "id" => 123,
         "tags" => ["tag1", "tag2"],
-        "summary" => "bug summary"
+        "summary" => "bug summary",
+        "creation_time" => "2024-03-18T12:38:20Z"
       }
 
       Req.Test.json(conn, %{"bugs" => [bug_resp]})
@@ -151,22 +152,44 @@ defmodule Bugzero.BugzillaApiTest do
         assert conn.params == %{
                  "api_key" => "SECRET",
                  "limit" => "10",
-                 "include_fields" => "id,summary,tags",
+                 "include_fields" => "id,summary,tags,creation_time",
                  "foo" => "bar",
                  "baz" => "qux"
                }
 
         Req.Test.json(conn, %{
           "bugs" => [
-            %{"id" => 1, "summary" => "bug 1", "tags" => []},
-            %{"id" => 2, "summary" => "bug 2", "tags" => ["tag1"]}
+            %{
+              "id" => 1,
+              "summary" => "bug 1",
+              "creation_time" => "2024-03-18T12:38:20Z",
+              "tags" => []
+            },
+            %{
+              "id" => 2,
+              "summary" => "bug 2",
+              "creation_time" => "2024-03-18T12:38:20Z",
+              "tags" => ["tag1"]
+            }
           ]
         })
       end)
 
       assert {:ok, [bug1, bug2]} = BugzillaApi.search(api, "foo search")
-      assert %{id: 1, summary: "bug 1", tags: []} = bug1
-      assert %{id: 2, summary: "bug 2", tags: ["tag1"]} = bug2
+
+      assert %{
+               id: 1,
+               summary: "bug 1",
+               creation_time: ~U[2024-03-18T12:38:20Z],
+               tags: []
+             } = bug1
+
+      assert %{
+               id: 2,
+               summary: "bug 2",
+               creation_time: ~U[2024-03-18T12:38:20Z],
+               tags: ["tag1"]
+             } = bug2
     end
   end
 end

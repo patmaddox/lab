@@ -192,4 +192,8 @@ defmodule BugzeroWeb.BugsLive do
   defp update_current_bug(socket, bug) do
     update_bug_at(socket, socket.assigns.current_bug_index, bug)
   end
+
+  defp format_time(time) do
+    DateTime.to_date(time)
+  end
 end

@@ -7,7 +7,10 @@
 <%= if Enum.any?(@bugs) do %>
   <ul id="bugs" phx-window-keyup="key_up">
     <li :for={b <- @bugs} id={"bug-#{b.id}"} class={MapSet.to_list(b.css_classes)}>
-      <.link href={"https://bugs.freebsd.org/bugzilla/show_bug.cgi?id=#{b.id}"} target="_blank"><%= b.summary %></.link>
+      <.link href={"https://bugs.freebsd.org/bugzilla/show_bug.cgi?id=#{b.id}"} target="_blank">
+	[<%= format_time(b.creation_time) %>]
+	<%= b.summary %>
+      </.link>
     </li>
   </ul>
 <% end %>

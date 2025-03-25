@@ -36,7 +36,7 @@ Req.get!(json_req, url: "/version")
 ## Request a single bug
 
 ```elixir
-Req.get!(json_req, url: "/bug/277488?include_fields=_default,tags")
+Req.get!(json_req, url: "/bug/277488?include_fields=id,summary,tags,last_change_time")
 ```
 
 ## Saved searches
