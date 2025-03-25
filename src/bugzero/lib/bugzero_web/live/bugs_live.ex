@@ -5,6 +5,15 @@ defmodule BugzeroWeb.BugsLive do
 
   alias Bugzero.BugzillaApi
 
+  @key_prev ["j", "ArrowUp"]
+  @key_next ["k", "ArrowDown"]
+
+  @key_ignore ["i", "ArrowLeft"]
+  @key_subscribe ["s", "ArrowRight"]
+
+  @key_open " "
+  @key_refresh ["r", "Insert"]
+
   def mount(_params, session, socket) do
     socket =
       socket
@@ -48,28 +57,28 @@ defmodule BugzeroWeb.BugsLive do
     {:noreply, socket}
   end
 
-  def handle_event("key_up", %{"key" => "k"}, socket) do
-    {:noreply, next_bug(socket)}
-  end
-
-  def handle_event("key_up", %{"key" => "j"}, socket) do
+  def handle_event("key_up", %{"key" => k}, socket) when k in @key_prev do
     {:noreply, prev_bug(socket)}
   end
 
-  def handle_event("key_up", %{"key" => " "}, socket) do
+  def handle_event("key_up", %{"key" => k}, socket) when k in @key_next do
+    {:noreply, next_bug(socket)}
+  end
+
+  def handle_event("key_up", %{"key" => @key_open}, socket) do
     bug_id = Enum.at(socket.assigns.bugs, socket.assigns.current_bug_index).id
     {:noreply, push_event(socket, "open_bug", %{id: bug_id})}
   end
 
-  def handle_event("key_up", %{"key" => "r"}, socket) do
+  def handle_event("key_up", %{"key" => k}, socket) when k in @key_refresh do
     {:noreply, refresh_bugs(socket)}
   end
 
-  def handle_event("key_up", %{"key" => "i"}, socket) do
+  def handle_event("key_up", %{"key" => k}, socket) when k in @key_ignore do
     {:noreply, ignore_current_bug(socket)}
   end
 
-  def handle_event("key_up", %{"key" => "s"}, socket) do
+  def handle_event("key_up", %{"key" => k}, socket) when k in @key_subscribe do
     {:noreply, subscribe_current_bug(socket)}
   end
 
