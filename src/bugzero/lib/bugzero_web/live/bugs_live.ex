@@ -144,6 +144,10 @@ defmodule BugzeroWeb.BugsLive do
       |> current_bug()
       |> add_css_class("ignored")
 
+    Task.start_link(fn ->
+      :ok = BugzillaApi.ignore(socket.assigns.api, bug.id)
+    end)
+
     update_current_bug(socket, bug)
   end
 
@@ -152,6 +156,10 @@ defmodule BugzeroWeb.BugsLive do
       socket
       |> current_bug()
       |> add_css_class("subscribed")
+
+    Task.start_link(fn ->
+      :ok = BugzillaApi.subscribe(socket.assigns.api, bug.id)
+    end)
 
     update_current_bug(socket, bug)
   end
