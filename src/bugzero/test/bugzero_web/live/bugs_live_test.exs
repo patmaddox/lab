@@ -61,64 +61,71 @@ defmodule BugzeroWeb.BugsLiveTest do
     assert_patched(view, ~p"/bugs/foo search")
   end
 
-  describe "selecting a search (original)" do
-    setup %{conn: conn} do
-      {:ok, view, _html} = live(conn, ~p"/bugs/foo search")
-      %{view: view}
-    end
+  test "select first bug by default", %{conn: conn} do
+    {:ok, view, _html} = live(conn, ~p"/bugs/foo search")
 
-    test "select first bug by default", %{view: view} do
-      assert_push_event(view, "focus_bug", %{id: 1})
-      assert has_element?(view, "#bugs")
-      assert has_element?(view, "#bugs #bug-1.selected")
-    end
+    assert_push_event(view, "focus_bug", %{id: 1})
+    assert has_element?(view, "#bugs")
+    assert has_element?(view, "#bugs #bug-1.selected")
+  end
 
-    test "keyboard navigation", %{view: view} do
-      render_keyup(view, "key_up", %{"key" => "k"})
-      assert_push_event(view, "focus_bug", %{id: 2})
-      assert has_element?(view, "#bugs #bug-2.selected")
+  test "keyboard navigation", %{conn: conn} do
+    {:ok, view, _html} = live(conn, ~p"/bugs/foo search")
 
-      render_keyup(view, "key_up", %{"key" => "k"})
-      assert has_element?(view, "#bugs #bug-2.selected")
+    render_keyup(view, "key_up", %{"key" => "k"})
+    assert_push_event(view, "focus_bug", %{id: 2})
+    assert has_element?(view, "#bugs #bug-2.selected")
 
-      render_keyup(view, "key_up", %{"key" => "j"})
-      assert_push_event(view, "focus_bug", %{id: 1})
-      assert has_element?(view, "#bugs #bug-1.selected")
+    render_keyup(view, "key_up", %{"key" => "k"})
+    assert has_element?(view, "#bugs #bug-2.selected")
 
-      render_keyup(view, "key_up", %{"key" => "j"})
-      assert has_element?(view, "#bugs #bug-1.selected")
-    end
+    render_keyup(view, "key_up", %{"key" => "j"})
+    assert_push_event(view, "focus_bug", %{id: 1})
+    assert has_element?(view, "#bugs #bug-1.selected")
 
-    test "spacebar opens selected bug", %{view: view} do
-      render_keyup(view, "key_up", %{"key" => " "})
-      assert_push_event(view, "open_bug", %{id: 1})
-    end
+    render_keyup(view, "key_up", %{"key" => "j"})
+    assert has_element?(view, "#bugs #bug-1.selected")
+  end
 
-    test "r to refresh", %{view: view} do
-      # navigate down one to make sure it's a reload
-      render_keyup(view, "key_up", %{"key" => "k"})
-      assert has_element?(view, "#bugs #bug-2.selected")
+  test "spacebar opens selected bug", %{conn: conn} do
+    {:ok, view, _html} = live(conn, ~p"/bugs/foo search")
 
-      render_keyup(view, "key_up", %{"key" => "r"})
-      assert_push_event(view, "focus_bug", %{id: 1})
-      assert has_element?(view, "#bugs #bug-1.selected")
-    end
+    render_keyup(view, "key_up", %{"key" => " "})
+    assert_push_event(view, "open_bug", %{id: 1})
+  end
 
-    test "i to ignore", %{view: view} do
-      render_keyup(view, "key_up", %{"key" => "i"})
-      assert has_element?(view, "#bugs #bug-1.selected.ignored")
+  test "r to refresh", %{conn: conn} do
+    {:ok, view, _html} = live(conn, ~p"/bugs/foo search")
 
-      render_keyup(view, "key_up", %{"key" => "k"})
-      assert has_element?(view, "#bugs #bug-1.ignored")
-    end
+    # navigate down one to make sure it's a reload
+    render_keyup(view, "key_up", %{"key" => "k"})
+    assert has_element?(view, "#bugs #bug-2.selected")
 
-    test "s to subscribe", %{view: view} do
-      render_keyup(view, "key_up", %{"key" => "s"})
-      assert has_element?(view, "#bugs #bug-1.selected.subscribed")
-    end
+    render_keyup(view, "key_up", %{"key" => "r"})
+    assert_push_event(view, "focus_bug", %{id: 1})
+    assert has_element?(view, "#bugs #bug-1.selected")
+  end
 
-    test "ignore other keys", %{view: view} do
-      render_keyup(view, "key_up", %{"key" => "`"})
-    end
+  test "i to ignore", %{conn: conn} do
+    {:ok, view, _html} = live(conn, ~p"/bugs/foo search")
+
+    render_keyup(view, "key_up", %{"key" => "i"})
+    assert has_element?(view, "#bugs #bug-1.selected.ignored")
+
+    render_keyup(view, "key_up", %{"key" => "k"})
+    assert has_element?(view, "#bugs #bug-1.ignored")
+  end
+
+  test "s to subscribe", %{conn: conn} do
+    {:ok, view, _html} = live(conn, ~p"/bugs/foo search")
+
+    render_keyup(view, "key_up", %{"key" => "s"})
+    assert has_element?(view, "#bugs #bug-1.selected.subscribed")
+  end
+
+  test "ignore other keys", %{conn: conn} do
+    {:ok, view, _html} = live(conn, ~p"/bugs/foo search")
+
+    render_keyup(view, "key_up", %{"key" => "`"})
   end
 end
