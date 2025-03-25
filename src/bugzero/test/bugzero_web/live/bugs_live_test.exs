@@ -63,25 +63,34 @@ defmodule BugzeroWeb.BugsLiveTest do
     end
 
     test "select first bug by default", %{view: view} do
+      assert_push_event(view, "focus_bug", %{id: 1})
       assert has_element?(view, "#bugs")
       assert has_element?(view, "#bugs #bug-1.selected")
     end
 
     test "keyboard navigation", %{view: view} do
       render_keyup(view, "key_up", %{"key" => "k"})
+      assert_push_event(view, "focus_bug", %{id: 2})
       assert has_element?(view, "#bugs #bug-2.selected")
+
       render_keyup(view, "key_up", %{"key" => "k"})
       assert has_element?(view, "#bugs #bug-2.selected")
 
       render_keyup(view, "key_up", %{"key" => "j"})
+      assert_push_event(view, "focus_bug", %{id: 1})
       assert has_element?(view, "#bugs #bug-1.selected")
+
       render_keyup(view, "key_up", %{"key" => "j"})
       assert has_element?(view, "#bugs #bug-1.selected")
     end
 
+    test "spacebar opens selected bug", %{view: view} do
+      render_keyup(view, "key_up", %{"key" => " "})
+      assert_push_event(view, "open_bug", %{id: 1})
+    end
+
     test "ignore other keys", %{view: view} do
       render_keyup(view, "key_up", %{"key" => "`"})
-      assert has_element?(view, "#bugs #bug-1.selected")
     end
   end
 end

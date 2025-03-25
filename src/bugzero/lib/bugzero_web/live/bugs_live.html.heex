@@ -7,7 +7,7 @@
 <%= if Enum.any?(@bugs) do %>
   <ul id="bugs" phx-window-keyup="key_up">
     <li :for={{b, index} <- Enum.with_index(@bugs)} id={"bug-#{b.id}"} class={if index == @current_bug_index, do: "selected"}>
-      <a href={"https://bugs.freebsd.org/bugzilla/show_bug.cgi?id=#{b.id}"} target="_blank"><%= b.summary %></a>
+      <.link href={"https://bugs.freebsd.org/bugzilla/show_bug.cgi?id=#{b.id}"} target="_blank"><%= b.summary %></.link>
     </li>
   </ul>
 <% end %>

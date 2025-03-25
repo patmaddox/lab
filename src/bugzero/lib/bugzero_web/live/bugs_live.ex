@@ -42,7 +42,7 @@ defmodule BugzeroWeb.BugsLive do
       socket
       |> assign(:search_form, search_form)
       |> assign(:bugs, bugs)
-      |> assign(:current_bug_index, 0)
+      |> assign_current_bug_index(0)
 
     {:noreply, socket}
   end
@@ -53,7 +53,7 @@ defmodule BugzeroWeb.BugsLive do
     if current_bug_index == length(socket.assigns.bugs) do
       {:noreply, socket}
     else
-      {:noreply, assign(socket, :current_bug_index, current_bug_index)}
+      {:noreply, assign_current_bug_index(socket, current_bug_index)}
     end
   end
 
@@ -64,17 +64,30 @@ defmodule BugzeroWeb.BugsLive do
       {:noreply, socket}
     else
       current_bug_index = current_bug_index - 1
-      {:noreply, assign(socket, :current_bug_index, current_bug_index)}
+      {:noreply, assign_current_bug_index(socket, current_bug_index)}
     end
+  end
+
+  def handle_event("key_up", %{"key" => " "}, socket) do
+    bug_id = Enum.at(socket.assigns.bugs, socket.assigns.current_bug_index).id
+    {:noreply, push_event(socket, "open_bug", %{id: bug_id})}
   end
 
   def handle_event("key_up", %{"key" => _}, socket), do: {:noreply, socket}
 
-  def api(%{"api_key" => api_key, "email" => email}) do
+  defp api(%{"api_key" => api_key, "email" => email}) do
     {:ok, api} =
       BugzillaApi.new(email: email, api_key: api_key)
       |> BugzillaApi.fetch_searches()
 
     api
+  end
+
+  defp assign_current_bug_index(socket, index) do
+    bug_id = Enum.at(socket.assigns.bugs, index).id
+
+    socket
+    |> assign(:current_bug_index, index)
+    |> push_event("focus_bug", %{id: bug_id})
   end
 end
