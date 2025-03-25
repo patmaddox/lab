@@ -151,7 +151,7 @@ defmodule Bugzero.BugzillaApiTest do
         assert conn.params == %{
                  "api_key" => "SECRET",
                  "limit" => "10",
-                 "include_fields" => "_default,tags",
+                 "include_fields" => "id,summary,tags",
                  "foo" => "bar",
                  "baz" => "qux"
                }

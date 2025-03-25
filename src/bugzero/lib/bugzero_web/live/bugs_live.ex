@@ -100,7 +100,7 @@ defmodule BugzeroWeb.BugsLive do
   end
 
   defp refresh_bugs(socket) do
-    {:ok, bugs} = BugzillaApi.search(socket.assigns.api, socket.assigns.selected_search)
+    {:ok, bugs} = BugzillaApi.search(socket.assigns.api, socket.assigns.selected_search, 20)
     bugs = Enum.map(bugs, &Map.put(&1, :css_classes, MapSet.new()))
 
     socket

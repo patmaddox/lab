@@ -41,8 +41,8 @@ defmodule BugzeroWeb.BugsLiveTest do
 
         assert conn.params == %{
                  "api_key" => "SECRET",
-                 "limit" => "10",
-                 "include_fields" => "_default,tags",
+                 "limit" => "20",
+                 "include_fields" => "id,summary,tags",
                  "foo" => "bar",
                  "baz" => "qux"
                }

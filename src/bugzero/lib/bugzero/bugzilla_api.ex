@@ -100,7 +100,7 @@ defmodule Bugzero.BugzillaApi do
     %Response{status: 200, body: %{"bugs" => bugs}} =
       api
       |> json_req()
-      |> Req.get!(url: "bug?limit=#{limit}&include_fields=_default,tags&#{query}")
+      |> Req.get!(url: "bug?limit=#{limit}&include_fields=id,summary,tags&#{query}")
 
     {:ok, Enum.map(bugs, &parse_bug/1)}
   end
