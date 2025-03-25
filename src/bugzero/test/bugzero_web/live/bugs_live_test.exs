@@ -63,6 +63,11 @@ defmodule BugzeroWeb.BugsLiveTest do
     assert_patched(view, ~p"/bugs/foo search")
   end
 
+  test "select search option from param", %{conn: conn} do
+    {:ok, view, _html} = live(conn, ~p"/bugs/foo search")
+    assert has_element?(view, "#searches option[selected]", "foo search")
+  end
+
   test "select first bug by default", %{conn: conn} do
     {:ok, view, _html} = live(conn, ~p"/bugs/foo search")
 

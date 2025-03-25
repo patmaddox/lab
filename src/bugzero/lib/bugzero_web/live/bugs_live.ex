@@ -32,7 +32,7 @@ defmodule BugzeroWeb.BugsLive do
   end
 
   def handle_params(%{"search" => selected_search}, _uri, socket, :search) do
-    search_form = Map.put(socket.assigns.search_form, "selected_search", selected_search)
+    search_form = to_form(%{"selected_search" => selected_search})
 
     socket =
       socket
