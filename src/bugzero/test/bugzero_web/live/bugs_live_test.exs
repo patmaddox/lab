@@ -99,6 +99,16 @@ defmodule BugzeroWeb.BugsLiveTest do
       assert has_element?(view, "#bugs #bug-1.selected")
     end
 
+    test "i to ignore", %{view: view} do
+      render_keyup(view, "key_up", %{"key" => "i"})
+      assert has_element?(view, "#bugs #bug-1.selected.ignored")
+    end
+
+    test "s to subscribe", %{view: view} do
+      render_keyup(view, "key_up", %{"key" => "s"})
+      assert has_element?(view, "#bugs #bug-1.selected.subscribed")
+    end
+
     test "ignore other keys", %{view: view} do
       render_keyup(view, "key_up", %{"key" => "`"})
     end

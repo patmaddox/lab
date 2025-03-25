@@ -7,3 +7,11 @@
 #bugs .selected {
     background-color: yellow;
 }
+
+#bugs .ignored {
+    text-decoration: line-through;
+}
+
+#bugs .subscribed {
+    font-style: italic;
+}

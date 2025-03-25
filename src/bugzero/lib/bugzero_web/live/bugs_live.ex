@@ -76,7 +76,26 @@ defmodule BugzeroWeb.BugsLive do
     {:noreply, assign_bugs(socket)}
   end
 
+  def handle_event("key_up", %{"key" => "i"}, socket) do
+    {:noreply, ignore_current_bug(socket)}
+  end
+
+  def handle_event("key_up", %{"key" => "s"}, socket) do
+    {:noreply, subscribe_current_bug(socket)}
+  end
+
   def handle_event("key_up", %{"key" => _}, socket), do: {:noreply, socket}
+
+  def css_classes(bug, index, current_index) do
+    classes =
+      if index == current_index do
+        ["selected"]
+      else
+        []
+      end
+
+    [bug.css_class | classes]
+  end
 
   defp api(%{"api_key" => api_key, "email" => email}) do
     {:ok, api} =
@@ -96,9 +115,25 @@ defmodule BugzeroWeb.BugsLive do
 
   defp assign_bugs(socket) do
     {:ok, bugs} = BugzillaApi.search(socket.assigns.api, socket.assigns.selected_search)
+    bugs = Enum.map(bugs, &Map.put(&1, :css_class, nil))
 
     socket
     |> assign(:bugs, bugs)
     |> assign_current_bug_index(0)
+  end
+
+  defp ignore_current_bug(socket), do: set_current_bug_css_class(socket, "ignored")
+  defp subscribe_current_bug(socket), do: set_current_bug_css_class(socket, "subscribed")
+
+  defp set_current_bug_css_class(socket, css_class) do
+    bugs = socket.assigns.bugs
+    index = socket.assigns.current_bug_index
+
+    bug =
+      bugs
+      |> Enum.at(index)
+      |> Map.put(:css_class, css_class)
+
+    assign(socket, :bugs, List.replace_at(bugs, index, bug))
   end
 end
