@@ -5,13 +5,15 @@ EMACS="emacs --batch -l ${src_dir}/testconfig.el -l ${HOME}/.emacs.d/init.el"
 
 atf_init_test_cases() {
     atf_add_test_case install
+    atf_add_test_case elixir
 }
 
 helper::install() {
-    atf_check -e ignore make -C ${src_dir} -s
+    atf_check -o ignore -e ignore make -C ${src_dir} -s
     atf_check make -C ${src_dir} -s install
 }
 
+## install
 atf_test_case install
 install_head() {
     atf_set 'descr' 'Install config file and compiled packages to $HOME/.emacs.d, load init.el'
@@ -25,4 +27,17 @@ install_body() {
     atf_check test ! -f ${HOME}/.emacs.d/init.elc
     atf_check -o not-empty find ${HOME}/.emacs.d/packages -name '*.elc'
     atf_check ${EMACS} --eval 't'
+}
+
+## elixir
+atf_test_case elixir
+elixir_head() {
+    atf_set 'descr' 'Elixir configuration'
+}
+
+elixir_body() {
+    helper::install
+
+    atf_check ${EMACS} -f elixir-ts-mode
+    atf_check ${EMACS} -f heex-ts-mode
 }

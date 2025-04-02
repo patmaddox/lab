@@ -25,7 +25,12 @@
 	      (add-hook 'after-save-hook (lambda () (byte-compile-file buffer-file-name)) nil t)))
 
   (add-to-list 'completion-styles 'flex)
+
   (add-to-list 'auto-mode-alist '("\\.jjdescription\\'" . org-mode))
+  (add-to-list 'auto-mode-alist '("\\.ex\\'" . elixir-ts-mode))
+  (add-to-list 'auto-mode-alist '("\\.exs\\'" . elixir-ts-mode))
+  (add-to-list 'auto-mode-alist '("\\.heex\\'" . heex-ts-mode))
+
   (delete ".git/" completion-ignored-extensions)
   (dolist (i '(".core"
                ".fslckout"
