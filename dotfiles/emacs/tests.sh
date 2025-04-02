@@ -1,7 +1,7 @@
 #!/usr/bin/env atf-sh
 src_dir=$(atf_get_srcdir)
 
-EMACS="emacs --batch -l ${HOME}/.emacs.d/init.el"
+EMACS="emacs --batch -l ${src_dir}/testconfig.el -l ${HOME}/.emacs.d/init.el"
 
 atf_init_test_cases() {
     atf_add_test_case install
@@ -30,6 +30,6 @@ load_config_head() {
 
 load_config_body() {
     helper::install
-    atf_check ${EMACS} -l ${src_dir}/test.el
+    atf_check ${EMACS} --eval 't'
     atf_check test ! -f ${HOME}/.emacs.d/init.elc
 }
