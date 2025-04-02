@@ -1,5 +1,6 @@
 *#*
 *.core
+*.elc
 *.jj
 *~
 .plzconfig.local
