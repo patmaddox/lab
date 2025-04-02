@@ -3,6 +3,7 @@
   :init
   (add-to-list 'load-path (expand-file-name "packages/consult-2.2" user-emacs-directory))
   (add-to-list 'load-path (expand-file-name "packages/consult-project-extra-982e800" user-emacs-directory))
+  (add-to-list 'load-path (expand-file-name "packages/orderless-1.4" user-emacs-directory))
 
   :config
   (add-hook 'emacs-lisp-mode-hook
@@ -90,3 +91,9 @@
 ;; consult-project-extra - consult extension for project.el
 ;; https://github.com/Qkessler/consult-project-extra
 (use-package consult-project-extra)
+
+;; orderless - completion style matching in any order
+;; https://github.com/oantolin/orderless
+(use-package orderless
+  :custom
+  (completion-styles '(orderless basic)))
