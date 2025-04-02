@@ -5,31 +5,24 @@ EMACS="emacs --batch -l ${src_dir}/testconfig.el -l ${HOME}/.emacs.d/init.el"
 
 atf_init_test_cases() {
     atf_add_test_case install
-    atf_add_test_case load_config
 }
 
 helper::install() {
+    atf_check -e ignore make -C ${src_dir} -s
     atf_check make -C ${src_dir} -s install
 }
 
 atf_test_case install
 install_head() {
-    atf_set 'descr' 'Install the config file to $HOME/.emacs.d'
+    atf_set 'descr' 'Install config file and compiled packages to $HOME/.emacs.d, load init.el'
 }
 
 install_body() {
     helper::install
+
     atf_check test -d ${HOME}/.emacs.d
     atf_check test -f ${HOME}/.emacs.d/init.el
-}
-
-atf_test_case load_config
-load_config_head() {
-    atf_set 'descr' 'Load init.el, do not compile it'
-}
-
-load_config_body() {
-    helper::install
-    atf_check ${EMACS} --eval 't'
     atf_check test ! -f ${HOME}/.emacs.d/init.elc
+    atf_check -o not-empty find ${HOME}/.emacs.d/packages -name '*.elc'
+    atf_check ${EMACS} --eval 't'
 }

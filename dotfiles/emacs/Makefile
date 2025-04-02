@@ -1,20 +1,30 @@
 DESTDIR?=	${HOME}/.emacs.d
 
-.PHONY: install
-.MAIN: install
+.PHONY: build clean install
+.MAIN: build
 
-SRC_FILES=	init.el \
-		packages/consult-2.2/*.el \
-		packages/consult-project-extra-982e800/*.el \
-		packages/marginalia-2.0/*.el \
-		packages/orderless-1.4/*.el \
-		packages/term-keys-5677d06/*.el \
-		packages/vertico-2.0/*.el \
-		packages/vertico-2.0/extensions/*.el \
-		packages/xclip-1.11.1/*.el
+SRC_FILES=	init.el
+PACKAGES=	consult-2.2 \
+		consult-project-extra-982e800 \
+		marginalia-2.0 \
+		orderless-1.4 \
+		term-keys-5677d06 \
+		vertico-2.0 \
+		vertico-2.0/extensions \
+		xclip-1.11.1
 
-install: ${SRC_FILES}
-.for f in ${SRC_FILES}
-	@mkdir -p ${DESTDIR}/${f:H}/
-	cp ${f} ${DESTDIR}/${f:H}/
+build:
+	emacs --batch --init-directory=. -l init.el --eval '(byte-recompile-directory "packages" 0)'
+
+clean:
+	find packages -name '*.elc' -delete
+
+install:
+	@mkdir -p ${DESTDIR}
+	cp init.el ${DESTDIR}/
+
+.for p in ${PACKAGES}
+	@mkdir -p ${DESTDIR}/packages/${p}
+	cp packages/${p}/*.el ${DESTDIR}/packages/${p}/
+	cp packages/${p}/*.elc ${DESTDIR}/packages/${p}/
 .endfor
