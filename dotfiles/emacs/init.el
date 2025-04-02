@@ -4,6 +4,7 @@
   :init
   (add-to-list 'load-path (expand-file-name "packages/consult-2.2" user-emacs-directory))
   (add-to-list 'load-path (expand-file-name "packages/consult-project-extra-982e800" user-emacs-directory))
+  (add-to-list 'load-path (expand-file-name "packages/marginalia-2.0" user-emacs-directory))
   (add-to-list 'load-path (expand-file-name "packages/orderless-1.4" user-emacs-directory))
   (add-to-list 'load-path (expand-file-name "packages/term-keys-5677d06" user-emacs-directory))
   (add-to-list 'load-path (expand-file-name "packages/vertico-2.0" user-emacs-directory))
@@ -96,6 +97,12 @@
 ;; consult-project-extra - consult extension for project.el
 ;; https://github.com/Qkessler/consult-project-extra
 (use-package consult-project-extra)
+
+;; marginalia - notes in the minibuffer (names, file sizes, etc)
+;; https://github.com/minad/marginalia
+(use-package marginalia
+  :config
+  (marginalia-mode 1))
 
 ;; orderless - completion style matching in any order
 ;; https://github.com/oantolin/orderless

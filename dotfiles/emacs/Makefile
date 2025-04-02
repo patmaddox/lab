@@ -6,6 +6,7 @@ DESTDIR?=	${HOME}/.emacs.d
 SRC_FILES=	init.el \
 		packages/consult-2.2/*.el \
 		packages/consult-project-extra-982e800/*.el \
+		packages/marginalia-2.0/*.el \
 		packages/orderless-1.4/*.el \
 		packages/term-keys-5677d06/*.el \
 		packages/vertico-2.0/*.el \
