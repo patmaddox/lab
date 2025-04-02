@@ -2,12 +2,13 @@
 (use-package emacs
   :init
   (add-to-list 'load-path (expand-file-name "packages/consult-2.2" user-emacs-directory))
+  (add-to-list 'load-path (expand-file-name "packages/consult-project-extra-982e800" user-emacs-directory))
 
   :bind
   ("M-RET" . project-find-file)
   ("M-i" . consult-imenu))
 
-;; Consult - better search and navigation (consulting completing-read)
+;; consult - better search and navigation (consulting completing-read)
 ;; https://github.com/minad/consult
 (use-package consult
   :bind
@@ -23,3 +24,7 @@
 (use-package consult-imenu)
 (use-package consult-org)
 (use-package consult-xref)
+
+;; consult-project-extra - consult extension for project.el
+;; https://github.com/Qkessler/consult-project-extra
+(use-package consult-project-extra)

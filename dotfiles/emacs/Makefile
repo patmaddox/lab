@@ -4,7 +4,8 @@ DESTDIR?=	${HOME}/.emacs.d
 .MAIN: install
 
 SRC_FILES=	init.el \
-		packages/consult-2.2/*.el
+		packages/consult-2.2/*.el \
+		packages/consult-project-extra-982e800/*.el
 
 install: ${SRC_FILES}
 .for f in ${SRC_FILES}
