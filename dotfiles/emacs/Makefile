@@ -6,7 +6,8 @@ DESTDIR?=	${HOME}/.emacs.d
 SRC_FILES=	init.el \
 		packages/consult-2.2/*.el \
 		packages/consult-project-extra-982e800/*.el \
-		packages/orderless-1.4/*.el
+		packages/orderless-1.4/*.el \
+		packages/term-keys-5677d06/*.el
 
 install: ${SRC_FILES}
 .for f in ${SRC_FILES}
