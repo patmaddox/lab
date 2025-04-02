@@ -1,10 +1,13 @@
 ;; -*-no-byte-compile: t; -*-
+
 (use-package emacs
   :init
   (add-to-list 'load-path (expand-file-name "packages/consult-2.2" user-emacs-directory))
   (add-to-list 'load-path (expand-file-name "packages/consult-project-extra-982e800" user-emacs-directory))
   (add-to-list 'load-path (expand-file-name "packages/orderless-1.4" user-emacs-directory))
   (add-to-list 'load-path (expand-file-name "packages/term-keys-5677d06" user-emacs-directory))
+  (add-to-list 'load-path (expand-file-name "packages/vertico-2.0" user-emacs-directory))
+  (add-to-list 'load-path (expand-file-name "packages/vertico-2.0/extensions" user-emacs-directory))
   (add-to-list 'load-path (expand-file-name "packages/xclip-1.11.1" user-emacs-directory))
 
   :config
@@ -107,6 +110,25 @@
   (unbind-key "C-M-_")
   :config
   (term-keys-mode t))
+
+;; vertico - vertical interactive completion
+;; https://github.com/minad/vertico
+(use-package vertico
+  :custom
+  (vertico-cycle t)
+  (vertico-resize nil)
+  (vertico-count 20)
+  :config
+  (vertico-mode 1))
+
+(use-package vertico-directory
+  :after vertico
+  :bind (:map vertico-map
+              ("RET" . vertico-directory-enter)
+              ("DEL" . vertico-directory-delete-char)
+              ("M-DEL" . vertico-directory-delete-word))
+  ;; Tidy shadowed file names
+  :hook (rfn-eshadow-update-overlay . vertico-directory-tidy))
 
 ;; xclip - copy and paste between X
 ;; https://elpa.gnu.org/packages/xclip.html
