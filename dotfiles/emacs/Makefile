@@ -1,9 +1,13 @@
 DESTDIR?=	${HOME}/.emacs.d
 
 .PHONY: install
+.MAIN: install
 
-install: ${DESTDIR}/init.el
+SRC_FILES=	init.el \
+		packages/consult-2.2/*.el
 
-${DESTDIR}/init.el: init.el
-	@mkdir -p ${.TARGET:H}
-	cp ${.ALLSRC} ${.TARGET}
+install: ${SRC_FILES}
+.for f in ${SRC_FILES}
+	@mkdir -p ${DESTDIR}/${f:H}/
+	cp ${f} ${DESTDIR}/${f:H}/
+.endfor
