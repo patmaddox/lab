@@ -5,6 +5,7 @@
   (add-to-list 'load-path (expand-file-name "packages/consult-project-extra-982e800" user-emacs-directory))
   (add-to-list 'load-path (expand-file-name "packages/orderless-1.4" user-emacs-directory))
   (add-to-list 'load-path (expand-file-name "packages/term-keys-5677d06" user-emacs-directory))
+  (add-to-list 'load-path (expand-file-name "packages/xclip-1.11.1" user-emacs-directory))
 
   :config
   (add-hook 'emacs-lisp-mode-hook
@@ -106,3 +107,9 @@
   (unbind-key "C-M-_")
   :config
   (term-keys-mode t))
+
+;; xclip - copy and paste between X
+;; https://elpa.gnu.org/packages/xclip.html
+(use-package xclip
+  :config
+  (xclip-mode 1))
