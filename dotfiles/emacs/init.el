@@ -44,6 +44,32 @@
   (warning-minimum-level :error)
   (read-file-name-completion-ignore-case t))
 
+(use-package project
+  :custom
+  (project-vc-extra-root-markers
+   '(".emacs-project"
+     ".fslckout"
+     ".jj"
+     "mix.exs"))
+  (project-vc-ignores
+   '("#*#"
+     "*~"
+     "*.elc"
+     ".elixir_ls"
+     "*.jj"
+     ".fslckout"
+     ".jj"
+     "_build"
+     "deps"
+     "node_modules"
+     "packages"
+     "plz-out"
+     "postgres/data"
+     "priv/static"
+     "auto-save-list"
+     "transient"
+     "tree-sitter")))
+
 ;; consult - better search and navigation (consulting completing-read)
 ;; https://github.com/minad/consult
 (use-package consult
