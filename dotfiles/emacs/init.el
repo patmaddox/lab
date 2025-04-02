@@ -2,14 +2,18 @@
 
 (use-package emacs
   :init
-  (add-to-list 'load-path (expand-file-name "packages/consult-2.2" user-emacs-directory))
-  (add-to-list 'load-path (expand-file-name "packages/consult-project-extra-982e800" user-emacs-directory))
-  (add-to-list 'load-path (expand-file-name "packages/marginalia-2.0" user-emacs-directory))
-  (add-to-list 'load-path (expand-file-name "packages/orderless-1.4" user-emacs-directory))
-  (add-to-list 'load-path (expand-file-name "packages/term-keys-5677d06" user-emacs-directory))
-  (add-to-list 'load-path (expand-file-name "packages/vertico-2.0" user-emacs-directory))
-  (add-to-list 'load-path (expand-file-name "packages/vertico-2.0/extensions" user-emacs-directory))
-  (add-to-list 'load-path (expand-file-name "packages/xclip-1.11.1" user-emacs-directory))
+  (setq patmaddox-packages
+        '("consult-2.2"
+          "consult-project-extra-982e800"
+          "marginalia-2.0"
+          "orderless-1.4"
+          "term-keys-5677d06"
+          "vertico-2.0"
+          "vertico-2.0/extensions"
+          "xclip-1.11.1"))
+
+  (dolist (p patmaddox-packages)
+    (add-to-list 'load-path (expand-file-name (concat "packages/" p) user-emacs-directory)))
 
   :config
   (add-hook 'emacs-lisp-mode-hook
