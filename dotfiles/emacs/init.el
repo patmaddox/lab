@@ -30,6 +30,7 @@
   (add-to-list 'auto-mode-alist '("\\.ex\\'" . elixir-ts-mode))
   (add-to-list 'auto-mode-alist '("\\.exs\\'" . elixir-ts-mode))
   (add-to-list 'auto-mode-alist '("\\.heex\\'" . heex-ts-mode))
+  (add-to-list 'auto-mode-alist '("\\.lua\\'" . lua-ts-mode))
 
   (delete ".git/" completion-ignored-extensions)
   (dolist (i '(".core"

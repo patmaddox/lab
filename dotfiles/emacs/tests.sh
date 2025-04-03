@@ -5,7 +5,7 @@ EMACS="emacs --batch -l ${src_dir}/testconfig.el -l ${HOME}/.emacs.d/init.el"
 
 atf_init_test_cases() {
     atf_add_test_case install
-    atf_add_test_case elixir
+    atf_add_test_case languages
 }
 
 helper::install() {
@@ -29,15 +29,16 @@ install_body() {
     atf_check ${EMACS} --eval 't'
 }
 
-## elixir
-atf_test_case elixir
-elixir_head() {
-    atf_set 'descr' 'Elixir configuration'
+## languages
+atf_test_case languages
+languages_head() {
+    atf_set 'descr' 'Languages configuration'
 }
 
-elixir_body() {
+languages_body() {
     helper::install
 
     atf_check ${EMACS} -f elixir-ts-mode
     atf_check ${EMACS} -f heex-ts-mode
+    atf_check ${EMACS} -f lua-ts-mode
 }

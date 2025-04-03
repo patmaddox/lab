@@ -13,12 +13,16 @@ PACKAGES=	consult-2.2 \
 		vertico-2.0/extensions \
 		xclip-1.11.1
 
-build: tree-sitter/libtree-sitter-elixir.so tree-sitter/libtree-sitter-heex.so
+TS_LANGS=	elixir \
+		heex \
+		lua
+
+build: ${TS_LANGS:C/.*/tree-sitter\/libtree-sitter-&.so/}
 	emacs --batch --init-directory=. -l init.el --eval '(byte-recompile-directory "packages" 0)'
 
 clean:
 	find packages -name '*.elc' -delete
-	rm tree-sitter/*.so
+	rm -f tree-sitter/*.so
 
 install:
 	@mkdir -p ${DESTDIR}/tree-sitter
@@ -48,3 +52,11 @@ tree-sitter/libtree-sitter-heex.so:
 	fetch -o - https://github.com/phoenixframework/tree-sitter-heex/archive/refs/tags/v0.8.0.tar.gz | tar -C /tmp/build-tree-sitter-heex -x
 	gmake -C /tmp/build-tree-sitter-heex/tree-sitter-heex-0.8.0
 	cp /tmp/build-tree-sitter-heex/tree-sitter-heex-0.8.0/libtree-sitter-heex.so ${.TARGET}
+
+tree-sitter/libtree-sitter-lua.so:
+	@mkdir -p tree-sitter
+	@rm -rf /tmp/build-tree-sitter-lua
+	mkdir -p /tmp/build-tree-sitter-lua
+	fetch -o - https://github.com/tree-sitter-grammars/tree-sitter-lua/archive/refs/tags/v0.3.0.tar.gz | tar -C /tmp/build-tree-sitter-lua -x
+	gmake -C /tmp/build-tree-sitter-lua/tree-sitter-lua-0.3.0
+	cp /tmp/build-tree-sitter-lua/tree-sitter-lua-0.3.0/libtree-sitter-lua.so ${.TARGET}
