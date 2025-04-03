@@ -27,6 +27,12 @@ install_body() {
     atf_check test ! -f ${HOME}/.emacs.d/init.elc
     atf_check -o not-empty find ${HOME}/.emacs.d/packages -name '*.elc'
     atf_check ${EMACS} --eval 't'
+
+    # make sure it doesn't overwrite an existing dir
+    rm -rf ${HOME}/.emacs.d
+    mkdir ${HOME}/.emacs.d
+    atf_check -s exit:1 -o ignore -e match:"E: DESTDIR already exists" make -C ${src_dir} -s install
+    atf_check -o empty find ${HOME}/.emacs.d -type f
 }
 
 ## languages

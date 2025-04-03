@@ -34,6 +34,7 @@ clean:
 	rm -rf tree-sitter/_build
 
 install:
+	test ! -e ${DESTDIR} || (echo "E: DESTDIR already exists" 1>&2 && exit 1)
 	@mkdir -p ${DESTDIR}/tree-sitter
 	cp init.el ${DESTDIR}/
 	cp tree-sitter/_build/*.so ${DESTDIR}/tree-sitter/
