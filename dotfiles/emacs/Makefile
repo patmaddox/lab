@@ -11,14 +11,16 @@ PACKAGES=	consult-2.2 \
 		term-keys-5677d06 \
 		vertico-2.0 \
 		vertico-2.0/extensions \
-		xclip-1.11.1
+		xclip-1.11.1 \
+		zig-ts-mode-3898b70
 
 TS_LANGS=	elixir \
 		go \
 		gomod \
 		heex \
 		lua \
-		rust
+		rust \
+		zig
 
 LANG_TO_OBJ=	C/.*/tree-sitter\/_build\/libtree-sitter-&.so/
 

@@ -46,4 +46,5 @@ languages_body() {
     atf_check ${EMACS} -f lua-ts-mode
     atf_check ${EMACS} -f markdown-mode
     atf_check ${EMACS} -f rust-ts-mode
+    atf_check ${EMACS} -f zig-ts-mode
 }

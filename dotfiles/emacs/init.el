@@ -11,7 +11,8 @@
           "term-keys-5677d06"
           "vertico-2.0"
           "vertico-2.0/extensions"
-          "xclip-1.11.1"))
+          "xclip-1.11.1"
+          "zig-ts-mode-3898b70"))
 
   (dolist (p patmaddox-packages)
     (add-to-list 'load-path (expand-file-name (concat "packages/" p) user-emacs-directory)))
@@ -159,3 +160,7 @@
 (use-package xclip
   :config
   (xclip-mode 1))
+
+;; zig-ts-mode
+;; https://codeberg.org/meow_king/zig-ts-mode
+(use-package zig-ts-mode)
