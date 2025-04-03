@@ -13,6 +13,8 @@ PACKAGES=	consult-2.2 \
 		xclip-1.11.1
 
 TS_LANGS=	elixir \
+		go \
+		gomod \
 		heex \
 		lua
 

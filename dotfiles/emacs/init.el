@@ -29,6 +29,7 @@
   (add-to-list 'auto-mode-alist '("\\.jjdescription\\'" . org-mode))
   (add-to-list 'auto-mode-alist '("\\.ex\\'" . elixir-ts-mode))
   (add-to-list 'auto-mode-alist '("\\.exs\\'" . elixir-ts-mode))
+  (add-to-list 'auto-mode-alist '("\\.go\\'" . go-ts-mode))
   (add-to-list 'auto-mode-alist '("\\.heex\\'" . heex-ts-mode))
   (add-to-list 'auto-mode-alist '("\\.lua\\'" . lua-ts-mode))
 

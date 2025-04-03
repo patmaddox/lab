@@ -39,6 +39,8 @@ languages_body() {
     helper::install
 
     atf_check ${EMACS} -f elixir-ts-mode
+    atf_check ${EMACS} -f go-ts-mode
+    atf_check ${EMACS} -f go-mod-ts-mode
     atf_check ${EMACS} -f heex-ts-mode
     atf_check ${EMACS} -f lua-ts-mode
 }
