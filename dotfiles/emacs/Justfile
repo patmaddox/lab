@@ -3,3 +3,9 @@ help:
 
 test:
   kyua test
+
+# Install to .emacs.dev
+install-dev:
+  rm -rf $HOME/.emacs.dev
+  make -s 2>/dev/null
+  make -s install DESTDIR=$HOME/.emacs.dev
