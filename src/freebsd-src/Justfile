@@ -1,39 +1,49 @@
-default_config := "config/main.conf"
-
 help:
   @just -l
 
+# Show ccache status
 ccache +args:
   CCACHE_CONFIGPATH=$(realpath ccache.conf) ccache {{args}}
 
+# Refresh ccache stats every {wait} seconds
 ccache-watch wait='5':
   while true; do clear; just ccache -s; sleep {{wait}}; done
 
+# Clone the git repository
 clone:
   if [ ! -d main.jj ]; then jj git clone --colocate https://github.com/freebsd/freebsd-src.git main.jj; fi
 
-bootstrap tree=default_config:
-  ./scripts/build.sh bootstrap {{tree}}
+# Build from scratch, cleaning first if necessary
+bootstrap config:
+  ./scripts/build.sh bootstrap {{config}}
 
-build config=default_config:
+# DTRT build - from scratch if needed, fast if possible
+build config:
   ./scripts/build.sh build {{config}}
 
-clean config=default_config:
+# Clean everything with the config (cleanworld)
+clean config:
   ./scripts/build.sh clean {{config}}
 
-release config=default_config:
+# Build release tarballs (base.txz kernel.txz etc)
+release config:
   ./scripts/build.sh release {{config}}
 
-clean-release config=default_config:
+# Clean release tarballs
+clean-release config:
   ./scripts/build.sh clean-release {{config}}
 
 # print .OBJDIR for the build
-objdir config=default_config:
+objdir config:
   ./scripts/build.sh objdir {{config}}
 
 # print .OBJDIR/release for the build
-objdir-release config=default_config:
+objdir-release config:
   ./scripts/build.sh objdir-release {{config}}
+
+# Print the command list in markdown table format
+command-table:
+  just -l -u | awk '/#/ {match($0, /#.*/); printf("| `just %s`!| %s!|\n", $1, substr($0, RSTART + 2)) }' | column -t -s '!' | sed -e 's/  |/ |/g'
 
 [no-cd]
 format-patch change="":
