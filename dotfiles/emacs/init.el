@@ -6,6 +6,7 @@
         '("consult-2.2"
           "consult-project-extra-982e800"
           "marginalia-2.0"
+          "markdown-mode-2.7"
           "orderless-1.4"
           "term-keys-5677d06"
           "vertico-2.0"
@@ -115,6 +116,10 @@
 (use-package marginalia
   :config
   (marginalia-mode 1))
+
+;; markdown-mode
+;; https://github.com/jrblevin/markdown-mode
+(use-package markdown-mode)
 
 ;; orderless - completion style matching in any order
 ;; https://github.com/oantolin/orderless
