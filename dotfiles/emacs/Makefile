@@ -3,7 +3,6 @@ DESTDIR?=	${HOME}/.emacs.d
 .PHONY: build clean install
 .MAIN: build
 
-SRC_FILES=	init.el
 PACKAGES=	consult-2.2 \
 		consult-project-extra-982e800 \
 		marginalia-2.0 \
@@ -17,17 +16,21 @@ TS_LANGS=	elixir \
 		heex \
 		lua
 
-build: ${TS_LANGS:C/.*/tree-sitter\/libtree-sitter-&.so/}
+LANG_TO_OBJ=	C/.*/tree-sitter\/_build\/libtree-sitter-&.so/
+
+TS_OBJS=	${TS_LANGS:${LANG_TO_OBJ}}
+
+build: ${TS_OBJS}
 	emacs --batch --init-directory=. -l init.el --eval '(byte-recompile-directory "packages" 0)'
 
 clean:
 	find packages -name '*.elc' -delete
-	rm -f tree-sitter/*.so
+	rm -rf tree-sitter/_build
 
 install:
 	@mkdir -p ${DESTDIR}/tree-sitter
 	cp init.el ${DESTDIR}/
-	cp tree-sitter/*.so ${DESTDIR}/tree-sitter/
+	cp tree-sitter/_build/*.so ${DESTDIR}/tree-sitter/
 
 .for p in ${PACKAGES}
 	@mkdir -p ${DESTDIR}/packages/${p}
@@ -35,28 +38,8 @@ install:
 	cp packages/${p}/*.elc ${DESTDIR}/packages/${p}/
 .endfor
 
-# This has a bit of a goofy build process with PARSER_REPO_URL for now.
-# It seems to be fixed in main
-tree-sitter/libtree-sitter-elixir.so:
-	@mkdir -p tree-sitter
-	@rm -rf /tmp/build-tree-sitter-elixir
-	mkdir -p /tmp/build-tree-sitter-elixir
-	fetch -o - https://github.com/elixir-lang/tree-sitter-elixir/archive/refs/tags/v0.3.4.tar.gz | tar -C /tmp/build-tree-sitter-elixir -x
-	gmake -C /tmp/build-tree-sitter-elixir/tree-sitter-elixir-0.3.4 PARSER_REPO_URL=https://github.com/elixir-lang/tree-sitter-elixir.git
-	cp /tmp/build-tree-sitter-elixir/tree-sitter-elixir-0.3.4/libtree-sitter-elixir.so ${.TARGET}
-
-tree-sitter/libtree-sitter-heex.so:
-	@mkdir -p tree-sitter
-	@rm -rf /tmp/build-tree-sitter-heex
-	mkdir -p /tmp/build-tree-sitter-heex
-	fetch -o - https://github.com/phoenixframework/tree-sitter-heex/archive/refs/tags/v0.8.0.tar.gz | tar -C /tmp/build-tree-sitter-heex -x
-	gmake -C /tmp/build-tree-sitter-heex/tree-sitter-heex-0.8.0
-	cp /tmp/build-tree-sitter-heex/tree-sitter-heex-0.8.0/libtree-sitter-heex.so ${.TARGET}
-
-tree-sitter/libtree-sitter-lua.so:
-	@mkdir -p tree-sitter
-	@rm -rf /tmp/build-tree-sitter-lua
-	mkdir -p /tmp/build-tree-sitter-lua
-	fetch -o - https://github.com/tree-sitter-grammars/tree-sitter-lua/archive/refs/tags/v0.3.0.tar.gz | tar -C /tmp/build-tree-sitter-lua -x
-	gmake -C /tmp/build-tree-sitter-lua/tree-sitter-lua-0.3.0
-	cp /tmp/build-tree-sitter-lua/tree-sitter-lua-0.3.0/libtree-sitter-lua.so ${.TARGET}
+# recursively build the languages
+.for l in ${TS_LANGS}
+${l:${LANG_TO_OBJ}}:
+	${MAKE} -C tree-sitter -f ${l}.mk
+.endfor
