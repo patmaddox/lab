@@ -5,6 +5,7 @@
   (setq patmaddox-packages
         '("consult-2.2"
           "consult-project-extra-982e800"
+          "denote-7bb8b7c"
           "marginalia-2.0"
           "markdown-mode-2.7"
           "orderless-1.4"
@@ -107,6 +108,26 @@
 (use-package consult-imenu)
 (use-package consult-org)
 (use-package consult-xref)
+
+;; denote - simple notes with ID-based naming scheme
+;; https://github.com/protesilaos/denote
+(use-package denote
+  :hook (dired-mode . denote-dired-mode)
+  :bind
+  ("C-c n n" . denote)
+  ("C-c n r" . denote-rename-file)
+  ("C-c n l" . denote-link)
+  ("C-c n b" . denote-backlinks)
+  ("C-c n d" . denote-dired)
+  ("C-c n g" . denote-grep)
+  :config
+  (setq denote-directory (expand-file-name "~/lab.jj/notes"))
+
+  ;; Automatically rename Denote buffers when opening them so that
+  ;; instead of their long file name they have, for example, a literal
+  ;; "[D]" followed by the file's title.  Read the doc string of
+  ;; `denote-rename-buffer-format' for how to modify this.
+  (denote-rename-buffer-mode 1))
 
 ;; consult-project-extra - consult extension for project.el
 ;; https://github.com/Qkessler/consult-project-extra

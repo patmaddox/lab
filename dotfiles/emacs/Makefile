@@ -5,6 +5,7 @@ DESTDIR?=	${HOME}/.emacs.d
 
 PACKAGES=	consult-2.2 \
 		consult-project-extra-982e800 \
+		denote-7bb8b7c \
 		marginalia-2.0 \
 		markdown-mode-2.7 \
 		orderless-1.4 \
