@@ -32,6 +32,7 @@
   (add-to-list 'auto-mode-alist '("\\.go\\'" . go-ts-mode))
   (add-to-list 'auto-mode-alist '("\\.heex\\'" . heex-ts-mode))
   (add-to-list 'auto-mode-alist '("\\.lua\\'" . lua-ts-mode))
+  (add-to-list 'auto-mode-alist '("\\.rs\\'" . rust-ts-mode))
 
   (delete ".git/" completion-ignored-extensions)
   (dolist (i '(".core"

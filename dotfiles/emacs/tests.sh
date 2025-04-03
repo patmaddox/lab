@@ -43,4 +43,5 @@ languages_body() {
     atf_check ${EMACS} -f go-mod-ts-mode
     atf_check ${EMACS} -f heex-ts-mode
     atf_check ${EMACS} -f lua-ts-mode
+    atf_check ${EMACS} -f rust-ts-mode
 }

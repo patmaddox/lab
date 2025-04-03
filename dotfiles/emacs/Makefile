@@ -16,7 +16,8 @@ TS_LANGS=	elixir \
 		go \
 		gomod \
 		heex \
-		lua
+		lua \
+		rust
 
 LANG_TO_OBJ=	C/.*/tree-sitter\/_build\/libtree-sitter-&.so/
 
