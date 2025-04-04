@@ -13,11 +13,7 @@ ccache-watch wait='5':
 clone:
   if [ ! -d main.jj ]; then jj git clone --colocate https://github.com/freebsd/freebsd-src.git main.jj; fi
 
-# Build from scratch, cleaning first if necessary
-bootstrap config:
-  ./scripts/build.sh bootstrap {{config}}
-
-# DTRT build - from scratch if needed, fast if possible
+# DWIM build - from scratch if needed, fast if possible
 build config:
   ./scripts/build.sh build {{config}}
 

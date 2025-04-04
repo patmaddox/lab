@@ -10,8 +10,7 @@ Commands:
 | `just ccache`         | Show ccache status                                    |
 | `just ccache-watch`   | Refresh ccache stats every {wait} seconds             |
 | `just clone`          | Clone the git repository                              |
-| `just bootstrap`      | Build from scratch, cleaning first if necessary       |
-| `just build`          | DTRT build - from scratch if needed, fast if possible |
+| `just build`          | DWIM build - from scratch if needed, fast if possible |
 | `just clean`          | Clean everything with the config (cleanworld)         |
 | `just release`        | Build release tarballs (base.txz kernel.txz etc)      |
 | `just clean-release`  | Clean release tarballs                                |

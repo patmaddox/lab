@@ -22,14 +22,9 @@ parse_args() {
     . $(realpath ${CONFIG})
 
     SRC_ROOT=$(realpath ${TREE})
-    OPT_BOOTSTRAP=0
     MAKE_FLAGS=""
 
     case ${CMD} in
-	bootstrap)
-	    OPT_BOOTSTRAP=1
-	    CMD=build
-	    ;;
 	release|clean-release|objdir-release)
 	    SRC_ROOT=$(realpath ${SRC_ROOT}/release)
 	    ;;
@@ -51,13 +46,7 @@ cmd::build() {
     local build_stamp
     build_stamp=${OBJDIR}/tmp/build.done
 
-    if [ ! -f ${build_stamp} ]; then
-	OPT_BOOTSTRAP=1
-    fi
-
-    if [ ${OPT_BOOTSTRAP} -eq 1 ]; then
-	_make cleanworld
-    else
+    if [ -f ${build_stamp} ]; then
 	MAKE_FLAGS="-DWORLDFAST -DKERNFAST"
     fi
 
