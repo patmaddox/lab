@@ -1,4 +1,5 @@
 build_sh = ./scripts/build.sh
+ninja_out = ninja-out
 
 rule build-freebsd
   command = jj -R ${config}.jj file list | awk -v stampfile=$out '{printf("%s: %s\n", stampfile, $$1)}' > ${depfile} && ${build_sh} build config/${config}.conf && touch ${out}
@@ -7,7 +8,7 @@ rule build-freebsd
   pool = console
 
 rule release-freebsd
-  command = ${build_sh} release config/${config}.conf && touch ${out}
+  command = ${build_sh} release config/${config}.conf && for f in $out; do cp _build/${config}/amd64.amd64/release/$$(basename $${f}) ${ninja_out}/${config}/; done
   pool = console
 
 # auto-generated from config/*.conf
@@ -18,9 +19,9 @@ build _build/14.2-RELEASE.build: build-freebsd | config/14.2-RELEASE.conf script
   config = 14.2-RELEASE
 build 14.2-RELEASE: phony _build/14.2-RELEASE.build
 
-build _build/14.2-RELEASE.release: release-freebsd | _build/14.2-RELEASE.build
+build ninja-out/14.2-RELEASE/MANIFEST ninja-out/14.2-RELEASE/base.txz ninja-out/14.2-RELEASE/kernel.txz ninja-out/14.2-RELEASE/src.txz ninja-out/14.2-RELEASE/tests.txz: release-freebsd | _build/14.2-RELEASE.build
   config = 14.2-RELEASE
-build 14.2-RELEASE/txz: phony _build/14.2-RELEASE.release
+build 14.2-RELEASE/txz: phony ninja-out/14.2-RELEASE/MANIFEST ninja-out/14.2-RELEASE/base.txz ninja-out/14.2-RELEASE/kernel.txz ninja-out/14.2-RELEASE/src.txz ninja-out/14.2-RELEASE/tests.txz
 
 ## 14.2-STABLE
 
@@ -28,9 +29,9 @@ build _build/14.2-STABLE.build: build-freebsd | config/14.2-STABLE.conf scripts/
   config = 14.2-STABLE
 build 14.2-STABLE: phony _build/14.2-STABLE.build
 
-build _build/14.2-STABLE.release: release-freebsd | _build/14.2-STABLE.build
+build ninja-out/14.2-STABLE/MANIFEST ninja-out/14.2-STABLE/base.txz ninja-out/14.2-STABLE/kernel.txz ninja-out/14.2-STABLE/src.txz ninja-out/14.2-STABLE/tests.txz: release-freebsd | _build/14.2-STABLE.build
   config = 14.2-STABLE
-build 14.2-STABLE/txz: phony _build/14.2-STABLE.release
+build 14.2-STABLE/txz: phony ninja-out/14.2-STABLE/MANIFEST ninja-out/14.2-STABLE/base.txz ninja-out/14.2-STABLE/kernel.txz ninja-out/14.2-STABLE/src.txz ninja-out/14.2-STABLE/tests.txz
 
 ## 15.0-CURRENT
 
@@ -38,9 +39,9 @@ build _build/15.0-CURRENT.build: build-freebsd | config/15.0-CURRENT.conf script
   config = 15.0-CURRENT
 build 15.0-CURRENT: phony _build/15.0-CURRENT.build
 
-build _build/15.0-CURRENT.release: release-freebsd | _build/15.0-CURRENT.build
+build ninja-out/15.0-CURRENT/MANIFEST ninja-out/15.0-CURRENT/base.txz ninja-out/15.0-CURRENT/kernel.txz ninja-out/15.0-CURRENT/src.txz ninja-out/15.0-CURRENT/tests.txz: release-freebsd | _build/15.0-CURRENT.build
   config = 15.0-CURRENT
-build 15.0-CURRENT/txz: phony _build/15.0-CURRENT.release
+build 15.0-CURRENT/txz: phony ninja-out/15.0-CURRENT/MANIFEST ninja-out/15.0-CURRENT/base.txz ninja-out/15.0-CURRENT/kernel.txz ninja-out/15.0-CURRENT/src.txz ninja-out/15.0-CURRENT/tests.txz
 
 ## 15.0-STABWEEK-2025-03
 
@@ -48,6 +49,6 @@ build _build/15.0-STABWEEK-2025-03.build: build-freebsd | config/15.0-STABWEEK-2
   config = 15.0-STABWEEK-2025-03
 build 15.0-STABWEEK-2025-03: phony _build/15.0-STABWEEK-2025-03.build
 
-build _build/15.0-STABWEEK-2025-03.release: release-freebsd | _build/15.0-STABWEEK-2025-03.build
+build ninja-out/15.0-STABWEEK-2025-03/MANIFEST ninja-out/15.0-STABWEEK-2025-03/base.txz ninja-out/15.0-STABWEEK-2025-03/kernel.txz ninja-out/15.0-STABWEEK-2025-03/src.txz ninja-out/15.0-STABWEEK-2025-03/tests.txz: release-freebsd | _build/15.0-STABWEEK-2025-03.build
   config = 15.0-STABWEEK-2025-03
-build 15.0-STABWEEK-2025-03/txz: phony _build/15.0-STABWEEK-2025-03.release
+build 15.0-STABWEEK-2025-03/txz: phony ninja-out/15.0-STABWEEK-2025-03/MANIFEST ninja-out/15.0-STABWEEK-2025-03/base.txz ninja-out/15.0-STABWEEK-2025-03/kernel.txz ninja-out/15.0-STABWEEK-2025-03/src.txz ninja-out/15.0-STABWEEK-2025-03/tests.txz

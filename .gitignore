@@ -9,4 +9,5 @@
 /wiki
 _build
 bin
+ninja-out
 plz-out

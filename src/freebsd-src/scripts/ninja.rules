@@ -1,4 +1,5 @@
 build_sh = ./scripts/build.sh
+ninja_out = ninja-out
 
 rule build-freebsd
   command = jj -R ${config}.jj file list | awk -v stampfile=$out '{printf("%s: %s\n", stampfile, $$1)}' > ${depfile} && ${build_sh} build config/${config}.conf && touch ${out}
@@ -7,5 +8,5 @@ rule build-freebsd
   pool = console
 
 rule release-freebsd
-  command = ${build_sh} release config/${config}.conf && touch ${out}
+  command = ${build_sh} release config/${config}.conf && for f in $out; do cp _build/${config}/amd64.amd64/release/$$(basename $${f}) ${ninja_out}/${config}/; done
   pool = console
