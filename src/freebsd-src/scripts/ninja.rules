@@ -1,14 +1,11 @@
 build_sh = ./scripts/build.sh
 
-pool freebsd_pool
-  depth = 1
-
 rule build-freebsd
-  command = $build_sh ls-files config/$$(basename $out).conf | awk -v stampfile=$out '{printf("%s: %s\n", stampfile, $$1)}' > $depfile && $build_sh build config/$$(basename $out).conf && touch $out
+  command = jj -R ${config}.jj file list | awk -v stampfile=$out '{printf("%s: %s\n", stampfile, $$1)}' > ${depfile} && ${build_sh} build config/${config}.conf && touch ${out}
   depfile = $out.d
   deps = gcc
-  pool = freebsd_pool
+  pool = console
 
 rule release-freebsd
-  command = $build_sh release config/$$(basename $out).conf && touch $out
-  pool = freebsd_pool
+  command = ${build_sh} release config/${config}.conf && touch ${out}
+  pool = console

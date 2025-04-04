@@ -1,48 +1,53 @@
 build_sh = ./scripts/build.sh
 
-pool freebsd_pool
-  depth = 1
-
 rule build-freebsd
-  command = $build_sh ls-files config/$$(basename $out).conf | awk -v stampfile=$out '{printf("%s: %s\n", stampfile, $$1)}' > $depfile && $build_sh build config/$$(basename $out).conf && touch $out
+  command = jj -R ${config}.jj file list | awk -v stampfile=$out '{printf("%s: %s\n", stampfile, $$1)}' > ${depfile} && ${build_sh} build config/${config}.conf && touch ${out}
   depfile = $out.d
   deps = gcc
-  pool = freebsd_pool
+  pool = console
 
 rule release-freebsd
-  command = $build_sh release config/$$(basename $out).conf && touch $out
-  pool = freebsd_pool
+  command = ${build_sh} release config/${config}.conf && touch ${out}
+  pool = console
 
 # auto-generated from config/*.conf
 
 ## 14.2-RELEASE
 
-build _build/stamps/build/14.2-RELEASE: build-freebsd
-build 14.2-RELEASE: phony _build/stamps/build/14.2-RELEASE
+build _build/14.2-RELEASE.build: build-freebsd | config/14.2-RELEASE.conf scripts/build.sh
+  config = 14.2-RELEASE
+build 14.2-RELEASE: phony _build/14.2-RELEASE.build
 
-build _build/stamps/release/14.2-RELEASE: release-freebsd | _build/stamps/build/14.2-RELEASE
-build 14.2-RELEASE/txz: phony _build/stamps/release/14.2-RELEASE
+build _build/14.2-RELEASE.release: release-freebsd | _build/14.2-RELEASE.build
+  config = 14.2-RELEASE
+build 14.2-RELEASE/txz: phony _build/14.2-RELEASE.release
 
 ## 14.2-STABLE
 
-build _build/stamps/build/14.2-STABLE: build-freebsd
-build 14.2-STABLE: phony _build/stamps/build/14.2-STABLE
+build _build/14.2-STABLE.build: build-freebsd | config/14.2-STABLE.conf scripts/build.sh
+  config = 14.2-STABLE
+build 14.2-STABLE: phony _build/14.2-STABLE.build
 
-build _build/stamps/release/14.2-STABLE: release-freebsd | _build/stamps/build/14.2-STABLE
-build 14.2-STABLE/txz: phony _build/stamps/release/14.2-STABLE
+build _build/14.2-STABLE.release: release-freebsd | _build/14.2-STABLE.build
+  config = 14.2-STABLE
+build 14.2-STABLE/txz: phony _build/14.2-STABLE.release
 
 ## 15.0-CURRENT
 
-build _build/stamps/build/15.0-CURRENT: build-freebsd
-build 15.0-CURRENT: phony _build/stamps/build/15.0-CURRENT
+build _build/15.0-CURRENT.build: build-freebsd | config/15.0-CURRENT.conf scripts/build.sh
+  config = 15.0-CURRENT
+build 15.0-CURRENT: phony _build/15.0-CURRENT.build
 
-build _build/stamps/release/15.0-CURRENT: release-freebsd | _build/stamps/build/15.0-CURRENT
-build 15.0-CURRENT/txz: phony _build/stamps/release/15.0-CURRENT
+build _build/15.0-CURRENT.release: release-freebsd | _build/15.0-CURRENT.build
+  config = 15.0-CURRENT
+build 15.0-CURRENT/txz: phony _build/15.0-CURRENT.release
 
 ## 15.0-STABWEEK-2025-03
 
-build _build/stamps/build/15.0-STABWEEK-2025-03: build-freebsd
-build 15.0-STABWEEK-2025-03: phony _build/stamps/build/15.0-STABWEEK-2025-03
+build _build/15.0-STABWEEK-2025-03.build: build-freebsd | config/15.0-STABWEEK-2025-03.conf scripts/build.sh
+  config = 15.0-STABWEEK-2025-03
+build 15.0-STABWEEK-2025-03: phony _build/15.0-STABWEEK-2025-03.build
 
-build _build/stamps/release/15.0-STABWEEK-2025-03: release-freebsd | _build/stamps/build/15.0-STABWEEK-2025-03
-build 15.0-STABWEEK-2025-03/txz: phony _build/stamps/release/15.0-STABWEEK-2025-03
+build _build/15.0-STABWEEK-2025-03.release: release-freebsd | _build/15.0-STABWEEK-2025-03.build
+  config = 15.0-STABWEEK-2025-03
+build 15.0-STABWEEK-2025-03/txz: phony _build/15.0-STABWEEK-2025-03.release

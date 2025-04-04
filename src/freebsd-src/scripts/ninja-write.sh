@@ -17,10 +17,12 @@ for c in ${configs}; do
 
 ## ${c}
 
-build _build/stamps/build/${c}: build-freebsd
-build ${c}: phony _build/stamps/build/${c}
+build _build/${c}.build: build-freebsd | config/${c}.conf scripts/build.sh
+  config = ${c}
+build ${c}: phony _build/${c}.build
 
-build _build/stamps/release/${c}: release-freebsd | _build/stamps/build/${c}
-build ${c}/txz: phony _build/stamps/release/${c}
+build _build/${c}.release: release-freebsd | _build/${c}.build
+  config = ${c}
+build ${c}/txz: phony _build/${c}.release
 EOF
 done
