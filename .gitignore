@@ -4,6 +4,7 @@
 *.jj
 *~
 .plzconfig.local
+/wiki
 _build
 bin
 plz-out
