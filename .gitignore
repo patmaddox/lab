@@ -3,6 +3,8 @@
 *.elc
 *.jj
 *~
+.ninja_deps
+.ninja_log
 .plzconfig.local
 /wiki
 _build

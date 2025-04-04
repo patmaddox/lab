@@ -1,0 +1,9 @@
+build_sh = ./scripts/build.sh
+
+rule build-freebsd
+  command = $build_sh ls-files config/$$(basename $out).conf | awk -v stampfile=$out '{printf("%s: %s\n", stampfile, $$1)}' > $depfile && $build_sh build config/$$(basename $out).conf && touch $out
+  depfile = $out.d
+  deps = gcc
+
+rule release-freebsd
+  command = $build_sh release config/$$(basename $out).conf && touch $out

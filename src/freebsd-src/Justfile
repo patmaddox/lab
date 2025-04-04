@@ -19,27 +19,29 @@ build-all:
 
 # DWIM build - from scratch if needed, fast if possible
 build config:
-  ./scripts/build.sh build {{config}}
+  ninja {{config}}
 
 # Clean everything with the config (cleanworld)
 clean config:
-  ./scripts/build.sh clean {{config}}
+  ./scripts/build.sh clean config/{{config}}.conf
+  ninja -t clean {{config}}
 
 # Build release tarballs (base.txz kernel.txz etc)
 release config:
-  ./scripts/build.sh release {{config}}
+  ninja {{config}}/txz
 
 # Clean release tarballs
 clean-release config:
-  ./scripts/build.sh clean-release {{config}}
+  ./scripts/build.sh clean-release config/{{config}}.conf
+  ninja -t clean {{config}}/txz
 
 # print .OBJDIR for the build
 objdir config:
-  ./scripts/build.sh objdir {{config}}
+  ./scripts/build.sh objdir config/{{config}}.conf
 
 # print .OBJDIR/release for the build
 objdir-release config:
-  ./scripts/build.sh objdir-release {{config}}
+  ./scripts/build.sh objdir-release config/{{config}}.conf
 
 # Print the command list in markdown table format
 command-table:
@@ -48,6 +50,10 @@ command-table:
 # List all release assets (base.txz kernel.txz etc)
 ls-releases:
   ls _build/*/amd64.amd64/release
+
+# List all of the configs
+ls-configs:
+  @for c in $(ls config/*.conf); do basename ${c} .conf; done
 
 [no-cd]
 format-patch change="":

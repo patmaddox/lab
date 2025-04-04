@@ -1,0 +1,43 @@
+build_sh = ./scripts/build.sh
+
+rule build-freebsd
+  command = $build_sh ls-files config/$$(basename $out).conf | awk -v stampfile=$out '{printf("%s: %s\n", stampfile, $$1)}' > $depfile && $build_sh build config/$$(basename $out).conf && touch $out
+  depfile = $out.d
+  deps = gcc
+
+rule release-freebsd
+  command = $build_sh release config/$$(basename $out).conf && touch $out
+
+# auto-generated from config/*.conf
+
+## 14.2-RELEASE
+
+build _build/stamps/build/14.2-RELEASE: build-freebsd
+build 14.2-RELEASE: phony _build/stamps/build/14.2-RELEASE
+
+build _build/stamps/release/14.2-RELEASE: release-freebsd | _build/stamps/build/14.2-RELEASE
+build 14.2-RELEASE/txz: phony _build/stamps/release/14.2-RELEASE
+
+## 14.2-STABLE
+
+build _build/stamps/build/14.2-STABLE: build-freebsd
+build 14.2-STABLE: phony _build/stamps/build/14.2-STABLE
+
+build _build/stamps/release/14.2-STABLE: release-freebsd | _build/stamps/build/14.2-STABLE
+build 14.2-STABLE/txz: phony _build/stamps/release/14.2-STABLE
+
+## 15.0-CURRENT
+
+build _build/stamps/build/15.0-CURRENT: build-freebsd
+build 15.0-CURRENT: phony _build/stamps/build/15.0-CURRENT
+
+build _build/stamps/release/15.0-CURRENT: release-freebsd | _build/stamps/build/15.0-CURRENT
+build 15.0-CURRENT/txz: phony _build/stamps/release/15.0-CURRENT
+
+## 15.0-STABWEEK-2025-03
+
+build _build/stamps/build/15.0-STABWEEK-2025-03: build-freebsd
+build 15.0-STABWEEK-2025-03: phony _build/stamps/build/15.0-STABWEEK-2025-03
+
+build _build/stamps/release/15.0-STABWEEK-2025-03: release-freebsd | _build/stamps/build/15.0-STABWEEK-2025-03
+build 15.0-STABWEEK-2025-03/txz: phony _build/stamps/release/15.0-STABWEEK-2025-03
