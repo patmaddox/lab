@@ -1,0 +1,3 @@
+ninja_out = ninja-out
+
+subninja src/freebsd-src/build.ninja

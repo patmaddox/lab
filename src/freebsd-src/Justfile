@@ -1,3 +1,6 @@
+ninja := "ninja -C $(jj root)"
+src_root := "src/freebsd-src"
+
 help:
   @just -l
 
@@ -13,27 +16,31 @@ ccache-watch wait='5':
 clone:
   if [ ! -d main.jj ]; then jj git clone --colocate https://github.com/freebsd/freebsd-src.git main.jj; fi
 
+# Build every config
+# build-all *args:
+#   {{ninja}} {{args}} freebsd-src:build-all
+
 # Build and release every config
-build-all *args:
-  ninja {{args}}
+#release-all *args:
+#  {{ninja}} {{args}} freebsd-src:release-all
 
 # DWIM build - from scratch if needed, fast if possible
 build config:
-  ninja {{config}}
+  {{ninja}} freebsd-src/{{config}}:build
 
 # Clean everything with the config (cleanworld)
 clean config:
   ./scripts/build.sh clean config/{{config}}.conf
-  ninja -t clean {{config}}
+  {{ninja}} -t clean freebsd-src/{{config}}:build
 
 # Build release tarballs (base.txz kernel.txz etc)
 release config:
-  ninja {{config}}/txz
+  {{ninja}} freebsd-src/{{config}}:release
 
 # Clean release tarballs
 clean-release config:
   ./scripts/build.sh clean-release config/{{config}}.conf
-  ninja -t clean {{config}}/txz
+  {{ninja}} -t clean freebsd-src/{{config}}:release
 
 # print .OBJDIR for the build
 objdir config:

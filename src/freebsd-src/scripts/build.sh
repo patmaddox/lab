@@ -28,7 +28,7 @@ parse_args() {
 	release|clean-release|objdir-release)
 	    SRC_ROOT=$(realpath ${SRC_ROOT}/release)
 	    ;;
-	build|clean|objdir)
+	build|clean|objdir|ls-files)
 	    ;;
 	*)
 	    echo "E: unknown command ${CMD}" 1>&2
@@ -73,6 +73,10 @@ cmd::objdir() {
 cmd::objdir-release() {
     # OBJDIR is already set via cmd::objdir in main
     echo ${OBJDIR}
+}
+
+cmd::ls-files() {
+    jj -R ${SRC_ROOT} file list
 }
 
 _make() {
