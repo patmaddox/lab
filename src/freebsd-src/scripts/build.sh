@@ -7,6 +7,7 @@ export KERNCONF
 
 main() {
     parse_args "${@}"
+    ensure_not_dirty
 
     _make obj
     OBJDIR=$(cmd::objdir)
@@ -22,6 +23,7 @@ parse_args() {
     . $(realpath ${CONFIG})
 
     SRC_ROOT=$(realpath ${TREE})
+    REPO_ROOT=${SRC_ROOT}
     MAKE_FLAGS=""
 
     case ${CMD} in
@@ -40,6 +42,15 @@ parse_args() {
     SRCCONF=$(realpath src.conf)
     OBJROOT=$(pwd)/_build/$(basename ${CONFIG} .conf)/
     CCACHE_CONFIGPATH=$(realpath ccache.conf)
+}
+
+ensure_not_dirty() {
+    set +o pipefail
+    if ! jj -R ${REPO_ROOT} status --quiet | grep -q '^Working copy .* (empty) (no description set)'; then
+	echo "E: refusing to build in a dirty tree"
+	exit 1
+    fi
+    set -o pipefail
 }
 
 cmd::build() {
