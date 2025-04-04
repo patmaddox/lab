@@ -26,12 +26,12 @@ clone:
 
 # DWIM build - from scratch if needed, fast if possible
 build config:
-  {{ninja}} freebsd-src/{{config}}:build
+  {{ninja}} freebsd-src/{{config}}
 
 # Clean everything with the config (cleanworld)
 clean config:
   ./scripts/build.sh clean config/{{config}}.conf
-  {{ninja}} -t clean freebsd-src/{{config}}:build
+  {{ninja}} -t clean freebsd-src/{{config}}
 
 # Build release tarballs (base.txz kernel.txz etc)
 release config:

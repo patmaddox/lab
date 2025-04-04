@@ -12,7 +12,7 @@ config_releases=""
 
 for c in ${configs}; do
     c=$(basename ${c} .conf)
-    config_builds="freebsd-src/${c}\$:build ${config_builds}"
+    config_builds="freebsd-src/${c} ${config_builds}"
     config_releases="freebsd-src/${c}\$:release ${config_releases}"
 done
 
@@ -41,7 +41,7 @@ for c in ${configs}; do
 
 build ${src_root}/_build/${c}.build: build-freebsd | ${src_root}/config/${c}.conf ${src_root}/scripts/build.sh
   config = ${c}
-build freebsd-src/${c}$:build: phony ${src_root}/_build/${c}.build
+build freebsd-src/${c}: phony ${src_root}/_build/${c}.build
 
 build ${c_release_ninja_files}: release-freebsd | ${src_root}/_build/${c}.build
   config = ${c}

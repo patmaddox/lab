@@ -15,7 +15,7 @@ rule release-freebsd
 # auto-generated from config/*.conf
 
 # these hide all of the specific versions... disable for now
-# build freebsd-src$:build-all: phony freebsd-src/15.0-STABWEEK-2025-03$:build freebsd-src/15.0-CURRENT$:build freebsd-src/14.2-STABLE$:build freebsd-src/14.2-RELEASE$:build 
+# build freebsd-src$:build-all: phony freebsd-src/15.0-STABWEEK-2025-03 freebsd-src/15.0-CURRENT freebsd-src/14.2-STABLE freebsd-src/14.2-RELEASE 
 # build freebsd-src$:release-all: phony freebsd-src/15.0-STABWEEK-2025-03$:release freebsd-src/15.0-CURRENT$:release freebsd-src/14.2-STABLE$:release freebsd-src/14.2-RELEASE$:release 
 
 
@@ -23,7 +23,7 @@ rule release-freebsd
 
 build src/freebsd-src/_build/14.2-RELEASE.build: build-freebsd | src/freebsd-src/config/14.2-RELEASE.conf src/freebsd-src/scripts/build.sh
   config = 14.2-RELEASE
-build freebsd-src/14.2-RELEASE$:build: phony src/freebsd-src/_build/14.2-RELEASE.build
+build freebsd-src/14.2-RELEASE: phony src/freebsd-src/_build/14.2-RELEASE.build
 
 build ninja-out/freebsd-src/14.2-RELEASE/MANIFEST ninja-out/freebsd-src/14.2-RELEASE/base.txz ninja-out/freebsd-src/14.2-RELEASE/kernel.txz ninja-out/freebsd-src/14.2-RELEASE/src.txz ninja-out/freebsd-src/14.2-RELEASE/tests.txz: release-freebsd | src/freebsd-src/_build/14.2-RELEASE.build
   config = 14.2-RELEASE
@@ -33,7 +33,7 @@ build freebsd-src/14.2-RELEASE$:release: phony ninja-out/freebsd-src/14.2-RELEAS
 
 build src/freebsd-src/_build/14.2-STABLE.build: build-freebsd | src/freebsd-src/config/14.2-STABLE.conf src/freebsd-src/scripts/build.sh
   config = 14.2-STABLE
-build freebsd-src/14.2-STABLE$:build: phony src/freebsd-src/_build/14.2-STABLE.build
+build freebsd-src/14.2-STABLE: phony src/freebsd-src/_build/14.2-STABLE.build
 
 build ninja-out/freebsd-src/14.2-STABLE/MANIFEST ninja-out/freebsd-src/14.2-STABLE/base.txz ninja-out/freebsd-src/14.2-STABLE/kernel.txz ninja-out/freebsd-src/14.2-STABLE/src.txz ninja-out/freebsd-src/14.2-STABLE/tests.txz: release-freebsd | src/freebsd-src/_build/14.2-STABLE.build
   config = 14.2-STABLE
@@ -43,7 +43,7 @@ build freebsd-src/14.2-STABLE$:release: phony ninja-out/freebsd-src/14.2-STABLE/
 
 build src/freebsd-src/_build/15.0-CURRENT.build: build-freebsd | src/freebsd-src/config/15.0-CURRENT.conf src/freebsd-src/scripts/build.sh
   config = 15.0-CURRENT
-build freebsd-src/15.0-CURRENT$:build: phony src/freebsd-src/_build/15.0-CURRENT.build
+build freebsd-src/15.0-CURRENT: phony src/freebsd-src/_build/15.0-CURRENT.build
 
 build ninja-out/freebsd-src/15.0-CURRENT/MANIFEST ninja-out/freebsd-src/15.0-CURRENT/base.txz ninja-out/freebsd-src/15.0-CURRENT/kernel.txz ninja-out/freebsd-src/15.0-CURRENT/src.txz ninja-out/freebsd-src/15.0-CURRENT/tests.txz: release-freebsd | src/freebsd-src/_build/15.0-CURRENT.build
   config = 15.0-CURRENT
@@ -53,7 +53,7 @@ build freebsd-src/15.0-CURRENT$:release: phony ninja-out/freebsd-src/15.0-CURREN
 
 build src/freebsd-src/_build/15.0-STABWEEK-2025-03.build: build-freebsd | src/freebsd-src/config/15.0-STABWEEK-2025-03.conf src/freebsd-src/scripts/build.sh
   config = 15.0-STABWEEK-2025-03
-build freebsd-src/15.0-STABWEEK-2025-03$:build: phony src/freebsd-src/_build/15.0-STABWEEK-2025-03.build
+build freebsd-src/15.0-STABWEEK-2025-03: phony src/freebsd-src/_build/15.0-STABWEEK-2025-03.build
 
 build ninja-out/freebsd-src/15.0-STABWEEK-2025-03/MANIFEST ninja-out/freebsd-src/15.0-STABWEEK-2025-03/base.txz ninja-out/freebsd-src/15.0-STABWEEK-2025-03/kernel.txz ninja-out/freebsd-src/15.0-STABWEEK-2025-03/src.txz ninja-out/freebsd-src/15.0-STABWEEK-2025-03/tests.txz: release-freebsd | src/freebsd-src/_build/15.0-STABWEEK-2025-03.build
   config = 15.0-STABWEEK-2025-03
