@@ -14,8 +14,8 @@ clone:
   if [ ! -d main.jj ]; then jj git clone --colocate https://github.com/freebsd/freebsd-src.git main.jj; fi
 
 # Build and release every config
-build-all:
-  for c in $(ls config/*.conf); do just build ${c} && just release ${c}; done
+build-all *args:
+  ninja {{args}}
 
 # DWIM build - from scratch if needed, fast if possible
 build config:
