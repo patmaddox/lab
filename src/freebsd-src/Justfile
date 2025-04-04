@@ -13,6 +13,10 @@ ccache-watch wait='5':
 clone:
   if [ ! -d main.jj ]; then jj git clone --colocate https://github.com/freebsd/freebsd-src.git main.jj; fi
 
+# Build and release every config
+build-all:
+  for c in $(ls config/*.conf); do just build ${c} && just release ${c}; done
+
 # DWIM build - from scratch if needed, fast if possible
 build config:
   ./scripts/build.sh build {{config}}
@@ -40,6 +44,10 @@ objdir-release config:
 # Print the command list in markdown table format
 command-table:
   just -l -u | awk '/#/ {match($0, /#.*/); printf("| `just %s`!| %s!|\n", $1, substr($0, RSTART + 2)) }' | column -t -s '!' | sed -e 's/  |/ |/g'
+
+# List all release assets (base.txz kernel.txz etc)
+ls-releases:
+  ls _build/*/amd64.amd64/release
 
 [no-cd]
 format-patch change="":
