@@ -1,0 +1,12 @@
+src_root = src/freebsd-src
+images_dir = infra/images
+
+rule poudriere-bulk
+  command = doas poudriere bulk -j ${jail} -p main $$(for f in $in; do echo -n "-f $${f} "; done) && touch $out
+  pool = console
+
+build ${src_root}/_build/releng-142.done: poudriere-bulk ${images_dir}/andre/andre.ports ${images_dir}/beastie/beastie.ports ${images_dir}/gulliver/gulliver.ports ${images_dir}/poudriere-builder/poudriere-builder.ports
+  jail = releng-142
+
+build mod.ports.releng-142: phony ${src_root}/_build/releng-142.done
+build ports.releng-142: phony mod.ports.releng-142

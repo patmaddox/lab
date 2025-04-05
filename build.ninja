@@ -1,3 +1,4 @@
 ninja_out = ninja-out
 
 subninja src/freebsd-src/build.ninja
+subninja src/freebsd-ports/ports.ninja
