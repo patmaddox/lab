@@ -12,8 +12,8 @@ config_releases=""
 
 for c in ${configs}; do
     c=$(basename ${c} .conf)
-    config_builds="freebsd-src/${c} ${config_builds}"
-    config_releases="freebsd-src/${c}\$:release ${config_releases}"
+    config_builds="mod.freebsd.build.${c} ${config_builds}"
+    config_releases="mod.freebsd.release.${c} ${config_releases}"
 done
 
 cat ${bindir}/ninja.rules
@@ -23,8 +23,11 @@ cat <<EOF
 # auto-generated from config/*.conf
 
 # these hide all of the specific versions... disable for now
-# build freebsd-src\$:build-all: phony ${config_builds}
-# build freebsd-src\$:release-all: phony ${config_releases}
+build mod.freebsd.build: phony ${config_builds}
+build freebsd.build: phony mod.freebsd.build
+
+build mod.freebsd.release: phony ${config_releases}
+build freebsd.release: phony mod.freebsd.release
 
 EOF
 
@@ -41,10 +44,12 @@ for c in ${configs}; do
 
 build ${src_root}/_build/${c}.build: build-freebsd | ${src_root}/config/${c}.conf ${src_root}/scripts/build.sh
   config = ${c}
-build freebsd-src/${c}: phony ${src_root}/_build/${c}.build
+build mod.freebsd.build.${c}: phony ${src_root}/_build/${c}.build
+build freebsd.build.${c}: phony mod.freebsd.build.${c}
 
 build ${c_release_ninja_files}: release-freebsd | ${src_root}/_build/${c}.build
   config = ${c}
-build freebsd-src/${c}$:release: phony ${c_release_ninja_files}
+build mod.freebsd.release.${c}: phony ${c_release_ninja_files}
+build freebsd.release.${c}: phony mod.freebsd.release.${c}
 EOF
 done

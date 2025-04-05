@@ -17,30 +17,30 @@ clone:
   if [ ! -d main.jj ]; then jj git clone --colocate https://github.com/freebsd/freebsd-src.git main.jj; fi
 
 # Build every config
-# build-all *args:
-#   {{ninja}} {{args}} freebsd-src:build-all
+build-all *args:
+   {{ninja}} {{args}} freebsd.build
 
 # Build and release every config
-#release-all *args:
-#  {{ninja}} {{args}} freebsd-src:release-all
+release-all *args:
+  {{ninja}} {{args}} freebsd.release
 
 # DWIM build - from scratch if needed, fast if possible
 build config:
-  {{ninja}} freebsd-src/{{config}}
+  {{ninja}} freebsd.build.{{config}}
 
 # Clean everything with the config (cleanworld)
 clean config:
   ./scripts/build.sh clean config/{{config}}.conf
-  {{ninja}} -t clean freebsd-src/{{config}}
+  {{ninja}} -t clean freebsd.build.{{config}}
 
 # Build release tarballs (base.txz kernel.txz etc)
 release config:
-  {{ninja}} freebsd-src/{{config}}:release
+  {{ninja}} freebsd.release.{{config}}
 
 # Clean release tarballs
 clean-release config:
   ./scripts/build.sh clean-release config/{{config}}.conf
-  {{ninja}} -t clean freebsd-src/{{config}}:release
+  {{ninja}} -t clean freebsd.release.{{config}}
 
 # print .OBJDIR for the build
 objdir config:
@@ -56,7 +56,7 @@ command-table:
 
 # List all release assets (base.txz kernel.txz etc)
 ls-releases:
-  ls _build/*/amd64.amd64/release
+  tree --prune $(jj root)/ninja-out/freebsd-src
 
 # List all of the configs
 ls-configs:
