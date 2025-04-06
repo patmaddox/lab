@@ -1,10 +1,8 @@
 ninja_out = ninja-out
 bin_out = ${ninja_out}/bin
 
-tool_muffet = /home/patmaddox/go/bin/muffet
-
 rule sh_cmd
-  command = test -x ${in} && cp ${in} ${out}
+  command = test -x ${in} && cp ${in} ${out} && touch ${out}
 
 subninja src/freebsd-src/freebsd.ninja
 subninja src/freebsd-ports/ports.ninja

@@ -2,8 +2,10 @@
 port=62123
 www=http://localhost:${port}
 
+URLCHECK=$(atf_get_srcdir)/urlcheck.sh
+
 httpd::start() {
-    darkhttpd $(atf_get_srcdir)/html --daemon --pidfile httpd.pid --port ${port} || exit 1
+    darkhttpd $(atf_get_srcdir)/test-fixtures --daemon --pidfile httpd.pid --port ${port} || exit 1
 }
 
 httpd::stop() {

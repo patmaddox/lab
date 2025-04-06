@@ -1,12 +1,12 @@
 src_root = src/urlcheck
 
 rule test
-  command = set -o pipefail && MUFFET=${tool_muffet} URLCHECK=$$(realpath ${src_root}/urlcheck.sh) kyua test --kyuafile=${src_root}/test/Kyuafile | tee ${out}
+  command = set -o pipefail && kyua test --kyuafile=${src_root}/Kyuafile | tee ${out}
 
 build ${bin_out}/urlcheck.sh: sh_cmd ${src_root}/urlcheck.sh | mod.bin.urlcheck.test
 build mod.bin.urlcheck: phony ${bin_out}/urlcheck.sh
 build bin.urlcheck: phony mod.bin.urlcheck
 
-#build mod.bin.urlcheck.test: test | ${src_root}/urlcheck.sh ${src_root}/test/Kyuafile ${src_root}/test/main_test
-build mod.bin.urlcheck.test: test | ${src_root}/urlcheck.sh ${src_root}/test/Kyuafile ${src_root}/test/main_test ${src_root}/test/html/broken-different-host.html ${src_root}/test/html/broken-recursion.html ${src_root}/test/html/broken-same-host.html ${src_root}/test/html/foo-exists.html ${src_root}/test/html/valid-same-host.html
+build ${src_root}/_build/test.done: test | ${src_root}/urlcheck.sh ${src_root}/Kyuafile ${src_root}/tests.sh ${src_root}/test-fixtures/broken-different-host.html ${src_root}/test-fixtures/broken-recursion.html ${src_root}/test-fixtures/broken-same-host.html ${src_root}/test-fixtures/foo-exists.html ${src_root}/test-fixtures/valid-same-host.html
+build mod.bin.urlcheck.test: phony ${src_root}/_build/test.done
 build test.bin.urlcheck: phony mod.bin.urlcheck.test
