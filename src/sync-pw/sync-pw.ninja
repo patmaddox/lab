@@ -1,0 +1,5 @@
+src_root = src/sync-pw
+
+build ${bin_out}/sync-pw: sh_cmd ${src_root}/sync-pw
+build mod.bin.sync-pw: phony ${bin_out}/sync-pw
+build bin.sync-pw: phony mod.bin.sync-pw

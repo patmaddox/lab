@@ -1,4 +1,9 @@
 ninja_out = ninja-out
+bin_out = ${ninja_out}/bin
+
+rule sh_cmd
+  command = test -x ${in} && cp ${in} ${out}
 
 subninja src/freebsd-src/freebsd.ninja
 subninja src/freebsd-ports/ports.ninja
+subninja src/sync-pw/sync-pw.ninja
