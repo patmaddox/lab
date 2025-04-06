@@ -1,0 +1,21 @@
+src_root = src/patmaddox.com
+zola_root = ${src_root}/generators/zola
+
+rule zola
+  command = set -o pipefail && jj file list ${src_root}/content ${src_root}/generators/zola | sed "s|^|${out}: |" > ${depfile} && zola -r ${zola_root} build -f -o ${destdir} && touch ${out}
+  depfile = ${out}.d
+  deps = gcc
+
+rule test
+  command = set -o pipefail && jj file list ${src_root}/content ${src_root}/generators/zola | sed "s|^|${out}: |" > ${depfile} && kyua test --kyuafile=${src_root}/Kyuafile && touch ${out}
+  depfile = ${out}.d
+  deps = gcc
+
+build ${src_root}/_build/build.done: zola | mod.patmaddox.com.test
+  destdir = ${ninja_out}/patmaddox.com
+build mod.patmaddox.com: phony ${src_root}/_build/build.done
+build patmaddox.com: phony mod.patmaddox.com
+
+build ${src_root}/_build/test.done: test | ${src_root}/Kyuafile ${src_root}/test.sh
+build mod.patmaddox.com.test: phony ${src_root}/_build/test.done
+build patmaddox.com.test: phony mod.patmaddox.com.test

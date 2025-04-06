@@ -1,12 +1,14 @@
 #!/usr/bin/env atf-sh
 
-root=${ROOTDIR:?}
+zola_root=$(atf_get_srcdir)/generators/zola
 port=62123
 www=http://localhost:${port}
 outfile=output.html
+urlcheck=$(cd ${zola_root} && realpath $(jj root)/ninja-out/bin/urlcheck.sh)
 
 httpd::start() {
-    darkhttpd ${root} --addr 127.0.0.1 --daemon --pidfile httpd.pid --port ${port} || exit 1
+    zola -r ${zola_root} build -o html -u ${www}
+    darkhttpd html --addr 127.0.0.1 --daemon --pidfile httpd.pid --port ${port} || exit 1
 }
 
 httpd::stop() {
@@ -19,7 +21,7 @@ check_get() {
     local url
     url=${1}; shift
 
-    atf_check ${URLCHECK} ${www} ${url}
+    atf_check ${urlcheck} ${www} ${url}
 }
 
 atf_init_test_cases() {
@@ -55,7 +57,7 @@ sitemap_body() {
     httpd::start
 
     local urls
-    urls=$(sed -e "s|^https://patmaddox.com|${www}|" < ${root}/sitemap.txt)
+    urls=$(sed -e "s|^https://patmaddox.com|${www}|" < html/sitemap.txt)
     for u in ${urls}; do
 	check_get ${u}
 	echo "${u}" >> ${outfile}

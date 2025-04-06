@@ -1,4 +1,4 @@
 syntax(2)
 
 test_suite('patmaddox.com')
-atf_test_program{name='test'}
+atf_test_program{name='test.sh'}
