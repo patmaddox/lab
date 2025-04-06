@@ -9,4 +9,3 @@ build bin.urlcheck: phony mod.bin.urlcheck
 
 build ${src_root}/_build/test.done: test | ${src_root}/urlcheck.sh ${src_root}/Kyuafile ${src_root}/tests.sh ${src_root}/test-fixtures/broken-different-host.html ${src_root}/test-fixtures/broken-recursion.html ${src_root}/test-fixtures/broken-same-host.html ${src_root}/test-fixtures/foo-exists.html ${src_root}/test-fixtures/valid-same-host.html
 build mod.bin.urlcheck.test: phony ${src_root}/_build/test.done
-build test.bin.urlcheck: phony mod.bin.urlcheck.test
