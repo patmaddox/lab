@@ -6,6 +6,7 @@ rule sh_cmd
 
 subninja src/freebsd-src/freebsd.ninja
 subninja src/freebsd-ports/ports.ninja
+subninja infra/images/poudriere-builder/poudriere-builder.ninja
 subninja src/sync-pw/sync-pw.ninja
 subninja src/urlcheck/urlcheck.ninja
 subninja src/patmaddox.com/patmaddox.com.ninja
