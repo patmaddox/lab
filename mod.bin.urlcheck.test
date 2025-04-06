@@ -1,0 +1,10 @@
+main_test:broken_links_same_host  ->  passed  [0.009s]
+main_test:invalid_starting_link  ->  passed  [0.008s]
+main_test:recursion  ->  passed  [0.011s]
+main_test:skip_links_off_host  ->  passed  [0.014s]
+main_test:valid_links_same_host  ->  passed  [0.013s]
+
+Results file id is home_patmaddox_lab.jj_src_urlcheck_test.20250406-170551-367917
+Results saved to /home/patmaddox/.kyua/store/results.home_patmaddox_lab.jj_src_urlcheck_test.20250406-170551-367917.db
+
+5/5 passed (0 broken, 0 failed, 0 skipped)

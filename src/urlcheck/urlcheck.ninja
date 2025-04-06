@@ -1,0 +1,12 @@
+src_root = src/urlcheck
+
+rule test
+  command = set -o pipefail && MUFFET=${tool_muffet} URLCHECK=$$(realpath ${src_root}/urlcheck.sh) kyua test --kyuafile=${src_root}/test/Kyuafile | tee ${out}
+
+build ${bin_out}/urlcheck.sh: sh_cmd ${src_root}/urlcheck.sh | mod.bin.urlcheck.test
+build mod.bin.urlcheck: phony ${bin_out}/urlcheck.sh
+build bin.urlcheck: phony mod.bin.urlcheck
+
+#build mod.bin.urlcheck.test: test | ${src_root}/urlcheck.sh ${src_root}/test/Kyuafile ${src_root}/test/main_test
+build mod.bin.urlcheck.test: test | ${src_root}/urlcheck.sh ${src_root}/test/Kyuafile ${src_root}/test/main_test ${src_root}/test/html/broken-different-host.html ${src_root}/test/html/broken-recursion.html ${src_root}/test/html/broken-same-host.html ${src_root}/test/html/foo-exists.html ${src_root}/test/html/valid-same-host.html
+build test.bin.urlcheck: phony mod.bin.urlcheck.test
