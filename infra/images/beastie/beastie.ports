@@ -29,7 +29,7 @@ java/eclipse
 java/openjdk21
 java/openjfx14
 lang/elixir-devel
-lang/erlang-runtime27
+lang/erlang-runtime28
 lang/gcc
 lang/gleam
 lang/go123

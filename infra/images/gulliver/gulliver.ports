@@ -20,7 +20,7 @@ editors/emacs@nox
 graphics/drm-61-kmod
 graphics/gpu-firmware-amd-kmod@green_sardine
 lang/elixir-devel
-lang/erlang-runtime27
+lang/erlang-runtime28
 lang/go123
 lang/ldc
 lang/rust
