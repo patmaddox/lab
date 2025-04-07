@@ -66,6 +66,9 @@ build::extract() {
 }
 
 build::config() {
+    # nfs mount points
+    doas mkdir ${rootdir}/root/lab.jj
+
     tar -c -C ${distdir}/zroot @${distdir}/zroot.mtree | doas tar -x -C ${rootdir}
     doas zfs snapshot -r ninja-pb--zroot@config
 }

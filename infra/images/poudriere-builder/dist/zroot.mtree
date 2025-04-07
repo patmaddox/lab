@@ -5,7 +5,7 @@
 ./etc/rc.conf
 ./etc/resolv.conf
 ./etc/ssh/sshd_config
-./opt/bin/bootstrap.sh
+./opt/bootstrap.sh mode=0744
 ./root/.ssh/authorized_keys
 ./usr/local/etc/doas.conf
 ./usr/local/etc/nginx/nginx.conf
