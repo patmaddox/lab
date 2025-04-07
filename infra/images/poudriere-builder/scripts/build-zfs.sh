@@ -11,7 +11,7 @@ main() {
     rm -f ${tmpfile}
     BUILDDIR=$(dirname ${outfile})
     rootdir=$(realpath ${BUILDDIR}/imgroot)
-    distdir=$(realpath ${BUILDDIR}/../dist/zroot)
+    distdir=$(realpath ${BUILDDIR}/../dist)
 
     build::validate-txz
     build::create-zpool
@@ -66,7 +66,7 @@ build::extract() {
 }
 
 build::config() {
-    tar -c -C ${distdir} . | doas tar -x -C ${rootdir} --gid 0 --uid 0
+    tar -c -C ${distdir}/zroot @${distdir}/zroot.mtree | doas tar -x -C ${rootdir}
     doas zfs snapshot -r ninja-pb--zroot@config
 }
 

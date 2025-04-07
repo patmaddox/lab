@@ -24,7 +24,7 @@ rule untar-file
 # This is used as the mountpoint for the zfs image
 build ${build_dir}/imgroot: mkdir
 
-build ${build_dir}/poudriere-builder.zfs: zfs | ${build_dir}/imgroot ${ninja_out}/freebsd-src/${revision}/base.txz ${ninja_out}/freebsd-src/${revision}/kernel.txz
+build ${build_dir}/poudriere-builder.zfs: zfs | ${src_root}/scripts/build-zfs.sh ${build_dir}/imgroot ${ninja_out}/freebsd-src/${revision}/base.txz ${ninja_out}/freebsd-src/${revision}/kernel.txz
   freebsd_txz = ${ninja_out}/freebsd-src/${revision}
 
 build ${efi_dir}/efi/boot/bootx64.efi: untar-file ${ninja_out}/freebsd-src/${revision}/base.txz
