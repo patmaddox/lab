@@ -53,7 +53,7 @@ bootstrap-poudriere() {
     local stabweek
     if ! poudriere jail -i -j 150 > /dev/null 2>&1; then
 	stabweek=$(cd lab.jj/ninja-out/freebsd-src && ls -r -d 15.0-STABWEEK-* | head -n 1)
-	poudriere jail -c -j 150 -m url=file:///root/lab.jj/ninja-out/freebsd-src/${stabweek} -K GENERIC -v 15.0
+	poudriere jail -c -j 150 -m url=file:///root/lab.jj/ninja-out/freebsd-src/${stabweek} -K GENERIC-NODEBUG -v 15.0
     fi
 }
 
