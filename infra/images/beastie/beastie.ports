@@ -9,6 +9,7 @@ devel/ccache
 devel/cmake
 devel/fossil
 devel/git
+devel/git-subrepo
 devel/gmake
 devel/jujutsu
 devel/maven
@@ -23,6 +24,8 @@ devel/tcllib
 devel/uclcmd
 devel/valgrind-devel
 editors/emacs@nox
+editors/libreoffice
+editors/vscode
 ftp/wget
 graphics/maim
 java/eclipse
@@ -33,6 +36,7 @@ lang/erlang-runtime28
 lang/gcc
 lang/gleam
 lang/go123
+lang/python310
 lang/rust
 lang/tcl-wrapper
 lang/zig
@@ -71,12 +75,14 @@ sysutils/sanoid
 sysutils/tmux
 sysutils/vm-bhyve-devel
 sysutils/zelta
+textproc/fzf
 textproc/groff
 textproc/hs-pandoc
 textproc/p5-ack
 textproc/ripgrep
 www/chromium
 www/darkhttpd
+www/deno
 www/firefox
 www/nginx
 www/npm
