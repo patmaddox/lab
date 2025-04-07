@@ -44,6 +44,7 @@ sysutils/htop
 sysutils/password-store
 sysutils/rubygem-bundler
 sysutils/sanoid
+sysutils/tmux
 sysutils/tree
 textproc/docproj
 textproc/fzf
