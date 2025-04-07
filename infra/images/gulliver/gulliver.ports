@@ -18,7 +18,7 @@ devel/uclcmd
 devel/valgrind
 editors/emacs@nox
 graphics/drm-61-kmod
-graphics/gpu-firmware-kmod
+graphics/gpu-firmware-amd-kmod@green_sardine
 lang/elixir-devel
 lang/erlang-runtime27
 lang/go123
