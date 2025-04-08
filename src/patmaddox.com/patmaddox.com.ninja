@@ -14,7 +14,7 @@ rule test
 build ${src_root}/_build/build.done: zola | mod.patmaddox.com.test
   destdir = ${ninja_out}/patmaddox.com
 build mod.patmaddox.com: phony ${src_root}/_build/build.done
-build patmaddox.com: phony mod.patmaddox.com
+build sites.patmaddox.com: phony mod.patmaddox.com
 
 build ${src_root}/_build/test.done: test | ${src_root}/Kyuafile ${src_root}/test.sh
 build mod.patmaddox.com.test: phony ${src_root}/_build/test.done
