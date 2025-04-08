@@ -5,7 +5,7 @@ rule sh_cmd
   command = test -x ${in} && cp ${in} ${out} && touch ${out}
 
 subninja src/freebsd-src/freebsd.ninja
-subninja src/freebsd-ports/ports.ninja
+#subninja src/freebsd-ports/ports.ninja
 
 subninja infra/images/devbsd/devbsd.ninja
 subninja infra/images/poudriere-builder/poudriere-builder.ninja

@@ -22,12 +22,12 @@ cat <<EOF
 
 # auto-generated from config/*.conf
 
-# these hide all of the specific versions... disable for now
-build mod.freebsd.build: phony ${config_builds}
-build freebsd.build: phony mod.freebsd.build
+#build mod.freebsd.build: phony ${config_builds}
+#build freebsd.build: phony mod.freebsd.build
 
 build mod.freebsd.release: phony ${config_releases}
-build freebsd.release: phony mod.freebsd.release
+#build freebsd.release: phony mod.freebsd.release
+build freebsd.all: phony mod.freebsd.release
 
 EOF
 
@@ -45,11 +45,12 @@ for c in ${configs}; do
 build ${src_root}/_build/${c}.build: build-freebsd | ${src_root}/config/${c}.conf ${src_root}/scripts/build.sh
   config = ${c}
 build mod.freebsd.build.${c}: phony ${src_root}/_build/${c}.build
-build freebsd.build.${c}: phony mod.freebsd.build.${c}
+#build freebsd.build.${c}: phony mod.freebsd.build.${c}
 
-build ${c_release_ninja_files}: release-freebsd | ${src_root}/_build/${c}.build
+build ${c_release_ninja_files}: release-freebsd | mod.freebsd.build.${c}
   config = ${c}
 build mod.freebsd.release.${c}: phony ${c_release_ninja_files}
-build freebsd.release.${c}: phony mod.freebsd.release.${c}
+#build freebsd.release.${c}: phony mod.freebsd.release.${c}
+build freebsd.${c}: phony mod.freebsd.release.${c}
 EOF
 done
