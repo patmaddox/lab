@@ -2,7 +2,7 @@ src_root = infra/images/devbsd
 build_dir = ${src_root}/_build
 root_dir = ${build_dir}/root
 efi_dir = ${build_dir}/efistage
-revision = 15.0-CURRENT
+revision = 15-CURRENT
 image_name = devbsd
 
 rule image

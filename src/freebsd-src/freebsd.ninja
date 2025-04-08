@@ -14,14 +14,26 @@ rule release-freebsd
 
 # auto-generated from config/*.conf
 
-# these hide all of the specific versions... disable for now
-#build mod.freebsd.build: phony mod.freebsd.build.15.0-STABLE mod.freebsd.build.15.0-CURRENT mod.freebsd.build.14.2-STABLE mod.freebsd.build.14.2-RELEASE 
+#build mod.freebsd.build: phony mod.freebsd.build.15-STABLE mod.freebsd.build.15-CURRENT mod.freebsd.build.14.2-RELEASE mod.freebsd.build.14-STABLE 
 #build freebsd.build: phony mod.freebsd.build
 
-build mod.freebsd.release: phony mod.freebsd.release.15.0-STABLE mod.freebsd.release.15.0-CURRENT mod.freebsd.release.14.2-STABLE mod.freebsd.release.14.2-RELEASE 
+build mod.freebsd.release: phony mod.freebsd.release.15-STABLE mod.freebsd.release.15-CURRENT mod.freebsd.release.14.2-RELEASE mod.freebsd.release.14-STABLE 
 #build freebsd.release: phony mod.freebsd.release
 build freebsd.all: phony mod.freebsd.release
 
+
+## 14-STABLE
+
+build src/freebsd-src/_build/14-STABLE.build: build-freebsd | src/freebsd-src/config/14-STABLE.conf src/freebsd-src/scripts/build.sh
+  config = 14-STABLE
+build mod.freebsd.build.14-STABLE: phony src/freebsd-src/_build/14-STABLE.build
+#build freebsd.build.14-STABLE: phony mod.freebsd.build.14-STABLE
+
+build ninja-out/freebsd-src/14-STABLE/MANIFEST ninja-out/freebsd-src/14-STABLE/base.txz ninja-out/freebsd-src/14-STABLE/kernel.txz ninja-out/freebsd-src/14-STABLE/src.txz ninja-out/freebsd-src/14-STABLE/tests.txz: release-freebsd | mod.freebsd.build.14-STABLE
+  config = 14-STABLE
+build mod.freebsd.release.14-STABLE: phony ninja-out/freebsd-src/14-STABLE/MANIFEST ninja-out/freebsd-src/14-STABLE/base.txz ninja-out/freebsd-src/14-STABLE/kernel.txz ninja-out/freebsd-src/14-STABLE/src.txz ninja-out/freebsd-src/14-STABLE/tests.txz
+#build freebsd.release.14-STABLE: phony mod.freebsd.release.14-STABLE
+build freebsd.14-STABLE: phony mod.freebsd.release.14-STABLE
 
 ## 14.2-RELEASE
 
@@ -36,41 +48,28 @@ build mod.freebsd.release.14.2-RELEASE: phony ninja-out/freebsd-src/14.2-RELEASE
 #build freebsd.release.14.2-RELEASE: phony mod.freebsd.release.14.2-RELEASE
 build freebsd.14.2-RELEASE: phony mod.freebsd.release.14.2-RELEASE
 
-## 14.2-STABLE
+## 15-CURRENT
 
-build src/freebsd-src/_build/14.2-STABLE.build: build-freebsd | src/freebsd-src/config/14.2-STABLE.conf src/freebsd-src/scripts/build.sh
-  config = 14.2-STABLE
-build mod.freebsd.build.14.2-STABLE: phony src/freebsd-src/_build/14.2-STABLE.build
-#build freebsd.build.14.2-STABLE: phony mod.freebsd.build.14.2-STABLE
+build src/freebsd-src/_build/15-CURRENT.build: build-freebsd | src/freebsd-src/config/15-CURRENT.conf src/freebsd-src/scripts/build.sh
+  config = 15-CURRENT
+build mod.freebsd.build.15-CURRENT: phony src/freebsd-src/_build/15-CURRENT.build
+#build freebsd.build.15-CURRENT: phony mod.freebsd.build.15-CURRENT
 
-build ninja-out/freebsd-src/14.2-STABLE/MANIFEST ninja-out/freebsd-src/14.2-STABLE/base.txz ninja-out/freebsd-src/14.2-STABLE/kernel.txz ninja-out/freebsd-src/14.2-STABLE/src.txz ninja-out/freebsd-src/14.2-STABLE/tests.txz: release-freebsd | mod.freebsd.build.14.2-STABLE
-  config = 14.2-STABLE
-build mod.freebsd.release.14.2-STABLE: phony ninja-out/freebsd-src/14.2-STABLE/MANIFEST ninja-out/freebsd-src/14.2-STABLE/base.txz ninja-out/freebsd-src/14.2-STABLE/kernel.txz ninja-out/freebsd-src/14.2-STABLE/src.txz ninja-out/freebsd-src/14.2-STABLE/tests.txz
-#build freebsd.release.14.2-STABLE: phony mod.freebsd.release.14.2-STABLE
-build freebsd.14.2-STABLE: phony mod.freebsd.release.14.2-STABLE
+build ninja-out/freebsd-src/15-CURRENT/MANIFEST ninja-out/freebsd-src/15-CURRENT/base.txz ninja-out/freebsd-src/15-CURRENT/kernel.txz ninja-out/freebsd-src/15-CURRENT/src.txz ninja-out/freebsd-src/15-CURRENT/tests.txz: release-freebsd | mod.freebsd.build.15-CURRENT
+  config = 15-CURRENT
+build mod.freebsd.release.15-CURRENT: phony ninja-out/freebsd-src/15-CURRENT/MANIFEST ninja-out/freebsd-src/15-CURRENT/base.txz ninja-out/freebsd-src/15-CURRENT/kernel.txz ninja-out/freebsd-src/15-CURRENT/src.txz ninja-out/freebsd-src/15-CURRENT/tests.txz
+#build freebsd.release.15-CURRENT: phony mod.freebsd.release.15-CURRENT
+build freebsd.15-CURRENT: phony mod.freebsd.release.15-CURRENT
 
-## 15.0-CURRENT
+## 15-STABLE
 
-build src/freebsd-src/_build/15.0-CURRENT.build: build-freebsd | src/freebsd-src/config/15.0-CURRENT.conf src/freebsd-src/scripts/build.sh
-  config = 15.0-CURRENT
-build mod.freebsd.build.15.0-CURRENT: phony src/freebsd-src/_build/15.0-CURRENT.build
-#build freebsd.build.15.0-CURRENT: phony mod.freebsd.build.15.0-CURRENT
+build src/freebsd-src/_build/15-STABLE.build: build-freebsd | src/freebsd-src/config/15-STABLE.conf src/freebsd-src/scripts/build.sh
+  config = 15-STABLE
+build mod.freebsd.build.15-STABLE: phony src/freebsd-src/_build/15-STABLE.build
+#build freebsd.build.15-STABLE: phony mod.freebsd.build.15-STABLE
 
-build ninja-out/freebsd-src/15.0-CURRENT/MANIFEST ninja-out/freebsd-src/15.0-CURRENT/base.txz ninja-out/freebsd-src/15.0-CURRENT/kernel.txz ninja-out/freebsd-src/15.0-CURRENT/src.txz ninja-out/freebsd-src/15.0-CURRENT/tests.txz: release-freebsd | mod.freebsd.build.15.0-CURRENT
-  config = 15.0-CURRENT
-build mod.freebsd.release.15.0-CURRENT: phony ninja-out/freebsd-src/15.0-CURRENT/MANIFEST ninja-out/freebsd-src/15.0-CURRENT/base.txz ninja-out/freebsd-src/15.0-CURRENT/kernel.txz ninja-out/freebsd-src/15.0-CURRENT/src.txz ninja-out/freebsd-src/15.0-CURRENT/tests.txz
-#build freebsd.release.15.0-CURRENT: phony mod.freebsd.release.15.0-CURRENT
-build freebsd.15.0-CURRENT: phony mod.freebsd.release.15.0-CURRENT
-
-## 15.0-STABLE
-
-build src/freebsd-src/_build/15.0-STABLE.build: build-freebsd | src/freebsd-src/config/15.0-STABLE.conf src/freebsd-src/scripts/build.sh
-  config = 15.0-STABLE
-build mod.freebsd.build.15.0-STABLE: phony src/freebsd-src/_build/15.0-STABLE.build
-#build freebsd.build.15.0-STABLE: phony mod.freebsd.build.15.0-STABLE
-
-build ninja-out/freebsd-src/15.0-STABLE/MANIFEST ninja-out/freebsd-src/15.0-STABLE/base.txz ninja-out/freebsd-src/15.0-STABLE/kernel.txz ninja-out/freebsd-src/15.0-STABLE/src.txz ninja-out/freebsd-src/15.0-STABLE/tests.txz: release-freebsd | mod.freebsd.build.15.0-STABLE
-  config = 15.0-STABLE
-build mod.freebsd.release.15.0-STABLE: phony ninja-out/freebsd-src/15.0-STABLE/MANIFEST ninja-out/freebsd-src/15.0-STABLE/base.txz ninja-out/freebsd-src/15.0-STABLE/kernel.txz ninja-out/freebsd-src/15.0-STABLE/src.txz ninja-out/freebsd-src/15.0-STABLE/tests.txz
-#build freebsd.release.15.0-STABLE: phony mod.freebsd.release.15.0-STABLE
-build freebsd.15.0-STABLE: phony mod.freebsd.release.15.0-STABLE
+build ninja-out/freebsd-src/15-STABLE/MANIFEST ninja-out/freebsd-src/15-STABLE/base.txz ninja-out/freebsd-src/15-STABLE/kernel.txz ninja-out/freebsd-src/15-STABLE/src.txz ninja-out/freebsd-src/15-STABLE/tests.txz: release-freebsd | mod.freebsd.build.15-STABLE
+  config = 15-STABLE
+build mod.freebsd.release.15-STABLE: phony ninja-out/freebsd-src/15-STABLE/MANIFEST ninja-out/freebsd-src/15-STABLE/base.txz ninja-out/freebsd-src/15-STABLE/kernel.txz ninja-out/freebsd-src/15-STABLE/src.txz ninja-out/freebsd-src/15-STABLE/tests.txz
+#build freebsd.release.15-STABLE: phony mod.freebsd.release.15-STABLE
+build freebsd.15-STABLE: phony mod.freebsd.release.15-STABLE
