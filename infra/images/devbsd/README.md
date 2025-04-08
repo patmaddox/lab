@@ -32,7 +32,7 @@ It is simple to extract the host keys from the original image and copy them to t
 
 ```
 mdconfig -a devbsd.zfs
-zpool import -R /tmp/devbsd-orig -t zroot devbsd-orig
+zpool import -o readonly=on -R /tmp/devbsd-orig -t zroot devbsd-orig
 
 mdconfig -a devbsd.next.zfs
 zpool import -R /tmp/devbsd-next -t zroot devbsd-next
@@ -44,3 +44,9 @@ zpool export devbsd-orig
 
 # clean up the mdconfigs e.g. mdconfig -d -u 1
 ```
+
+## zpool guid
+
+`makefs` creates datasets with a fixed guid. (https://bugs.freebsd.org/bugzilla/show_bug.cgi?id=282832)
+zfs cannot import two pools with the same guid - it simply won't see the other one.
+Images should be created with a unique guid, or set `zfs_reguid="yes"` in `rc.conf` as done here.

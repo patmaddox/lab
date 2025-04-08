@@ -29,3 +29,9 @@ build ${ninja_out}/images/${image_name}-${revision}.zfs: image | ${src_root}/_bu
 
 build mod.images.${image_name}: phony ${ninja_out}/images/${image_name}-${revision}.zfs
 build images.${image_name}: phony mod.images.${image_name}
+
+rule deploy
+  command = doas ./${src_root}/scripts/deploy.sh ${image_name} ${in}
+  pool = console
+
+build run.${image_name}.deploy: deploy ${ninja_out}/images/${image_name}-${revision}.zfs
