@@ -23,3 +23,24 @@ network0_switch="jails"
 disk0_type="ahci-hd"
 disk0_name="devbsd.zfs"
 ```
+
+## SSH host keys
+
+The first time the image boots up, it will write SSH host keys to `/etc/ssh/`.
+After rebuilding the image, the host keys will be gone.
+It is simple to extract the host keys from the original image and copy them to the new one:
+
+```
+mdconfig -a devbsd.zfs
+zpool import -R /tmp/devbsd-orig -t zroot devbsd-orig
+
+mdconfig -a devbsd.next.zfs
+zpool import -R /tmp/devbsd-next -t zroot devbsd-next
+
+cp /tmp/devbsd-orig/etc/ssh/ssh_host_*_key* /tmp/devbsd-next/etc/ssh/
+
+zpool export devbsd-next
+zpool export devbsd-orig
+
+# clean up the mdconfigs e.g. mdconfig -d -u 1
+```
