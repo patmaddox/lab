@@ -6,10 +6,7 @@ revision = 15-CURRENT
 image_name = devbsd
 
 rule image
-  command = mkimg -s gpt -p efi/esp:=${src_root}/_build/boot.part -p freebsd-zfs:=${src_root}/_build/${image_name}.zfs -o ${out} --capacity 21G
-
-rule efi-partition
-  command = makefs -t msdos -o fat_type=32 -o sectors_per_cluster=1 -o volume_label=EFISYS -s 50m ${out} ${efi_dir}
+     command = cp ${src_root}/_build/${image_name}.zfs ${out}
 
 rule zfs
   command = set -o pipefail && curdir=$$(pwd) && jj file list ${src_root}/dist/zroot | sed -e "s|^|${out}: |" > ${out}.d && cd ${src_root} && ./scripts/build-zfs.sh $${curdir}/${ninja_out}/freebsd-src/${revision} $${curdir}/${out}
@@ -28,12 +25,7 @@ build ${build_dir}/imgroot: mkdir
 build ${build_dir}/${image_name}.zfs: zfs | ${src_root}/scripts/build-zfs.sh ${build_dir}/imgroot ${ninja_out}/freebsd-src/${revision}/base.txz ${ninja_out}/freebsd-src/${revision}/kernel.txz
   freebsd_txz = ${ninja_out}/freebsd-src/${revision}
 
-build ${efi_dir}/efi/boot/bootx64.efi: untar-file ${ninja_out}/freebsd-src/${revision}/base.txz
-  file = boot/loader.efi
+build ${ninja_out}/images/${image_name}-${revision}.zfs: image | ${src_root}/_build/${image_name}.zfs
 
-build ${src_root}/_build/boot.part: efi-partition ${efi_dir}/efi/boot/bootx64.efi
-
-build ${ninja_out}/images/${image_name}.img: image | ${src_root}/_build/${image_name}.zfs ${src_root}/_build/boot.part
-
-build mod.images.${image_name}: phony ${ninja_out}/images/${image_name}.img
+build mod.images.${image_name}: phony ${ninja_out}/images/${image_name}-${revision}.zfs
 build images.${image_name}: phony mod.images.${image_name}
