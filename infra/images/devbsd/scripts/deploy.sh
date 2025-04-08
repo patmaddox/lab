@@ -28,22 +28,15 @@ cp-image-file() {
 }
 
 cp-ssh-host-keys() {
-    local orig_image orig_md next_md
-    orig_image=/vm/${image_name}/.zfs/snapshot/${before_snapshot}/${image_name}.zfs
-
-    orig_md=$(mdconfig -a -f ${orig_image} -o readonly | sed -e 's/^md//')
-    zpool import -d /dev/md${orig_md} -f -o readonly=on -R /tmp/${image_name}-orig -t zroot ${image_name}-orig
+    local next_md
 
     next_md=$(mdconfig -a -f ${dst_image_file}.next | sed -e 's/^md//')
     zpool import -d /dev/md${next_md} -R /tmp/${image_name}-next -t zroot ${image_name}-next
 
-    cp /tmp/${image_name}-orig/etc/ssh/ssh_host_*_key* /tmp/${image_name}-next/etc/ssh/
+    cp /vm/${image_name}/ssh/ssh_host_*_key* /tmp/${image_name}-next/etc/ssh/
 
     zpool export ${image_name}-next
     mdconfig -d -u ${next_md}
-
-    zpool export ${image_name}-orig
-    mdconfig -d -u ${orig_md}
 }
 
 update-image() {
