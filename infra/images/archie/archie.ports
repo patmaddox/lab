@@ -1,0 +1,9 @@
+ports-mgmt/pkg
+security/1password-client2
+security/doas
+security/tailscale
+sysutils/fx
+textproc/fzf
+www/firefox
+x11-fonts/noto-emoji
+x11/xorg

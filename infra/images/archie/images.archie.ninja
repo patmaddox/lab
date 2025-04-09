@@ -1,0 +1,25 @@
+image_name = archie
+src_root = infra/images/${image_name}
+build_dir = ${src_root}/_build
+root_dir = ${build_dir}/root
+jail = 142
+image_size = 20G
+
+rule packages
+  command = ssh -t root@poudriere "poudriere bulk -j ${jail} -f ~/lab.jj/${src_root}/${image_name}.ports" && touch ${out}
+  pool = console
+
+rule build-be
+  command = ./${src_root}/scripts/build-be.sh ${image_name} ${jail} ~/lab.jj/${src_root}/${image_name}.ports ${out}
+  pool = console
+
+build ${build_dir}/packages.done: packages | ${src_root}/${image_name}.ports
+build ${ninja_out}/images/${image_name}-${jail}.zfs.gz: build-be | ${build_dir}/packages.done ${src_root}/scripts/build-be.sh
+
+build mod.images.${image_name}: phony ${ninja_out}/images/${image_name}-${jail}.zfs.gz
+
+rule deploy
+  command = doas ./${src_root}/scripts/deploy.sh ${image_name} ${in}
+  pool = console
+
+build run.${image_name}.deploy: deploy ${ninja_out}/images/${image_name}-${jail}.zfs.gz ${src_root}/dist/dist.mtree

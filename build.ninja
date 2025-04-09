@@ -24,8 +24,9 @@ subninja src/freebsd-src/freebsd.ninja
 #subninja src/freebsd-ports/ports.ninja
 
 # images
-build mod.pkg.images: phony mod.images.devbsd mod.images.poudriere-builder
+build mod.pkg.images: phony mod.images.archie mod.images.devbsd mod.images.poudriere-builder
 
+subninja infra/images/archie/images.archie.ninja
 subninja infra/images/devbsd/devbsd.ninja
 subninja infra/images/poudriere-builder/poudriere-builder.ninja
 
