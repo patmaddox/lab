@@ -1,0 +1,4 @@
+EOF
+
+nixos-install --no-root-password
+nixos-enter --root /mnt -c 'passwd -d root'

@@ -1,0 +1,4 @@
+rule cat
+  command = rm -f ${out} && cat ${in} > ${out} && chmod 444 ${out}
+
+build install.sh: cat install-pre minimal.nix install-post
