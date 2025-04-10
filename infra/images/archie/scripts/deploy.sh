@@ -1,4 +1,7 @@
 #!/bin/sh
+#
+# zfs receive -o origin=<snapshot> and then promote method is described in
+# https://github.com/openzfs/zfs/discussions/10325?sort=old#discussioncomment-232840
 set -eu
 set -o pipefail
 
