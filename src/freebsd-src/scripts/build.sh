@@ -66,6 +66,9 @@ cmd::build() {
 }
 
 cmd::release() {
+    # packagesystem does not pick up changes after buildworld, so need
+    # to clean it first
+    _make clean
     _make -DNOPORTS packagesystem
 }
 
