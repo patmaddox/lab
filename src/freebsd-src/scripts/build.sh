@@ -24,7 +24,6 @@ parse_args() {
 
     SRC_ROOT=$(realpath ${TREE})
     REPO_ROOT=${SRC_ROOT}
-    MAKE_FLAGS=""
 
     case ${CMD} in
 	release|clean-release|objdir-release)
@@ -54,15 +53,7 @@ ensure_not_dirty() {
 }
 
 cmd::build() {
-    local build_stamp
-    build_stamp=${OBJDIR}/tmp/build.done
-
-    if [ -f ${build_stamp} ]; then
-	MAKE_FLAGS="-DWORLDFAST -DKERNFAST"
-    fi
-
     _make buildworld buildkernel
-    touch ${build_stamp}
 }
 
 cmd::release() {
@@ -102,7 +93,7 @@ _make() {
 	       -C ${SRC_ROOT} \
 	       -s \
 	       -j$(sysctl -n hw.ncpu) \
-	       -DNO_ROOT ${MAKE_FLAGS} ${@}
+	       -DNO_ROOT ${@}
 }
 
 main "${@}"
