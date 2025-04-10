@@ -25,7 +25,6 @@ devel/uclcmd
 devel/valgrind-devel
 editors/emacs@nox
 editors/libreoffice
-editors/vscode
 ftp/wget
 graphics/maim
 java/eclipse

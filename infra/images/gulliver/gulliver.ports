@@ -42,7 +42,6 @@ sysutils/bhyve-firmware
 sysutils/fx
 sysutils/htop
 sysutils/password-store
-sysutils/rubygem-bundler
 sysutils/sanoid
 sysutils/tmux
 sysutils/tree
@@ -59,5 +58,4 @@ www/thttpd
 x11-fonts/noto-emoji
 x11-wm/i3
 x11/wezterm
-x11/xfce4-screensaver
 x11/xorg
