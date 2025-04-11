@@ -18,7 +18,6 @@ subninja src/sync-pw/sync-pw.ninja
 subninja src/urlcheck/urlcheck.ninja
 
 # freebsd
-build mod.pkg.freebsd: phony freebsd.all
 
 subninja src/freebsd-src/freebsd.ninja
 #subninja src/freebsd-ports/ports.ninja

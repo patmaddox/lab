@@ -1,13 +1,11 @@
 src_root = src/freebsd-src
-build_sh = ./scripts/build.sh
 out_dir = ${ninja_out}/freebsd-src
+git_main = ${src_root}/main.jj
+git_tmp = ${src_root}/_build/ninja.tmp.git
+build_sh = GIT_MAIN=$${ninja_root}/${git_main} GIT_TMP=$${ninja_root}/${git_tmp} ./scripts/build.sh
 
 rule build-freebsd
-  command = ninja_root=$$(pwd) && cd ${src_root} && ${build_sh} ls-files config/${config}.conf | awk -v src_root=${src_root} -v stampfile=${out} '{printf("%s: %s/%s\n", stampfile, src_root, $$1)}' > $${ninja_root}/${depfile} && ${build_sh} build config/${config}.conf && cd $${ninja_root} && touch ${out}
-  depfile = $out.d
+  command = ninja_root=$$(pwd) && rm -f ${stampfile} && cd ${src_root} && mkdir -p _build && ${build_sh} ls-files config/${config}.conf | awk -v src_root=${src_root} -v stampfile=${stampfile} '{printf("%s: %s/%s\n", stampfile, src_root, $$1)}' > $${ninja_root}/${depfile} && ${build_sh} build config/${config}.conf && cd $${ninja_root} && for f in ${out}; do cp ${src_root}/_build/${config}/amd64.amd64/release/$$(basename $${f}) ${out_dir}/${config}/; done
+  depfile = ${stampfile}.d
   deps = gcc
-  pool = console
-
-rule release-freebsd
-  command = curdir=$$(pwd) && cd ${src_root} && ${build_sh} release config/${config}.conf && cd $${curdir} && for f in $out; do cp ${src_root}/_build/${config}/amd64.amd64/release/$$(basename $${f}) ${out_dir}/${config}/; done
   pool = console
