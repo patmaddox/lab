@@ -19,7 +19,8 @@ build ${ninja_out}/images/${image_name}-${jail}.be.zfs: build-be | ${build_dir}/
 build mod.images.${image_name}: phony ${ninja_out}/images/${image_name}-${jail}.be.zfs
 
 rule deploy
-  command = doas env TOOL_SYNC_PW=${sync_pw} ./${src_root}/scripts/deploy.sh ${image_name} ${in}
+  command = doas env TOOL_SYNC_PW=${sync_pw} ./${src_root}/scripts/deploy.sh ${image_name} ${in} ${tz}
   pool = console
 
 build run.${image_name}.deploy: deploy ${ninja_out}/images/${image_name}-${jail}.be.zfs ${src_root}/dist/dist.mtree ${src_root}/dist/data.mtree
+  tz = US/Pacific

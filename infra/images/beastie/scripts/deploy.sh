@@ -5,14 +5,16 @@ set -o pipefail
 TOOL_SYNC_PW=$(realpath ${TOOL_SYNC_PW:?E: $(usage)})
 
 main() {
-    local image_name image_file dist_mtree data_mtree
+    local image_name image_file dist_mtree data_mtree tz
     local mountpoint tmp_image_name
 
     image_name=${1:?E: $(usage)}; shift
     image_file=${1:?E: $(usage)}; shift
     dist_mtree=${1:?E: $(usage)}; shift
-    dist_mtree=$(realpath ${dist_mtree})
     data_mtree=${1:?E: $(usage)}; shift
+    tz=${1:?E: $(usage)}; shift
+
+    dist_mtree=$(realpath ${dist_mtree})
     data_mtree=$(realpath ${data_mtree})
 
     tmp_image_name=TMP-${image_name}-next
@@ -37,6 +39,8 @@ config-be() {
     # This is tight coupling, setting data_mtree to read from /. But
     # it will work for now
     tar -C / -c @${data_mtree} | tar -x -C ${mountpoint}
+
+    tzsetup -C ${mountpoint} ${tz}
 }
 
 # when we code, we code hard
@@ -60,7 +64,7 @@ unmount-be() {
 }
 
 usage() {
-    echo "Usage: TOOL_PW_SYNC=path/sync-pw deploy.sh <image_name> <image_file> <dist.mtree> <data.mtree>"
+    echo "Usage: TOOL_PW_SYNC=path/sync-pw deploy.sh <image_name> <image_file> <dist.mtree> <data.mtree> <timezone>"
 }
 
 main "${@}"
