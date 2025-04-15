@@ -35,7 +35,7 @@ reset_worktree() {
 
     local branchname githead
 
-    branchname=$(jj -R ${SRC_ROOT} log -r '::@ & bookmarks()' -n 1 -T 'self.local_bookmarks()' --no-graph)
+    branchname=$(jj -R ${SRC_ROOT} log -r '::@ & bookmarks()' -n 1 -T 'self.local_bookmarks()' --no-graph  | sed 's/\*$//')
     githead=$(jj -R ${SRC_ROOT} log -r "@-" --no-graph -T 'commit_id')
 
     if [ ! -d ${GIT_TMP} ]; then
