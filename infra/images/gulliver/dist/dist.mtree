@@ -6,4 +6,7 @@
 ./etc/pf.conf
 ./etc/rc.conf
 ./etc/resolv.conf
+./usr/local/etc/doas.conf
 ./usr/local/etc/pkg/repos/FreeBSD.conf
+./usr/local/etc/poudriere.conf
+./usr/local/etc/sanoid/sanoid.conf

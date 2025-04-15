@@ -12,7 +12,7 @@ new-be name:
 
 # Import any dist files that have been edited on the local system
 import-config:
-  {{newbe_src}}/import-config dist/base.mtree dist/packages.mtree
+  {{newbe_src}}/import-config dist/dist.mtree
 
 # Update portsfile with list of manually-installed ports
 update-ports:
