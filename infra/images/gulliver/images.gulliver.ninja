@@ -13,7 +13,7 @@ rule build-be
   pool = console
 
 rule deploy
-  command = doas env TOOL_SYNC_PW=${sync_pw} ./${src_root}/scripts/deploy.sh ${image_name} ${in} ${tz}
+  command = doas env TOOL_SYNC_PW=${sync_pw} ./${src_root}/scripts/deploy.sh ${image_name} ${in} ${tz} '${users}' '${groups}'
   pool = console
 
 # 14.2
@@ -28,6 +28,8 @@ build mod.images.${image_name}-142: phony ${ninja_out}/images/${image_name}-142.
 
 build run.${image_name}-142.deploy: deploy ${ninja_out}/images/${image_name}-142.be.zfs ${src_root}/dist/dist.mtree ${src_root}/dist/data.mtree
   tz = US/Pacific
+  users = root patmaddox
+  groups = operator patmaddox video wheel
 
 # 14.3
 
@@ -41,6 +43,8 @@ build mod.images.${image_name}-143: phony ${ninja_out}/images/${image_name}-143.
 
 build run.${image_name}-143.deploy: deploy ${ninja_out}/images/${image_name}-143.be.zfs ${src_root}/dist/dist.mtree ${src_root}/dist/data.mtree
   tz = US/Pacific
+  users = root patmaddox
+  groups = operator patmaddox video wheel
 
 # 15.0
 
@@ -54,3 +58,5 @@ build mod.images.${image_name}-150: phony ${ninja_out}/images/${image_name}-150.
 
 build run.${image_name}-150.deploy: deploy ${ninja_out}/images/${image_name}-150.be.zfs ${src_root}/dist/dist.mtree ${src_root}/dist/data.mtree
   tz = US/Pacific
+  users = root patmaddox
+  groups = operator patmaddox video wheel

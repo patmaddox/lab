@@ -5,7 +5,7 @@ set -o pipefail
 TOOL_SYNC_PW=$(realpath ${TOOL_SYNC_PW:?E: $(usage)})
 
 main() {
-    local image_name image_file dist_mtree data_mtree tz
+    local image_name image_file dist_mtree data_mtree tz users groups
     local mountpoint tmp_image_name
 
     image_name=${1:?E: $(usage)}; shift
@@ -13,6 +13,8 @@ main() {
     dist_mtree=${1:?E: $(usage)}; shift
     data_mtree=${1:?E: $(usage)}; shift
     tz=${1:?E: $(usage)}; shift
+    users=${1:?E: $(usage)}; shift
+    groups=${1:?E: $(usage)}; shift
 
     dist_mtree=$(realpath ${dist_mtree})
     data_mtree=$(realpath ${data_mtree})
@@ -43,15 +45,14 @@ config-be() {
     tzsetup -C ${mountpoint} ${tz}
 }
 
-# when we code, we code hard
 sync-pw() {
     local u g
 
-    for u in root patmaddox; do
+    for u in ${users}; do
 	${TOOL_SYNC_PW} /etc ${mountpoint}/etc u ${u}
     done
 
-    for g in operator patmaddox video wheel; do
+    for g in ${groups}; do
 	${TOOL_SYNC_PW} /etc ${mountpoint}/etc g ${g}
     done
 }
@@ -64,7 +65,7 @@ unmount-be() {
 }
 
 usage() {
-    echo "Usage: TOOL_PW_SYNC=path/sync-pw deploy.sh <image_name> <image_file> <dist.mtree> <data.mtree> <timezone>"
+    echo "Usage: TOOL_PW_SYNC=path/sync-pw deploy.sh <image_name> <image_file> <dist.mtree> <data.mtree> <timezone> 'root [user1 ...]' 'wheel [group1 ...]'"
 }
 
 main "${@}"
