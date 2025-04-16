@@ -1,0 +1,19 @@
+src_root = infra/images/${image_name}
+build_dir = ${src_root}/_build
+root_dir = ${build_dir}/root
+
+sync_pw = ./src/sync-pw/sync-pw
+build_be_sh = ./infra/scripts/build-be.sh
+deploy_sh = ./infra/scripts/deploy.sh
+
+rule packages
+  command = ssh -t root@poudriere "poudriere bulk -j ${jail} -f ~/lab.jj/${src_root}/${image_name}.ports" && touch ${out}
+  pool = console
+
+rule build-be
+  command = ${build_be_sh} ${image_name} ${jail} ~/lab.jj/${src_root}/${image_name}.ports ${out}
+  pool = console
+
+rule deploy
+  command = doas env TOOL_SYNC_PW=${sync_pw} ${deploy_sh} ${image_name} ${in} ${tz} '${users}' '${groups}'
+  pool = console
