@@ -2,7 +2,6 @@ image_name = gulliver
 src_root = infra/images/${image_name}
 build_dir = ${src_root}/_build
 root_dir = ${build_dir}/root
-jail = 142
 sync_pw = ./src/sync-pw/sync-pw
 
 rule packages
@@ -13,14 +12,45 @@ rule build-be
   command = ./${src_root}/scripts/build-be.sh ${image_name} ${jail} ~/lab.jj/${src_root}/${image_name}.ports ${out}
   pool = console
 
-build ${build_dir}/packages.done: packages | ${src_root}/${image_name}.ports
-build ${ninja_out}/images/${image_name}-${jail}.be.zfs: build-be | ${build_dir}/packages.done ${src_root}/scripts/build-be.sh
-
-build mod.images.${image_name}: phony ${ninja_out}/images/${image_name}-${jail}.be.zfs
-
 rule deploy
   command = doas env TOOL_SYNC_PW=${sync_pw} ./${src_root}/scripts/deploy.sh ${image_name} ${in} ${tz}
   pool = console
 
-build run.${image_name}.deploy: deploy ${ninja_out}/images/${image_name}-${jail}.be.zfs ${src_root}/dist/dist.mtree ${src_root}/dist/data.mtree
+# 14.2
+
+build ${build_dir}/packages.142.done: packages | ${src_root}/${image_name}.ports
+  jail = 142
+  
+build ${ninja_out}/images/${image_name}-142.be.zfs: build-be | ${build_dir}/packages.142.done ${src_root}/scripts/build-be.sh
+  jail = 142
+
+build mod.images.${image_name}-142: phony ${ninja_out}/images/${image_name}-142.be.zfs
+
+build run.${image_name}-142.deploy: deploy ${ninja_out}/images/${image_name}-142.be.zfs ${src_root}/dist/dist.mtree ${src_root}/dist/data.mtree
+  tz = US/Pacific
+
+# 14.3
+
+build ${build_dir}/packages.143.done: packages | ${src_root}/${image_name}.ports
+  jail = 143
+  
+build ${ninja_out}/images/${image_name}-143.be.zfs: build-be | ${build_dir}/packages.143.done ${src_root}/scripts/build-be.sh
+  jail = 143
+
+build mod.images.${image_name}-143: phony ${ninja_out}/images/${image_name}-143.be.zfs
+
+build run.${image_name}-143.deploy: deploy ${ninja_out}/images/${image_name}-143.be.zfs ${src_root}/dist/dist.mtree ${src_root}/dist/data.mtree
+  tz = US/Pacific
+
+# 15.0
+
+build ${build_dir}/packages.150.done: packages | ${src_root}/${image_name}.ports
+  jail = 150
+  
+build ${ninja_out}/images/${image_name}-150.be.zfs: build-be | ${build_dir}/packages.150.done ${src_root}/scripts/build-be.sh
+  jail = 150
+
+build mod.images.${image_name}-150: phony ${ninja_out}/images/${image_name}-150.be.zfs
+
+build run.${image_name}-150.deploy: deploy ${ninja_out}/images/${image_name}-150.be.zfs ${src_root}/dist/dist.mtree ${src_root}/dist/data.mtree
   tz = US/Pacific
