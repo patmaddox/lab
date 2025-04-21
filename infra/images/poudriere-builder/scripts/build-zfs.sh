@@ -57,10 +57,8 @@ build::extract() {
 	doas tar -C ${rootdir} -xf ${freebsd_txz}/${p}.txz
     done
 
-    # I don't want to use the standard build directories.
-    # Make them readonly so I don't inadvertently use them.
+    # /usr/src is an nfs mount point
     doas zfs set readonly=on ninja-pb--zroot/usr/src
-    doas zfs set readonly=on ninja-pb--zroot/usr/obj
 
     doas zfs snapshot -r ninja-pb--zroot@base
 }
