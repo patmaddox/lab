@@ -28,6 +28,7 @@ lang/zig
 net/rclone
 net/rsync
 net/socat
+net/wifi-firmware-iwlwifi-kmod@ax210
 ports-mgmt/pkg
 ports-mgmt/portfmt
 ports-mgmt/portlint

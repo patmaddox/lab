@@ -23,7 +23,7 @@ build run.${image_name}-${jail}.deploy: deploy ${ninja_out}/images/${image_name}
 build ${build_dir}/packages.${jail}.done: packages | ${src_root}/${image_name}.ports
   jail = 143
   
-build ${ninja_out}/images/${image_name}-${jail}.be.zfs: build-be | ${build_dir}/packages.${jail}.done ${src_root}/scripts/build-be.sh
+build ${ninja_out}/images/${image_name}-${jail}.be.zfs: build-be | ${build_dir}/packages.${jail}.done ${build_be_sh}
   jail = 143
 
 build mod.images.${image_name}-${jail}: phony ${ninja_out}/images/${image_name}-${jail}.be.zfs
@@ -40,7 +40,7 @@ build run.${image_name}-${jail}.deploy: deploy ${ninja_out}/images/${image_name}
 build ${build_dir}/packages.${jail}.done: packages | ${src_root}/${image_name}.ports
   jail = 150
   
-build ${ninja_out}/images/${image_name}-${jail}.be.zfs: build-be | ${build_dir}/packages.${jail}.done ${src_root}/scripts/build-be.sh
+build ${ninja_out}/images/${image_name}-${jail}.be.zfs: build-be | ${build_dir}/packages.${jail}.done ${build_be_sh}
   jail = 150
 
 build mod.images.${image_name}-${jail}: phony ${ninja_out}/images/${image_name}-${jail}.be.zfs
