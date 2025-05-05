@@ -6,6 +6,7 @@
         '("consult-2.2"
           "consult-project-extra-982e800"
           "denote-7bb8b7c"
+          "gptel-0.9.8"
           "llama-0.6.2" ; magit dependency
           "magit-4.3.3/lisp"
           "marginalia-2.0"
@@ -152,6 +153,10 @@
   ;; "[D]" followed by the file's title.  Read the doc string of
   ;; `denote-rename-buffer-format' for how to modify this.
   (denote-rename-buffer-mode 1))
+
+;; gptel - LLM interface
+;; https://github.com/karthink/gptel
+(use-package gptel)
 
 ;; magit - git interface
 ;; https://github.com/magit/magit

@@ -57,4 +57,7 @@ libs_body() {
     # magit needs a git directory to operate on
     atf_check -o ignore -e ignore git init
     atf_check -e ignore ${EMACS} -f magit-status
+
+    # gptel doesn't run in emacs lisp interactive mode, so just require it
+    atf_check ${EMACS} --eval "(require 'gptel)"
 }

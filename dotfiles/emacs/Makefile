@@ -6,6 +6,7 @@ DESTDIR?=	${HOME}/.emacs.d
 PACKAGES=	consult-2.2 \
 		consult-project-extra-982e800 \
 		denote-7bb8b7c \
+		gptel-0.9.8 \
 		llama-0.6.2 \
 		magit-4.3.3/lisp \
 		marginalia-2.0 \
