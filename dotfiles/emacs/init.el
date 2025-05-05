@@ -112,6 +112,10 @@
 (use-package consult-org)
 (use-package consult-xref)
 
+;; consult-project-extra - consult extension for project.el
+;; https://github.com/Qkessler/consult-project-extra
+(use-package consult-project-extra)
+
 ;; denote - simple notes with ID-based naming scheme
 ;; https://github.com/protesilaos/denote
 (use-package denote
@@ -131,10 +135,6 @@
   ;; "[D]" followed by the file's title.  Read the doc string of
   ;; `denote-rename-buffer-format' for how to modify this.
   (denote-rename-buffer-mode 1))
-
-;; consult-project-extra - consult extension for project.el
-;; https://github.com/Qkessler/consult-project-extra
-(use-package consult-project-extra)
 
 ;; magit - git interface
 ;; https://github.com/magit/magit
