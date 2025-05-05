@@ -6,12 +6,15 @@
         '("consult-2.2"
           "consult-project-extra-982e800"
           "denote-7bb8b7c"
+          "llama-0.6.2" ; magit dependency
+          "magit-4.3.3/lisp"
           "marginalia-2.0"
           "markdown-mode-2.7"
           "orderless-1.4"
           "term-keys-5677d06"
           "vertico-2.0"
           "vertico-2.0/extensions"
+          "with-editor-3.4.3/lisp"
           "xclip-1.11.1"
           "zig-ts-mode-3898b70"))
 
@@ -132,6 +135,10 @@
 ;; consult-project-extra - consult extension for project.el
 ;; https://github.com/Qkessler/consult-project-extra
 (use-package consult-project-extra)
+
+;; magit - git interface
+;; https://github.com/magit/magit
+(use-package magit)
 
 ;; marginalia - notes in the minibuffer (names, file sizes, etc)
 ;; https://github.com/minad/marginalia

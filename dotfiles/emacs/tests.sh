@@ -5,7 +5,7 @@ EMACS="emacs --batch -l ${src_dir}/testconfig.el -l ${HOME}/.emacs.d/init.el"
 
 atf_init_test_cases() {
     atf_add_test_case install
-    atf_add_test_case languages
+    atf_add_test_case libs
 }
 
 helper::install() {
@@ -35,13 +35,13 @@ install_body() {
     atf_check -o empty find ${HOME}/.emacs.d -type f
 }
 
-## languages
-atf_test_case languages
-languages_head() {
-    atf_set 'descr' 'Languages configuration'
+## libs
+atf_test_case libs
+libs_head() {
+    atf_set 'descr' 'Test that all libs load correctly'
 }
 
-languages_body() {
+libs_body() {
     helper::install
 
     atf_check ${EMACS} -f elixir-ts-mode
@@ -53,4 +53,8 @@ languages_body() {
     atf_check ${EMACS} -f markdown-mode
     atf_check ${EMACS} -f rust-ts-mode
     atf_check ${EMACS} -f zig-ts-mode
+
+    # magit needs a git directory to operate on
+    atf_check -o ignore -e ignore git init
+    atf_check -e ignore ${EMACS} -f magit-status
 }
