@@ -42,6 +42,8 @@ install:
 	@mkdir -p ${DESTDIR}/tree-sitter
 	cp init.el ${DESTDIR}/
 	cp tree-sitter/_build/*.so ${DESTDIR}/tree-sitter/
+	for d in $$(find dist -type d); do mkdir ${DESTDIR}/$${d}; done
+	for f in $$(jj file list dist); do cp $${f} ${DESTDIR}/$${f}; done
 
 .for p in ${PACKAGES}
 	@mkdir -p ${DESTDIR}/packages/${p}

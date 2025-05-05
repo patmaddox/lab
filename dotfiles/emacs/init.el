@@ -69,6 +69,18 @@
   (warning-minimum-level :error)
   (read-file-name-completion-ignore-case t))
 
+(use-package eglot
+  :init
+  (setq eglot-ignored-server-capabilities '(:hoverProvider :signatureHelpProvider)))
+
+(use-package elixir-ts-mode
+  :init
+  (add-hook 'elixir-ts-mode-hook 'eglot-ensure)
+  (add-hook 'elixir-ts-mode-hook (lambda () (eldoc-mode 0)))
+  (add-hook 'elixir-ts-mode-hook
+            (lambda () (add-hook 'before-save-hook 'eglot-format nil t)))
+  (add-to-list 'eglot-server-programs (list 'elixir-ts-mode (expand-file-name "dist/elixir-ls-v0.27.2/language_server.sh" user-emacs-directory))))
+
 (use-package project
   :custom
   (project-vc-extra-root-markers
