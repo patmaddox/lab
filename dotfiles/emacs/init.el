@@ -107,6 +107,11 @@
      "transient"
      "tree-sitter")))
 
+(use-package sh-script
+  :init
+  (add-hook 'sh-mode-hook
+            (lambda () (add-hook 'before-save-hook 'delete-trailing-whitespace nil t))))
+
 ;; consult - better search and navigation (consulting completing-read)
 ;; https://github.com/minad/consult
 (use-package consult
