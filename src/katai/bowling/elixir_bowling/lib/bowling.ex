@@ -11,33 +11,34 @@ defmodule Bowling do
     case frames do
       [] -> nil
       [[_]] -> nil
+      [[a, b]] when a + b == 10 -> nil
       frames -> compute_frames_score(frames)
     end
   end
 
   defp compute_frames_score(frames) do
     case frames do
-      [frame] when length(frame) == 2 ->
-        frame_score(frame, nil)
+      [frame | rest] ->
+        frame_score(frame) + bonus(frame, rest) + compute_frames_score(rest)
 
-      [frame, next | _rest] ->
-        frame_score(frame, next) + compute_frames_score(tl(frames))
-
-      [_incomplete | _] ->
+      _ ->
         0
     end
   end
 
-  defp frame_score(frame, next_frame) do
+  defp frame_score([a, b]), do: a + b
+  defp frame_score(_), do: 0
+
+  def bonus(frame, rest) do
     case frame do
-      [roll1, roll2] when roll1 + roll2 == 10 ->
-        case next_frame do
-          nil -> nil
-          [next_roll | _] -> 10 + next_roll
+      [a, b] when a + b == 10 ->
+        case rest do
+          [] -> 0
+          [next_frame | _] -> hd(next_frame)
         end
 
-      [roll1, roll2] ->
-        roll1 + roll2
+      _ ->
+        0
     end
   end
 
