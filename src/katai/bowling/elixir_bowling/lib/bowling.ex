@@ -32,14 +32,19 @@ defmodule Bowling do
   def bonus(frame, rest) do
     case frame do
       [a, b] when a + b == 10 ->
-        case rest do
-          [] -> 0
-          [next_frame | _] -> hd(next_frame)
-        end
+        bonus_rolls(1, rest)
 
       _ ->
         0
     end
+  end
+
+  defp bonus_rolls(count, frames) do
+    frames
+    |> Enum.take(count)
+    |> List.flatten()
+    |> Enum.take(count)
+    |> Enum.sum()
   end
 
   defp add_roll_to_frames(frames, pins) do
