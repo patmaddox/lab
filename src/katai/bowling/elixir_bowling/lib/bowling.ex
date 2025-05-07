@@ -18,10 +18,18 @@ defmodule Bowling do
         nil
 
       frames ->
-        Enum.reduce(frames, 0, fn frame, score ->
-          score + Enum.sum(frame)
-        end)
+        if is_spare_frame?(List.last(frames)) do
+          nil
+        else
+          Enum.reduce(frames, 0, fn frame, score ->
+            score + Enum.sum(frame)
+          end)
+        end
     end
+  end
+
+  defp is_spare_frame?(frame) do
+    length(frame) == 2 && Enum.sum(frame) == 10
   end
 
   defp complete_frames(frames) do
