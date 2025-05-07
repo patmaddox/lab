@@ -132,4 +132,15 @@ defmodule BowlingTest do
     assert game.frames == [[10], [10]]
     assert game.score == nil
   end
+
+  test "complete strike frame" do
+    game =
+      %Bowling{}
+      |> Bowling.roll(10)
+      |> Bowling.roll(1)
+      |> Bowling.roll(2)
+
+    assert game.frames == [[10], [1, 2]]
+    assert game.score == 16
+  end
 end
