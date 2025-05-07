@@ -1,18 +1,44 @@
 defmodule Bowling do
-  @moduledoc """
-  Documentation for `Bowling`.
-  """
+  defstruct score: nil, frames: []
 
-  @doc """
-  Hello world.
+  def roll(game, pins) do
+    new_frames = add_roll_to_frames(game.frames, pins)
+    %{game | frames: new_frames, score: compute_score(new_frames)}
+  end
 
-  ## Examples
+  def is_complete_frame?(frame) do
+    length(frame) == 2
+  end
 
-      iex> Bowling.hello()
-      :world
+  defp compute_score(frames) do
+    frames
+    |> complete_frames()
+    |> case do
+      [] ->
+        nil
 
-  """
-  def hello do
-    :world
+      frames ->
+        Enum.reduce(frames, 0, fn frame, score ->
+          score + Enum.sum(frame)
+        end)
+    end
+  end
+
+  defp complete_frames(frames) do
+    Enum.filter(frames, &is_complete_frame?/1)
+  end
+
+  defp add_roll_to_frames(frames, pins) do
+    case frames do
+      [] ->
+        [[pins]]
+
+      frames when is_list(frames) ->
+        if is_complete_frame?(List.last(frames)) do
+          frames ++ [[pins]]
+        else
+          List.update_at(frames, -1, &(&1 ++ [pins]))
+        end
+    end
   end
 end
