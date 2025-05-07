@@ -8,6 +8,8 @@ Scores were verified by manually inputting into https://www.bowlinggenius.com/
 Specific LLM instructions are provided in {begllm} {endllm} tags.
 
 {begllm}
+In this file only:
+
 - Wrap all responses in response tags: {begresp} {endresp}.
 - Only use your response tags. Do not use any other tags in your responses.
 - Do not provide any additional context outside of those tags.
