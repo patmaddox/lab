@@ -21,32 +21,32 @@ defmodule Bowling do
 
   defp compute_frames_score(frames) do
     [frame | rest] = frames
-    frame_score(frame) + bonus(frame, rest) + compute_frames_score(rest)
+    frame_score(frame, rest) + compute_frames_score(rest)
   end
 
-  defp frame_score([10]), do: 10
-  defp frame_score([a, b]), do: a + b
-  defp frame_score(_), do: 0
+  defp frame_score([10], rest) do
+    compute_bonus(2, rest)
+  end
 
-  def bonus(frame, rest) do
-    case frame do
-      [a, b] when a + b == 10 ->
-        bonus_rolls(1, rest)
+  defp frame_score([a, b], rest) when a + b == 10 do
+    compute_bonus(1, rest)
+  end
 
-      [10] ->
-        bonus_rolls(2, rest)
+  defp frame_score([a, b], _rest), do: a + b
+  defp frame_score(_, _), do: 0
 
-      _ ->
-        0
+  defp compute_bonus(count, frames) do
+    bonus_rolls =
+      frames
+      |> Enum.take(count)
+      |> List.flatten()
+      |> Enum.take(count)
+
+    if length(bonus_rolls) == count do
+      10 + Enum.sum(bonus_rolls)
+    else
+      0
     end
-  end
-
-  defp bonus_rolls(count, frames) do
-    frames
-    |> Enum.take(count)
-    |> List.flatten()
-    |> Enum.take(count)
-    |> Enum.sum()
   end
 
   defp add_roll_to_frames(frames, pins) do

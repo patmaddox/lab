@@ -104,6 +104,18 @@ defmodule BowlingTest do
     assert game.score == 20
   end
 
+  test "second frame is incomplete spare" do
+    game =
+      %Bowling{}
+      |> Bowling.roll(3)
+      |> Bowling.roll(4)
+      |> Bowling.roll(9)
+      |> Bowling.roll(1)
+
+    assert game.frames == [[3, 4], [9, 1]]
+    assert game.score == 7
+  end
+
   test "incomplete strike frame" do
     game =
       %Bowling{}
@@ -142,5 +154,16 @@ defmodule BowlingTest do
 
     assert game.frames == [[10], [1, 2]]
     assert game.score == 16
+  end
+
+  test "cumulative strikes with open frame" do
+    game =
+      %Bowling{}
+      |> Bowling.roll(10)
+      |> Bowling.roll(10)
+      |> Bowling.roll(10)
+
+    assert game.frames == [[10], [10], [10]]
+    assert game.score == 30
   end
 end
