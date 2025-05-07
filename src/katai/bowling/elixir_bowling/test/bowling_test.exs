@@ -91,4 +91,16 @@ defmodule BowlingTest do
     assert game.score == 13
     assert game.frames == [[9, 1], [3]]
   end
+
+  test "complete spare frame followed by complete frame" do
+    game =
+      %Bowling{}
+      |> Bowling.roll(9)
+      |> Bowling.roll(1)
+      |> Bowling.roll(3)
+      |> Bowling.roll(4)
+
+    assert game.score == 20
+    assert game.frames == [[9, 1], [3, 4]]
+  end
 end
