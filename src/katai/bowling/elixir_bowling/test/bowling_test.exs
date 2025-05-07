@@ -80,4 +80,15 @@ defmodule BowlingTest do
     assert is_nil(game.score)
     assert game.frames == [[9, 1]]
   end
+
+  test "complete spare frame" do
+    game =
+      %Bowling{}
+      |> Bowling.roll(9)
+      |> Bowling.roll(1)
+      |> Bowling.roll(3)
+
+    assert game.score == 13
+    assert game.frames == [[9, 1], [3]]
+  end
 end
