@@ -166,4 +166,59 @@ defmodule BowlingTest do
     assert game.frames == [[10], [10], [10]]
     assert game.score == 30
   end
+
+  test "perfect game" do
+    game =
+      List.duplicate(10, 12)
+      |> Enum.reduce(%Bowling{}, fn i, game ->
+        Bowling.roll(game, i)
+      end)
+
+    assert game.frames == [[10], [10], [10], [10], [10], [10], [10], [10], [10], [10, 10, 10]]
+    assert game.score == 300
+  end
+
+  test "strikes through final frame" do
+    game =
+      List.duplicate(10, 10)
+      |> Enum.reduce(%Bowling{}, fn i, game ->
+        Bowling.roll(game, i)
+      end)
+
+    assert game.frames == [[10], [10], [10], [10], [10], [10], [10], [10], [10], [10]]
+    assert game.score == 240
+  end
+
+  test "strikes through final frame, one ball left" do
+    game =
+      List.duplicate(10, 11)
+      |> Enum.reduce(%Bowling{}, fn i, game ->
+        Bowling.roll(game, i)
+      end)
+
+    assert game.frames == [[10], [10], [10], [10], [10], [10], [10], [10], [10], [10, 10]]
+    assert game.score == 270
+  end
+
+  test "spare on final frame" do
+    game =
+      (List.duplicate(10, 9) ++ [9, 1, 5])
+      |> Enum.reduce(%Bowling{}, fn i, game ->
+        Bowling.roll(game, i)
+      end)
+
+    assert game.frames == [[10], [10], [10], [10], [10], [10], [10], [10], [10], [9, 1, 5]]
+    assert game.score == 274
+  end
+
+  test "spare on final frame, one ball left" do
+    game =
+      (List.duplicate(10, 9) ++ [9, 1])
+      |> Enum.reduce(%Bowling{}, fn i, game ->
+        Bowling.roll(game, i)
+      end)
+
+    assert game.frames == [[10], [10], [10], [10], [10], [10], [10], [10], [10], [9, 1]]
+    assert game.score == 259
+  end
 end

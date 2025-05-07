@@ -24,6 +24,14 @@ defmodule Bowling do
     frame_score(frame, rest) + compute_frames_score(rest)
   end
 
+  # tenth frame bonus has three rolls
+  defp frame_score(frame, _rest) when length(frame) == 3 do
+    Enum.sum(frame)
+  end
+
+  # tenth frame can start with a strike, not ready to count bonus yet
+  defp frame_score([10, _], _rest), do: 0
+
   defp frame_score([10], rest) do
     compute_bonus(2, rest)
   end
@@ -50,18 +58,18 @@ defmodule Bowling do
   end
 
   defp add_roll_to_frames(frames, pins) do
-    case frames do
-      [] ->
-        [[pins]]
-
-      frames when is_list(frames) ->
-        last = List.last(frames)
-
-        if length(last) == 2 or last == [10] do
-          frames ++ [[pins]]
-        else
-          List.update_at(frames, -1, &(&1 ++ [pins]))
-        end
+    if not final_frame?(frames) and complete_frame?(List.last(frames)) do
+      frames ++ [[pins]]
+    else
+      List.update_at(frames, -1, &(&1 ++ [pins]))
     end
+  end
+
+  defp final_frame?(frames) do
+    length(frames) == 10
+  end
+
+  defp complete_frame?(frame) do
+    is_nil(frame) or length(frame) == 2 or frame == [10]
   end
 end
