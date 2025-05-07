@@ -14,8 +14,8 @@ defmodule BowlingTest do
       %Bowling{}
       |> Bowling.roll(1)
 
-    assert game.frames == [[1]]
     assert is_nil(game.score)
+    assert game.frames == [[1]]
   end
 
   test "one complete frame" do
@@ -24,8 +24,8 @@ defmodule BowlingTest do
       |> Bowling.roll(1)
       |> Bowling.roll(2)
 
-    assert game.frames == [[1, 2]]
     assert game.score == 3
+    assert game.frames == [[1, 2]]
   end
 
   test "two frames, with one incomplete" do
@@ -45,8 +45,8 @@ defmodule BowlingTest do
       |> Bowling.roll(0)
       |> Bowling.roll(1)
 
-    assert game.frames == [[0, 1]]
     assert game.score == 1
+    assert game.frames == [[0, 1]]
   end
 
   test "frame with two misses" do
@@ -55,8 +55,8 @@ defmodule BowlingTest do
       |> Bowling.roll(0)
       |> Bowling.roll(0)
 
-    assert game.frames == [[0, 0]]
     assert game.score == 0
+    assert game.frames == [[0, 0]]
   end
 
   test "two complete frames" do
@@ -67,8 +67,8 @@ defmodule BowlingTest do
       |> Bowling.roll(3)
       |> Bowling.roll(4)
 
-    assert game.frames == [[1, 2], [3, 4]]
     assert game.score == 10
+    assert game.frames == [[1, 2], [3, 4]]
   end
 
   test "incomplete spare frame" do
@@ -77,7 +77,7 @@ defmodule BowlingTest do
       |> Bowling.roll(9)
       |> Bowling.roll(1)
 
-    assert game.frames == [[9, 1]]
     assert is_nil(game.score)
+    assert game.frames == [[9, 1]]
   end
 end
