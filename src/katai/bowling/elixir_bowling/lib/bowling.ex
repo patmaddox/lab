@@ -3,14 +3,14 @@ defmodule Bowling do
 
   def roll(game, pins) do
     new_frames = add_roll_to_frames(game.frames, pins)
-    %{game | frames: new_frames, score: compute_score(new_frames)}
+    new_score = compute_score(new_frames)
+    %{game | frames: new_frames, score: new_score}
   end
-
-  defp compute_score([]), do: nil
 
   defp compute_score(frames) do
     case frames do
-      [frame] when length(frame) < 2 -> nil
+      [] -> nil
+      [[_]] -> nil
       frames -> compute_frames_score(frames)
     end
   end
@@ -20,7 +20,7 @@ defmodule Bowling do
       [frame] when length(frame) == 2 ->
         frame_score(frame, nil)
 
-      [frame, next | _rest] when length(frame) == 2 ->
+      [frame, next | _rest] ->
         frame_score(frame, next) + compute_frames_score(tl(frames))
 
       [_incomplete | _] ->
