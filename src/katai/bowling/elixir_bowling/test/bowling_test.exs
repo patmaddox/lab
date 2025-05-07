@@ -6,7 +6,7 @@ defmodule BowlingTest do
     game = %Bowling{}
 
     assert game.frames == []
-    assert is_nil(game.score)
+    assert game.score == nil
   end
 
   test "one incomplete frame" do
@@ -15,7 +15,7 @@ defmodule BowlingTest do
       |> Bowling.roll(1)
 
     assert game.frames == [[1]]
-    assert is_nil(game.score)
+    assert game.score == nil
   end
 
   test "one complete frame" do
@@ -78,7 +78,7 @@ defmodule BowlingTest do
       |> Bowling.roll(1)
 
     assert game.frames == [[9, 1]]
-    assert is_nil(game.score)
+    assert game.score == nil
   end
 
   test "complete spare frame" do
