@@ -6,34 +6,41 @@ defmodule Bowling do
     %{game | frames: new_frames, score: compute_score(new_frames)}
   end
 
-  def is_complete_frame?(frame) do
-    length(frame) == 2
-  end
+  defp compute_score([]), do: nil
 
   defp compute_score(frames) do
-    frames
-    |> complete_frames()
-    |> case do
-      [] ->
-        nil
+    complete = complete_frames_with_bonuses(frames)
 
-      frames ->
-        if is_spare_frame?(List.last(frames)) do
-          nil
-        else
-          Enum.reduce(frames, 0, fn frame, score ->
-            score + Enum.sum(frame)
-          end)
-        end
+    case complete do
+      [] -> nil
+      frames -> Enum.sum(Enum.map(frames, &frame_score/1))
     end
   end
+
+  defp frame_score([roll1, roll2] = frame) do
+    cond do
+      is_spare_frame?(frame) -> 10
+      true -> roll1 + roll2
+    end
+  end
+
+  defp complete_frames_with_bonuses([frame | rest] = _frames) do
+    cond do
+      not is_complete_frame?(frame) -> []
+      is_spare_frame?(frame) && rest == [] -> []
+      is_spare_frame?(frame) && not Enum.empty?(rest) -> [frame]
+      true -> [frame | complete_frames_with_bonuses(rest)]
+    end
+  end
+
+  defp complete_frames_with_bonuses([]), do: []
 
   defp is_spare_frame?(frame) do
     length(frame) == 2 && Enum.sum(frame) == 10
   end
 
-  defp complete_frames(frames) do
-    Enum.filter(frames, &is_complete_frame?/1)
+  defp is_complete_frame?(frame) do
+    length(frame) == 2
   end
 
   defp add_roll_to_frames(frames, pins) do
