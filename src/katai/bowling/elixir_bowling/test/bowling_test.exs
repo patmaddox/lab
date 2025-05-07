@@ -103,4 +103,33 @@ defmodule BowlingTest do
     assert game.frames == [[9, 1], [3, 4]]
     assert game.score == 20
   end
+
+  test "incomplete strike frame" do
+    game =
+      %Bowling{}
+      |> Bowling.roll(10)
+
+    assert game.frames == [[10]]
+    assert game.score == nil
+  end
+
+  test "incomplete strike frame, followed by one roll" do
+    game =
+      %Bowling{}
+      |> Bowling.roll(10)
+      |> Bowling.roll(2)
+
+    assert game.frames == [[10], [2]]
+    assert game.score == nil
+  end
+
+  test "incomplete strike frame, followed by another strike" do
+    game =
+      %Bowling{}
+      |> Bowling.roll(10)
+      |> Bowling.roll(10)
+
+    assert game.frames == [[10], [10]]
+    assert game.score == nil
+  end
 end

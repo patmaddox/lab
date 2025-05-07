@@ -12,6 +12,7 @@ defmodule Bowling do
       [] -> nil
       [[_]] -> nil
       [[a, b]] when a + b == 10 -> nil
+      [[10], [_a]] -> nil
       frames -> compute_frames_score(frames)
     end
   end
@@ -55,7 +56,7 @@ defmodule Bowling do
       frames when is_list(frames) ->
         last = List.last(frames)
 
-        if length(last) == 2 do
+        if length(last) == 2 or last == [10] do
           frames ++ [[pins]]
         else
           List.update_at(frames, -1, &(&1 ++ [pins]))
