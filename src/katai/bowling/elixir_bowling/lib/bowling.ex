@@ -17,14 +17,11 @@ defmodule Bowling do
     end
   end
 
-  defp compute_frames_score(frames) do
-    case frames do
-      [frame | rest] ->
-        frame_score(frame) + bonus(frame, rest) + compute_frames_score(rest)
+  defp compute_frames_score([]), do: 0
 
-      _ ->
-        0
-    end
+  defp compute_frames_score(frames) do
+    [frame | rest] = frames
+    frame_score(frame) + bonus(frame, rest) + compute_frames_score(rest)
   end
 
   defp frame_score([10]), do: 10
