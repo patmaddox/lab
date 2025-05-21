@@ -1,6 +1,8 @@
+benchmarks/iperf3
 databases/duckdb
 databases/postgresql16-contrib
 databases/postgresql16-server
+databases/tcl-sqlite3
 deskutils/i3lock
 deskutils/just
 devel/atf
@@ -11,6 +13,7 @@ devel/fossil
 devel/git
 devel/git-subrepo
 devel/gmake
+devel/hs-git-annex
 devel/jujutsu
 devel/maven
 devel/maven39
@@ -26,11 +29,15 @@ devel/valgrind-devel
 editors/emacs@nox
 editors/libreoffice
 ftp/wget
+graphics/drm-61-kmod
+graphics/gpu-firmware-amd-kmod@dimgrey_cavefish
 graphics/maim
+graphics/mesa-demos
 java/eclipse
 java/openjdk21
 java/openjfx14
 lang/elixir-devel
+lang/erlang-runtime27
 lang/erlang-runtime28
 lang/gcc
 lang/gleam
