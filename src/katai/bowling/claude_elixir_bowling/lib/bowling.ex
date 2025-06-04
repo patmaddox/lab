@@ -15,56 +15,47 @@ defmodule Bowling do
   end
 
   defp calculate_score(rolls) do
-    score_frames(rolls, 1, 0, 0)
-  end
-
-  # Finished all 10 frames
-  defp score_frames(_rolls, frame, _roll_index, total_score) when frame > 10 do
-    total_score
+    score_frames(rolls, 1, 0)
   end
 
   # 10th frame special handling
-  defp score_frames(rolls, 10, roll_index, total_score) do
-    remaining_rolls = Enum.drop(rolls, roll_index)
+  defp score_frames(remaining_rolls, 10, total_score) do
     frame_score = Enum.sum(remaining_rolls)
     total_score + frame_score
   end
 
-  # Regular frames (1-9)
-  defp score_frames(rolls, frame, roll_index, total_score) do
-    case Enum.slice(rolls, roll_index, 3) do
-      [10 | _] ->
-        # Strike
-        next_two = Enum.slice(rolls, roll_index + 1, 2)
+  # Regular frames (1-9) - Strike with enough bonus rolls
+  defp score_frames([10, next1, next2 | rest], frame, total_score) when frame < 10 do
+    frame_score = 10 + next1 + next2
+    score_frames([next1, next2 | rest], frame + 1, total_score + frame_score)
+  end
 
-        if length(next_two) < 2 do
-          # Can't calculate bonus yet
-          total_score
-        else
-          frame_score = 10 + Enum.sum(next_two)
-          score_frames(rolls, frame + 1, roll_index + 1, total_score + frame_score)
-        end
+  # Regular frames (1-9) - Strike without enough bonus rolls
+  defp score_frames([10 | _], frame, total_score) when frame < 10 do
+    total_score
+  end
 
-      [first, second | _] when first + second == 10 ->
-        # Spare
-        next_one = Enum.slice(rolls, roll_index + 2, 1)
+  # Regular frames (1-9) - Spare with enough bonus rolls
+  defp score_frames([first, second, next | rest], frame, total_score)
+       when frame < 10 and first + second == 10 do
+    frame_score = 10 + next
+    score_frames([next | rest], frame + 1, total_score + frame_score)
+  end
 
-        if length(next_one) < 1 do
-          # Can't calculate bonus yet
-          total_score
-        else
-          frame_score = 10 + hd(next_one)
-          score_frames(rolls, frame + 1, roll_index + 2, total_score + frame_score)
-        end
+  # Regular frames (1-9) - Spare without enough bonus rolls
+  defp score_frames([first, second], frame, total_score)
+       when frame < 10 and first + second == 10 do
+    total_score
+  end
 
-      [first, second | _] ->
-        # Regular frame
-        frame_score = first + second
-        score_frames(rolls, frame + 1, roll_index + 2, total_score + frame_score)
+  # Regular frames (1-9) - Normal frame
+  defp score_frames([first, second | rest], frame, total_score) when frame < 10 do
+    frame_score = first + second
+    score_frames(rest, frame + 1, total_score + frame_score)
+  end
 
-      _ ->
-        # Not enough rolls to complete frame
-        total_score
-    end
+  # Not enough rolls to complete current frame
+  defp score_frames(_, _, total_score) do
+    total_score
   end
 end
