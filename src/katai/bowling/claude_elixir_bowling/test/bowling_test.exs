@@ -5,9 +5,8 @@ defmodule BowlingTest do
   describe "scoring a game of bowling" do
     test "Regular Frame (No Strike/Spare)" do
       game =
-        %Bowling{}
-        |> Bowling.roll(1)
-        |> Bowling.roll(2)
+        [1, 2]
+        |> Enum.reduce(%Bowling{}, &Bowling.roll(&2, &1))
 
       assert game.score == 3
     end
@@ -15,9 +14,8 @@ defmodule BowlingTest do
     @tag :skip
     test "Frame with Miss" do
       game =
-        %Bowling{}
-        |> Bowling.roll(3)
-        |> Bowling.roll(0)
+        [3, 0]
+        |> Enum.reduce(%Bowling{}, &Bowling.roll(&2, &1))
 
       assert game.score == 3
     end
@@ -25,10 +23,8 @@ defmodule BowlingTest do
     @tag :skip
     test "Strike" do
       game =
-        %Bowling{}
-        |> Bowling.roll(10)
-        |> Bowling.roll(3)
-        |> Bowling.roll(4)
+        [10, 3, 4]
+        |> Enum.reduce(%Bowling{}, &Bowling.roll(&2, &1))
 
       assert game.score == 24
     end
@@ -36,9 +32,8 @@ defmodule BowlingTest do
     @tag :skip
     test "Strike (Incomplete - Only One Ball Rolled After)" do
       game =
-        %Bowling{}
-        |> Bowling.roll(10)
-        |> Bowling.roll(5)
+        [10, 5]
+        |> Enum.reduce(%Bowling{}, &Bowling.roll(&2, &1))
 
       assert game.score == 0
     end
@@ -46,11 +41,8 @@ defmodule BowlingTest do
     @tag :skip
     test "Strike in Second Frame (Incomplete)" do
       game =
-        %Bowling{}
-        |> Bowling.roll(3)
-        |> Bowling.roll(4)
-        |> Bowling.roll(10)
-        |> Bowling.roll(6)
+        [3, 4, 10, 6]
+        |> Enum.reduce(%Bowling{}, &Bowling.roll(&2, &1))
 
       assert game.score == 7
     end
@@ -58,11 +50,8 @@ defmodule BowlingTest do
     @tag :skip
     test "Spare" do
       game =
-        %Bowling{}
-        |> Bowling.roll(7)
-        |> Bowling.roll(3)
-        |> Bowling.roll(5)
-        |> Bowling.roll(2)
+        [7, 3, 5, 2]
+        |> Enum.reduce(%Bowling{}, &Bowling.roll(&2, &1))
 
       assert game.score == 22
     end
@@ -70,28 +59,8 @@ defmodule BowlingTest do
     @tag :skip
     test "10th Frame - Strike with Bonus Rolls" do
       game =
-        %Bowling{}
-        |> Bowling.roll(1)
-        |> Bowling.roll(1)
-        |> Bowling.roll(1)
-        |> Bowling.roll(1)
-        |> Bowling.roll(1)
-        |> Bowling.roll(1)
-        |> Bowling.roll(1)
-        |> Bowling.roll(1)
-        |> Bowling.roll(1)
-        |> Bowling.roll(1)
-        |> Bowling.roll(1)
-        |> Bowling.roll(1)
-        |> Bowling.roll(1)
-        |> Bowling.roll(1)
-        |> Bowling.roll(1)
-        |> Bowling.roll(1)
-        |> Bowling.roll(1)
-        |> Bowling.roll(1)
-        |> Bowling.roll(10)
-        |> Bowling.roll(5)
-        |> Bowling.roll(3)
+        [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 10, 5, 3]
+        |> Enum.reduce(%Bowling{}, &Bowling.roll(&2, &1))
 
       assert game.score == 36
     end
@@ -99,28 +68,8 @@ defmodule BowlingTest do
     @tag :skip
     test "10th Frame - Spare with Bonus Roll" do
       game =
-        %Bowling{}
-        |> Bowling.roll(1)
-        |> Bowling.roll(1)
-        |> Bowling.roll(1)
-        |> Bowling.roll(1)
-        |> Bowling.roll(1)
-        |> Bowling.roll(1)
-        |> Bowling.roll(1)
-        |> Bowling.roll(1)
-        |> Bowling.roll(1)
-        |> Bowling.roll(1)
-        |> Bowling.roll(1)
-        |> Bowling.roll(1)
-        |> Bowling.roll(1)
-        |> Bowling.roll(1)
-        |> Bowling.roll(1)
-        |> Bowling.roll(1)
-        |> Bowling.roll(1)
-        |> Bowling.roll(1)
-        |> Bowling.roll(7)
-        |> Bowling.roll(3)
-        |> Bowling.roll(5)
+        [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 7, 3, 5]
+        |> Enum.reduce(%Bowling{}, &Bowling.roll(&2, &1))
 
       assert game.score == 33
     end
@@ -128,19 +77,8 @@ defmodule BowlingTest do
     @tag :skip
     test "Perfect Game" do
       game =
-        %Bowling{}
-        |> Bowling.roll(10)
-        |> Bowling.roll(10)
-        |> Bowling.roll(10)
-        |> Bowling.roll(10)
-        |> Bowling.roll(10)
-        |> Bowling.roll(10)
-        |> Bowling.roll(10)
-        |> Bowling.roll(10)
-        |> Bowling.roll(10)
-        |> Bowling.roll(10)
-        |> Bowling.roll(10)
-        |> Bowling.roll(10)
+        [10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10]
+        |> Enum.reduce(%Bowling{}, &Bowling.roll(&2, &1))
 
       assert game.score == 300
     end
