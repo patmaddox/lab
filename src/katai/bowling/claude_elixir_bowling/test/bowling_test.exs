@@ -27,7 +27,6 @@ defmodule BowlingTest do
       assert game.score == 24
     end
 
-    @tag :skip
     test "Strike (Incomplete - Only One Ball Rolled After)" do
       game =
         [10, 5]
