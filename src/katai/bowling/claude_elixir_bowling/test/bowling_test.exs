@@ -19,7 +19,6 @@ defmodule BowlingTest do
       assert game.score == 3
     end
 
-    @tag :skip
     test "Strike" do
       game =
         [10, 3, 4]

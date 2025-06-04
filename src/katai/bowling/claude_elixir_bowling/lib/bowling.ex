@@ -3,12 +3,22 @@ defmodule Bowling do
   Bowling game scorer.
   """
 
-  defstruct score: 0
+  defstruct score: 0, rolls: []
 
   @doc """
   Rolls a ball and returns updated Bowling struct with current score.
   """
-  def roll(%Bowling{score: current_score} = game, pins) do
-    %{game | score: current_score + pins}
+  def roll(%Bowling{rolls: rolls} = game, pins) do
+    new_rolls = rolls ++ [pins]
+    new_score = calculate_score(new_rolls)
+    %{game | score: new_score, rolls: new_rolls}
+  end
+
+  defp calculate_score([10, second, third | _]) do
+    10 + second + third + second + third
+  end
+
+  defp calculate_score(rolls) do
+    Enum.sum(rolls)
   end
 end
