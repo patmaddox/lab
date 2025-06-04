@@ -13,7 +13,7 @@
 - Spares are represented by `/`.
 - Misses are always represented by '-'.
 - All other rolls are represented by the number of pins knocked down.
-- An unrolled ball is represented by `?`.
+- Unrolled balls are omitted (not displayed).
 - All 10th frame bonus balls are included within the 10th frame.
 - The cumulative score appears at the end of the line, separated by ` # `.
 - The cumulative score does not include any unresolved frames. An unresolved frame is one in which all balls have not yet been rolled, or the bonus balls have not yet been rolled.

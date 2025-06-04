@@ -51,7 +51,7 @@ Input:
 Output:
 
 ```
-|1: X|2: 5 ?|
+|1: X|2: 5|
 ```
 
 # Strike in Second Frame (Incomplete)
@@ -65,7 +65,7 @@ Input:
 Output:
 
 ```
-|1: 3 4|2: X|3: 6 ?| # 7
+|1: 3 4|2: X|3: 6| # 7
 ```
 
 # Spare
