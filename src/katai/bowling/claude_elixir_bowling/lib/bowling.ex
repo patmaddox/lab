@@ -1,18 +1,14 @@
 defmodule Bowling do
   @moduledoc """
-  Documentation for `Bowling`.
+  Bowling game scorer.
   """
+
+  defstruct score: 0
 
   @doc """
-  Hello world.
-
-  ## Examples
-
-      iex> Bowling.hello()
-      :world
-
+  Rolls a ball and returns updated Bowling struct with current score.
   """
-  def hello do
-    :world
+  def roll(%Bowling{score: current_score} = game, pins) do
+    %{game | score: current_score + pins}
   end
 end
