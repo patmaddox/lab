@@ -12,6 +12,20 @@ Output:
 | 1 2 | # 3
 ```
 
+# Frame with Miss
+
+Input:
+
+```
+3,0
+```
+
+Output:
+
+```
+| 3 - | # 3
+```
+
 # Strike
 
 Input:
@@ -24,6 +38,34 @@ Output:
 
 ```
 | X | 3 4 | # 24
+```
+
+# Strike (Incomplete - Only One Ball Rolled After)
+
+Input:
+
+```
+10,5
+```
+
+Output:
+
+```
+| X | 5 ? |
+```
+
+# Strike in Second Frame (Incomplete)
+
+Input:
+
+```
+3,4,10,6
+```
+
+Output:
+
+```
+| 3 4 | X | 6 ? | # 7
 ```
 
 # Spare
