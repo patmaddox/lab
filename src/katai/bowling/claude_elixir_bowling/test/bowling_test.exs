@@ -51,7 +51,6 @@ defmodule BowlingTest do
       assert game.score == 22
     end
 
-    @tag :skip
     test "10th Frame - Strike with Bonus Rolls" do
       game =
         [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 10, 5, 3]
@@ -60,7 +59,6 @@ defmodule BowlingTest do
       assert game.score == 36
     end
 
-    @tag :skip
     test "10th Frame - Spare with Bonus Roll" do
       game =
         [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 7, 3, 5]
@@ -69,7 +67,6 @@ defmodule BowlingTest do
       assert game.score == 33
     end
 
-    @tag :skip
     test "Perfect Game" do
       game =
         [10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10]

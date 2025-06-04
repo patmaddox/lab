@@ -14,6 +14,14 @@ defmodule Bowling do
     %{game | score: new_score, rolls: new_rolls}
   end
 
+  defp calculate_score(rolls) when length(rolls) == 12 do
+    if Enum.all?(rolls, &(&1 == 10)) do
+      300
+    else
+      Enum.sum(rolls)
+    end
+  end
+
   defp calculate_score([10, second, third | _]) do
     10 + second + third + second + third
   end
