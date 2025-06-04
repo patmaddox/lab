@@ -7,13 +7,15 @@
 
 - Each game is one line.
 - Frames are separated by `|`. A game always has a leading and trailing `|`.
-- Each frame includes its frame number followed by a colon, then the rolls.
+- Each frame includes its frame number followed by a colon, then the rolls, then the frame score in parentheses.
 - Rolls in a frame are separated by a space.
 - Strikes are represented by `X`.
 - Spares are represented by `/`.
 - Misses are always represented by '-'.
 - All other rolls are represented by the number of pins knocked down.
 - Unrolled balls are omitted (not displayed).
+- Frame scores in parentheses show the cumulative score after that frame.
+- Frame scores are only shown for resolved frames.
 - All 10th frame bonus balls are included within the 10th frame.
 - The cumulative score appears at the end of the line, separated by ` # `.
 - The cumulative score does not include any unresolved frames. An unresolved frame is one in which all balls have not yet been rolled, or the bonus balls have not yet been rolled.
