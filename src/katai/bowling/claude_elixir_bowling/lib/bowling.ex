@@ -22,6 +22,10 @@ defmodule Bowling do
     0
   end
 
+  defp calculate_score([first, second, 10, _]) do
+    first + second
+  end
+
   defp calculate_score(rolls) do
     Enum.sum(rolls)
   end

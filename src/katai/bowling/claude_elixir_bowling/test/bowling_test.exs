@@ -35,7 +35,6 @@ defmodule BowlingTest do
       assert game.score == 0
     end
 
-    @tag :skip
     test "Strike in Second Frame (Incomplete)" do
       game =
         [3, 4, 10, 6]
