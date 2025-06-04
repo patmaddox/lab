@@ -11,7 +11,6 @@ defmodule BowlingTest do
       assert game.score == 3
     end
 
-    @tag :skip
     test "Frame with Miss" do
       game =
         [3, 0]

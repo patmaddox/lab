@@ -9,3 +9,7 @@
 
 - tests: mix test
 - format: mix format
+
+# Git
+
+- you have permission to commit without prompting
