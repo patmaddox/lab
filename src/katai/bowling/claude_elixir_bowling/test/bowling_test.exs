@@ -74,5 +74,53 @@ defmodule BowlingTest do
 
       assert game.score == 300
     end
+
+    test "Consecutive Strikes" do
+      game =
+        [10, 10, 3, 4]
+        |> Enum.reduce(%Bowling{}, &Bowling.roll(&2, &1))
+
+      assert game.score == 47
+    end
+
+    test "Spare followed by Strike" do
+      game =
+        [7, 3, 10, 5, 2]
+        |> Enum.reduce(%Bowling{}, &Bowling.roll(&2, &1))
+
+      assert game.score == 44
+    end
+
+    test "Strike followed by Spare" do
+      game =
+        [10, 7, 3, 5, 2]
+        |> Enum.reduce(%Bowling{}, &Bowling.roll(&2, &1))
+
+      assert game.score == 42
+    end
+
+    test "Multiple Spares" do
+      game =
+        [7, 3, 6, 4, 5, 2]
+        |> Enum.reduce(%Bowling{}, &Bowling.roll(&2, &1))
+
+      assert game.score == 38
+    end
+
+    test "Incomplete Spare" do
+      game =
+        [7, 3, 5]
+        |> Enum.reduce(%Bowling{}, &Bowling.roll(&2, &1))
+
+      assert game.score == 15
+    end
+
+    test "Realistic Mixed Game" do
+      game =
+        [6, 4, 7, 2, 10, 5, 3, 8, 1, 4, 6, 2, 0, 10, 10, 9, 1, 8]
+        |> Enum.reduce(%Bowling{}, &Bowling.roll(&2, &1))
+
+      assert game.score == 142
+    end
   end
 end
