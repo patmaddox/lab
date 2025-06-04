@@ -18,10 +18,24 @@ defmodule Bowling do
     score_frames(rolls, 1, 0)
   end
 
-  # 10th frame special handling
-  defp score_frames(remaining_rolls, 10, total_score) do
-    frame_score = Enum.sum(remaining_rolls)
-    total_score + frame_score
+  # 10th frame - Strike with two bonus rolls
+  defp score_frames([10, bonus1, bonus2], 10, total_score) do
+    total_score + 10 + bonus1 + bonus2
+  end
+
+  # 10th frame - Spare with one bonus roll
+  defp score_frames([first, second, bonus], 10, total_score) when first + second == 10 do
+    total_score + 10 + bonus
+  end
+
+  # 10th frame - Regular frame (no strike or spare)
+  defp score_frames([first, second], 10, total_score) when first + second < 10 do
+    total_score + first + second
+  end
+
+  # 10th frame - Incomplete
+  defp score_frames(_, 10, total_score) do
+    total_score
   end
 
   # Regular frames (1-9) - Strike with enough bonus rolls

@@ -122,5 +122,32 @@ defmodule BowlingTest do
 
       assert game.score == 142
     end
+
+    test "10th Frame - Strike but incomplete (missing both bonus rolls)" do
+      game =
+        [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 10]
+        |> Enum.reduce(%Bowling{}, &Bowling.roll(&2, &1))
+
+      # Should be just the first 9 frames
+      assert game.score == 18
+    end
+
+    test "10th Frame - Strike with only one bonus roll" do
+      game =
+        [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 10, 5]
+        |> Enum.reduce(%Bowling{}, &Bowling.roll(&2, &1))
+
+      # Should be just the first 9 frames until complete
+      assert game.score == 18
+    end
+
+    test "10th Frame - Spare but incomplete (missing bonus roll)" do
+      game =
+        [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 7, 3]
+        |> Enum.reduce(%Bowling{}, &Bowling.roll(&2, &1))
+
+      # Should be just the first 9 frames
+      assert game.score == 18
+    end
   end
 end
