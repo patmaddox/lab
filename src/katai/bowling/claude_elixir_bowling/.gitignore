@@ -21,3 +21,6 @@ claude_elixir_bowling-*.tar
 
 # Temporary files, for example, from tests.
 /tmp/
+
+# Local claude stuff
+.claude/*.local.json
