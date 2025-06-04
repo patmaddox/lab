@@ -22,6 +22,10 @@ defmodule Bowling do
     0
   end
 
+  defp calculate_score([first, second, third, fourth | _]) when first + second == 10 do
+    10 + third + third + fourth
+  end
+
   defp calculate_score([first, second, 10, _]) do
     first + second
   end
