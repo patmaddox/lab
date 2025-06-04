@@ -33,13 +33,14 @@ defmodule Bowling do
   end
 
   # Strike with enough bonus rolls
-  defp score_frame([10, next1, next2 | rest], _frame) do
-    {10 + next1 + next2, [next1, next2 | rest]}
+  defp score_frame([10 | remaining_rolls = [next1, next2 | _]], _frame) do
+    {10 + next1 + next2, remaining_rolls}
   end
 
   # Spare with enough bonus rolls
-  defp score_frame([first, second, next | rest], _frame) when first + second == 10 do
-    {10 + next, [next | rest]}
+  defp score_frame([first, second | remaining_rolls = [next | _]], _frame)
+       when first + second == 10 do
+    {10 + next, remaining_rolls}
   end
 
   # Regular frame
