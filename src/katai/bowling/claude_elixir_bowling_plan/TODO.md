@@ -19,10 +19,10 @@
   - [x] 3.3 Implement spare bonus calculation
   - [x] 3.4 Implement score/1 function
 
-- [ ] 4. Handle frame 10 special rules
-  - [ ] 4.1 Allow up to 3 rolls in frame 10
-  - [ ] 4.2 Handle strike in frame 10
-  - [ ] 4.3 Handle spare in frame 10
+- [x] 4. Handle frame 10 special rules
+  - [x] 4.1 Allow up to 3 rolls in frame 10
+  - [x] 4.2 Handle strike in frame 10
+  - [x] 4.3 Handle spare in frame 10
 
 - [ ] 5. Add comprehensive tests for all scenarios
   - [ ] 5.1 Test basic open frames
