@@ -24,11 +24,11 @@
   - [x] 4.2 Handle strike in frame 10
   - [x] 4.3 Handle spare in frame 10
 
-- [ ] 5. Add comprehensive tests for all scenarios
-  - [ ] 5.1 Test basic open frames
-  - [ ] 5.2 Test strikes
-  - [ ] 5.3 Test spares
-  - [ ] 5.4 Test perfect game (all strikes)
-  - [ ] 5.5 Test gutter game (all zeros)
-  - [ ] 5.6 Test frame 10 edge cases
-  - [ ] 5.7 Test game completion detection
+- [x] 5. Add comprehensive tests for all scenarios
+  - [x] 5.1 Test basic open frames
+  - [x] 5.2 Test strikes
+  - [x] 5.3 Test spares
+  - [x] 5.4 Test perfect game (all strikes)
+  - [x] 5.5 Test gutter game (all zeros)
+  - [x] 5.6 Test frame 10 edge cases
+  - [x] 5.7 Test game completion detection

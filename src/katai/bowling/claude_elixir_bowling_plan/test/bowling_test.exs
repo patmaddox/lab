@@ -201,4 +201,203 @@ defmodule BowlingTest do
       assert Bowling.score(game) == 42
     end
   end
+
+  describe "comprehensive test scenarios" do
+    test "gutter game scores 0" do
+      game = Bowling.new_game()
+
+      # Roll 20 zeros (all gutter balls)
+      game = Enum.reduce(1..20, game, fn _, acc -> Bowling.roll(acc, 0) end)
+
+      assert Bowling.score(game) == 0
+    end
+
+    test "all spares with 5 pins each time" do
+      game = Bowling.new_game()
+
+      # Roll 21 times: 5 pins each roll (10 spares + 1 bonus)
+      game = Enum.reduce(1..21, game, fn _, acc -> Bowling.roll(acc, 5) end)
+
+      # Each spare scores 10 + 5 = 15, total = 150
+      assert Bowling.score(game) == 150
+    end
+
+    test "alternating strikes and gutter balls" do
+      game = Bowling.new_game()
+
+      # Frames 1,3,5,7,9: strikes
+      # Frames 2,4,6,8,10: gutter balls
+      game =
+        game
+        |> Bowling.roll(10)
+        # Strike, bonus: 0+0=0, score: 10
+        |> Bowling.roll(0)
+        |> Bowling.roll(0)
+        # Open, score: 0
+        |> Bowling.roll(10)
+        # Strike, bonus: 0+0=0, score: 10
+        |> Bowling.roll(0)
+        |> Bowling.roll(0)
+        # Open, score: 0
+        |> Bowling.roll(10)
+        # Strike, bonus: 0+0=0, score: 10
+        |> Bowling.roll(0)
+        |> Bowling.roll(0)
+        # Open, score: 0
+        |> Bowling.roll(10)
+        # Strike, bonus: 0+0=0, score: 10
+        |> Bowling.roll(0)
+        |> Bowling.roll(0)
+        # Open, score: 0
+        |> Bowling.roll(10)
+        # Strike, bonus: 0+0=0, score: 10
+        |> Bowling.roll(0)
+        |> Bowling.roll(0)
+
+      # Frame 10: open frame, score: 0
+      assert Bowling.score(game) == 50
+    end
+
+    test "consecutive strikes (turkey)" do
+      game = Bowling.new_game()
+
+      # Three consecutive strikes, then open frames
+      game =
+        game
+        |> Bowling.roll(10)
+        # Strike 1, bonus: 10+10=20, score: 30
+        |> Bowling.roll(10)
+        # Strike 2, bonus: 10+3=13, score: 23
+        |> Bowling.roll(10)
+        # Strike 3, bonus: 3+4=7, score: 17
+        |> Bowling.roll(3)
+        |> Bowling.roll(4)
+
+      # Total so far: 30 + 23 + 17 + 7 = 77
+      assert Bowling.score(game) == 77
+    end
+
+    test "spare followed by strike" do
+      game = Bowling.new_game()
+
+      game =
+        game
+        |> Bowling.roll(7)
+        |> Bowling.roll(3)
+        # Spare, bonus: 10, score: 20
+        |> Bowling.roll(10)
+        # Strike, bonus: 4+3=7, score: 17
+        |> Bowling.roll(4)
+        |> Bowling.roll(3)
+
+      # Total: 20 + 17 + 7 = 44
+      assert Bowling.score(game) == 44
+    end
+
+    test "all open frames with different scores" do
+      game = Bowling.new_game()
+
+      rolls = [1, 2, 2, 3, 3, 4, 4, 1, 1, 5, 0, 8, 2, 7, 3, 3, 1, 8, 2, 6]
+      game = Enum.reduce(rolls, game, fn pins, acc -> Bowling.roll(acc, pins) end)
+
+      expected_score = Enum.sum(rolls)
+      assert Bowling.score(game) == expected_score
+      assert length(game.frames) == 10
+    end
+
+    test "strike in frame 8 followed by strikes in frame 9 and 10" do
+      game = Bowling.new_game()
+
+      # Roll 7 open frames (score: 14 each)
+      game =
+        Enum.reduce(1..7, game, fn _, acc ->
+          acc |> Bowling.roll(1) |> Bowling.roll(1)
+        end)
+
+      # Frame 8: strike (bonus from two strikes = 20)
+      game = Bowling.roll(game, 10)
+      # Frame 9: strike (bonus from frame 10 first two rolls)
+      game = Bowling.roll(game, 10)
+      # Frame 10: strike, strike, strike
+      game = game |> Bowling.roll(10) |> Bowling.roll(10) |> Bowling.roll(10)
+
+      # Frame 1-7: 2 each = 14
+      # Frame 8: 10 + 10 + 10 = 30 (strike bonus from frames 9,10)
+      # Frame 9: 10 + 10 + 10 = 30 (strike bonus from frame 10)
+      # Frame 10: 30 (strike + strike + strike)
+      # Total: 14 + 30 + 30 + 30 = 104
+      assert Bowling.score(game) == 104
+    end
+  end
+
+  describe "game completion detection" do
+    test "game is complete after 10 open frames" do
+      game = Bowling.new_game()
+
+      # Roll 20 times (10 open frames)
+      game = Enum.reduce(1..20, game, fn _, acc -> Bowling.roll(acc, 1) end)
+
+      assert length(game.frames) == 10
+    end
+
+    test "game is complete after 9 strikes plus frame 10" do
+      game = Bowling.new_game()
+
+      # 9 strikes + frame 10 (3 rolls)
+      game = Enum.reduce(1..12, game, fn _, acc -> Bowling.roll(acc, 10) end)
+
+      assert length(game.frames) == 10
+    end
+
+    test "game handles mixed strikes and spares correctly" do
+      game = Bowling.new_game()
+
+      # Complex game with various scenarios
+      game =
+        game
+        |> Bowling.roll(10)
+        # Frame 1: Strike
+        |> Bowling.roll(7)
+        |> Bowling.roll(3)
+        # Frame 2: Spare
+        |> Bowling.roll(9)
+        |> Bowling.roll(0)
+        # Frame 3: Open
+        |> Bowling.roll(10)
+        # Frame 4: Strike
+        |> Bowling.roll(0)
+        |> Bowling.roll(8)
+        # Frame 5: Open
+        |> Bowling.roll(8)
+        |> Bowling.roll(2)
+        # Frame 6: Spare
+        |> Bowling.roll(0)
+        |> Bowling.roll(6)
+        # Frame 7: Open
+        |> Bowling.roll(10)
+        # Frame 8: Strike
+        |> Bowling.roll(10)
+        # Frame 9: Strike
+        |> Bowling.roll(10)
+        |> Bowling.roll(8)
+        |> Bowling.roll(1)
+
+      # Frame 10: Strike + 8 + 1
+      assert length(game.frames) == 10
+
+      # Manual calculation:
+      # Frame 1: 10 + 7 + 3 = 20
+      # Frame 2: 10 + 9 = 19
+      # Frame 3: 9
+      # Frame 4: 10 + 0 + 8 = 18
+      # Frame 5: 8
+      # Frame 6: 10 + 0 = 10
+      # Frame 7: 6
+      # Frame 8: 10 + 10 + 10 = 30
+      # Frame 9: 10 + 10 + 8 = 28
+      # Frame 10: 19
+      # Total: 167
+      assert Bowling.score(game) == 167
+    end
+  end
 end
