@@ -1,18 +1,15 @@
 defmodule Bowling do
   @moduledoc """
-  Documentation for `Bowling`.
+  A bowling game scoring system.
   """
 
-  @doc """
-  Hello world.
+  defstruct frames: [], score: 0, complete?: false
 
-  ## Examples
+  defmodule Frame do
+    @moduledoc """
+    Represents a single frame in a bowling game.
+    """
 
-      iex> Bowling.hello()
-      :world
-
-  """
-  def hello do
-    :world
+    defstruct rolls: [], score: 0, type: :open
   end
 end

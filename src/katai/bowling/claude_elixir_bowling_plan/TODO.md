@@ -2,10 +2,10 @@
 
 ## Implementation Tasks
 
-- [ ] 1. Replace placeholder code with core structs
-  - [ ] 1.1 Define Game struct
-  - [ ] 1.2 Define Frame struct  
-  - [ ] 1.3 Remove placeholder hello/0 function
+- [x] 1. Replace placeholder code with core structs
+  - [x] 1.1 Define Game struct
+  - [x] 1.2 Define Frame struct  
+  - [x] 1.3 Remove placeholder hello/0 function
 
 - [ ] 2. Implement roll recording logic
   - [ ] 2.1 Implement new_game/0
