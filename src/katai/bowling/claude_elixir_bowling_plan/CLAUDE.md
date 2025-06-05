@@ -17,3 +17,4 @@
 
 - ensure all code paths are fully tested
 - organize tests with the simplest test first, and more complex tests later
+- use `describe` blocks to organize tests for a specific function. Name the describe according to function signature.
