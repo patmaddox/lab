@@ -51,4 +51,47 @@ defmodule BowlingTest do
 
     assert List.first(game.frames).type == :spare
   end
+
+  test "score calculates basic open frame" do
+    game =
+      Bowling.new_game()
+      |> Bowling.roll(3)
+      |> Bowling.roll(4)
+
+    assert Bowling.score(game) == 7
+  end
+
+  test "score calculates strike with bonus" do
+    game =
+      Bowling.new_game()
+      |> Bowling.roll(10)
+      |> Bowling.roll(3)
+      |> Bowling.roll(4)
+
+    assert Bowling.score(game) == 24
+  end
+
+  test "score calculates spare with bonus" do
+    game =
+      Bowling.new_game()
+      |> Bowling.roll(6)
+      |> Bowling.roll(4)
+      |> Bowling.roll(3)
+      |> Bowling.roll(2)
+
+    assert Bowling.score(game) == 18
+  end
+
+  test "score handles multiple frames" do
+    game =
+      Bowling.new_game()
+      |> Bowling.roll(1)
+      |> Bowling.roll(2)
+      |> Bowling.roll(3)
+      |> Bowling.roll(4)
+      |> Bowling.roll(5)
+      |> Bowling.roll(1)
+
+    assert Bowling.score(game) == 16
+  end
 end

@@ -13,11 +13,11 @@
   - [x] 2.3 Handle frame transitions
   - [x] 2.4 Track rolls within frames
 
-- [ ] 3. Add scoring algorithm with strike/spare bonuses
-  - [ ] 3.1 Calculate basic frame scores
-  - [ ] 3.2 Implement strike bonus calculation
-  - [ ] 3.3 Implement spare bonus calculation
-  - [ ] 3.4 Implement score/1 function
+- [x] 3. Add scoring algorithm with strike/spare bonuses
+  - [x] 3.1 Calculate basic frame scores
+  - [x] 3.2 Implement strike bonus calculation
+  - [x] 3.3 Implement spare bonus calculation
+  - [x] 3.4 Implement score/1 function
 
 - [ ] 4. Handle frame 10 special rules
   - [ ] 4.1 Allow up to 3 rolls in frame 10

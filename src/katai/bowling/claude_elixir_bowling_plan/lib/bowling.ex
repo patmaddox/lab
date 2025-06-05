@@ -53,4 +53,60 @@ defmodule Bowling do
   end
 
   defp maybe_add_new_frame(frames, _), do: frames
+
+  @doc """
+  Calculates the total score for the game.
+  """
+  def score(%Bowling{frames: frames}) do
+    frames
+    |> Enum.with_index()
+    |> Enum.map(fn {frame, index} -> calculate_frame_score(frame, frames, index) end)
+    |> Enum.sum()
+  end
+
+  defp calculate_frame_score(%Frame{type: :strike, rolls: [10]}, frames, index) do
+    10 + strike_bonus(frames, index)
+  end
+
+  defp calculate_frame_score(%Frame{type: :spare, rolls: [a, b]}, frames, index)
+       when a + b == 10 do
+    10 + spare_bonus(frames, index)
+  end
+
+  defp calculate_frame_score(%Frame{rolls: rolls}, _frames, _index) do
+    Enum.sum(rolls)
+  end
+
+  defp strike_bonus(frames, index) when index < 9 do
+    next_frame = Enum.at(frames, index + 1)
+
+    case next_frame do
+      %Frame{type: :strike, rolls: [10]} when index < 8 ->
+        # Strike in next frame, need next two rolls
+        next_next_frame = Enum.at(frames, index + 2)
+        10 + List.first(next_next_frame.rolls || [0])
+
+      %Frame{rolls: [a, b]} ->
+        a + (b || 0)
+
+      %Frame{rolls: [a]} ->
+        a
+
+      _ ->
+        0
+    end
+  end
+
+  defp strike_bonus(_frames, _index), do: 0
+
+  defp spare_bonus(frames, index) when index < 9 do
+    next_frame = Enum.at(frames, index + 1)
+
+    case next_frame do
+      %Frame{rolls: [a | _]} -> a
+      _ -> 0
+    end
+  end
+
+  defp spare_bonus(_frames, _index), do: 0
 end
