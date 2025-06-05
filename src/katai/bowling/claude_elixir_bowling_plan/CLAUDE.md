@@ -10,7 +10,10 @@
 # Rules
 
 - write clear, concise code
-- do not modify test files unless explicitly instructed to
-- update test files as needed if a function interface changes
 - run tests after making a code change, make sure the tests pass
 - format code after successful test run
+
+# Tests
+
+- ensure all code paths are fully tested
+- organize tests with the simplest test first, and more complex tests later

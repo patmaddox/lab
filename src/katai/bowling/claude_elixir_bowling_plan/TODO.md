@@ -7,11 +7,11 @@
   - [x] 1.2 Define Frame struct  
   - [x] 1.3 Remove placeholder hello/0 function
 
-- [ ] 2. Implement roll recording logic
-  - [ ] 2.1 Implement new_game/0
-  - [ ] 2.2 Implement roll/2 function
-  - [ ] 2.3 Handle frame transitions
-  - [ ] 2.4 Track rolls within frames
+- [x] 2. Implement roll recording logic
+  - [x] 2.1 Implement new_game/0
+  - [x] 2.2 Implement roll/2 function
+  - [x] 2.3 Handle frame transitions
+  - [x] 2.4 Track rolls within frames
 
 - [ ] 3. Add scoring algorithm with strike/spare bonuses
   - [ ] 3.1 Calculate basic frame scores
