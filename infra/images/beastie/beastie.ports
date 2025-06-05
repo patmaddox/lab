@@ -46,6 +46,7 @@ lang/python310
 lang/rust
 lang/tcl-wrapper
 lang/zig
+misc/py-aider-chat
 multimedia/webcamd
 net/google-cloud-sdk
 net/rsync
