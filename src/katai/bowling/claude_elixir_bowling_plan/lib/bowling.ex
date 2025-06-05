@@ -49,24 +49,21 @@ defmodule Bowling do
 
   # Frame 10 special handling
   defp determine_frame_type(rolls, @total_frames) do
-    case rolls do
-      [@max_pins] -> :strike
-      [@max_pins, @max_pins] -> :strike
-      [@max_pins, @max_pins, _] -> :strike
-      [@max_pins, a, b] when a + b == @max_pins -> :spare
-      [@max_pins, a, _] when a < @max_pins -> :open
-      [a, b] when a + b == @max_pins -> :spare
-      [a, b, _] when a + b == @max_pins -> :spare
-      [a, b] when a + b < @max_pins -> :open
-      _ -> :open
+    cond do
+      is_strike?(rolls) -> :strike
+      is_spare?(rolls) -> :spare
+      true -> :open
     end
   end
 
   # Regular frames 1-9
-  defp determine_frame_type([@max_pins], _), do: :strike
-  defp determine_frame_type([a, b], _) when a + b == @max_pins, do: :spare
-  defp determine_frame_type([a, b], _) when a + b < @max_pins, do: :open
-  defp determine_frame_type(_, _), do: :open
+  defp determine_frame_type(rolls, _frame_number) do
+    cond do
+      is_strike?(rolls) -> :strike
+      is_spare?(rolls) -> :spare
+      true -> :open
+    end
+  end
 
   defp maybe_add_new_frame(frames, %Frame{type: :strike}) when length(frames) < @total_frames do
     frames ++ [%Frame{}]
@@ -180,4 +177,14 @@ defmodule Bowling do
   end
 
   defp spare_bonus(_frames, _index), do: 0
+
+  defp is_strike?([first_roll]), do: first_roll == @max_pins
+  defp is_strike?([@max_pins, @max_pins]), do: true
+  defp is_strike?([@max_pins, @max_pins, _]), do: true
+  defp is_strike?(_), do: false
+
+  defp is_spare?([@max_pins, a, b]) when a + b == @max_pins, do: true
+  defp is_spare?([a, b]) when a + b == @max_pins, do: true
+  defp is_spare?([a, b, _]) when a + b == @max_pins, do: true
+  defp is_spare?(_), do: false
 end
