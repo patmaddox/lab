@@ -91,13 +91,12 @@ defmodule Bowling do
   end
 
   # Regular frame scoring
-  defp calculate_frame_score(%Frame{type: :strike, rolls: [@max_pins]}, frames, index) do
+  defp calculate_frame_score(%Frame{type: :strike}, frames, index) do
     bonus = strike_bonus(frames, index)
     if bonus == :incomplete, do: 0, else: @max_pins + bonus
   end
 
-  defp calculate_frame_score(%Frame{type: :spare, rolls: [a, b]}, frames, index)
-       when a + b == @max_pins do
+  defp calculate_frame_score(%Frame{type: :spare}, frames, index) do
     bonus = spare_bonus(frames, index)
     if bonus == :incomplete, do: 0, else: @max_pins + bonus
   end
