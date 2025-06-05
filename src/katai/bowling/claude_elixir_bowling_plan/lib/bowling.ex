@@ -88,12 +88,14 @@ defmodule Bowling do
 
   # Regular frame scoring
   defp calculate_frame_score(%Frame{type: :strike, rolls: [10]}, frames, index) do
-    10 + strike_bonus(frames, index)
+    bonus = strike_bonus(frames, index)
+    if bonus == :incomplete, do: 0, else: 10 + bonus
   end
 
   defp calculate_frame_score(%Frame{type: :spare, rolls: [a, b]}, frames, index)
        when a + b == 10 do
-    10 + spare_bonus(frames, index)
+    bonus = spare_bonus(frames, index)
+    if bonus == :incomplete, do: 0, else: 10 + bonus
   end
 
   defp calculate_frame_score(%Frame{rolls: rolls}, _frames, _index) do
@@ -107,9 +109,9 @@ defmodule Bowling do
       # Strike in frame 9, bonus comes from frame 10
       index == 8 ->
         case next_frame do
-          %Frame{rolls: [a, b | _]} -> a + (b || 0)
-          %Frame{rolls: [a]} -> a
-          _ -> 0
+          %Frame{rolls: [a, b | _]} -> a + b
+          %Frame{rolls: [_a]} -> :incomplete
+          _ -> :incomplete
         end
 
       # Strike in frame 8, check if frame 9 is also a strike
@@ -117,16 +119,20 @@ defmodule Bowling do
         case next_frame do
           %Frame{type: :strike, rolls: [10]} ->
             frame_10 = Enum.at(frames, 9)
-            10 + List.first(frame_10.rolls || [0])
+
+            case frame_10 do
+              %Frame{rolls: [first_roll | _]} -> 10 + first_roll
+              _ -> :incomplete
+            end
 
           %Frame{rolls: [a, b]} ->
-            a + (b || 0)
+            a + b
 
-          %Frame{rolls: [a]} ->
-            a
+          %Frame{rolls: [_a]} ->
+            :incomplete
 
           _ ->
-            0
+            :incomplete
         end
 
       # Regular strike bonus for frames 1-7
@@ -134,16 +140,20 @@ defmodule Bowling do
         case next_frame do
           %Frame{type: :strike, rolls: [10]} ->
             next_next_frame = Enum.at(frames, index + 2)
-            10 + List.first(next_next_frame.rolls || [0])
+
+            case next_next_frame do
+              %Frame{rolls: [first_roll | _]} -> 10 + first_roll
+              _ -> :incomplete
+            end
 
           %Frame{rolls: [a, b]} ->
-            a + (b || 0)
+            a + b
 
-          %Frame{rolls: [a]} ->
-            a
+          %Frame{rolls: [_a]} ->
+            :incomplete
 
           _ ->
-            0
+            :incomplete
         end
     end
   end
@@ -154,8 +164,11 @@ defmodule Bowling do
     next_frame = Enum.at(frames, index + 1)
 
     case next_frame do
-      %Frame{rolls: [a | _]} -> a
-      _ -> 0
+      %Frame{type: :strike, rolls: [a]} -> a
+      %Frame{rolls: [a, _b]} -> a
+      # Frame 10 with 3 rolls
+      %Frame{rolls: [a, _b, _c]} when index == 8 -> a
+      _ -> :incomplete
     end
   end
 

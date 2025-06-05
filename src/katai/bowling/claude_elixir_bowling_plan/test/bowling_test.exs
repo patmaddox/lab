@@ -64,6 +64,24 @@ defmodule BowlingTest do
       assert Bowling.score(game) == 7
     end
 
+    test "incomplete strike does not get scored" do
+      game =
+        Bowling.new_game()
+        |> Bowling.roll(10)
+        |> Bowling.roll(3)
+
+      assert Bowling.score(game) == 3
+    end
+
+    test "incomplete spare does not get scored" do
+      game =
+        Bowling.new_game()
+        |> Bowling.roll(6)
+        |> Bowling.roll(4)
+
+      assert Bowling.score(game) == 0
+    end
+
     test "calculates strike with bonus" do
       game =
         Bowling.new_game()
