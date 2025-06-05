@@ -3,6 +3,13 @@ defmodule Bowling do
   A bowling game scoring system.
   """
 
+  @max_pins 10
+  @min_pins 0
+  @total_frames 10
+  @last_regular_frame_index 9
+  @frame_8_index 7
+  @frame_9_index 8
+
   defstruct frames: [], score: 0, complete?: false
 
   defmodule Frame do
@@ -23,7 +30,7 @@ defmodule Bowling do
   @doc """
   Records a roll in the current game.
   """
-  def roll(%Bowling{} = game, pins) when pins >= 0 and pins <= 10 do
+  def roll(%Bowling{} = game, pins) when pins >= @min_pins and pins <= @max_pins do
     current_frame = List.last(game.frames)
     frame_number = length(game.frames)
     updated_frame = add_roll_to_frame(current_frame, pins, frame_number)
@@ -41,31 +48,31 @@ defmodule Bowling do
   end
 
   # Frame 10 special handling
-  defp determine_frame_type(rolls, 10) do
+  defp determine_frame_type(rolls, @total_frames) do
     case rolls do
-      [10] -> :strike
-      [10, 10] -> :strike
-      [10, 10, _] -> :strike
-      [10, a, b] when a + b == 10 -> :spare
-      [10, a, _] when a < 10 -> :open
-      [a, b] when a + b == 10 -> :spare
-      [a, b, _] when a + b == 10 -> :spare
-      [a, b] when a + b < 10 -> :open
+      [@max_pins] -> :strike
+      [@max_pins, @max_pins] -> :strike
+      [@max_pins, @max_pins, _] -> :strike
+      [@max_pins, a, b] when a + b == @max_pins -> :spare
+      [@max_pins, a, _] when a < @max_pins -> :open
+      [a, b] when a + b == @max_pins -> :spare
+      [a, b, _] when a + b == @max_pins -> :spare
+      [a, b] when a + b < @max_pins -> :open
       _ -> :open
     end
   end
 
   # Regular frames 1-9
-  defp determine_frame_type([10], _), do: :strike
-  defp determine_frame_type([a, b], _) when a + b == 10, do: :spare
-  defp determine_frame_type([a, b], _) when a + b < 10, do: :open
+  defp determine_frame_type([@max_pins], _), do: :strike
+  defp determine_frame_type([a, b], _) when a + b == @max_pins, do: :spare
+  defp determine_frame_type([a, b], _) when a + b < @max_pins, do: :open
   defp determine_frame_type(_, _), do: :open
 
-  defp maybe_add_new_frame(frames, %Frame{type: :strike}) when length(frames) < 10 do
+  defp maybe_add_new_frame(frames, %Frame{type: :strike}) when length(frames) < @total_frames do
     frames ++ [%Frame{}]
   end
 
-  defp maybe_add_new_frame(frames, %Frame{rolls: [_, _]}) when length(frames) < 10 do
+  defp maybe_add_new_frame(frames, %Frame{rolls: [_, _]}) when length(frames) < @total_frames do
     frames ++ [%Frame{}]
   end
 
@@ -82,32 +89,32 @@ defmodule Bowling do
   end
 
   # Frame 10 scoring
-  defp calculate_frame_score(%Frame{rolls: rolls}, _frames, 9) do
+  defp calculate_frame_score(%Frame{rolls: rolls}, _frames, @last_regular_frame_index) do
     Enum.sum(rolls)
   end
 
   # Regular frame scoring
-  defp calculate_frame_score(%Frame{type: :strike, rolls: [10]}, frames, index) do
+  defp calculate_frame_score(%Frame{type: :strike, rolls: [@max_pins]}, frames, index) do
     bonus = strike_bonus(frames, index)
-    if bonus == :incomplete, do: 0, else: 10 + bonus
+    if bonus == :incomplete, do: 0, else: @max_pins + bonus
   end
 
   defp calculate_frame_score(%Frame{type: :spare, rolls: [a, b]}, frames, index)
-       when a + b == 10 do
+       when a + b == @max_pins do
     bonus = spare_bonus(frames, index)
-    if bonus == :incomplete, do: 0, else: 10 + bonus
+    if bonus == :incomplete, do: 0, else: @max_pins + bonus
   end
 
   defp calculate_frame_score(%Frame{rolls: rolls}, _frames, _index) do
     Enum.sum(rolls)
   end
 
-  defp strike_bonus(frames, index) when index < 9 do
+  defp strike_bonus(frames, index) when index < @last_regular_frame_index do
     next_frame = Enum.at(frames, index + 1)
 
     cond do
       # Strike in frame 9, bonus comes from frame 10
-      index == 8 ->
+      index == @frame_9_index ->
         case next_frame do
           %Frame{rolls: [a, b | _]} -> a + b
           %Frame{rolls: [_a]} -> :incomplete
@@ -115,13 +122,13 @@ defmodule Bowling do
         end
 
       # Strike in frame 8, check if frame 9 is also a strike
-      index == 7 ->
+      index == @frame_8_index ->
         case next_frame do
-          %Frame{type: :strike, rolls: [10]} ->
-            frame_10 = Enum.at(frames, 9)
+          %Frame{type: :strike, rolls: [@max_pins]} ->
+            frame_10 = Enum.at(frames, @last_regular_frame_index)
 
             case frame_10 do
-              %Frame{rolls: [first_roll | _]} -> 10 + first_roll
+              %Frame{rolls: [first_roll | _]} -> @max_pins + first_roll
               _ -> :incomplete
             end
 
@@ -138,11 +145,11 @@ defmodule Bowling do
       # Regular strike bonus for frames 1-7
       true ->
         case next_frame do
-          %Frame{type: :strike, rolls: [10]} ->
+          %Frame{type: :strike, rolls: [@max_pins]} ->
             next_next_frame = Enum.at(frames, index + 2)
 
             case next_next_frame do
-              %Frame{rolls: [first_roll | _]} -> 10 + first_roll
+              %Frame{rolls: [first_roll | _]} -> @max_pins + first_roll
               _ -> :incomplete
             end
 
@@ -160,14 +167,14 @@ defmodule Bowling do
 
   defp strike_bonus(_frames, _index), do: 0
 
-  defp spare_bonus(frames, index) when index < 9 do
+  defp spare_bonus(frames, index) when index < @last_regular_frame_index do
     next_frame = Enum.at(frames, index + 1)
 
     case next_frame do
       %Frame{type: :strike, rolls: [a]} -> a
       %Frame{rolls: [a, _b]} -> a
       # Frame 10 with 3 rolls
-      %Frame{rolls: [a, _b, _c]} when index == 8 -> a
+      %Frame{rolls: [a, _b, _c]} when index == @frame_9_index -> a
       _ -> :incomplete
     end
   end
