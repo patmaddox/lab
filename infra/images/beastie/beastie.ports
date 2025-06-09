@@ -1,7 +1,8 @@
 benchmarks/iperf3
 databases/duckdb
-databases/postgresql16-contrib
-databases/postgresql16-server
+databases/postgresql17-client
+databases/postgresql17-contrib
+databases/postgresql17-server
 databases/tcl-sqlite3
 deskutils/i3lock
 deskutils/just
@@ -26,6 +27,7 @@ devel/shtk
 devel/tcllib
 devel/uclcmd
 devel/valgrind-devel
+dns/bind-tools
 editors/emacs@nox
 editors/libreoffice
 ftp/wget
@@ -46,7 +48,7 @@ lang/python310
 lang/rust
 lang/tcl-wrapper
 lang/zig
-misc/py-aider-chat
+misc/py-aider-chat@py311
 multimedia/webcamd
 net/google-cloud-sdk
 net/rsync
