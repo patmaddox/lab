@@ -99,7 +99,5 @@ www/tomcat101
 www/zola
 x11-fonts/noto-emoji
 x11-wm/i3
-x11/nvidia-driver
-x11/nvidia-xconfig
 x11/wezterm
 x11/xorg
