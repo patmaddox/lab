@@ -1,19 +1,20 @@
 image_name = beastie
 include infra/ninja/image.be.ninja
+jail = 143
 
 # 14.2
 
 build ${build_dir}/packages.${jail}.done: packages | ${src_root}/${image_name}.ports
-  jail = 142
+  jail = ${jail}
 
 build ${ninja_out}/images/${image_name}-${jail}.be.zfs: build-be | ${build_dir}/packages.${jail}.done ${build_be_sh}
-  jail = 142
+  jail = ${jail}
 
 build mod.images.${image_name}-${jail}: phony ${ninja_out}/images/${image_name}-${jail}.be.zfs
-  jail = 142
+  jail = ${jail}
 
 build run.${image_name}-${jail}.deploy: deploy ${ninja_out}/images/${image_name}-${jail}.be.zfs ${src_root}/dist/dist.mtree ${src_root}/dist/data.mtree
   tz = US/Pacific
   users = root patmaddox
   groups = operator patmaddox video webcamd wheel
-  jail = 142
+  jail = ${jail}
