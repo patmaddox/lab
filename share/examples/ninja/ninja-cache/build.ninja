@@ -2,12 +2,16 @@ tool_cache_get = cp
 tool_cache_put = cp
 
 rule cc-lib
-  command = ${tool_cache_get} ${out}-${hash} ${out} || (cc -o ${out} -shared -fPIC -Wall -Werror -Wextra -Wpedantic ${in} && ${tool_cache_put} ${out} ${out}-${hash})
+  command = hash=$$(cat ${out}.deps); ${tool_cache_get} ${out}-$${hash} ${out} || (cc -o ${out} -shared -fPIC -Wall -Werror -Wextra -Wpedantic ${in} && ${tool_cache_put} ${out} ${out}-$${hash})
 
 rule cc-bin
   command = cc -o ${out} -Wall -Werror -Wextra -Wpedantic ${in}
 
-build _build/libhello.so: cc-lib libhello.c
-  hash = abc123
+rule hash-deps
+  command = sha256sum ${in} | sha256 -q > ${out}
+
+build _build/libhello.so.deps: hash-deps libhello.c
+
+build _build/libhello.so: cc-lib libhello.c | _build/libhello.so.deps
 
 build _build/hello: cc-bin hello.c _build/libhello.so
