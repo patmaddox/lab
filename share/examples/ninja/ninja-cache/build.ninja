@@ -1,9 +1,13 @@
+tool_cache_get = cp 
+tool_cache_put = cp
+
 rule cc-lib
-  command = cc -o ${out} -shared -fPIC -Wall -Werror -Wextra -Wpedantic ${in}
+  command = ${tool_cache_get} ${out}-${hash} ${out} || (cc -o ${out} -shared -fPIC -Wall -Werror -Wextra -Wpedantic ${in} && ${tool_cache_put} ${out} ${out}-${hash})
 
 rule cc-bin
   command = cc -o ${out} -Wall -Werror -Wextra -Wpedantic ${in}
 
 build _build/libhello.so: cc-lib libhello.c
+  hash = abc123
 
 build _build/hello: cc-bin hello.c _build/libhello.so
