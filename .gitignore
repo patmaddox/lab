@@ -6,9 +6,11 @@
 .ninja_deps
 .ninja_log
 .plzconfig.local
+.pnpm-store
 /wiki
 _build
 bin
 ninja-out
+node_modules
 notes
 tmp/*
