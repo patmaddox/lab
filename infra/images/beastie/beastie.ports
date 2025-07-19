@@ -17,8 +17,6 @@ devel/git-subrepo
 devel/gmake
 devel/hs-git-annex
 devel/jujutsu
-devel/maven
-devel/maven39
 devel/ninja
 devel/ob-rust
 devel/pcsc-lite
@@ -35,11 +33,7 @@ emulators/linux_base-rl9
 ftp/wget
 graphics/drm-61-kmod
 graphics/gpu-firmware-amd-kmod@dimgrey_cavefish
-graphics/maim
 graphics/mesa-demos
-java/eclipse
-java/openjdk21
-java/openjfx14
 lang/elixir-devel
 lang/erlang-runtime27
 lang/erlang-runtime28
@@ -70,8 +64,6 @@ security/libsodium
 security/nmap
 security/sudo
 security/tailscale
-security/u2f-devd
-security/yubico-piv-tool
 shells/zsh
 sysutils/ansible@py311
 sysutils/ansible-sshjail
@@ -103,7 +95,6 @@ www/deno
 www/firefox
 www/nginx
 www/tailwindcss4
-www/tomcat101
 www/zola
 x11-fonts/noto-emoji
 x11-wm/i3
