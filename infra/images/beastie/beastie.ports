@@ -10,6 +10,7 @@ devel/atf
 devel/autoconf
 devel/ccache
 devel/cmake
+devel/esbuild
 devel/fossil
 devel/git
 devel/git-subrepo
@@ -30,6 +31,7 @@ devel/valgrind-devel
 dns/bind-tools
 editors/emacs@nox
 editors/libreoffice
+emulators/linux_base-rl9
 ftp/wget
 graphics/drm-61-kmod
 graphics/gpu-firmware-amd-kmod@dimgrey_cavefish
@@ -44,6 +46,7 @@ lang/erlang-runtime28
 lang/gcc
 lang/gleam
 lang/go123
+lang/python
 lang/python310
 lang/rust
 lang/tcl-wrapper
@@ -51,6 +54,8 @@ lang/zig
 misc/py-aider-chat@py311
 multimedia/webcamd
 net/google-cloud-sdk
+net/haproxy
+net/py-netaddr@py311
 net/rsync
 net/speedtest-go
 ports-mgmt/pkg
@@ -63,10 +68,13 @@ security/aws-vault
 security/doas
 security/libsodium
 security/nmap
+security/sudo
 security/tailscale
 security/u2f-devd
 security/yubico-piv-tool
 shells/zsh
+sysutils/ansible@py311
+sysutils/ansible-sshjail
 sysutils/bhyve-firmware
 sysutils/bottom
 sysutils/btop
@@ -94,7 +102,7 @@ www/darkhttpd
 www/deno
 www/firefox
 www/nginx
-www/npm
+www/tailwindcss4
 www/tomcat101
 www/zola
 x11-fonts/noto-emoji
