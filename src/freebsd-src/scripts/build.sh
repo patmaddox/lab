@@ -126,6 +126,7 @@ _make() {
 	       SRCCONF=${SRCCONF} \
 	       OBJROOT=${OBJROOT} \
 	       CCACHE_CONFIGPATH=${CCACHE_CONFIGPATH} \
+         nice -n 20 bear --append --force-wrapper --output ${REPO_ROOT}/compile_commands.json -- \
 	       make \
 	       -C ${SRC_ROOT} \
 	       -s \

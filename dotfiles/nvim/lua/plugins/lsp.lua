@@ -6,5 +6,9 @@ return {
     lspconfig.elixirls.setup({
       cmd = { vim.fn.expand("~/.emacs.dev/dist/elixir-ls-v0.27.2/language_server.sh") },
     })
+
+    lspconfig.clangd.setup({
+      cmd = { "/usr/local/llvm19/bin/clangd" }
+    })
   end,
 }
