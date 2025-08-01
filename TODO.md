@@ -1,4 +1,4 @@
 # TODO
 
-- [ ] Auto format markdown files
+- [x] Auto format markdown files
 - [ ] Automate repo branching for new objectives
