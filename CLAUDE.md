@@ -60,6 +60,7 @@ This monorepo exists to facilitate rapid exploration, creation, and sharing of s
 - **Prioritize authoritative sources**: Always prefer official documentation and source code over blog posts and community content
 - Use unofficial sources as points of departure to better understand and explore authoritative materials
 - Treat community content and tutorials with appropriate skepticism while leveraging them for context
+- When adding research topics to `research/TOPICS.md`, use simple bullet points without detailed structure
 
 ### Claude the Writer's Assistant
 - Analyze rough drafts to identify key ideas and themes
