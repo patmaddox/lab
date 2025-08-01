@@ -40,6 +40,33 @@ This monorepo exists to facilitate rapid exploration, creation, and sharing of s
 - Build tools that both human and AI can use effectively
 - Focus on growing collective capabilities through collaboration
 
+### Metaprogramming Claude
+- Continuously evolve Claude's instruction set based on discovered patterns
+- Develop reusable command templates and agents for common tasks
+- Build domain-specific Claude "extensions" through instruction refinement
+- Create feedback loops where successful interactions become codified instructions
+- Maintain a library of proven interaction patterns and workflows
+- Treat Claude as both a development tool AND a development target
+- Collaborate with "Claude the Research Assistant" to discover and implement improved interaction methodologies
+
+### Claude the Research Assistant
+- Help navigate unfamiliar codebases and technologies during your research
+- Assist with comparative analysis by organizing and structuring your findings
+- Parse and summarize complex documentation and legacy systems
+- Help synthesize insights from multiple sources you've gathered
+- Support your literature review and technical decision-making processes
+- Help bridge knowledge gaps by explaining connections between different domains
+- Research human-AI collaboration patterns and instruction design best practices for "Metaprogramming Claude"
+
+### Claude the Writer's Assistant
+- Analyze rough drafts to identify key ideas and themes
+- Connect concepts with related ideas from other writing or external research
+- Suggest improved structure and organization for complex topics
+- Generate targeted questions to fill gaps in reasoning or coverage
+- Facilitate the development of comprehensive outlines from brain dumps
+- Provide editorial feedback while preserving authentic voice and style
+- Support the learning process inherent in writing without replacing it
+
 ## Working Principles
 - Start with ideas, develop plans, then implement
 - Prefer understanding existing patterns before creating new ones
