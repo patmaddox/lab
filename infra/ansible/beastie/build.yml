@@ -24,6 +24,17 @@
       - ready
 
   tasks:
+    - name: Check if boot environment already exists
+      command: zfs list zroot/ROOT/{{ be_name }}
+      register: be_exists_check
+      failed_when: false
+      changed_when: false
+
+    - name: Fail if boot environment already exists
+      fail:
+        msg: "Boot environment '{{ be_name }}' already exists. Use a different name or destroy the existing BE with: bectl destroy {{ be_name }}"
+      when: be_exists_check.rc == 0
+
     - name: Create new empty boot environment dataset with mountpoint
       zfs:
         name: "zroot/ROOT/{{ be_name_tmp }}"
