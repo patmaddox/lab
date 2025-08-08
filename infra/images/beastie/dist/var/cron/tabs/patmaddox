@@ -1,0 +1,5 @@
+SHELL=/bin/sh
+TZ=UTC/UTC
+
+*/2 * * * * doas sanoid --take-snapshots
+5 * * * * syncoid -q --compress=none -r --no-sync-snap --use-hold --no-rollback --sendoptions="Lc" --recvoptions="u" --no-privilege-elevation zroot/safe andre-backup:hdd/crypt/snaps/safe/beastie--zroot--safe && sync && doas sanoid --prune-snapshots
