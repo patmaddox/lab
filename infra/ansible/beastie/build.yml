@@ -12,7 +12,7 @@
     be_name_tmp: "{{ be_name }}-TMP"
     be_mount: "/tmp/be-{{ be_name_tmp }}"
     freebsd_src_path: "../../../ninja-out/freebsd-src/14.3"
-    expected_snapshots: ['empty', 'base', 'kernel', 'tests', 'packages', 'ready']
+    expected_snapshots: ['empty', 'base', 'kernel', 'tests', 'packages', 'config_base', 'ready']
 
   tasks:
     - name: Create new empty boot environment dataset with mountpoint
@@ -80,6 +80,19 @@
         cat ../../images/beastie/beastie.ports | xargs pkg -r "{{ be_mount }}" install -r poudriere -y
         zfs snapshot zroot/ROOT/{{ be_name_tmp }}@packages
       when: packages_snapshot_check.rc != 0
+
+    - name: Check if config_base snapshot exists
+      command: zfs list -t snapshot zroot/ROOT/{{ be_name_tmp }}@config_base
+      register: config_base_snapshot_check
+      failed_when: false
+      changed_when: false
+
+    - name: Copy configuration files using mtree manifest
+      shell: |
+        set -eo pipefail
+        tar -C ../../images/beastie/dist -c @dist.mtree | tar -C "{{ be_mount }}" -x
+        zfs snapshot zroot/ROOT/{{ be_name_tmp }}@config_base
+      when: config_base_snapshot_check.rc != 0
 
     - name: Create ready snapshot of completed boot environment
       zfs:
