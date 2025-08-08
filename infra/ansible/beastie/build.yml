@@ -35,12 +35,23 @@
         msg: "Boot environment '{{ be_name }}' already exists. Use a different name or destroy the existing BE with: bectl destroy {{ be_name }}"
       when: be_exists_check.rc == 0
 
-    - name: Create new empty boot environment dataset with mountpoint
+    - name: Create new empty boot environment
       zfs:
         name: "zroot/ROOT/{{ be_name_tmp }}"
         state: present
         extra_zfs_properties:
-          mountpoint: "{{ be_mount }}"
+          mountpoint: none
+
+    - name: Check if boot environment is already mounted
+      command: zfs get -H -o value mounted zroot/ROOT/{{ be_name_tmp }}
+      register: mount_check
+      changed_when: false
+
+    - name: Mount boot environment using bectl
+      command: bectl mount {{ be_name_tmp }} {{ be_mount }}
+      when: mount_check.stdout == "no"
+      register: did_mount
+      changed_when: false
 
     - name: Create empty snapshot of empty boot environment
       zfs:
@@ -186,6 +197,10 @@
       changed_when: false
       failed_when: final_snapshot_order.stdout_lines != expected_snapshots
       ignore_errors: false
+
+    - name: Unmount boot environment
+      command: bectl umount {{ be_name_tmp }}
+      changed_when: false
 
     - name: Report activation command
       debug:
