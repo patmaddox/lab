@@ -11,6 +11,8 @@
   vars:
     be_name_tmp: "{{ be_name }}-TMP"
     be_mount: "/tmp/be-{{ be_name_tmp }}"
+    freebsd_src_path: "../../../ninja-out/freebsd-src/14.3"
+    expected_snapshots: ['empty', 'base', 'kernel', 'tests', 'ready']
 
   tasks:
     - name: Create new empty boot environment dataset with mountpoint
@@ -25,7 +27,50 @@
         name: "zroot/ROOT/{{ be_name_tmp }}@empty"
         state: present
 
+    - name: Check if base extraction snapshot exists
+      command: zfs list -t snapshot zroot/ROOT/{{ be_name_tmp }}@base
+      register: base_snapshot_check
+      failed_when: false
+      changed_when: false
+
+    - name: Extract base FreeBSD system
+      shell: |
+        tar -xf "{{ freebsd_src_path }}/base.txz" -C "{{ be_mount }}" &&
+        zfs snapshot zroot/ROOT/{{ be_name_tmp }}@base
+      when: base_snapshot_check.rc != 0
+
+    - name: Check if kernel extraction snapshot exists
+      command: zfs list -t snapshot zroot/ROOT/{{ be_name_tmp }}@kernel
+      register: kernel_snapshot_check
+      failed_when: false
+      changed_when: false
+
+    - name: Extract FreeBSD kernel
+      shell: |
+        tar -xf "{{ freebsd_src_path }}/kernel.txz" -C "{{ be_mount }}" &&
+        zfs snapshot zroot/ROOT/{{ be_name_tmp }}@kernel
+      when: kernel_snapshot_check.rc != 0
+
+    - name: Check if tests extraction snapshot exists
+      command: zfs list -t snapshot zroot/ROOT/{{ be_name_tmp }}@tests
+      register: tests_snapshot_check
+      failed_when: false
+      changed_when: false
+
+    - name: Extract FreeBSD tests
+      shell: |
+        tar -xf "{{ freebsd_src_path }}/tests.txz" -C "{{ be_mount }}" &&
+        zfs snapshot zroot/ROOT/{{ be_name_tmp }}@tests
+      when: tests_snapshot_check.rc != 0
+
     - name: Create ready snapshot of completed boot environment
       zfs:
         name: "zroot/ROOT/{{ be_name_tmp }}@ready"
         state: present
+
+    - name: Validate snapshot order
+      shell: zfs list -t snap -H -s creation -o name zroot/ROOT/{{ be_name_tmp }} | sed -e 's|^zroot/ROOT/{{ be_name_tmp }}@||'
+      register: final_snapshot_order
+      changed_when: false
+      failed_when: final_snapshot_order.stdout_lines != expected_snapshots
+      ignore_errors: false
