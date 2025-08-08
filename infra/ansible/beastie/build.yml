@@ -102,6 +102,7 @@
         set -eo pipefail
         tar -C ../../images/beastie/dist -c @dist.mtree |
           tar -C "{{ be_mount }}" -x
+        tzsetup -C "{{ be_mount }}" {{ timezone }}
         zfs snapshot zroot/ROOT/{{ be_name_tmp }}@config_base
       when: config_base_snapshot_check.rc != 0
 
