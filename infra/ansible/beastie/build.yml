@@ -12,7 +12,7 @@
     be_name_tmp: "{{ be_name }}-TMP"
     be_mount: "/tmp/be-{{ be_name_tmp }}"
     freebsd_src_path: "../../../ninja-out/freebsd-src/14.3"
-    expected_snapshots: ['empty', 'base', 'kernel', 'tests', 'packages', 'config_base', 'ready']
+    expected_snapshots: ['empty', 'base', 'kernel', 'tests', 'packages', 'config_base', 'users', 'ready']
 
   tasks:
     - name: Create new empty boot environment dataset with mountpoint
@@ -93,6 +93,26 @@
         tar -C ../../images/beastie/dist -c @dist.mtree | tar -C "{{ be_mount }}" -x
         zfs snapshot zroot/ROOT/{{ be_name_tmp }}@config_base
       when: config_base_snapshot_check.rc != 0
+
+    - name: Check if users snapshot exists
+      command: zfs list -t snapshot zroot/ROOT/{{ be_name_tmp }}@users
+      register: users_snapshot_check
+      failed_when: false
+      changed_when: false
+
+    - name: Sync users and groups from current BE
+      shell: |
+        set -eo pipefail
+        # Sync users
+        for user in root patmaddox; do
+          ../../../src/sync-pw/sync-pw /etc "{{ be_mount }}/etc" u $user
+        done
+        # Sync groups  
+        for group in wheel operator video webcamd patmaddox; do
+          ../../../src/sync-pw/sync-pw /etc "{{ be_mount }}/etc" g $group
+        done
+        zfs snapshot zroot/ROOT/{{ be_name_tmp }}@users
+      when: users_snapshot_check.rc != 0
 
     - name: Create ready snapshot of completed boot environment
       zfs:
