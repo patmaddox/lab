@@ -1,9 +1,9 @@
 ---
 - name: Create FreeBSD Boot Environment
   hosts: localhost
-  become: yes
+  become: true
   connection: local
-  gather_facts: yes
+  gather_facts: true
 
   vars_files:
     - vars.yml
@@ -12,7 +12,16 @@
     be_name_tmp: "{{ be_name }}-TMP"
     be_mount: "/tmp/be-{{ be_name_tmp }}"
     freebsd_src_path: "../../../ninja-out/freebsd-src/14.3"
-    expected_snapshots: ['empty', 'base', 'kernel', 'tests', 'packages', 'config_base', 'users', 'data', 'ready']
+    expected_snapshots:
+      - empty
+      - base
+      - kernel
+      - tests
+      - packages
+      - config_base
+      - users
+      - data
+      - ready
 
   tasks:
     - name: Create new empty boot environment dataset with mountpoint
@@ -77,7 +86,8 @@
     - name: Install packages
       shell: |
         set -eo pipefail
-        cat ../../images/beastie/beastie.ports | xargs pkg -r "{{ be_mount }}" install -r poudriere -y
+        cat ../../images/beastie/beastie.ports |
+          xargs pkg -r "{{ be_mount }}" install -r poudriere -y
         zfs snapshot zroot/ROOT/{{ be_name_tmp }}@packages
       when: packages_snapshot_check.rc != 0
 
@@ -90,7 +100,8 @@
     - name: Copy configuration files using mtree manifest
       shell: |
         set -eo pipefail
-        tar -C ../../images/beastie/dist -c @dist.mtree | tar -C "{{ be_mount }}" -x
+        tar -C ../../images/beastie/dist -c @dist.mtree |
+          tar -C "{{ be_mount }}" -x
         zfs snapshot zroot/ROOT/{{ be_name_tmp }}@config_base
       when: config_base_snapshot_check.rc != 0
 
@@ -107,7 +118,7 @@
         for user in root patmaddox; do
           ../../../src/sync-pw/sync-pw /etc "{{ be_mount }}/etc" u $user
         done
-        # Sync groups  
+        # Sync groups
         for group in wheel operator video webcamd patmaddox; do
           ../../../src/sync-pw/sync-pw /etc "{{ be_mount }}/etc" g $group
         done
@@ -123,7 +134,8 @@
     - name: Copy data files using mtree manifest
       shell: |
         set -eo pipefail
-        tar -C / -c @$(realpath ../../images/beastie/dist/data.mtree) | tar -C "{{ be_mount }}" -x
+        tar -C / -c @$(realpath ../../images/beastie/dist/data.mtree) |
+          tar -C "{{ be_mount }}" -x
         zfs snapshot zroot/ROOT/{{ be_name_tmp }}@data
       when: data_snapshot_check.rc != 0
 
@@ -133,7 +145,9 @@
         state: present
 
     - name: Validate snapshot order
-      shell: zfs list -t snap -H -s creation -o name zroot/ROOT/{{ be_name_tmp }} | sed -e 's|^zroot/ROOT/{{ be_name_tmp }}@||'
+      shell: |
+        zfs list -t snap -H -s creation -o name zroot/ROOT/{{ be_name_tmp }} |
+          sed -e 's|^zroot/ROOT/{{ be_name_tmp }}@||'
       register: final_snapshot_order
       changed_when: false
       failed_when: final_snapshot_order.stdout_lines != expected_snapshots
