@@ -12,7 +12,7 @@
     be_name_tmp: "{{ be_name }}-TMP"
     be_mount: "/tmp/be-{{ be_name_tmp }}"
     freebsd_src_path: "../../../ninja-out/freebsd-src/14.3"
-    expected_snapshots: ['empty', 'base', 'kernel', 'tests', 'packages', 'config_base', 'users', 'ready']
+    expected_snapshots: ['empty', 'base', 'kernel', 'tests', 'packages', 'config_base', 'users', 'data', 'ready']
 
   tasks:
     - name: Create new empty boot environment dataset with mountpoint
@@ -113,6 +113,19 @@
         done
         zfs snapshot zroot/ROOT/{{ be_name_tmp }}@users
       when: users_snapshot_check.rc != 0
+
+    - name: Check if data snapshot exists
+      command: zfs list -t snapshot zroot/ROOT/{{ be_name_tmp }}@data
+      register: data_snapshot_check
+      failed_when: false
+      changed_when: false
+
+    - name: Copy data files using mtree manifest
+      shell: |
+        set -eo pipefail
+        tar -C / -c @$(realpath ../../images/beastie/dist/data.mtree) | tar -C "{{ be_mount }}" -x
+        zfs snapshot zroot/ROOT/{{ be_name_tmp }}@data
+      when: data_snapshot_check.rc != 0
 
     - name: Create ready snapshot of completed boot environment
       zfs:
