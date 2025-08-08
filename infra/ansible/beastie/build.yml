@@ -1,0 +1,31 @@
+---
+- name: Create FreeBSD Boot Environment
+  hosts: localhost
+  become: yes
+  connection: local
+  gather_facts: yes
+
+  vars_files:
+    - vars.yml
+
+  vars:
+    be_name_tmp: "{{ be_name }}-TMP"
+    be_mount: "/tmp/be-{{ be_name_tmp }}"
+
+  tasks:
+    - name: Create new empty boot environment dataset with mountpoint
+      zfs:
+        name: "zroot/ROOT/{{ be_name_tmp }}"
+        state: present
+        extra_zfs_properties:
+          mountpoint: "{{ be_mount }}"
+
+    - name: Create empty snapshot of empty boot environment
+      zfs:
+        name: "zroot/ROOT/{{ be_name_tmp }}@empty"
+        state: present
+
+    - name: Create ready snapshot of completed boot environment
+      zfs:
+        name: "zroot/ROOT/{{ be_name_tmp }}@ready"
+        state: present
