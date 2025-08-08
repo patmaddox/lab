@@ -1,0 +1,282 @@
+#!/bin/sh
+
+set -e
+
+main() {
+    verbose=false
+    if [ "$1" = "-v" ]; then
+        verbose=true
+        shift
+    fi
+    
+    load_config
+
+    case "${1:-init}" in
+    clone)
+        trap cleanup_tmp_files EXIT INT TERM
+        cmd_clone
+        ;;
+    workspaces)
+        trap cleanup_tmp_files EXIT INT TERM
+        cmd_workspaces
+        ;;
+    build)
+        shift
+        cmd_build "$1"
+        ;;
+    clean)
+        shift
+        cmd_clean "$1"
+        ;;
+    status)
+        cmd_status
+        ;;
+    init)
+        trap cleanup_tmp_files EXIT INT TERM
+        cmd_clone
+        cmd_workspaces
+        ;;
+    help|--help|-h)
+        usage
+        ;;
+    *)
+        error "Unknown command: $1. Use '$0 help' for usage."
+        ;;
+    esac
+}
+
+usage() {
+    cat << EOF
+Usage: $0 [-v] [command] [args...]
+
+Options:
+    -v                  - Verbose logging
+
+Commands:
+    init                - Clone repository and create workspaces (default)
+    clone               - Clone the repository only
+    workspaces          - Create workspaces for all refs
+    build <name>        - Build in specified workspace (name or path)
+    clean [name]        - Remove all workspaces, or single workspace if specified
+    status              - Show current state
+    help                - Show this help
+
+Configuration:
+    Edit repoman.conf to set repoman_repo_url, repoman_refs, and repoman_build_cmd
+    Use REPOMAN_CONFIG environment variable to specify alternate config file
+
+Examples:
+    ./repoman                        # Run init with repoman.conf
+    ./repoman -v init                # Run init with verbose logging
+    ./repoman build main             # Build in main.jj workspace
+    ./repoman clean                  # Remove all workspaces
+    ./repoman clean develop          # Remove only develop.jj workspace
+    REPOMAN_CONFIG=project.conf ./repoman init
+EOF
+}
+
+load_config() {
+    CONFIG_FILE="${REPOMAN_CONFIG:-repoman.conf}"
+
+    if [ -f "$CONFIG_FILE" ]; then
+        . "$CONFIG_FILE"
+    else
+        error "Configuration file '$CONFIG_FILE' not found"
+    fi
+    
+    missing=""
+    
+    if [ -z "$repoman_repo_url" ]; then
+        missing="$missing repoman_repo_url"
+    fi
+    
+    if [ -z "$repoman_refs" ]; then
+        missing="$missing repoman_refs"
+    fi
+    
+    if [ -z "$repoman_build_cmd" ]; then
+        missing="$missing repoman_build_cmd"
+    fi
+    
+    if [ -n "$missing" ]; then
+        error "Missing required configuration variables:$missing"
+    fi
+}
+
+log() {
+    if [ "$verbose" = "true" ]; then
+        echo "[$(date '+%H:%M:%S')] $*" >&2
+    fi
+}
+
+error() {
+    echo "[$(date '+%H:%M:%S')] ERROR: $*" >&2
+    exit 1
+}
+
+clone_repo() {
+    if [ -d "default.jj/.jj" ]; then
+        log "Repository already cloned"
+        return 0
+    fi
+    
+    log "Cloning repository: $repoman_repo_url"
+    if ! jj git clone --colocate "$repoman_repo_url" default.jj.tmp; then
+        rm -rf default.jj.tmp
+        error "Failed to clone repository"
+    fi
+    
+    mv default.jj.tmp default.jj
+    log "Repository cloned successfully"
+}
+
+forget_workspace_if_orphaned() {
+    workspace_name="$1"
+    
+    if jj -R default.jj workspace list 2>/dev/null | grep -q "^$workspace_name:"; then
+        log "Forgetting orphaned workspace: $workspace_name"
+        jj -R default.jj workspace forget "$workspace_name" 2>/dev/null || true
+    fi
+}
+
+create_workspace() {
+    ref="$1"
+    
+    if [ -d "$ref.jj" ]; then
+        log "Workspace '$ref' already exists"
+        return 0
+    fi
+    
+    forget_workspace_if_orphaned "$ref"
+    
+    log "Creating workspace for: $ref"
+    if ! jj -R default.jj workspace add --name "$ref" -r "$ref" "$ref.jj.tmp" 2>/dev/null; then
+        rm -rf "$ref.jj.tmp"
+        log "WARNING: Failed to create workspace for '$ref' (ref may not exist)"
+        return 1
+    fi
+    
+    mv "$ref.jj.tmp" "$ref.jj"
+    log "Workspace '$ref' created successfully"
+    return 0
+}
+
+resolve_workspace() {
+    workspace="$1"
+    
+    if [ -z "$workspace" ]; then
+        error "No workspace specified"
+    fi
+    
+    if [ -d "$workspace" ]; then
+        echo "$workspace"
+        return 0
+    fi
+    
+    if [ -d "$workspace.jj" ]; then
+        echo "$workspace.jj"
+        return 0
+    fi
+    
+    return 1
+}
+
+build_workspace() {
+    workspace="$1"
+    
+    if ! workspace_path=$(resolve_workspace "$workspace"); then
+        error "Workspace '$workspace' does not exist"
+    fi
+    
+    log "Building in workspace: $workspace_path"
+    if (cd "$workspace_path" && eval "$repoman_build_cmd"); then
+        log "Build successful in: $workspace_path"
+        return 0
+    else
+        log "Build failed in: $workspace_path"
+        return 1
+    fi
+}
+
+cleanup_tmp_files() {
+    log "Cleaning up temporary files"
+    rm -rf *.jj.tmp
+}
+
+cmd_clone() {
+    clone_repo
+}
+
+cmd_workspaces() {
+    clone_repo
+    
+    success_count=0
+    total_count=0
+    
+    for ref in $repoman_refs; do
+        total_count=$((total_count + 1))
+        if create_workspace "$ref"; then
+            success_count=$((success_count + 1))
+        fi
+    done
+    
+    log "Created $success_count/$total_count workspaces"
+}
+
+cmd_build() {
+    workspace="$1"
+    
+    if [ -z "$workspace" ]; then
+        error "build command requires a workspace name or path"
+    fi
+    
+    build_workspace "$workspace"
+}
+
+cmd_clean() {
+    workspace="$1"
+    
+    if [ -z "$workspace" ]; then
+        log "Removing all workspaces"
+        rm -rf *.jj *.jj.tmp
+        log "Clean complete"
+    else
+        if ! workspace_path=$(resolve_workspace "$workspace"); then
+            error "Workspace '$workspace' does not exist"
+        fi
+        
+        log "Removing workspace: $workspace_path"
+        rm -rf "$workspace_path"
+        rm -rf "$workspace.jj.tmp" "${workspace_path}.tmp"
+        log "Workspace '$workspace' removed"
+    fi
+}
+
+cmd_status() {
+    echo "Configuration file: $CONFIG_FILE"
+    echo "Repository: $repoman_repo_url"
+    echo "References: $repoman_refs"
+    echo "Build command: $repoman_build_cmd"
+    echo
+    
+    if [ -d "default.jj" ]; then
+        echo "✓ Repository cloned"
+    else
+        echo "✗ Repository not cloned"
+    fi
+    
+    workspace_count=0
+    for ref in $repoman_refs; do
+        if [ -d "$ref.jj" ]; then
+            echo "✓ Workspace: $ref"
+            workspace_count=$((workspace_count + 1))
+        else
+            echo "✗ Workspace: $ref"
+        fi
+    done
+    
+    echo
+    echo "Workspaces: $workspace_count created"
+}
+
+main "$@"
