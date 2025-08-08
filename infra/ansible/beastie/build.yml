@@ -48,6 +48,17 @@
         zfs snapshot zroot/ROOT/{{ be_name_tmp }}@base
       when: base_snapshot_check.rc != 0
 
+    - name: Validate userland version
+      command: chroot "{{ be_mount }}" /bin/freebsd-version
+      register: freebsd_version_check
+      failed_when: false
+      changed_when: false
+
+    - name: Fail if userland version mismatch
+      fail:
+        msg: "Userland version mismatch. Expected '{{ expected_userland_version }}' but got '{{ freebsd_version_check.stdout }}'"
+      when: freebsd_version_check.stdout != expected_userland_version
+
     - name: Check if kernel extraction snapshot exists
       command: zfs list -t snapshot zroot/ROOT/{{ be_name_tmp }}@kernel
       register: kernel_snapshot_check
@@ -59,6 +70,17 @@
         tar -xf "{{ freebsd_src_path }}/kernel.txz" -C "{{ be_mount }}" &&
         zfs snapshot zroot/ROOT/{{ be_name_tmp }}@kernel
       when: kernel_snapshot_check.rc != 0
+
+    - name: Validate kernel version
+      command: what -q "{{ be_mount }}/boot/kernel/kernel"
+      register: kernel_version_check
+      failed_when: false
+      changed_when: false
+
+    - name: Fail if kernel version mismatch
+      fail:
+        msg: "Kernel version mismatch. Expected '{{ expected_kernel_version }}' but got '{{ kernel_version_check.stdout }}'"
+      when: kernel_version_check.stdout != expected_kernel_version
 
     - name: Check if tests extraction snapshot exists
       command: zfs list -t snapshot zroot/ROOT/{{ be_name_tmp }}@tests
