@@ -9,7 +9,7 @@
     - vars.yml
 
   vars:
-    be_name_tmp: "{{ be_name }}-TMP"
+    be_name_tmp: "{{ be_name }}-NEW"
     be_mount: "/tmp/be-{{ be_name_tmp }}"
     freebsd_src_path: "../../../ninja-out/freebsd-src/14.3"
     expected_snapshots:
@@ -153,3 +153,11 @@
       changed_when: false
       failed_when: final_snapshot_order.stdout_lines != expected_snapshots
       ignore_errors: false
+
+    - name: Report activation command
+      debug:
+        msg: |
+          Boot environment {{ be_name_tmp }} has been created successfully.
+          To temporarily activate it for the next boot, run:
+            bectl activate -t {{ be_name_tmp }}
+          Then reboot to test.
