@@ -5,6 +5,14 @@ release := "releng-14.2"
 help:
   just -l
 
+# Build beastie image via ninja
+build:
+    ninja -C ../../.. mod.images.beastie-143
+
+# Deploy the image via ninja (builds if needed)
+deploy:
+    ninja -C ../../.. run.beastie-143.deploy
+
 # Create a new, fully-configured boot environment
 new-be:
   {{newbe_src}}/new-be beastie.conf
@@ -16,3 +24,8 @@ import-config:
 # Update portsfile with list of manually-installed ports
 update-ports:
   {{newbe_src}}/list-ports | tee $(hostname -s).ports
+
+# Clean build artifacts
+clean:
+    rm -rf _build dist
+    ninja -C ../../.. -t clean mod.images.beastie-143
