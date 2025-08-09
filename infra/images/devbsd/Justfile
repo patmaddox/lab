@@ -1,0 +1,12 @@
+# Build devbsd ZFS image
+build:
+    ninja -C ../../.. images.devbsd
+
+# Deploy the image (builds if needed)
+deploy:
+    ninja -C ../../.. run.devbsd.deploy
+
+# Clean build artifacts
+clean:
+    rm -rf _build dist
+    ninja -C ../../.. -t clean images.devbsd
