@@ -16,31 +16,18 @@ ccache-watch wait='5':
 clone:
   if [ ! -d main.jj ]; then jj git clone --colocate https://github.com/freebsd/freebsd-src.git main.jj; fi
 
-# Build every config
+# Build all FreeBSD versions
 build-all *args:
-   {{ninja}} {{args}} freebsd.build
+   {{ninja}} {{args}} mod.pkg.freebsd
 
-# Build and release every config
-release-all *args:
-  {{ninja}} {{args}} freebsd.release
-
-# DWIM build - from scratch if needed, fast if possible
+# Build FreeBSD release tarballs (base.txz kernel.txz etc)
 build config:
-  {{ninja}} freebsd.build.{{config}}
+  {{ninja}} freebsd.{{config}}
 
-# Clean everything with the config (cleanworld)
+# Clean build artifacts
 clean config:
   ./scripts/build.sh clean config/{{config}}.conf
-  {{ninja}} -t clean freebsd.build.{{config}}
-
-# Build release tarballs (base.txz kernel.txz etc)
-release config:
-  {{ninja}} freebsd.release.{{config}}
-
-# Clean release tarballs
-clean-release config:
-  ./scripts/build.sh clean-release config/{{config}}.conf
-  {{ninja}} -t clean freebsd.release.{{config}}
+  {{ninja}} -t clean freebsd.{{config}}
 
 # print .OBJDIR for the build
 objdir config:
