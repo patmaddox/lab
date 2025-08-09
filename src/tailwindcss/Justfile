@@ -1,0 +1,14 @@
+# Build tailwindcss standalone binary
+build version="v4.1.11":
+    ./build.sh {{version}}.jj
+
+# List available versions
+versions:
+    @ls -d *.jj | sed 's/.jj$//'
+
+# Clean build artifacts
+clean version="v4.1.11":
+    rm -rf node_modules
+    rm -rf {{version}}.jj/node_modules
+    rm -rf {{version}}.jj/standalone-cli/dist
+    rm -rf {{version}}.jj/standalone-cli/node_modules
