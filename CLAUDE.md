@@ -198,6 +198,7 @@ Supporting the collaborative goal of "growing collective capabilities" while res
 
 ## File Handling Rules
 
+- **ALWAYS end files with newlines**: Every file created or edited MUST end with a newline character. No exceptions.
 - ALWAYS run `mdformat` on any markdown file after modifying it
 
 ______________________________________________________________________
