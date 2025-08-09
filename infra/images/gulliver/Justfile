@@ -5,6 +5,14 @@ release := "releng-14.2"
 help:
   just -l
 
+# Build gulliver image via ninja
+build version="143":
+    ninja -C ../../.. mod.images.gulliver-{{version}}
+
+# Deploy the image via ninja (builds if needed)
+deploy version="143":
+    ninja -C ../../.. run.gulliver-{{version}}.deploy
+
 # Create a new, fully-configured boot environment
 new-be name:
   packages="{{freebsd_src}}/_build/{{release}}/amd64.amd64/release"; \
@@ -17,3 +25,8 @@ import-config:
 # Update portsfile with list of manually-installed ports
 update-ports:
   {{newbe_src}}/list-ports | tee $(hostname -s).ports
+
+# Clean build artifacts
+clean version="143":
+    rm -rf _build dist
+    ninja -C ../../.. -t clean mod.images.gulliver-{{version}}
