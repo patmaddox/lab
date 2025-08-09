@@ -1,0 +1,12 @@
+# Build archie image
+build:
+    ninja -C ../../.. mod.images.archie
+
+# Deploy the image (builds if needed)
+deploy:
+    ninja -C ../../.. run.archie.deploy
+
+# Clean build artifacts
+clean:
+    rm -rf _build dist
+    ninja -C ../../.. -t clean mod.images.archie
