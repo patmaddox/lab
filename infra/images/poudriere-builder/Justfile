@@ -1,0 +1,12 @@
+# Build poudriere-builder ZFS image
+build:
+    ninja -C ../../.. images.poudriere-builder
+
+# Deploy the image (builds if needed)
+deploy:
+    ninja -C ../../.. run.poudriere-builder.deploy
+
+# Clean build artifacts
+clean:
+    rm -rf _build dist
+    ninja -C ../../.. -t clean images.poudriere-builder
