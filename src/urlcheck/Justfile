@@ -1,0 +1,15 @@
+# Build and install urlcheck to ninja-out/bin
+build:
+    ninja -C ../.. bin.urlcheck
+
+# Run tests via ninja
+test:
+    ninja -C ../.. mod.bin.urlcheck.test
+
+# Build and test
+check: test build
+
+# Clean build artifacts
+clean:
+    rm -rf _build
+    ninja -C ../.. -t clean bin.urlcheck
