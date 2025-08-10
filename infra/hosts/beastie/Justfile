@@ -11,7 +11,7 @@ build:
 
 # Deploy the image using ansible (builds if needed)
 deploy: build
-    ansible-playbook ../../ansible/beastie/build.yml
+    ansible-playbook deploy.yml
 
 # Create a new, fully-configured boot environment
 new-be:
