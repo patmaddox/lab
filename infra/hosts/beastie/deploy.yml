@@ -6,15 +6,22 @@
   connection: local
   gather_facts: true
 
-  vars_files:
-    - vars.yml
-
   vars:
+    ninja_vars: "{{ dict(lookup('file', 'build.ninja') | regex_findall('(\\w+) = (.+)')) }}"
+    host_name: "{{ ninja_vars.host_name }}"
+    jail: "{{ ninja_vars.jail }}"
+    version: "{{ ninja_vars.version }}"
+    userland: "{{ ninja_vars.userland }}"
+    kernel: "{{ ninja_vars.kernel }}"
+    timezone: "{{ ninja_vars.timezone }}"
+    sync_users: "{{ ninja_vars.users }}"
+    sync_groups: "{{ ninja_vars.groups }}"
+    be_name: "{{ host_name }}-{{ userland }}-{{ version }}"
     be_name_tmp: "{{ be_name }}-NEW"
     be_mount: "/tmp/be-{{ be_name_tmp }}"
-    image_path: "../../../ninja-out/infra/hosts/beastie/beastie-143.be.zfs"
+    image_path: "../../../ninja-out/infra/hosts/{{ host_name }}/{{ host_name }}.be.zfs"
     expected_snapshots:
-      - beastie143
+      - "{{ host_name }}{{ jail }}"
       - config_base
       - users
       - data
@@ -60,8 +67,8 @@
 
     - name: Fail if userland version mismatch
       fail:
-        msg: "Userland version mismatch. Expected '{{ expected_userland_version }}' but got '{{ freebsd_version_check.stdout }}'"
-      when: freebsd_version_check.stdout != expected_userland_version
+        msg: "Userland version mismatch. Expected '{{ userland }}' but got '{{ freebsd_version_check.stdout }}'"
+      when: freebsd_version_check.stdout != userland
 
     - name: Check if config_base snapshot exists
       command: zfs list -t snapshot zroot/ROOT/{{ be_name_tmp }}@config_base
@@ -72,7 +79,7 @@
     - name: Copy configuration files using mtree manifest
       shell: |
         set -eo pipefail
-        tar -C ../../hosts/beastie/dist -c @dist.mtree |
+        tar -C ../../hosts/{{ host_name }}/dist -c @dist.mtree |
           tar -C "{{ be_mount }}" -x
         tzsetup -C "{{ be_mount }}" {{ timezone }}
         zfs snapshot zroot/ROOT/{{ be_name_tmp }}@config_base
@@ -88,11 +95,11 @@
       shell: |
         set -eo pipefail
         # Sync users
-        for user in root patmaddox; do
+        for user in {{ sync_users }}; do
           ../../../src/sync-pw/sync-pw /etc "{{ be_mount }}/etc" u $user
         done
         # Sync groups
-        for group in wheel operator video webcamd patmaddox; do
+        for group in {{ sync_groups }}; do
           ../../../src/sync-pw/sync-pw /etc "{{ be_mount }}/etc" g $group
         done
         zfs snapshot zroot/ROOT/{{ be_name_tmp }}@users
@@ -107,7 +114,7 @@
     - name: Copy data files using mtree manifest
       shell: |
         set -eo pipefail
-        tar -C / -c @$(realpath ../../hosts/beastie/dist/data.mtree) |
+        tar -C / -c @$(realpath ../../hosts/{{ host_name }}/dist/data.mtree) |
           tar -C "{{ be_mount }}" -x
         zfs snapshot zroot/ROOT/{{ be_name_tmp }}@data
       when: data_snapshot_check.rc != 0

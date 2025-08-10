@@ -1,26 +1,13 @@
 host_name = beastie
-src_root = infra/hosts/${host_name}
-build_dir = ${src_root}/_build
 jail = 143
+version = 2025-08-09_1
 
-sync_pw = ./src/sync-pw/sync-pw
-build_be_sh = ./infra/scripts/build-be.sh
-deploy_sh = ./infra/scripts/deploy.sh
+userland = 14.3-RELEASE-p2
+kernel = FreeBSD ${userland} releng/14.3-n271439-5982521fe3dd GENERIC
 
-rule packages
-  command = ssh -t root@poudriere "poudriere bulk -j ${jail} -p main -f ~/lab.jj/${src_root}/ports" && touch ${out}
-  pool = console
+timezone = US/Pacific
 
-rule build-be
-  command = ${build_be_sh} ${host_name} ${jail} ~/lab.jj/${src_root}/ports ${out}
-  pool = console
+users = root patmaddox
+groups = wheel operator video webcamd patmaddox
 
-# Generate package list from roles
-build ${src_root}/ports: cat-roles | ${src_root}/roles
-  roles_file = ${src_root}/roles
-
-build ${build_dir}/packages.${jail}.done: packages | ${src_root}/ports
-  jail = ${jail}
-
-build ${ninja_out}/${src_root}/${host_name}-${jail}.be.zfs: build-be | ${build_dir}/packages.${jail}.done ${build_be_sh}
-  jail = ${jail}
+include infra/common/host.ninja

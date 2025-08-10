@@ -1,6 +1,0 @@
----
-be_name: "beastie-{{ expected_userland_version }}-{{ build_date }}"
-timezone: "US/Pacific"
-build_date: "2025-08-09"
-expected_userland_version: "14.3-RELEASE-p2"
-expected_kernel_version: "FreeBSD {{ expected_userland_version }} releng/14.3-n271439-5982521fe3dd GENERIC"

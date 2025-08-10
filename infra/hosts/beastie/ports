@@ -93,6 +93,7 @@ textproc/groff
 textproc/hs-pandoc
 textproc/p5-ack
 textproc/ripgrep
+textproc/zk
 www/chromium
 www/darkhttpd
 www/deno
