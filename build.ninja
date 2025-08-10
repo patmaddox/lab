@@ -30,6 +30,7 @@ build mod.pkg.images: phony mod.images.archie mod.images.devbsd mod.images.poudr
 
 subninja infra/images/archie/images.archie.ninja
 subninja infra/hosts/beastie/build.ninja
+subninja infra/hosts/gulliver/build.ninja
 subninja infra/images/gulliver/images.gulliver.ninja
 subninja infra/images/devbsd/devbsd.ninja
 subninja infra/images/poudriere-builder/poudriere-builder.ninja
