@@ -2,6 +2,7 @@
 - name: Create FreeBSD Boot Environment
   hosts: localhost
   become: true
+  become_method: doas
   connection: local
   gather_facts: true
 
@@ -11,13 +12,9 @@
   vars:
     be_name_tmp: "{{ be_name }}-NEW"
     be_mount: "/tmp/be-{{ be_name_tmp }}"
-    freebsd_src_path: "../../../ninja-out/freebsd-src/14.3"
+    image_path: "../../../ninja-out/infra/hosts/beastie/beastie-143.be.zfs"
     expected_snapshots:
-      - empty
-      - base
-      - kernel
-      - tests
-      - packages
+      - beastie143
       - config_base
       - users
       - data
@@ -35,42 +32,27 @@
         msg: "Boot environment '{{ be_name }}' already exists. Use a different name or destroy the existing BE with: bectl destroy {{ be_name }}"
       when: be_exists_check.rc == 0
 
-    - name: Create new empty boot environment
-      zfs:
-        name: "zroot/ROOT/{{ be_name_tmp }}"
-        state: present
-        extra_zfs_properties:
-          mountpoint: none
+    - name: Check if temporary boot environment already exists
+      command: zfs list zroot/ROOT/{{ be_name_tmp }}
+      register: tmp_be_exists_check
+      failed_when: false
+      changed_when: false
+
+    - name: Import pre-built boot environment
+      shell: bectl import {{ be_name_tmp }} < {{ image_path }}
+      when: tmp_be_exists_check.rc != 0
 
     - name: Check if boot environment is already mounted
       command: zfs get -H -o value mounted zroot/ROOT/{{ be_name_tmp }}
       register: mount_check
       changed_when: false
 
-    - name: Mount boot environment using bectl
+    - name: Mount boot environment for configuration
       command: bectl mount {{ be_name_tmp }} {{ be_mount }}
       when: mount_check.stdout == "no"
-      register: did_mount
       changed_when: false
 
-    - name: Create empty snapshot of empty boot environment
-      zfs:
-        name: "zroot/ROOT/{{ be_name_tmp }}@empty"
-        state: present
-
-    - name: Check if base extraction snapshot exists
-      command: zfs list -t snapshot zroot/ROOT/{{ be_name_tmp }}@base
-      register: base_snapshot_check
-      failed_when: false
-      changed_when: false
-
-    - name: Extract base FreeBSD system
-      shell: |
-        tar -xf "{{ freebsd_src_path }}/base.txz" -C "{{ be_mount }}" &&
-        zfs snapshot zroot/ROOT/{{ be_name_tmp }}@base
-      when: base_snapshot_check.rc != 0
-
-    - name: Validate userland version
+    - name: Validate imported system version
       command: chroot "{{ be_mount }}" /bin/freebsd-version
       register: freebsd_version_check
       failed_when: false
@@ -81,60 +63,6 @@
         msg: "Userland version mismatch. Expected '{{ expected_userland_version }}' but got '{{ freebsd_version_check.stdout }}'"
       when: freebsd_version_check.stdout != expected_userland_version
 
-    - name: Check if kernel extraction snapshot exists
-      command: zfs list -t snapshot zroot/ROOT/{{ be_name_tmp }}@kernel
-      register: kernel_snapshot_check
-      failed_when: false
-      changed_when: false
-
-    - name: Extract FreeBSD kernel
-      shell: |
-        tar -xf "{{ freebsd_src_path }}/kernel.txz" -C "{{ be_mount }}" &&
-        zfs snapshot zroot/ROOT/{{ be_name_tmp }}@kernel
-      when: kernel_snapshot_check.rc != 0
-
-    - name: Validate kernel version
-      command: what -q "{{ be_mount }}/boot/kernel/kernel"
-      register: kernel_version_check
-      failed_when: false
-      changed_when: false
-
-    - name: Fail if kernel version mismatch
-      fail:
-        msg: "Kernel version mismatch. Expected '{{ expected_kernel_version }}' but got '{{ kernel_version_check.stdout }}'"
-      when: kernel_version_check.stdout != expected_kernel_version
-
-    - name: Check if tests extraction snapshot exists
-      command: zfs list -t snapshot zroot/ROOT/{{ be_name_tmp }}@tests
-      register: tests_snapshot_check
-      failed_when: false
-      changed_when: false
-
-    - name: Extract FreeBSD tests
-      shell: |
-        tar -xf "{{ freebsd_src_path }}/tests.txz" -C "{{ be_mount }}" &&
-        zfs snapshot zroot/ROOT/{{ be_name_tmp }}@tests
-      when: tests_snapshot_check.rc != 0
-
-    - name: Bootstrap pkg in boot environment
-      command: pkg -r "{{ be_mount }}" bootstrap -f
-      args:
-        creates: "{{ be_mount }}/usr/sbin/pkg"
-
-    - name: Check if packages snapshot exists
-      command: zfs list -t snapshot zroot/ROOT/{{ be_name_tmp }}@packages
-      register: packages_snapshot_check
-      failed_when: false
-      changed_when: false
-
-    - name: Install packages
-      shell: |
-        set -eo pipefail
-        cat ../../images/beastie/beastie.ports |
-          xargs pkg -r "{{ be_mount }}" install -r poudriere -y
-        zfs snapshot zroot/ROOT/{{ be_name_tmp }}@packages
-      when: packages_snapshot_check.rc != 0
-
     - name: Check if config_base snapshot exists
       command: zfs list -t snapshot zroot/ROOT/{{ be_name_tmp }}@config_base
       register: config_base_snapshot_check
@@ -144,7 +72,7 @@
     - name: Copy configuration files using mtree manifest
       shell: |
         set -eo pipefail
-        tar -C ../../images/beastie/dist -c @dist.mtree |
+        tar -C ../../hosts/beastie/dist -c @dist.mtree |
           tar -C "{{ be_mount }}" -x
         tzsetup -C "{{ be_mount }}" {{ timezone }}
         zfs snapshot zroot/ROOT/{{ be_name_tmp }}@config_base
@@ -179,7 +107,7 @@
     - name: Copy data files using mtree manifest
       shell: |
         set -eo pipefail
-        tar -C / -c @$(realpath ../../images/beastie/dist/data.mtree) |
+        tar -C / -c @$(realpath ../../hosts/beastie/dist/data.mtree) |
           tar -C "{{ be_mount }}" -x
         zfs snapshot zroot/ROOT/{{ be_name_tmp }}@data
       when: data_snapshot_check.rc != 0
