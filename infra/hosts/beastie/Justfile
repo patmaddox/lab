@@ -11,7 +11,7 @@ build:
 
 # Deploy the image using ansible (builds if needed)
 deploy: build
-    ansible-playbook ../../common/deploy.yml
+    ../../common/deploy.sh
 
 # Create a new, fully-configured boot environment
 new-be:
