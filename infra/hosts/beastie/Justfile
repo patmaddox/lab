@@ -26,6 +26,10 @@ import-config:
 update-ports:
   {{newbe_src}}/list-ports | tee $(hostname -s).ports
 
+# Verify backup snapshots are in sync
+verify-backups:
+  ./libexec/verify-backups.sh
+
 # Clean build artifacts
 clean:
     rm -rf _build dist
