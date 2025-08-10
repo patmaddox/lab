@@ -4,6 +4,9 @@ bin_out = ${ninja_out}/bin
 rule sh_cmd
   command = test -x ${in} && cp ${in} ${out} && touch ${out}
 
+rule cat-roles
+  command = set -e; : > ${out}.tmp; for r in $$(cat infra/hosts/${host_name}/roles); do cat infra/roles/$${r}/ports >> $out.tmp; done; mv ${out}.tmp ${out}
+
 build all: phony mod.pkg.bin mod.pkg.freebsd mod.pkg.images mod.pkg.sites
 
 build pkg.bin: phony mod.pkg.bin
@@ -26,7 +29,7 @@ subninja src/freebsd-src/freebsd.ninja
 build mod.pkg.images: phony mod.images.archie mod.images.devbsd mod.images.poudriere-builder
 
 subninja infra/images/archie/images.archie.ninja
-subninja infra/images/beastie/images.beastie.ninja
+subninja infra/hosts/beastie/build.ninja
 subninja infra/images/gulliver/images.gulliver.ninja
 subninja infra/images/devbsd/devbsd.ninja
 subninja infra/images/poudriere-builder/poudriere-builder.ninja
