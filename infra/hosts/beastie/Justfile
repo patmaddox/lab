@@ -7,11 +7,11 @@ help:
 
 # Build beastie image via ninja
 build:
-    ninja -C ../../.. mod.images.beastie-143
+    ninja -C ../../.. ninja-out/infra/hosts/beastie/beastie-143.be.zfs
 
-# Deploy the image via ninja (builds if needed)
-deploy:
-    ninja -C ../../.. run.beastie-143.deploy
+# Deploy the image using ansible (builds if needed)
+deploy: build
+    ansible-playbook ../../ansible/beastie/build.yml
 
 # Create a new, fully-configured boot environment
 new-be:
