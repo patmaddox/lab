@@ -17,9 +17,9 @@ deploy: build
 new-be:
   {{newbe_src}}/new-be beastie.conf
 
-# Import any dist files that have been edited on the local system
+# Import any dist files that have been edited on the system
 import-config:
-  {{newbe_src}}/import-config dist/dist.mtree
+  ../../common/import-config.sh
 
 # Update portsfile with list of manually-installed ports
 update-ports:
