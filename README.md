@@ -9,3 +9,10 @@ Sometimes I build my own software, sometimes I hack on existing projects.
 - `src` - my custom code projects
 - `oss` - open source projects that I hack on
 - `libexec` - scripts available to any `Justfile` in the project
+
+## Commands
+
+`just dev`
+
+- select a project
+- launch an editor, shell, and claude
