@@ -1,5 +1,6 @@
 # TODO
 
-- [x] Auto format markdown files
-- [ ] Automate repo branching for new objectives
-- [ ] Research AI collaboration template structures and patterns that work in practice
+- [ ] just: `just dev`
+  - launches a fuzzy finder to select a project
+  - starts a tmux session with nvim, shell, and claude
+- [ ] vim: "focus mode" - center the text in the window, even if window is full-width
