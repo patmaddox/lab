@@ -1,0 +1,12 @@
+help:
+  just -l
+
+check:
+  i3 -C -c config
+
+install:
+  #!/bin/sh
+  set -euo pipefail
+  xdir=${XDG_CONFIG_HOME:-~/.config}/i3
+  mkdir -p ${xdir}
+  cp config ${xdir}/
