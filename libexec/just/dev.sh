@@ -54,8 +54,13 @@ check_for_empty_branch() {
 select_oss_branch() {
   project="$1"
   branches=$(find "$project" -maxdepth 1 -name "*.jj" -type d | sed 's|.*/||; s|\.jj$||')
-  branch_name=$(echo "$branches" | fzf --prompt="Select branch: ")
+  branch_name=$(echo "$branches" | fzf --prompt="Select branch: " --print-query | tail -n1)
   check_for_empty_branch "$branch_name"
+
+  if [ ! -d "$project/${branch_name}.jj" ]; then
+    jj -R "$project/default.jj" workspace add --name "$branch_name" "$project/${branch_name}.jj"
+  fi
+
   echo "$branch_name"
 }
 
