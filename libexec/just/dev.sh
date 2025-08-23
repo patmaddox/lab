@@ -9,15 +9,15 @@ main() {
 
   project_name=$(basename "$project")
 
-  printf "Enter branch name: "
-  read -r branch_name
-  if [ -z "$branch_name" ]; then
-    echo "No branch name entered"
-    exit 1
+  if is_oss_project "$project"; then
+    branch_name=$(select_oss_branch "$project")
+    project_dir="$(pwd)/$project/${branch_name}.jj"
+  else
+    branch_name=$(select_src_branch)
+    project_dir="$(pwd)/$project"
   fi
 
-  session_name="${project_name}-${branch_name}"
-  project_dir="$(pwd)/$project"
+  session_name=$(echo "${project_name}-${branch_name}" | tr '.' '-')
 
   tmux new-session -d -s "$session_name" -c "$project_dir" nvim .
   tmux select-pane -t "$session_name:0.0" -T "editor"
@@ -37,6 +37,33 @@ main() {
   else
     tmux attach-session -t "$session_name"
   fi
+}
+
+is_oss_project() {
+  echo "$1" | grep -q "^oss/"
+}
+
+check_for_empty_branch() {
+  branch_name="$1"
+  if [ -z "$branch_name" ]; then
+    echo "No branch selected" >&2
+    exit 1
+  fi
+}
+
+select_oss_branch() {
+  project="$1"
+  branches=$(find "$project" -maxdepth 1 -name "*.jj" -type d | sed 's|.*/||; s|\.jj$||')
+  branch_name=$(echo "$branches" | fzf --prompt="Select branch: ")
+  check_for_empty_branch "$branch_name"
+  echo "$branch_name"
+}
+
+select_src_branch() {
+  printf "Enter branch name: " >/dev/tty
+  read -r branch_name </dev/tty
+  check_for_empty_branch "$branch_name"
+  echo "$branch_name"
 }
 
 main "${@}"
