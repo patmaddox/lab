@@ -12,12 +12,11 @@ main() {
   if is_oss_project "$project"; then
     branch_name=$(select_oss_branch "$project")
     project_dir="$(pwd)/$project/${branch_name}.jj"
+    session_name=$(echo "dev-oss--${project_name}-${branch_name}" | tr '.' '-')
   else
-    branch_name=$(select_src_branch)
     project_dir="$(pwd)/$project"
+    session_name="dev-src--${project_name}"
   fi
-
-  session_name=$(echo "${project_name}-${branch_name}" | tr '.' '-')
 
   if ! tmux has-session -t "$session_name" 2>/dev/null; then
     create_session "$session_name" "$project_dir"
@@ -73,13 +72,6 @@ select_oss_branch() {
     jj -R "$project/default.jj" workspace add --name "$branch_name" "$project/${branch_name}.jj"
   fi
 
-  echo "$branch_name"
-}
-
-select_src_branch() {
-  printf "Enter branch name: " >/dev/tty
-  read -r branch_name </dev/tty
-  check_for_empty_branch "$branch_name"
   echo "$branch_name"
 }
 
