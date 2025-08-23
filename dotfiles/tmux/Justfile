@@ -1,0 +1,12 @@
+help:
+  just -l
+
+check:
+  tmux source-file tmux.conf
+
+install:
+  #!/bin/sh
+  set -euo pipefail
+  xdir=${XDG_CONFIG_HOME:-~/.config}/tmux
+  mkdir -p ${xdir}
+  cp tmux.conf ${xdir}/tmux.conf
