@@ -1,4 +1,5 @@
 #!/bin/sh
+set -eu
 
 main() {
   project=$(ls -d src/* oss/* 2>/dev/null | fzf --prompt="Select project: ")
@@ -19,6 +20,21 @@ main() {
 
   session_name=$(echo "${project_name}-${branch_name}" | tr '.' '-')
 
+  if ! tmux has-session -t "$session_name" 2>/dev/null; then
+    create_session "$session_name" "$project_dir"
+  fi
+
+  if [ -n "$TMUX" ]; then
+    tmux switch-client -t "$session_name"
+  else
+    tmux attach-session -t "$session_name"
+  fi
+}
+
+create_session() {
+  session_name="$1"
+  project_dir="$2"
+
   tmux new-session -d -s "$session_name" -c "$project_dir" nvim .
   tmux select-pane -t "$session_name:0.0" -T "editor"
 
@@ -31,12 +47,6 @@ main() {
   tmux send-keys -t "$session_name:0.2" "doas jexec -l -u $(whoami) -d $project_dir claude ~/.npm-global/bin/claude" C-m
 
   tmux select-pane -t "$session_name:0.0"
-
-  if [ -n "$TMUX" ]; then
-    tmux switch-client -t "$session_name"
-  else
-    tmux attach-session -t "$session_name"
-  fi
 }
 
 is_oss_project() {
