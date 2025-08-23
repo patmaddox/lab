@@ -1,0 +1,13 @@
+help:
+  just -l
+
+# Run a new instance of wezterm with wezterm.lua as the config file
+check:
+  WEZTERM_CONFIG_FILE=$(realpath wezterm.lua) wezterm
+
+install:
+  #!/bin/sh
+  set -euo pipefail
+  xdir=${XDG_CONFIG_HOME:-~/.config}/wezterm
+  mkdir -p ${xdir}
+  cp wezterm.lua ${xdir}/
