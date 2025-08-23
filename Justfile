@@ -19,3 +19,7 @@ cleanup:
 # format modified files
 @fmt:
   ./libexec/just/fmt.sh
+
+# select a project and start a dev session
+dev:
+  ./libexec/just/dev.sh
