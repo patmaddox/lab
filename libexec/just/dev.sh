@@ -20,6 +20,9 @@ main() {
       branch_name=$(select_oss_branch "$project")
       project_dir="$(pwd)/$project/${branch_name}.jj"
       session_name="$project/${branch_name}"
+    elif [ "$project" = "lab" ]; then
+      project_dir="$(realpath .)"
+      session_name="lab"
     else
       project_dir="$(pwd)/$project"
       session_name="$project"
@@ -61,7 +64,7 @@ make_selection() {
 
 sessions_and_projects() {
   existing_sessions=$(tmux list-sessions -F "#{session_name}" 2>/dev/null | grep -E "^(src|oss)/" || true)
-  projects=$(ls -dt src/* oss/* 2>/dev/null)
+  projects=$(ls -dt src/* oss/* 2>/dev/null; echo "lab")
 
   if [ -n "$existing_sessions" ]; then
     prefixed_sessions=$(echo "$existing_sessions" | sed 's/^/* /')
