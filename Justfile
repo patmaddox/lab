@@ -17,5 +17,5 @@ cleanup:
   find . -type d -empty -delete
 
 # format modified files
-fmt:
-  jj st | awk '/^[A|M] / {print $2}' | ./scripts/ensure-newlines.sh
+@fmt:
+  ./libexec/just/fmt.sh
