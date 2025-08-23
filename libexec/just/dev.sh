@@ -2,10 +2,9 @@
 set -eu
 
 main() {
-  project=$(ls -d src/* oss/* 2>/dev/null | fzf --prompt="Select project: ")
+  project=$(ls -d src/* oss/* 2>/dev/null | fzf_select --prompt="Select project: ")
   if [ -z "$project" ]; then
-    echo "No project selected"
-    exit 1
+    exit 0
   fi
 
   project_name=$(basename "$project")
@@ -53,18 +52,21 @@ is_oss_project() {
   echo "$1" | grep -q "^oss/"
 }
 
+fzf_select() {
+  fzf "$@" || true
+}
+
 check_for_empty_branch() {
   branch_name="$1"
   if [ -z "$branch_name" ]; then
-    echo "No branch selected" >&2
-    exit 1
+    exit 0
   fi
 }
 
 select_oss_branch() {
   project="$1"
   branches=$(find "$project" -maxdepth 1 -name "*.jj" -type d | sed 's|.*/||; s|\.jj$||')
-  branch_name=$(echo "$branches" | fzf --prompt="Select branch: " --print-query | tail -n1)
+  branch_name=$(echo "$branches" | fzf_select --prompt="Select branch: " --print-query | tail -n1)
   check_for_empty_branch "$branch_name"
 
   if [ ! -d "$project/${branch_name}.jj" ]; then
