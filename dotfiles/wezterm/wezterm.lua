@@ -25,14 +25,7 @@ config.keys = {
    { key = 'PageDown', mods = 'SHIFT|CTRL', action = act.MoveTabRelative(1) },
    { key = 'PageDown', mods = 'ALT', action = act.DecreaseFontSize },
    { key = 'PageUp', mods = 'ALT', action = act.IncreaseFontSize },
-   {
-    key = 'K',
-    mods = 'CTRL|SHIFT',
-    action = act.Multiple {
-      act.ClearScrollback 'ScrollbackAndViewport',
-      act.SendKey { key = 'L', mods = 'CTRL' },
-    },
-  },
+   { key = 'k', mods = 'ALT', action = wezterm.action.SendString '\x0b' }, -- ctrl-k
 }
 
 return config
