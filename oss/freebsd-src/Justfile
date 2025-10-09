@@ -1,5 +1,5 @@
 ninja := "ninja -C $(jj root)"
-src_root := "src/freebsd-src"
+src_root := "oss/freebsd-src"
 
 help:
   @just -l

@@ -5,7 +5,7 @@ set -o pipefail
 bindir=$(dirname $(realpath $0))
 configs=$(ls config/*.conf)
 release_files="MANIFEST base.txz kernel.txz src.txz tests.txz"
-src_root="src/freebsd-src"
+src_root="oss/freebsd-src"
 
 config_releases=""
 
