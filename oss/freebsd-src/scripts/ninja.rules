@@ -1,4 +1,4 @@
-src_root = src/freebsd-src
+src_root = oss/freebsd-src
 out_dir = ${ninja_out}/freebsd-src
 git_main = ${src_root}/main.jj
 git_tmp = ${src_root}/_build/ninja.tmp.git
