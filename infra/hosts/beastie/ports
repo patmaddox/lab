@@ -6,6 +6,7 @@ databases/postgresql17-server
 databases/tcl-sqlite3
 deskutils/i3lock
 deskutils/just
+deskutils/zk
 devel/atf
 devel/autoconf
 devel/bear
@@ -34,6 +35,7 @@ editors/libreoffice
 editors/neovim
 emulators/linux_base-rl9
 ftp/wget
+games/gtypist
 graphics/drm-61-kmod
 graphics/gpu-firmware-amd-kmod@dimgrey_cavefish
 graphics/maim
@@ -91,9 +93,9 @@ sysutils/zelta
 textproc/fzf
 textproc/groff
 textproc/hs-pandoc
+textproc/jq
 textproc/p5-ack
 textproc/ripgrep
-textproc/zk
 www/chromium
 www/darkhttpd
 www/deno
