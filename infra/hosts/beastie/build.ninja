@@ -1,9 +1,9 @@
 host_name = beastie
 jail = 143
-version = 2025-08-09_1
+version = 2025-10-10
 
-userland = 14.3-RELEASE-p2
-kernel = FreeBSD ${userland} releng/14.3-n271439-5982521fe3dd GENERIC
+userland = 14.3-RELEASE-p4
+kernel = FreeBSD 14.3-RELEASE-p3 GENERIC
 
 timezone = US/Pacific
 
