@@ -7,11 +7,9 @@
 .ninja_log
 .plzconfig.local
 .pnpm-store
-/wiki
 _build
 bin
 dotfiles/nvim/lazy
 ninja-out
 node_modules
-notes
 tmp/*
