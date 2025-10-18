@@ -1,0 +1,8 @@
+help:
+  just -l
+
+smoke:
+  SNOWSQL_USER="op://Personal/Snowflake/username" \
+    SNOWSQL_PWD="op://Personal/Snowflake/password" \
+    SNOWSQL_ACCOUNT="op://Personal/Snowflake/account" \
+  op run -- python3.11 smoketest.py

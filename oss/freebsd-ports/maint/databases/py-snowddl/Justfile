@@ -1,0 +1,13 @@
+help:
+  just -l
+
+smoke:
+  SNOWFLAKE_USER="op://Personal/Snowflake/username" \
+    SNOWFLAKE_PASSWORD="op://Personal/Snowflake/password" \
+    SNOWFLAKE_ACCOUNT="op://Personal/Snowflake/account" \
+  op run -- snowddl -c snowddl_01 apply
+
+  SNOWFLAKE_USER="op://Personal/Snowflake/username" \
+    SNOWFLAKE_PASSWORD="op://Personal/Snowflake/password" \
+    SNOWFLAKE_ACCOUNT="op://Personal/Snowflake/account" \
+  op run -- snowddl -c snowddl_01 --destroy-without-prefix destroy

@@ -1,0 +1,3 @@
+is_transient: true
+retention_time: 1
+comment: "snowddl test database"
