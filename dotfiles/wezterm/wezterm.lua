@@ -2,7 +2,7 @@ local wezterm = require 'wezterm'
 local act = wezterm.action
 local config = wezterm.config_builder()
 
-config.scrollback_lines = 0
+--config.scrollback_lines = 0
 
 config.enable_kitty_keyboard = true
 
