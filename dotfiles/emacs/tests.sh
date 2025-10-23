@@ -1,11 +1,8 @@
 #!/usr/bin/env atf-sh
 src_dir=$(atf_get_srcdir)
 
-EMACS="emacs --batch -l ${src_dir}/testconfig.el -l ${HOME}/.emacs.d/init.el"
-
 atf_init_test_cases() {
-    atf_add_test_case install
-    atf_add_test_case libs
+    atf_add_test_case install_and_load
 }
 
 helper::install() {
@@ -13,51 +10,32 @@ helper::install() {
     atf_check make -C ${src_dir} -s install
 }
 
-## install
-atf_test_case install
-install_head() {
-    atf_set 'descr' 'Install config file and compiled packages to $HOME/.emacs.d, load init.el'
+## install_and_load
+atf_test_case install_and_load
+install_and_load_head() {
+    atf_set 'descr' 'Install config file and compiled packages to $HOME/.emacs.d, load init.el, check modes and stuff'
 }
 
-install_body() {
+install_and_load_body() {
     helper::install
 
     atf_check test -d ${HOME}/.emacs.d
+
+    # compile everything except for init.el
     atf_check test -f ${HOME}/.emacs.d/init.el
     atf_check test ! -f ${HOME}/.emacs.d/init.elc
     atf_check -o not-empty find ${HOME}/.emacs.d/packages -name '*.elc'
-    atf_check ${EMACS} --eval 't'
 
-    # make sure it doesn't overwrite an existing dir
+    # run the elisp check that files load with correct modes etc
+    # emacs can be noisy, so just focus on error code
+    atf_check -o ignore -e ignore emacs --batch \
+	      -l ${src_dir}/testconfig.el \
+	      -l ${HOME}/.emacs.d/init.el \
+	      -l ${src_dir}/tests.el
+
+    # make sure install doesn't overwrite an existing dir
     rm -rf ${HOME}/.emacs.d
     mkdir ${HOME}/.emacs.d
     atf_check -s exit:1 -o ignore -e match:"E: DESTDIR already exists" make -C ${src_dir} -s install
     atf_check -o empty find ${HOME}/.emacs.d -type f
-}
-
-## libs
-atf_test_case libs
-libs_head() {
-    atf_set 'descr' 'Test that all libs load correctly'
-}
-
-libs_body() {
-    helper::install
-
-    atf_check ${EMACS} -f elixir-ts-mode
-    atf_check ${EMACS} -f gfm-mode
-    atf_check ${EMACS} -f go-ts-mode
-    atf_check ${EMACS} -f go-mod-ts-mode
-    atf_check ${EMACS} -f heex-ts-mode
-    atf_check ${EMACS} -f lua-ts-mode
-    atf_check ${EMACS} -f markdown-mode
-    atf_check ${EMACS} -f rust-ts-mode
-    atf_check ${EMACS} -f zig-ts-mode
-
-    # magit needs a git directory to operate on
-    atf_check -o ignore -e ignore git init
-    atf_check -e ignore ${EMACS} -f magit-status
-
-    # gptel doesn't run in emacs lisp interactive mode, so just require it
-    atf_check ${EMACS} --eval "(require 'gptel)"
 }
