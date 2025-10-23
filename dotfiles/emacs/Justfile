@@ -4,6 +4,14 @@ help:
 test:
   kyua test
 
+demo:
+  #!/bin/sh
+  set -eu
+  tmpdir=$(mktemp -d -t emacs-dev)/.emacs
+  echo "emacs tmpdir is ${tmpdir}"
+  make -s install DESTDIR=${tmpdir}
+  emacs --init-directory=${tmpdir}
+
 # Install to .emacs.dev
 install-dev:
   rm -rf $HOME/.emacs.dev
