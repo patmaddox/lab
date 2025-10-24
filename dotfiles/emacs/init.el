@@ -38,4 +38,4 @@
 
 ;; Languages that do not have a built-in mode
 (require 'markdown-mode)
-(add-to-list 'auto-mode-alist '("\\.md\\'" . markdown-mode))
+(add-to-list 'auto-mode-alist '("\\.md\\'" . gfm-mode))

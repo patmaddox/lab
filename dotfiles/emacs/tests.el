@@ -10,7 +10,7 @@
 (test-file-mode "foo.c" 'c-ts-mode)
 (test-file-mode "foo.ex" 'elixir-ts-mode)
 (test-file-mode "foo.exs" 'elixir-ts-mode)
-(test-file-mode "foo.md" 'markdown-mode)
+(test-file-mode "foo.md" 'gfm-mode)
 ;;(test-file-mode "foo.md" 'gfm-mode) ;; not sure what to do here
 (test-file-mode "foo.heex" 'heex-ts-mode)
 (test-file-mode "foo.go" 'go-ts-mode)
