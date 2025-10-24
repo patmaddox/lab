@@ -43,3 +43,17 @@
 ;; terminal emulators
 (require 'eat)
 (require 'vterm)
+
+;;; Completion: Vertico + Orderless + Consult + Marginalia
+
+;; Vertico: Vertical completion UI
+(require 'vertico)
+(vertico-mode)
+
+;; vertico-directory: better file path navigation
+(require 'vertico-directory)
+(with-eval-after-load 'vertico
+  (define-key vertico-map (kbd "RET") #'vertico-directory-enter)
+  (define-key vertico-map (kbd "DEL") #'vertico-directory-delete-char)
+  (define-key vertico-map (kbd "M-DEL") #'vertico-directory-delete-word))
+
