@@ -64,3 +64,8 @@
       ;; Use partial-completion for files to handle paths better
       completion-category-overrides '((file (styles partial-completion))))
 
+;; Marginalia: Rich annotations in the minibuffer
+;; Shows file permissions, sizes, dates, docstrings, etc.
+(require 'marginalia)
+(marginalia-mode)
+
