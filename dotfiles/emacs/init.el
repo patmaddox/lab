@@ -69,3 +69,45 @@
 (require 'marginalia)
 (marginalia-mode)
 
+;; Consult: Enhanced completion commands
+;; Provides better versions of switch-to-buffer, grep, imenu, etc.
+(require 'consult)
+
+;; C-x bindings (ctl-x-map)
+(global-set-key (kbd "C-x b") 'consult-buffer)
+(global-set-key (kbd "C-x 4 b") 'consult-buffer-other-window)
+(global-set-key (kbd "C-x 5 b") 'consult-buffer-other-frame)
+(global-set-key (kbd "C-x r b") 'consult-bookmark)
+
+;; M-g bindings (goto-map)
+(global-set-key (kbd "M-g e") 'consult-compile-error)
+(global-set-key (kbd "M-g g") 'consult-goto-line)
+(global-set-key (kbd "M-g M-g") 'consult-goto-line)
+(global-set-key (kbd "M-g o") 'consult-outline)
+(global-set-key (kbd "M-g m") 'consult-mark)
+(global-set-key (kbd "M-g k") 'consult-global-mark)
+(global-set-key (kbd "M-g i") 'consult-imenu)
+(global-set-key (kbd "M-g I") 'consult-imenu-multi)
+
+;; M-s bindings (search-map)
+(global-set-key (kbd "M-s d") 'consult-find)
+(global-set-key (kbd "M-s D") 'consult-locate)
+(global-set-key (kbd "M-s g") 'consult-grep)
+(global-set-key (kbd "M-s G") 'consult-git-grep)
+(global-set-key (kbd "M-s r") 'consult-ripgrep)
+(global-set-key (kbd "M-s l") 'consult-line)
+(global-set-key (kbd "M-s L") 'consult-line-multi)
+(global-set-key (kbd "M-s k") 'consult-keep-lines)
+(global-set-key (kbd "M-s u") 'consult-focus-lines)
+
+;; Other useful bindings
+(global-set-key (kbd "M-y") 'consult-yank-pop)
+(global-set-key (kbd "C-c h") 'consult-history)
+(global-set-key (kbd "C-c m") 'consult-mode-command)
+(global-set-key (kbd "C-c k") 'consult-kmacro)
+
+;; Consult customization
+(setq consult-narrow-key "<") ;; Use < for narrowing in consult commands
+
+;; Use project.el for project-based commands
+(setq consult-project-function #'consult--default-project-function)
