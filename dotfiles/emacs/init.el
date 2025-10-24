@@ -57,3 +57,10 @@
   (define-key vertico-map (kbd "DEL") #'vertico-directory-delete-char)
   (define-key vertico-map (kbd "M-DEL") #'vertico-directory-delete-word))
 
+;; Orderless: Flexible matching with space-separated patterns
+(require 'orderless)
+(setq completion-styles '(orderless basic)
+      completion-category-defaults nil
+      ;; Use partial-completion for files to handle paths better
+      completion-category-overrides '((file (styles partial-completion))))
+
