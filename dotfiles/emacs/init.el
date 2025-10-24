@@ -39,3 +39,7 @@
 ;; Languages that do not have a built-in mode
 (require 'markdown-mode)
 (add-to-list 'auto-mode-alist '("\\.md\\'" . gfm-mode))
+
+;; terminal emulators
+(require 'eat)
+(require 'vterm)
