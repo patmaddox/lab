@@ -79,7 +79,12 @@
     ;; Pass through Ctrl-arrow for word navigation in shell
     (define-key eat-semi-char-mode-map (kbd "C-<left>") #'eat-self-input)
     (define-key eat-semi-char-mode-map (kbd "C-<right>") #'eat-self-input)
-    (define-key eat-semi-char-mode-map (kbd "C-g") #'eat-self-input)))
+    (define-key eat-semi-char-mode-map (kbd "C-g") #'eat-self-input)
+    ;; Add shift-arrow scrolling in semi-char mode
+    (define-key eat-semi-char-mode-map (kbd "S-<up>") #'scroll-down-line)
+    (define-key eat-semi-char-mode-map (kbd "S-<down>") #'scroll-up-line)
+    (define-key eat-semi-char-mode-map (kbd "S-<prior>") #'scroll-down-command)
+    (define-key eat-semi-char-mode-map (kbd "S-<next>") #'scroll-up-command)))
 
 ;; Disable line numbers and hl-line in terminal modes
 (dolist (mode '(eat-mode-hook vterm-mode-hook term-mode-hook shell-mode-hook eshell-mode-hook))
