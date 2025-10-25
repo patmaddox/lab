@@ -49,6 +49,7 @@
 (show-paren-mode 1)
 (setq read-file-name-completion-ignore-case t)
 (setq warning-minimum-level :error)
+(setq load-prefer-newer t)
 
 ;; Enable disabled commands
 (put 'downcase-region 'disabled nil)
