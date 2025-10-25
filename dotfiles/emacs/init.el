@@ -42,6 +42,7 @@
 
 ;;; UI/UX
 (blink-cursor-mode -1)
+(column-number-mode 1)
 (electric-pair-mode 1)
 (global-display-line-numbers-mode 1)
 (global-hl-line-mode 1)
