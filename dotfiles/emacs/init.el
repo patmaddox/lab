@@ -108,6 +108,32 @@
           (lambda ()
             (add-hook 'before-save-hook 'delete-trailing-whitespace nil t)))
 
+;;; Project management
+(setq project-vc-extra-root-markers
+      '(".emacs-project"
+        ".fslckout"
+        ".jj"
+        "mix.exs"))
+
+(setq project-vc-ignores
+      '("#*#"
+        "*~"
+        "*.elc"
+        ".elixir_ls"
+        "*.jj"
+        ".fslckout"
+        ".jj"
+        "_build"
+        "deps"
+        "node_modules"
+        "packages"
+        "plz-out"
+        "postgres/data"
+        "priv/static"
+        "auto-save-list"
+        "transient"
+        "tree-sitter"))
+
 ;;; Completion: Vertico + Orderless + Consult + Marginalia
 
 ;; Vertico: Vertical completion UI
