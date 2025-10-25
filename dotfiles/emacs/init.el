@@ -225,3 +225,20 @@
 (with-eval-after-load 'consult
   (consult-customize consult--source-buffer :hidden t :default nil)
   (add-to-list 'consult-buffer-sources persp-consult-source))
+
+;;; IRC (rcirc)
+(setq rcirc-server-alist
+      '(("irc.libera.chat"
+         :port 6697
+         :encryption tls
+         :channels ("#freebsd" "#freebsd-ports" "#freebsd-emacs"
+                    "#freebsd-python" "#freebsd-pulse" "#freebsd-dev"))))
+
+;; Hide join/part/quit spam (toggle with C-c C-o)
+(setq rcirc-omit-responses '("JOIN" "PART" "QUIT" "NICK" "AWAY"))
+(add-hook 'rcirc-mode-hook 'rcirc-omit-mode)
+
+;; Track channel activity (show channel names, no counts)
+(setq rcirc-track-minor-mode-lighter " IRC"
+      rcirc-track-show-activity-flag t)
+(rcirc-track-minor-mode 1)
