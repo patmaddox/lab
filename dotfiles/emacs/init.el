@@ -72,6 +72,30 @@
 (dolist (mode '(eat-mode-hook vterm-mode-hook term-mode-hook shell-mode-hook eshell-mode-hook))
   (add-hook mode (lambda () (display-line-numbers-mode -1) (hl-line-mode -1))))
 
+;;; Language-specific
+
+;; Elixir
+(add-hook 'elixir-ts-mode-hook
+          (lambda ()
+            (add-hook 'before-save-hook
+                      (lambda ()
+                        (when (eq major-mode 'elixir-ts-mode)
+                          (shell-command-to-string
+                           (format "mix format %s" (buffer-file-name)))
+                          (revert-buffer t t t)))
+                      nil t)))
+
+;; HEEx
+(add-hook 'heex-ts-mode-hook
+          (lambda ()
+            (add-hook 'before-save-hook
+                      (lambda ()
+                        (when (eq major-mode 'heex-ts-mode)
+                          (shell-command-to-string
+                           (format "mix format %s" (buffer-file-name)))
+                          (revert-buffer t t t)))
+                      nil t)))
+
 ;;; Completion: Vertico + Orderless + Consult + Marginalia
 
 ;; Vertico: Vertical completion UI
