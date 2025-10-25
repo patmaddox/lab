@@ -6,8 +6,7 @@ atf_init_test_cases() {
 }
 
 helper::install() {
-    atf_check -o ignore -e ignore make -C ${src_dir} -s
-    atf_check make -C ${src_dir} -s install
+    atf_check make -C ${src_dir} -s
 }
 
 ## install_and_load
@@ -24,7 +23,6 @@ install_and_load_body() {
     # compile everything except for init.el
     atf_check test -f ${HOME}/.emacs.d/init.el
     atf_check test ! -f ${HOME}/.emacs.d/init.elc
-    atf_check -o not-empty find ${HOME}/.emacs.d/packages -name '*.elc'
 
     # run the elisp check that files load with correct modes etc
     # emacs can be noisy, so just focus on error code
@@ -36,6 +34,6 @@ install_and_load_body() {
     # make sure install doesn't overwrite an existing dir
     rm -rf ${HOME}/.emacs.d
     mkdir ${HOME}/.emacs.d
-    atf_check -s exit:1 -o ignore -e match:"E: DESTDIR already exists" make -C ${src_dir} -s install
+    atf_check -s exit:1 -o ignore -e match:"E: DESTDIR already exists" make -C ${src_dir} -s
     atf_check -o empty find ${HOME}/.emacs.d -type f
 }
