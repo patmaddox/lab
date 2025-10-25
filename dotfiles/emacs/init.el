@@ -112,6 +112,9 @@
 
 ;; Vertico: Vertical completion UI
 (require 'vertico)
+(setq vertico-cycle t
+      vertico-resize nil
+      vertico-count 20)
 (vertico-mode)
 
 ;; vertico-directory: better file path navigation
@@ -120,6 +123,7 @@
   (define-key vertico-map (kbd "RET") #'vertico-directory-enter)
   (define-key vertico-map (kbd "DEL") #'vertico-directory-delete-char)
   (define-key vertico-map (kbd "M-DEL") #'vertico-directory-delete-word))
+(add-hook 'rfn-eshadow-update-overlay-hook #'vertico-directory-tidy)
 
 ;; Orderless: Flexible matching with space-separated patterns
 (require 'orderless)
