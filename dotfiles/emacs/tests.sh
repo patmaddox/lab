@@ -27,7 +27,7 @@ install_and_load_body() {
     # run the elisp check that files load with correct modes etc
     # emacs can be noisy, so just focus on error code
     atf_check -o ignore -e ignore emacs --batch \
-	      -l ${src_dir}/testconfig.el \
+	      -l ${src_dir}/test-init.el \
 	      -l ${HOME}/.emacs.d/init.el \
 	      -l ${src_dir}/tests.el
 
