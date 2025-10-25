@@ -1,0 +1,23 @@
+[user]
+name = "Pat Maddox"
+email = "pat@patmaddox.com"
+
+[revset-aliases]
+"gerrits" = "mine() & description('Change-Id: ') ~ empty()"
+"nogerrit" = "mine() ~ description('Change-Id: ') ~ ::trunk() ~ empty() ~ ::untracked_remote_bookmarks()"
+"diffs" = "gerrits ~ description('WIP') ~ ::trunk() ~ ::untracked_remote_bookmarks()"
+"wip" = "(tracked_remote_bookmarks():: ~ ::tracked_remote_bookmarks()) | tracked_remote_bookmarks()"
+
+[aliases]
+l = ["log", "-r", "::@"]
+gud = ["gerrit", "upload", "-r", "diffs"]
+wip = ["log", "-r", "wip"]
+gp = ["git", "push", "--tracked"]
+
+[git]
+fetch = ["glob:*"]
+
+[[--scope]]
+--when.repositories = ["~/evirts"]
+[--scope.user]
+email = "pat@evirts.com"
