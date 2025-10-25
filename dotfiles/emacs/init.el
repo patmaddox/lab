@@ -47,6 +47,7 @@
 (global-hl-line-mode 1)
 (menu-bar-mode -1)
 (show-paren-mode 1)
+(winner-mode 1)
 (setq read-file-name-completion-ignore-case t)
 (setq warning-minimum-level :error)
 (setq load-prefer-newer t)
