@@ -69,6 +69,14 @@
 ;; terminal emulators
 (require 'eat)
 (require 'vterm)
+
+;; eat configuration - make ESC work in vim while keeping M-x working
+;; In GUI Emacs, <escape> is distinct from ESC (Meta prefix)
+(with-eval-after-load 'eat
+  (when (display-graphic-p)
+    ;; Bind the physical <escape> key to send itself to terminal
+    (define-key eat-semi-char-mode-map (kbd "<escape>") #'eat-self-input)))
+
 (dolist (mode '(eat-mode-hook vterm-mode-hook term-mode-hook shell-mode-hook eshell-mode-hook))
   (add-hook mode (lambda () (display-line-numbers-mode -1) (hl-line-mode -1))))
 
