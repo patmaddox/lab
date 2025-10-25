@@ -40,9 +40,36 @@
 (require 'markdown-mode)
 (add-to-list 'auto-mode-alist '("\\.md\\'" . gfm-mode))
 
+;;; UI/UX
+(blink-cursor-mode -1)
+(electric-pair-mode 1)
+(global-display-line-numbers-mode 1)
+(global-hl-line-mode 1)
+(menu-bar-mode -1)
+(show-paren-mode 1)
+(setq read-file-name-completion-ignore-case t)
+(setq warning-minimum-level :error)
+
+;; Enable disabled commands
+(put 'downcase-region 'disabled nil)
+(put 'upcase-region 'disabled nil)
+
+;; Completion ignored extensions
+(delete ".git/" completion-ignored-extensions)
+(dolist (i '(".core"
+             ".fslckout"
+             ".so"
+             "auto-save-list/"
+             "history"
+             "ido.last"
+             "transient/"))
+  (add-to-list 'completion-ignored-extensions i))
+
 ;; terminal emulators
 (require 'eat)
 (require 'vterm)
+(dolist (mode '(eat-mode-hook vterm-mode-hook term-mode-hook shell-mode-hook eshell-mode-hook))
+  (add-hook mode (lambda () (display-line-numbers-mode -1) (hl-line-mode -1))))
 
 ;;; Completion: Vertico + Orderless + Consult + Marginalia
 
