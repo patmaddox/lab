@@ -111,3 +111,14 @@
 
 ;; Use project.el for project-based commands
 (setq consult-project-function #'consult--default-project-function)
+
+;;; Perspective: Named workspaces
+(setq persp-mode-prefix-key (kbd "M-j")
+      persp-state-default-file nil)  ; disable auto-save/restore
+(require 'perspective)
+(persp-mode)
+
+;;; Integration with consult-buffer
+(with-eval-after-load 'consult
+  (consult-customize consult--source-buffer :hidden t :default nil)
+  (add-to-list 'consult-buffer-sources persp-consult-source))
