@@ -77,8 +77,12 @@
     ;; Bind the physical <escape> key to send itself to terminal
     (define-key eat-semi-char-mode-map (kbd "<escape>") #'eat-self-input)))
 
+;; Disable line numbers and hl-line in terminal modes
 (dolist (mode '(eat-mode-hook vterm-mode-hook term-mode-hook shell-mode-hook eshell-mode-hook))
-  (add-hook mode (lambda () (display-line-numbers-mode -1) (hl-line-mode -1))))
+  (add-hook mode (lambda ()
+                   (display-line-numbers-mode -1)
+                   (setq-local global-hl-line-mode nil)
+                   (hl-line-mode -1))))
 
 ;;; Language-specific
 
