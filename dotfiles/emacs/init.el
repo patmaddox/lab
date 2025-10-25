@@ -103,6 +103,11 @@
             (define-key emacs-lisp-mode-map (kbd "C-x C-e") 'pp-eval-last-sexp)
             (add-hook 'before-save-hook 'delete-trailing-whitespace nil t)))
 
+;; Shell scripts
+(add-hook 'sh-mode-hook
+          (lambda ()
+            (add-hook 'before-save-hook 'delete-trailing-whitespace nil t)))
+
 ;;; Completion: Vertico + Orderless + Consult + Marginalia
 
 ;; Vertico: Vertical completion UI
