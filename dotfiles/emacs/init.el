@@ -96,6 +96,13 @@
                           (revert-buffer t t t)))
                       nil t)))
 
+;; Emacs Lisp
+(add-hook 'emacs-lisp-mode-hook
+          (lambda ()
+            (setq indent-tabs-mode nil)
+            (define-key emacs-lisp-mode-map (kbd "C-x C-e") 'pp-eval-last-sexp)
+            (add-hook 'before-save-hook 'delete-trailing-whitespace nil t)))
+
 ;;; Completion: Vertico + Orderless + Consult + Marginalia
 
 ;; Vertico: Vertical completion UI
