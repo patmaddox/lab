@@ -75,7 +75,11 @@
 (with-eval-after-load 'eat
   (when (display-graphic-p)
     ;; Bind the physical <escape> key to send itself to terminal
-    (define-key eat-semi-char-mode-map (kbd "<escape>") #'eat-self-input)))
+    (define-key eat-semi-char-mode-map (kbd "<escape>") #'eat-self-input)
+    ;; Pass through Ctrl-arrow for word navigation in shell
+    (define-key eat-semi-char-mode-map (kbd "C-<left>") #'eat-self-input)
+    (define-key eat-semi-char-mode-map (kbd "C-<right>") #'eat-self-input)
+    (define-key eat-semi-char-mode-map (kbd "C-g") #'eat-self-input)))
 
 ;; Disable line numbers and hl-line in terminal modes
 (dolist (mode '(eat-mode-hook vterm-mode-hook term-mode-hook shell-mode-hook eshell-mode-hook))
