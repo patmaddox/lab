@@ -141,6 +141,15 @@
 ;; Provides better versions of switch-to-buffer, grep, imenu, etc.
 (require 'consult)
 
+;; Integrate with xref (jump-to-definition)
+(setq xref-show-xrefs-function #'consult-xref
+      xref-show-definitions-function #'consult-xref)
+
+;; Integrate with register preview
+(setq register-preview-delay 0.5
+      register-preview-function #'consult-register-format)
+(advice-add #'register-preview :override #'consult-register-window)
+
 ;; C-x bindings (ctl-x-map)
 (global-set-key (kbd "C-x b") 'consult-buffer)
 (global-set-key (kbd "C-x 4 b") 'consult-buffer-other-window)
