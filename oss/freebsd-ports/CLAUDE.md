@@ -13,10 +13,10 @@ The working copy is in `default.jj` and is a separate repository from
   issues to address.
 - all feedback should be aligned with freebsd-ports rules and
   conventions
-- My pending commits are identified by jj alias `diffs`. You can find
-  them e.g. `jj log -r diffs`. You do not need to review any other
-  commits or ports. You may look at other commits or ports to gather
-  information that assists with the code review.
+- My pending commits are identified by jj range 
+  `jj log -r main..patmaddox/main ~ patmaddox/main`. You do not need
+  to review any other commits or ports. You may look at other commits
+  or ports to gather information that assists with the code review.
 - Concise code review report, one per line. Write the results to
   screen, as well as to code-review.txt in `lab.jj/oss/freebsd-ports`.
 - Only review commits that are missing from the report, or are marked
