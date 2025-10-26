@@ -76,6 +76,9 @@
 ;; eat configuration - make ESC work in vim while keeping M-x working
 ;; In GUI Emacs, <escape> is distinct from ESC (Meta prefix)
 (with-eval-after-load 'eat
+  ;; Make invisible cursor actually visible (otherwise can't see cursor in emacs mode)
+  (setq eat-invisible-cursor-type '(box nil nil))
+
   (when (display-graphic-p)
     ;; Bind the physical <escape> key to send itself to terminal
     (define-key eat-semi-char-mode-map (kbd "<escape>") #'eat-self-input)
