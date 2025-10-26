@@ -189,6 +189,8 @@
 ;; Consult: Enhanced completion commands
 ;; Provides better versions of switch-to-buffer, grep, imenu, etc.
 (require 'consult)
+(require 'consult-imenu)
+(require 'consult-org)
 
 ;; Integrate with xref (jump-to-definition)
 (setq xref-show-xrefs-function #'consult-xref
