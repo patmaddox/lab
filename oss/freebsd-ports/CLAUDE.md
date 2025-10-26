@@ -19,24 +19,27 @@ The working copy is in `default.jj` and is a separate repository from
   information that assists with the code review.
 - Concise code review report, one per line. Write the results to
   screen, as well as to code-review.txt in `lab.jj/oss/freebsd-ports`.
-- Only review commits that are missing from the report, or failed the
-  last code review. Do not review commits that are marked as passing
-  in the report. Always display the entire report.
+- Only review commits that are missing from the report, or are marked
+  as failed in the code review report. Do not review commits that are
+  marked as passing. Always display the entire report.
 - Always check to see if the report has been modified before doing
   another round of review. I may edit it offline.
+- I may change commit messages in between code reviews. ALWAYS read
+  the current commit message, and update it in the report if
+  necessary.
 - I can override your code review. If I tell you that something is
   good or bad, respect it.
 - If I tell you to restart the code review, you MUST:
     - delete the report file
-	- forget about any reviews you've done
-	- code review as if from scratch
+    - forget about any reviews you've done
+    - code review as if from scratch
 - You MUST NOT review any commits that have NOSUBMIT in the description
 
 ## code review: code
 
 - use `portclippy` to determine formatting issues, e.g. `portclippy editors/emacs`
 - use `portlint` to identify other formatting issues. It needs to know
-  the PORTSDIR e.g. `PORTSDIR=$(pwd) portlint -C editors/emacs`.
+  the PORTSDIR e.g. `PORTSDIR=$(pwd) portlint -A editors/emacs`.
 
 ## code review: commits
 
@@ -46,13 +49,14 @@ The working copy is in `default.jj` and is a separate repository from
 - Message length is max 72 cols
 - Ignore "Change-ID" trailer - that is used for gerrit
 - New ports
-    - COMMENT as the subject message (might be edited / truncated for
+    - COMMENT as the subject message (might be edited / summarized for
       space)
-    - pkg-descr as the body (might be edited / truncated for space)
+    - pkg-descr as the body (might be edited / summarized for space)
+    - MUST have a "WWW:" trailer matching the WWW value from Makefile
 - Updated ports
     - subject message: "Update <old-version> => <new-version>"
-	- SHOULD contain a changelog with link
-	- MAY have multiple changelogs if it skips versions
+    - SHOULD contain a changelog with link
+    - MAY have multiple changelogs if it skips versions
 
 Example new port:
 
@@ -61,6 +65,10 @@ editors/emacs: GNU Emacs Editor
 
 This is an editor that everyone loves.
 Well, most everyone.
+
+WWW: http://emacs.org
+
+PR: 12345
 ```
 
 Example port update:
@@ -68,7 +76,9 @@ Example port update:
 ```
 editors/emacs: Update 1.0 => 1.1
 
-Changelog: http://emacs.org
+Changelog: http://emacs.org/1.1
+
+PR: 67890
 ```
 
 Example port update (skip versions)
@@ -79,6 +89,8 @@ editors/emacs: Update 1.0 => 1.2
 Changelogs:
 http://emacs.org/1.1
 http://emacs.org/1.2
+
+PR: 54321
 ```
 
 ## code review: report format
@@ -102,15 +114,28 @@ colorize issue indicator as red.
 
 Issue indicators:
 
-| id        | reason                                          |
-|-----------|-------------------------------------------------|
-| pr        | Missing PR trailer                              |
-| clippy    | failed portclippy                               |
-| lint      | failed portlint                                 |
-| changelog | missing / incomplete changelog                  |
-| subject   | Doesn't match expected format for new / updates |
-| body      | Doesn't match expected format for new / updates |
-| len       | Message subject or body exceeds 72 columns      |
+| id        | reason                                                       |
+|-----------|--------------------------------------------------------------|
+| body      | Message body doesn't match expected format for new / updates |
+| changelog | missing / incomplete changelog                               |
+| clippy    | failed portclippy                                            |
+| len       | Message subject or body exceeds 72 columns                   |
+| lint      | failed portlint                                              |
+| pr        | Missing PR trailer                                           |
+| subject   | Doesn't match expected format for new / updates              |
+| www       | Missing WWW trailer                                          |
+
+ONLY for ports with `USES= emacs` and install `.el` files:
+
+| id    | reason                                       |
+|-------|----------------------------------------------|
+| elisp | Missing "elisp" from CATEGORIES= in Makefile |
+
+ONLY for ports with `USE_GITHUB= yes`:
+
+| id         | reason                                        |
+|------------|-----------------------------------------------|
+| gh_project | GH_PROJECT equals PORTNAME (it's not needed) |
 
 # SCRIPTS
 
