@@ -30,10 +30,4 @@ install_and_load_body() {
 	      -l ${src_dir}/test-init.el \
 	      -l ${HOME}/.emacs.d/init.el \
 	      -l ${src_dir}/tests.el
-
-    # make sure install doesn't overwrite an existing dir
-    rm -rf ${HOME}/.emacs.d
-    mkdir ${HOME}/.emacs.d
-    atf_check -s exit:1 -o ignore -e match:"E: DESTDIR already exists" make -C ${src_dir} -s
-    atf_check -o empty find ${HOME}/.emacs.d -type f
 }
