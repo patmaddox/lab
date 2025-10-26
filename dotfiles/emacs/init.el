@@ -267,3 +267,20 @@
 (setq rcirc-track-minor-mode-lighter " IRC"
       rcirc-track-show-activity-flag t)
 (rcirc-track-minor-mode 1)
+
+;;; Org-mode
+(require 'org)
+(require 'org-capture)
+
+;; Set default notes file for quick capture
+(setq org-default-notes-file (expand-file-name "~/safe/inbox.org"))
+
+;; Define capture templates
+(setq org-capture-templates
+      '(("t" "Todo" entry (file org-default-notes-file)
+         "* TODO %?\n%i")
+        ("n" "Note" entry (file org-default-notes-file)
+         "* %?\n%i")))
+
+;; Global keybinding for quick capture
+(global-set-key (kbd "C-c c") 'org-capture)
