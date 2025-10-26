@@ -299,6 +299,13 @@
 ;; Global keybinding for quick capture
 (global-set-key (kbd "C-c c") 'org-capture)
 
+;; Refile targets
+(setq org-refile-targets '(("~/safe/files/pat.org" :maxlevel . 9)))
+
+;; Use consult-style hierarchical completion for refiling
+(setq org-refile-use-outline-path 'file
+      org-outline-path-complete-in-steps nil)
+
 ;; Custom extensions
 (add-to-list 'load-path (expand-file-name "lisp" user-emacs-directory))
 (require 'pm-nirvana)
