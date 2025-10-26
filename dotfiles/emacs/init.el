@@ -160,12 +160,22 @@
 
 ;;; Completion: Vertico + Orderless + Consult + Marginalia
 
+;; Save minibuffer history across sessions
+(savehist-mode 1)
+(setq savehist-additional-variables '(kill-ring search-ring regexp-search-ring))
+
 ;; Vertico: Vertical completion UI
 (require 'vertico)
 (setq vertico-cycle t
       vertico-resize nil
       vertico-count 20)
 (vertico-mode)
+
+;; Prescient: Frequency and recency-based sorting
+(require 'prescient)
+(require 'vertico-prescient)
+(vertico-prescient-mode 1)
+(prescient-persist-mode 1)
 
 ;; vertico-directory: better file path navigation
 (require 'vertico-directory)
