@@ -284,3 +284,7 @@
 
 ;; Global keybinding for quick capture
 (global-set-key (kbd "C-c c") 'org-capture)
+
+;; Custom extensions
+(add-to-list 'load-path (expand-file-name "lisp" user-emacs-directory))
+(require 'pm-nirvana)
