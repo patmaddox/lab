@@ -47,6 +47,7 @@
 (global-display-line-numbers-mode 1)
 (global-hl-line-mode 1)
 (menu-bar-mode -1)
+(tool-bar-mode -1)
 (show-paren-mode 1)
 (winner-mode 1)
 (setq read-file-name-completion-ignore-case t)
