@@ -289,11 +289,38 @@
 ;; Set default notes file for quick capture
 (setq org-default-notes-file (expand-file-name "~/safe/inbox.org"))
 
+;; Todo keywords
+(setq org-todo-keywords
+      '((sequence "TODO(t)" "NEXT(n)" "|" "DONE(d)")))
+
 ;; Refile targets
 (setq org-refile-targets '(("~/safe/files/pat.org" :maxlevel . 9)))
 
 ;; Agenda files
 (setq org-agenda-files '("~/safe/files/pat.org"))
+
+;; Tags
+(setq org-tags-exclude-from-inheritance '("project"))
+
+;; Show parent headings when viewing agenda items
+(setq org-show-context-detail '((agenda . lineage)
+                                 (default . ancestors)))
+
+;; Stuck projects configuration
+(setq org-stuck-projects
+      '("+project-someday" ("TODO" "NEXT") nil ""))
+
+;; Custom agenda views
+(setq org-agenda-custom-commands
+      '(("w" "Workflow view"
+         ((todo "NEXT"
+                ((org-agenda-overriding-header "Next Actions:")))
+          (stuck ""
+                 ((org-agenda-overriding-header "Stalled Projects:")))
+          (todo "TODO"
+                ((org-agenda-overriding-header "Todo Items:")
+                 (org-agenda-skip-function
+                  '(org-agenda-skip-entry-if 'regexp ":someday:"))))))))
 
 ;; Define capture templates
 (setq org-capture-templates
