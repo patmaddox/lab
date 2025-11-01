@@ -310,6 +310,35 @@
 (setq org-stuck-projects
       '("+project-someday" ("TODO" "NEXT") nil ""))
 
+;; Helper function to add counts to agenda section headers
+(defun pm/org-agenda-add-item-counts ()
+  "Add item counts to section headers in the agenda buffer.
+Sections are identified as lines starting at column 0 ending with ':'.
+Items are identified as indented lines (starting with whitespace)."
+  (save-excursion
+    (goto-char (point-min))
+    (while (re-search-forward "^\\(.+\\):[ \t]*$" nil t)
+      (let* ((header-name (match-string 1))
+             (match-start (match-beginning 0))
+             (match-end (match-end 0))
+             (section-start (point))
+             (section-end (save-excursion
+                            (if (re-search-forward "^[^ \t\n]" nil t)
+                                (match-beginning 0)
+                              (point-max))))
+             (item-count 0))
+        (save-excursion
+          (goto-char section-start)
+          (forward-line 1)
+          (while (and (< (point) section-end)
+                      (not (eobp)))
+            (when (looking-at "^[ \t]+[^ \t\n]")
+              (setq item-count (1+ item-count)))
+            (forward-line 1)))
+        (goto-char match-start)
+        (delete-region match-start match-end)
+        (insert (format "%s (%d):" header-name item-count))))))
+
 ;; Custom agenda views
 (setq org-agenda-custom-commands
       '(("w" "Workflow view"
@@ -320,7 +349,8 @@
           (todo "TODO"
                 ((org-agenda-overriding-header "Todo Items:")
                  (org-agenda-skip-function
-                  '(org-agenda-skip-entry-if 'regexp ":someday:"))))))))
+                  '(org-agenda-skip-entry-if 'regexp ":someday:")))))
+         ((org-agenda-finalize-hook '(pm/org-agenda-add-item-counts))))))
 
 ;; Define capture templates
 (setq org-capture-templates
