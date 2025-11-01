@@ -104,7 +104,7 @@
 ;; Elixir
 (add-hook 'elixir-ts-mode-hook
           (lambda ()
-            (add-hook 'before-save-hook
+            (add-hook 'after-save-hook
                       (lambda ()
                         (when (eq major-mode 'elixir-ts-mode)
                           (shell-command-to-string
