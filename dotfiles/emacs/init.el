@@ -289,6 +289,12 @@
 ;; Set default notes file for quick capture
 (setq org-default-notes-file (expand-file-name "~/safe/inbox.org"))
 
+;; Refile targets
+(setq org-refile-targets '(("~/safe/files/pat.org" :maxlevel . 9)))
+
+;; Agenda files
+(setq org-agenda-files '("~/safe/files/pat.org"))
+
 ;; Define capture templates
 (setq org-capture-templates
       '(("t" "Todo" entry (file org-default-notes-file)
@@ -299,12 +305,12 @@
 ;; Global keybinding for quick capture
 (global-set-key (kbd "C-c c") 'org-capture)
 
-;; Refile targets
-(setq org-refile-targets '(("~/safe/files/pat.org" :maxlevel . 9)))
-
 ;; Use consult-style hierarchical completion for refiling
 (setq org-refile-use-outline-path 'file
       org-outline-path-complete-in-steps nil)
+
+;; Auto-save destination buffer after refiling
+(add-hook 'org-after-refile-insert-hook 'save-buffer)
 
 ;; Custom extensions
 (add-to-list 'load-path (expand-file-name "lisp" user-emacs-directory))
