@@ -1,4 +1,5 @@
-ninja := "ninja -C $(jj root)"
+ninja_root := `jj root`
+ninja := "ninja -C " + ninja_root
 src_root := "oss/freebsd-src"
 
 help:
@@ -16,38 +17,17 @@ ccache-watch wait='5':
 clone:
   if [ ! -d main.jj ]; then jj git clone --colocate https://github.com/freebsd/freebsd-src.git main.jj; fi
 
-# Build all FreeBSD versions
-build-all *args:
-   {{ninja}} {{args}} mod.pkg.freebsd
+# Run `make buildworld` for the given config
+buildworld config:
+  {{ninja}} ninja-out/{{src_root}}/{{config}}/buildworld.stamp
 
-# Build FreeBSD release tarballs (base.txz kernel.txz etc)
-build config:
-  {{ninja}} freebsd.{{config}}
+# Run `make buildkernel` for the given config
+buildkernel config:
+  {{ninja}} ninja-out/{{src_root}}/{{config}}/buildkernel.stamp
 
-# Clean build artifacts
-clean config:
-  ./scripts/build.sh clean config/{{config}}.conf
-  {{ninja}} -t clean freebsd.{{config}}
-
-# print .OBJDIR for the build
-objdir config:
-  ./scripts/build.sh objdir config/{{config}}.conf
-
-# print .OBJDIR/release for the build
-objdir-release config:
-  ./scripts/build.sh objdir-release config/{{config}}.conf
-
-# Print the command list in markdown table format
-command-table:
-  just -l -u | awk '/#/ {match($0, /#.*/); printf("| `just %s`!| %s!|\n", $1, substr($0, RSTART + 2)) }' | column -t -s '!' | sed -e 's/  |/ |/g'
-
-# List all release assets (base.txz kernel.txz etc)
-ls-releases:
-  tree --prune $(jj root)/ninja-out/freebsd-src
-
-# List all of the configs
-ls-configs:
-  @for c in $(ls config/*.conf); do basename ${c} .conf; done
+# Run `make packages` for the given config
+pkgbase config:
+  {{ninja}} ninja-out/{{src_root}}/{{config}}/pkgbase.stamp
 
 [no-cd]
 format-patch change="":

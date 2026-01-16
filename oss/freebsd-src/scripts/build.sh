@@ -2,136 +2,99 @@
 set -eu
 set -o pipefail
 
+: ${CCACHE_CONFIGPATH}
 : ${GIT_MAIN}
-: ${GIT_TMP}
-KERNCONF=${KERNCONF:-GENERIC}
-export KERNCONF
+: ${KERNCONF}
+: ${SRCCONF}
 
 main() {
-    parse_args "${@}"
-    ensure_not_dirty
-    reset_worktree
+    local cmd
+    cmd=${1}; shift
 
-    _make obj
-    OBJDIR=$(cmd::objdir)
-    cmd::${CMD}
+    case "${cmd}" in
+	buildworld|buildkernel|pkgbase)
+	    ${cmd} "${@}"
+	    ;;
+	*)
+	    echo "Unknown command: ${cmd}" >&2
+	    exit 1
+	    ;;
+    esac
 }
 
-# FreeBSD build scripts rely on .git being present, but jj worktrees
-# do not have it. Check out the jj workspace to a temporary repo so
-# build scripts correctly identify the git revision.
-#
-# I am not proud of these gymastics.
-#
-# Create a temp tag point to jj @-, which is the actual latest commit,
-# because of how jj uses detached head. Fetch and reset the working
-# tree to @-. Delete the tag so that it doesn't mess with jj.
-reset_worktree() {
-    # ls-files looks in the jj repo. Everything else should be run in
-    # a git repo for the worktree.
-    if [ "${CMD}" = "ls-files" ]; then
-	return 0
-    fi
+parse_build_args() {
+    config=${1}; shift
+    jjdir=${1}; shift
+    outdir=${1}; shift
+    stampfile=${1}; shift
 
-    local branchname githead
+    ensure_not_dirty
 
-    branchname=$(jj -R ${SRC_ROOT} log -r '::@ & bookmarks()' -n 1 -T 'self.local_bookmarks()' --no-graph  | sed 's/\*$//')
-    githead=$(jj -R ${SRC_ROOT} log -r "@-" --no-graph -T 'commit_id')
+    src=${outdir}/src
+    obj=${outdir}/obj
 
-    if [ ! -d ${GIT_TMP} ]; then
-	git clone -q -n ${GIT_MAIN} ${GIT_TMP}
-    fi
-
-    git -C ${GIT_MAIN} tag -f ninja-tmp ${githead}
-
-    git -C ${GIT_TMP} remote update
-    git -C ${GIT_TMP} fetch origin +refs/tags/ninja-tmp:refs/tags/ninja-tmp
-
-    # This builds the kernel identifier with the correct branch name,
-    # even if there are later commits.
-    git -C ${GIT_TMP} checkout ${branchname}
-    git -C ${GIT_TMP} reset --hard ninja-tmp
-
-    git -C ${GIT_MAIN} tag -d ninja-tmp > /dev/null
-
-    # double check that the git repo isn't dirty somehow
-    if [ -n "$(git -C ${GIT_TMP} status --porcelain)" ]; then
-	echo "E: refusing to build a dirty tree"
-	exit 1
-    fi
-
-    SRC_ROOT=$(realpath ${GIT_TMP})
+    sha=$(jj -R ${jjdir} log -r '@-' -T 'commit_id' --no-graph)
+    branch=$(jj -R ${jjdir} log -r '::@ & bookmarks()' -n 1 -T 'self.local_bookmarks()' --no-graph | sed 's/\*$//')
 }
 
 ensure_not_dirty() {
     set +o pipefail
-    if ! jj -R ${REPO_ROOT} status --quiet | grep -q '^Working copy .* (empty) (no description set)'; then
-	echo "E: refusing to build in a dirty tree"
+    if ! jj -R ${jjdir} status --quiet | grep -q '^Working copy .* (empty) (no description set)'; then
+	echo "E: refusing to build in a dirty tree: ${jjdir}" >&2
 	exit 1
     fi
     set -o pipefail
 }
 
-parse_args() {
-    local tree
+checkout_code() {
+    mkdir -p ${obj}
 
-    CMD=${1}; shift
-    CONFIG=${1}; shift
-
-    . $(realpath ${CONFIG})
-
-    SRC_ROOT=$(realpath ${TREE})
-    REPO_ROOT=${SRC_ROOT}
-
-    case ${CMD} in
-	build|clean|objdir|ls-files)
-	    ;;
-	*)
-	    echo "E: unknown command ${CMD}" 1>&2
-	    exit 1
-	    ;;
-    esac
-
-    __MAKE_CONF=/dev/null
-    SRCCONF=$(realpath src.conf)
-    OBJROOT=$(pwd)/_build/$(basename ${CONFIG} .conf)/
-    CCACHE_CONFIGPATH=$(realpath ccache.conf)
+    test -d ${src}/.git || git clone --no-checkout ${GIT_MAIN} ${src}
+    git -C ${src} remote update
+    git -C ${src} fetch origin ${sha}
+    git -C ${src} checkout ${branch}
+    git -C ${src} reset --hard ${sha}
 }
 
-# Build and release all in one go so the git ref is consistent.  Clean
-# because we're reusing a temp git dir, which can cause issues as we
-# juggle versions.
-cmd::build() {
-    _make cleanworld
-    _make buildworld buildkernel
-
-    SRC_ROOT=$(realpath ${SRC_ROOT}/release)
-    _make -DNOPORTS packagesystem
+buildworld() {
+    local config jjdir outdir stampfile src obj sha branch
+    parse_build_args "${@}"
+    checkout_code
+    _make buildworld
+    touch ${stampfile}
 }
 
-cmd::clean() {
-    _make cleanworld
+buildkernel() {
+    local config jjdir outdir stampfile src obj sha branch
+    parse_build_args "${@}"
+    checkout_code
+    _make buildkernel
+    touch ${stampfile}
 }
 
-cmd::objdir() {
-    _make -V .OBJDIR
-}
-
-cmd::ls-files() {
-    jj -R ${SRC_ROOT} file list
+pkgbase() {
+    local config jjdir outdir stampfile src obj sha branch
+    parse_build_args "${@}"
+    checkout_code
+    local repodir
+    repodir=${outdir}/pkgbase
+    mkdir -p ${repodir}
+    _make REPODIR=$(realpath ${repodir}) packages
+    touch ${stampfile}
 }
 
 _make() {
-    __MAKE_CONF=${__MAKE_CONF} \
-	       SRCCONF=${SRCCONF} \
-	       OBJROOT=${OBJROOT} \
-	       CCACHE_CONFIGPATH=${CCACHE_CONFIGPATH} \
-         nice -n 20 bear --append --force-wrapper --output ${REPO_ROOT}/compile_commands.json -- \
-	       make \
-	       -C ${SRC_ROOT} \
-	       -s \
-	       -j$(sysctl -n hw.ncpu) \
-	       -DNO_ROOT ${@}
+    __MAKE_CONF=/dev/null \
+	CCACHE_CONFIGPATH=$(realpath ${CCACHE_CONFIGPATH}) \
+	KERNCONF=${KERNCONF} \
+	OBJROOT=$(realpath ${obj})/ \
+	SRCCONF=$(realpath ${SRCCONF}) \
+	nice -n 20 \
+	make -C ${src} \
+	-s \
+	-j$(sysctl -n hw.ncpu) \
+	-DNO_ROOT \
+	${@}
 }
 
 main "${@}"
