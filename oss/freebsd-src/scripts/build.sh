@@ -51,6 +51,7 @@ checkout_code() {
     test -d ${src}/.git || git clone --no-checkout ${GIT_MAIN} ${src}
     git -C ${src} remote update
     git -C ${src} fetch origin ${sha}
+    git -C ${src} clean -fdx
     git -C ${src} checkout ${branch}
     git -C ${src} reset --hard ${sha}
 }
