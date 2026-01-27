@@ -1,70 +1,26 @@
 src_root = oss/freebsd-src
 out_dir = ${ninja_out}/${src_root}
 git_main = ${src_root}/main.jj
-kernconf = GENERIC
+freebsd_src_ninja = ${src_root}/freebsd-src.ninja
 
 rule build-freebsd
-  command = CCACHE_CONFIGPATH=${src_root}/ccache.conf GIT_MAIN=${git_main} KERNCONF=${kernconf} SRCCONF=${src_root}/src.conf ${src_root}/scripts/build.sh ${target} ${config} ${src} ${out_dir}/${config} ${out}
+  command = CCACHE_CONFIGPATH=${src_root}/ccache.conf GIT_MAIN=${git_main} KERNCONF=${kernconf} SRCCONF=${src_root}/src.conf ${src_root}/scripts/build.sh ${target} ${config} ${src_root}/${tree} ${out_dir}/${config}
   pool = console
 
-## current
+# current
+config = current
+tree = main.jj
+kernconf = GENERIC-NODEBUG
+include ${freebsd_src_ninja}
 
-build ${out_dir}/current/buildworld.stamp: build-freebsd ${src_root}/main.jj/.jj/working_copy/checkout
-  src = ${src_root}/main.jj
-  config = current
-  target = buildworld
-  kernconf = GENERIC-NODEBUG
+# 16.0 - stabweek
+config = 16.0
+tree = stable-16.jj
+kernconf = GENERIC-NODEBUG
+include ${freebsd_src_ninja}
 
-build ${out_dir}/current/buildkernel.stamp: build-freebsd ${src_root}/main.jj/.jj/working_copy/checkout
-  src = ${src_root}/main.jj
-  config = current
-  target = buildkernel
-  kernconf = GENERIC-NODEBUG
-
-build ${out_dir}/current/pkgbase.stamp: build-freebsd ${out_dir}/current/buildworld.stamp ${out_dir}/current/buildkernel.stamp
-  src = ${src_root}/main.jj
-  config = current
-  target = pkgbase
-  kernconf = GENERIC-NODEBUG
-
-## 16.0 - stabweek
-
-build ${out_dir}/16.0/buildworld.stamp: build-freebsd ${src_root}/stable-16.jj/.jj/working_copy/checkout
-  src = ${src_root}/stable-16.jj
-  config = 16.0
-  target = buildworld
-  kernconf = GENERIC-NODEBUG
-
-build ${out_dir}/16.0/buildkernel.stamp: build-freebsd ${src_root}/stable-16.jj/.jj/working_copy/checkout
-  src = ${src_root}/stable-16.jj
-  config = 16.0
-  target = buildkernel
-  kernconf = GENERIC-NODEBUG
-
-build ${out_dir}/16.0/pkgbase.stamp: build-freebsd ${out_dir}/16.0/buildworld.stamp ${out_dir}/16.0/buildkernel.stamp
-  src = ${src_root}/stable-16.jj
-  config = 16.0
-  target = pkgbase
-  kernconf = GENERIC-NODEBUG
-
-## 15.0
-
-build ${out_dir}/15.0/buildworld.stamp: build-freebsd ${src_root}/releng-15.0.jj/.jj/working_copy/checkout
-  src = ${src_root}/releng-15.0.jj
-  config = 15.0
-  target = buildworld
-
-build ${out_dir}/15.0/buildkernel.stamp: build-freebsd ${src_root}/releng-15.0.jj/.jj/working_copy/checkout
-  src = ${src_root}/releng-15.0.jj
-  config = 15.0
-  target = buildkernel
-
-build ${out_dir}/15.0/pkgbase.stamp: build-freebsd ${out_dir}/15.0/buildworld.stamp ${out_dir}/15.0/buildkernel.stamp
-  src = ${src_root}/releng-15.0.jj
-  config = 15.0
-  target = pkgbase
-
-build ${out_dir}/15.0/vm-image.stamp ${out_dir}/15.0/obj/amd64.amd64/release/vm.ufs.raw ${out_dir}/15.0/obj/amd64.amd64/release/vm.zfs.raw: build-freebsd ${out_dir}/15.0/pkgbase.stamp
-  src = ${src_root}/releng-15.0.jj
-  config = 15.0
-  target = vm-image
+# 15.0
+config = 15.0
+tree = releng-15.0.jj
+kernconf = GENERIC
+include ${freebsd_src_ninja}

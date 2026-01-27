@@ -12,7 +12,13 @@ main() {
  	    : ${GIT_MAIN}
  	    : ${KERNCONF}
  	    : ${SRCCONF}
-	    ${cmd} "${@}"
+
+	    local config jjdir outdir stampfile src obj sha branch
+	    parse_build_args "${@}"
+	    checkout_code
+
+	    ${cmd}
+	    touch ${stampfile}
 	    ;;
 	*)
 	    echo "Unknown command: ${cmd}" >&2
@@ -25,7 +31,7 @@ parse_build_args() {
     config=${1}; shift
     jjdir=${1}; shift
     outdir=${1}; shift
-    stampfile=${1}; shift
+    stampfile=${outdir}/${cmd}.stamp
 
     ensure_not_dirty
 
@@ -57,36 +63,21 @@ checkout_code() {
 }
 
 buildworld() {
-    local config jjdir outdir stampfile src obj sha branch
-    parse_build_args "${@}"
-    checkout_code
     _make buildworld
-    touch ${stampfile}
 }
 
 buildkernel() {
-    local config jjdir outdir stampfile src obj sha branch
-    parse_build_args "${@}"
-    checkout_code
     _make buildkernel
-    touch ${stampfile}
 }
 
 pkgbase() {
-    local config jjdir outdir stampfile src obj sha branch
-    parse_build_args "${@}"
-    checkout_code
     local repodir
     repodir=${outdir}/pkgbase
     mkdir -p ${repodir}
     _make REPODIR=$(realpath ${repodir}) packages
-    touch ${stampfile}
 }
 
 vm-image() {
-    local config jjdir outdir stampfile src obj sha branch
-    parse_build_args "${@}"
-    checkout_code
     _make_release clean -DWITH_VMIMAGES
 
     local repodir objtop pkg_abi pkgbase_conf_dir
@@ -99,7 +90,6 @@ vm-image() {
 FreeBSD-base: { url: "file://$(realpath ${repodir})/${pkg_abi}/latest", enabled: yes}
 EOF
     _make_release PKGBASE_REPO_DIR=$(realpath ${repodir}) VMCONFIG=$(realpath ${jjdir}/../tools/vm-nodbg32.conf) VMFORMATS=raw -DWITH_VMIMAGES vm-image
-    touch ${stampfile}
 }
 
 _make() {

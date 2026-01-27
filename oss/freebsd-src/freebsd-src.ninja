@@ -1,0 +1,23 @@
+build ${out_dir}/${config}/buildworld.stamp: build-freebsd ${src_root}/${tree}/.jj/working_copy/checkout
+  target = buildworld
+  config = ${config}
+  kernconf = ${kernconf}
+  tree = ${tree}
+
+build ${out_dir}/${config}/buildkernel.stamp: build-freebsd ${src_root}/${tree}/.jj/working_copy/checkout
+  target = buildkernel
+  config = ${config}
+  kernconf = ${kernconf}
+  tree = ${tree}
+
+build ${out_dir}/${config}/pkgbase.stamp: build-freebsd ${out_dir}/${config}/buildworld.stamp ${out_dir}/${config}/buildkernel.stamp
+  target = pkgbase
+  config = ${config}
+  kernconf = ${kernconf}
+  tree = ${tree}
+
+build ${out_dir}/${config}/vm-image.stamp ${out_dir}/${config}/obj/amd64.amd64/release/vm.ufs.raw ${out_dir}/${config}/obj/amd64.amd64/release/vm.zfs.raw: build-freebsd ${out_dir}/${config}/pkgbase.stamp
+  target = vm-image
+  config = ${config}
+  kernconf = ${kernconf}
+  tree = ${tree}
