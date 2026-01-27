@@ -29,6 +29,10 @@ buildkernel config:
 pkgbase config:
   {{ninja}} ninja-out/{{src_root}}/{{config}}/pkgbase.stamp
 
+# Run `make vm-image` for the given config
+vm-image config:
+  {{ninja}} ninja-out/{{src_root}}/{{config}}/vm-image.stamp
+
 [no-cd]
 format-patch change="":
   #!/bin/sh

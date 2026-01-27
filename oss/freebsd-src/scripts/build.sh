@@ -2,17 +2,16 @@
 set -eu
 set -o pipefail
 
-: ${CCACHE_CONFIGPATH}
-: ${GIT_MAIN}
-: ${KERNCONF}
-: ${SRCCONF}
-
 main() {
     local cmd
     cmd=${1}; shift
 
     case "${cmd}" in
-	buildworld|buildkernel|pkgbase)
+	buildworld|buildkernel|pkgbase|vm-image)
+ 	    : ${CCACHE_CONFIGPATH}
+ 	    : ${GIT_MAIN}
+ 	    : ${KERNCONF}
+ 	    : ${SRCCONF}
 	    ${cmd} "${@}"
 	    ;;
 	*)
@@ -83,6 +82,25 @@ pkgbase() {
     touch ${stampfile}
 }
 
+vm-image() {
+    local config jjdir outdir stampfile src obj sha branch
+    parse_build_args "${@}"
+    checkout_code
+    _make_release clean -DWITH_VMIMAGES
+
+    local repodir objtop pkg_abi pkgbase_conf_dir
+    objtop=$(make -C ${src} -V OBJTOP OBJROOT=$(realpath ${obj})/)
+    pkg_abi=$(pkg -o ABI_FILE=${objtop}/worldstage/usr/bin/uname config ABI)
+    pkgbase_conf_dir=${objtop}/release/pkgbase-repo-dir
+    mkdir -p ${pkgbase_conf_dir}
+    repodir=${outdir}/pkgbase
+    cat > ${pkgbase_conf_dir}/FreeBSD-base.conf <<EOF
+FreeBSD-base: { url: "file://$(realpath ${repodir})/${pkg_abi}/latest", enabled: yes}
+EOF
+    _make_release PKGBASE_REPO_DIR=$(realpath ${repodir}) VMCONFIG=$(realpath ${jjdir}/../tools/vm-nodbg32.conf) VMFORMATS=raw -DWITH_VMIMAGES vm-image
+    touch ${stampfile}
+}
+
 _make() {
     __MAKE_CONF=/dev/null \
 	CCACHE_CONFIGPATH=$(realpath ${CCACHE_CONFIGPATH}) \
@@ -94,6 +112,22 @@ _make() {
 	-s \
 	-j$(sysctl -n hw.ncpu) \
 	-DNO_ROOT \
+	${@}
+}
+
+_make_release() {
+    __MAKE_CONF=/dev/null \
+	CCACHE_CONFIGPATH=$(realpath ${CCACHE_CONFIGPATH}) \
+	KERNCONF=${KERNCONF} \
+	OBJROOT=$(realpath ${obj})/ \
+	SRCCONF=$(realpath ${SRCCONF}) \
+	nice -n 20 \
+	make -C ${src}/release \
+	-s \
+	-j$(sysctl -n hw.ncpu) \
+	-DNO_ROOT \
+	-DNOPORTS \
+	-DNOSRC \
 	${@}
 }
 

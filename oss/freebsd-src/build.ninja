@@ -63,3 +63,8 @@ build ${out_dir}/15.0/pkgbase.stamp: build-freebsd ${out_dir}/15.0/buildworld.st
   src = ${src_root}/releng-15.0.jj
   config = 15.0
   target = pkgbase
+
+build ${out_dir}/15.0/vm-image.stamp ${out_dir}/15.0/obj/amd64.amd64/release/vm.ufs.raw ${out_dir}/15.0/obj/amd64.amd64/release/vm.zfs.raw: build-freebsd ${out_dir}/15.0/pkgbase.stamp
+  src = ${src_root}/releng-15.0.jj
+  config = 15.0
+  target = vm-image
