@@ -23,7 +23,7 @@ import-config:
 
 # Update portsfile with list of manually-installed ports
 update-ports:
-  {{newbe_src}}/list-ports | tee $(hostname -s).ports
+  {{newbe_src}}/list-ports | tee ports
 
 # Clean build artifacts
 clean:
