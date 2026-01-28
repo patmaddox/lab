@@ -1,0 +1,13 @@
+/set type=file uname=root gname=wheel mode=0644
+
+./boot/loader.conf
+./etc/fstab
+./etc/rc.conf
+./etc/resolv.conf
+./etc/ssh/sshd_config
+./opt/bootstrap.sh mode=0744
+./root/.ssh/authorized_keys mode=0400
+./usr/local/etc/doas.conf
+./usr/local/etc/nginx/nginx.conf
+./usr/local/etc/pkg/repos/poudriere.conf
+./usr/local/etc/poudriere.conf
