@@ -57,7 +57,7 @@ lang/erlang-runtime27
 lang/erlang-runtime28
 lang/gcc
 lang/gleam
-lang/go123
+lang/go
 lang/python
 lang/python310
 lang/rust
