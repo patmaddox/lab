@@ -2,7 +2,7 @@
 set -eu
 set -o pipefail
 
-redo-ifchange build
+redo-ifchange clone
 
 cd default.jj
-./bin/redo test
+gmake
