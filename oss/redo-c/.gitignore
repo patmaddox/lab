@@ -1,0 +1,9 @@
+.dep.*
+all
+links
+redo
+redo-always
+redo-ifchange
+redo-ifcreate
+redo-sources
+redo-targets
