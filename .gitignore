@@ -1,12 +1,14 @@
 *#*
 *.core
 *.elc
+*.img
 *.jj
 *~
 .ninja_deps
 .ninja_log
 .plzconfig.local
 .pnpm-store
+.redo*
 _build
 bin
 dotfiles/nvim/lazy
