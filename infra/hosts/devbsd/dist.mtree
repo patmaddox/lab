@@ -1,0 +1,9 @@
+/set type=file uname=root gname=wheel mode=0644
+
+./boot/loader.conf
+./etc/fstab
+./etc/rc.conf
+./etc/resolv.conf
+./etc/ssh/sshd_config
+./root/.ssh/authorized_keys
+./usr/local/etc/doas.conf
