@@ -3,5 +3,5 @@ set -eu
 set -o pipefail
 
 # symlink this to clean.do in any dir that should build subdirs
-files=$(ls */clean.do 2>/dev/null || true)
-if [ -n "${files}" ]; then redo ${files%.do}; fi
+files=$(ls -1 */clean.do 2>/dev/null | sed -e 's/\.do$//' || true)
+if [ -n "${files}" ]; then redo ${files}; fi

@@ -3,5 +3,5 @@ set -eu
 set -o pipefail
 
 # symlink this to all.do in any dir that should build subdirs
-files=$(ls */all.do 2>/dev/null || true)
-if [ -n "${files}" ]; then redo-ifchange ${files%.do}; fi
+files=$(ls -1 */all.do 2>/dev/null | sed -e 's/\.do$//' || true)
+if [ -n "${files}" ]; then redo-ifchange ${files}; fi
