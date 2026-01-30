@@ -1,3 +1,3 @@
 #!/bin/sh
-redo-ifchange redo
+redo-ifchange redo-py
 redo-ifchange redo-rs
