@@ -1,0 +1,1 @@
+../share/redo/subdirs-all.do
