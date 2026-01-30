@@ -10,7 +10,6 @@
 .pnpm-store
 .redo*
 _build
-bin
 dotfiles/nvim/lazy
 ninja-out
 node_modules
