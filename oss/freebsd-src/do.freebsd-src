@@ -1,0 +1,55 @@
+#!/bin/sh
+#
+# The magic freebsd-src builder
+#
+# It derives the config name and build target from the file name, and
+# then evals remaining config values (tree and kernel) from ./config.
+# It hardcodes the sources for each target.
+#
+# ln -s do.freebsd-src current.buildworld.do
+# ln -s do.freebsd-src current.buildkernel.do
+# ln -s do.freebsd-src current.pkgbase.do
+set -eu
+set -o pipefail
+
+exec >&2
+
+filename=${0%.do}
+config=$(echo "${filename}" | cut -d . -f 1)
+target=$(echo "${filename}" | cut -d . -f 2)
+
+. ./config
+
+eval "tree=\${conf_${config}_tree}"
+eval "kernel=\${conf_${config}_kernel}"
+
+case "${target}" in
+    buildworld)
+	srcs=${tree}/.jj/working_copy/checkout
+	;;
+    buildkernel)
+	srcs=${config}.buildworld
+	;;
+    pkgbase)
+	srcs="${config}.buildworld ${config}.buildkernel"
+	;;
+    *)
+	echo "E: unknown target ${target}" >&2
+	exit 1
+esac
+
+export SRC_ROOT=$(pwd)
+export CCACHE_CONFIGPATH=${SRC_ROOT}/ccache.conf
+export GIT_MAIN=$(realpath ${SRC_ROOT}/main.jj)
+export KERNCONF=${kernel}
+export SRCCONF=$(realpath ${SRC_ROOT}/src.conf)
+
+# redo-rs sets MAKEFLAGS in a way that produces
+#     make: illegal argument to -j -- must be positive integer!
+unset MAKEFLAGS
+
+outdir=${SRC_ROOT}/_build/${config}
+mkdir -p ${outdir}
+
+redo-ifchange ${srcs} ${SRC_ROOT}/scripts/build.sh
+${SRC_ROOT}/scripts/build.sh ${target} ${config} $(realpath ${SRC_ROOT}/${tree}) ${outdir} | tee ${3}

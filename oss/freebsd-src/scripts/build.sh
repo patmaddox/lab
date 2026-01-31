@@ -13,12 +13,11 @@ main() {
  	    : ${KERNCONF}
  	    : ${SRCCONF}
 
-	    local config jjdir outdir stampfile src obj sha branch
+	    local config jjdir outdir src obj sha branch
 	    parse_build_args "${@}"
 	    checkout_code
 
 	    ${cmd}
-	    touch ${stampfile}
 	    ;;
 	*)
 	    echo "Unknown command: ${cmd}" >&2
@@ -31,7 +30,6 @@ parse_build_args() {
     config=${1}; shift
     jjdir=${1}; shift
     outdir=${1}; shift
-    stampfile=${outdir}/${cmd}.stamp
 
     ensure_not_dirty
 

@@ -22,7 +22,6 @@ subninja src/urlcheck/urlcheck.ninja
 
 # freebsd
 
-subninja oss/freebsd-src/build.ninja
 #subninja src/freebsd-ports/ports.ninja
 
 # images

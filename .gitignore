@@ -3,8 +3,11 @@
 *.elc
 *.img
 *.jj
+*.tmp
 *~
 .dep.*
+.depend.*
+.lock.*
 .ninja_deps
 .ninja_log
 .plzconfig.local

@@ -1,2 +1,5 @@
+*.buildkernel
+*.buildworld
+*.pkgbase
 dev-head
 patches

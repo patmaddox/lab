@@ -1,0 +1,9 @@
+# prefix with conf_ because shell vars don't permit numeric prefixes
+conf_current_tree=main.jj
+conf_current_kernel=GENERIC-NODEBUG
+
+conf_160_tree=stable-16.jj
+conf_160_kernel=GENERIC-NODEBUG
+
+conf_150_tree=releng-15.0.jj
+conf_150_kernel=GENERIC

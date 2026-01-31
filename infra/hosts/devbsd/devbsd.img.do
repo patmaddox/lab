@@ -5,12 +5,14 @@ set -o pipefail
 exec >&2
 
 version=16
-pkgdir=../../../ninja-out/oss/freebsd-src/current/pkgbase/FreeBSD:${version}:amd64/latest
-sources=$(ls ${pkgdir}/FreeBSD-*.pkg)
+pkgdir=../../../oss/freebsd-src/_build/current/pkgbase/FreeBSD:${version}:amd64/latest
 distfiles=$(jj file list dist)
 
 # redo secret sauce
-redo-ifchange ${sources} ${distfiles}
+redo-ifchange \
+    ../../../oss/freebsd-src/current.pkgbase \
+    ${distfiles} \
+    dist.mtree
 outfile=${3}
 
 main() {
