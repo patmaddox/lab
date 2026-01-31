@@ -4,6 +4,7 @@
 *.img
 *.jj
 *~
+.dep.*
 .ninja_deps
 .ninja_log
 .plzconfig.local

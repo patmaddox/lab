@@ -653,6 +653,7 @@ run_script(char *target, int implicit)
 	dep_fd = mkstemp(temp_depfile);
 
 	target_fd = mkstemp(temp_target_base);
+	unlink(temp_target_base);
 
 	fprintf(stderr, "redo%*.*s %s # %s\n", level*2, level*2, " ", orig_target, dofile);
 	write_dep(dep_fd, dofile);
