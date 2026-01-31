@@ -492,6 +492,7 @@ struct job {
 	struct job *next;
 	pid_t pid;
 	int lock_fd;
+	int stdout_fd;
 	char *target, *temp_depfile, *temp_target;
 	int implicit;
 };
@@ -581,6 +582,7 @@ new_waitjob(int lock_fd, int implicit)
 		job->target = 0;
 		job->pid = pid;
 		job->lock_fd = lock_fd;
+		job->stdout_fd = -1;
 		job->implicit = implicit;
 
 		insert_job(job);
@@ -616,15 +618,24 @@ redo_basename(char *dofile, char *target)
 	return buf;
 }
 
+static char *
+temptarget(char *target)
+{
+	static char buf[PATH_MAX];
+	snprintf(buf, sizeof buf, ".redo.%s.tmp", target);
+	return buf;
+}
+
 static void
 run_script(char *target, int implicit)
 {
 	char temp_depfile[] = ".depend.XXXXXX";
-	char temp_target_base[] = ".target.XXXXXX";
+	char stdout_file[] = ".stdout.XXXXXX";
+	char temp_target_base[PATH_MAX];
 	char temp_target[PATH_MAX], rel_target[PATH_MAX], cwd[PATH_MAX];
 	char *orig_target = target;
 	int old_dep_fd = dep_fd;
-	int target_fd;
+	int stdout_fd;
 	char *dofile, *dirprefix;
 	pid_t pid;
 
@@ -652,8 +663,13 @@ run_script(char *target, int implicit)
 
 	dep_fd = mkstemp(temp_depfile);
 
-	target_fd = mkstemp(temp_target_base);
-	unlink(temp_target_base);
+	// anonymous file for capturing stdout
+	stdout_fd = mkstemp(stdout_file);
+	unlink(stdout_file);
+
+	// deterministic temp target path for $3
+	strlcpy(temp_target_base, temptarget(target), sizeof temp_target_base);
+	unlink(temp_target_base);  // remove any stale temp file
 
 	fprintf(stderr, "redo%*.*s %s # %s\n", level*2, level*2, " ", orig_target, dofile);
 	write_dep(dep_fd, dofile);
@@ -707,9 +723,9 @@ djb-style default.o.do:
 		setenvfd("REDO_DEP_FD", dep_fd);
 		setenvfd("REDO_LEVEL", level + 1);
 		if (sflag > 0)
-			dup2(target_fd, 1);
+			dup2(stdout_fd, 1);
 		else
-			close(target_fd);
+			close(stdout_fd);
 
 		if (access(dofile, X_OK) != 0)   // run -x files with /bin/sh
 			execl("/bin/sh", "/bin/sh", xflag > 0 ? "-ex" : "-e",
@@ -724,12 +740,12 @@ djb-style default.o.do:
 		if (!job)
 			exit(-1);
 
-		close(target_fd);
 		close(dep_fd);
 		dep_fd = old_dep_fd;
 
 		job->pid = pid;
 		job->lock_fd = lock_fd;
+		job->stdout_fd = stdout_fd;
 		job->target = orig_target;
 		job->temp_depfile = strdup(temp_depfile);
 		job->temp_target = strdup(temp_target_base);
@@ -859,14 +875,43 @@ redo_ifchange(int targetc, char *targetv[])
 				remove(job->temp_depfile);
 				remove(job->temp_target);
 			} else {
-				struct stat st;
+				struct stat stdout_st, tmp_st;
 				char *target = targetchdir(job->target);
 				char *depfile = targetdep(target);
 				int dfd;
+				int have_stdout = 0, have_tmp = 0;
+
+				// check if stdout has content
+				if (fstat(job->stdout_fd, &stdout_st) == 0 &&
+				    stdout_st.st_size > 0)
+					have_stdout = 1;
+
+				// check if $3 was created by script
+				if (stat(job->temp_target, &tmp_st) == 0)
+					have_tmp = 1;
+
+				// if stdout has content and $3 doesn't exist,
+				// copy stdout to $3
+				if (have_stdout && !have_tmp) {
+					int tfd;
+					char buf[4096];
+					ssize_t r;
+
+					lseek(job->stdout_fd, 0, SEEK_SET);
+					tfd = open(job->temp_target,
+					    O_WRONLY | O_CREAT | O_TRUNC, 0666);
+					if (tfd >= 0) {
+						while ((r = read(job->stdout_fd,
+						    buf, sizeof buf)) > 0)
+							write(tfd, buf, r);
+						close(tfd);
+						have_tmp = 1;
+					}
+				}
 
 				dfd = open(job->temp_depfile,
 				    O_WRONLY | O_APPEND);
-				if (stat(job->temp_target, &st) == 0 && st.st_size > 0) {
+				if (have_tmp) {
 					rename(job->temp_target, target);
 					write_dep(dfd, target);
 				} else {
@@ -880,6 +925,8 @@ redo_ifchange(int targetc, char *targetv[])
 			}
 		}
 
+		if (job->stdout_fd >= 0)
+			close(job->stdout_fd);
 		close(job->lock_fd);
 
 		vacate(job->implicit);
