@@ -28,6 +28,8 @@ prepare_disk() {
     bootdir=${rootdir}-boot
     mkdir ${bootdir}
 
+    pkg_cmd="doas env ABI=FreeBSD:${version}:amd64 IGNORE_OSVERSION=yes pkg -r ${rootdir}"
+
     truncate -s 1300m ${outfile}
     md=$(doas mdconfig -a -f ${outfile})
     mdid=$(echo ${md} | grep -o '[[:digit:]]*')
@@ -65,9 +67,10 @@ prepare_zpool() {
 }
 
 install_base() {
-    pkg_cmd="doas env ABI=FreeBSD:${version}:amd64 IGNORE_OSVERSION=yes pkg -r ${rootdir}"
     ${pkg_cmd} add $(realpath ${pkgdir}/FreeBSD-set-base-${version}.*.pkg)
-    ${pkg_cmd} add $(realpath ${pkgdir}/FreeBSD-kernel-*-${version}.*.pkg)
+    ${pkg_cmd} add $(realpath ${pkgdir}/FreeBSD-set-kernels-${version}.*.pkg)
+    ${pkg_cmd} add $(realpath ${pkgdir}/FreeBSD-set-tests-${version}.*.pkg)
+    ${pkg_cmd} install -r FreeBSD -y ccache4 perl5 tmux
     doas zfs snapshot -r devbsd--zroot@base
 }
 
