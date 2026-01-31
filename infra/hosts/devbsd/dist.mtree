@@ -9,4 +9,3 @@
 ./etc/ssh/sshd_config
 ./root/.ssh/authorized_keys
 ./usr/local/etc/doas.conf
-./var/tmp/ccache/ccache.conf

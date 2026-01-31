@@ -53,7 +53,6 @@ prepare_zpool() {
     doas zfs create -o mountpoint=/usr -o canmount=off devbsd--zroot/usr
     doas zfs create -o setuid=off devbsd--zroot/usr/ports
     doas zfs create devbsd--zroot/usr/src
-    doas zfs create devbsd--zroot/usr/obj
     doas zfs create -o mountpoint=/var -o canmount=off devbsd--zroot/var
     doas zfs create devbsd--zroot/var/db
     doas zfs create devbsd--zroot/var/run
@@ -96,7 +95,7 @@ cleanup() {
     doas zfs set readonly=on devbsd--zroot/ROOT/default
     doas zpool export devbsd--zroot || true
     [ -n "${mdid}" ] && doas mdconfig -d -u ${mdid} || true
-    rmdir ${rootdir} ${bootdir} || true
+    doas rm -rf ${rootdir} ${bootdir}
 }
 
 main
