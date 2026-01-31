@@ -51,6 +51,8 @@ prepare_zpool() {
     doas zfs create devbsd--zroot/usr/src
     doas zfs create devbsd--zroot/usr/obj
     doas zfs create -o mountpoint=/var -o canmount=off devbsd--zroot/var
+    doas zfs create devbsd--zroot/var/db
+    doas zfs create devbsd--zroot/var/run
     doas zfs create -o setuid=off -o exec=off devbsd--zroot/var/audit
     doas zfs create -o setuid=off -o exec=off devbsd--zroot/var/crash
     doas zfs create -o setuid=off -o exec=off devbsd--zroot/var/log
@@ -86,6 +88,7 @@ install_bootloader() {
 }
 
 cleanup() {
+    doas zfs set readonly=on devbsd--zroot/ROOT/default
     doas zpool export devbsd--zroot || true
     [ -n "${mdid}" ] && doas mdconfig -d -u ${mdid} || true
     rmdir ${rootdir} ${bootdir} || true
