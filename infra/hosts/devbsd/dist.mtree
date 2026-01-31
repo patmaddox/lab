@@ -4,6 +4,9 @@
 ./etc/fstab
 ./etc/rc.conf
 ./etc/resolv.conf
+./etc/src-env.conf
+./etc/src.conf
 ./etc/ssh/sshd_config
 ./root/.ssh/authorized_keys
 ./usr/local/etc/doas.conf
+./var/tmp/ccache/ccache.conf
