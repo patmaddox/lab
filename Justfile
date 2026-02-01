@@ -6,7 +6,8 @@ help:
 
 # fetch trunk from gerrit, rebase dev onto trunk
 git-rebase:
-  jj git fetch --remote gerrit
+  jj git fetch --remote gerrit -b trunk
+  jj b s trunk -r trunk@gerrit
   jj rebase -b dev -d trunk --skip-emptied
   jj simplify-parents -r dev
 
