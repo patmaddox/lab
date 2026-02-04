@@ -1,0 +1,19 @@
+{
+  "name": "example",
+  "version": "1.0.0",
+  "description": "Example JSON file",
+  "author": {
+    "name": "Alice",
+    "email": "alice@example.com"
+  },
+  "dependencies": {
+    "foo": "^1.0.0",
+    "bar": "^2.0.0"
+  },
+  "scripts": {
+    "build": "make build",
+    "test": "make test"
+  },
+  "enabled": true,
+  "count": 42
+}

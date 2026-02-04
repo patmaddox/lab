@@ -1,0 +1,17 @@
+<div class="container">
+  <h1><%= @title %></h1>
+
+  <%= if @show_list do %>
+    <ul>
+      <%= for item <- @items do %>
+        <li class={if item.active, do: "active", else: ""}}>
+          <%= item.name %>
+        </li>
+      <% end %>
+    </ul>
+  <% else %>
+    <p>No items to display.</p>
+  <% end %>
+
+  <.link navigate={~p"/home"}>Go Home</.link>
+</div>

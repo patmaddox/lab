@@ -1,0 +1,30 @@
+# Example YAML file
+name: example
+version: 1.0.0
+description: Example YAML configuration
+
+author:
+  name: Alice
+  email: alice@example.com
+
+dependencies:
+  - name: foo
+    version: "1.0.0"
+  - name: bar
+    version: "2.0.0"
+
+settings:
+  enabled: true
+  count: 42
+  tags:
+    - dev
+    - test
+    - prod
+
+environment:
+  development:
+    debug: true
+    log_level: debug
+  production:
+    debug: false
+    log_level: info

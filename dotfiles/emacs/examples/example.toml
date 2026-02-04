@@ -1,0 +1,27 @@
+# Example TOML file
+
+[package]
+name = "example"
+version = "1.0.0"
+description = "Example TOML configuration"
+
+[author]
+name = "Alice"
+email = "alice@example.com"
+
+[dependencies]
+foo = "1.0.0"
+bar = "2.0.0"
+
+[settings]
+enabled = true
+count = 42
+tags = ["dev", "test", "prod"]
+
+[environment.development]
+debug = true
+log_level = "debug"
+
+[environment.production]
+debug = false
+log_level = "info"
