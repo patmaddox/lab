@@ -8,7 +8,7 @@ databases/postgresql17-server
 databases/tcl-sqlite3
 deskutils/i3lock
 deskutils/just
-deskutils/zk
+#deskutils/zk
 devel/atf
 devel/autoconf
 devel/bear
