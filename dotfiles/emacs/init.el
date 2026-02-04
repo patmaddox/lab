@@ -104,6 +104,11 @@
 
 ;;; Language-specific
 
+;; All programming modes
+(add-hook 'prog-mode-hook
+          (lambda ()
+            (add-hook 'before-save-hook 'delete-trailing-whitespace nil t)))
+
 ;; C (FreeBSD style(9))
 (require 'freebsd-style-ts)
 (add-hook 'c-ts-mode-hook 'freebsd-c-style-ts)
@@ -134,13 +139,7 @@
 (add-hook 'emacs-lisp-mode-hook
           (lambda ()
             (setq indent-tabs-mode nil)
-            (define-key emacs-lisp-mode-map (kbd "C-x C-e") 'pp-eval-last-sexp)
-            (add-hook 'before-save-hook 'delete-trailing-whitespace nil t)))
-
-;; Shell scripts
-(add-hook 'sh-mode-hook
-          (lambda ()
-            (add-hook 'before-save-hook 'delete-trailing-whitespace nil t)))
+            (define-key emacs-lisp-mode-map (kbd "C-x C-e") 'pp-eval-last-sexp)))
 
 ;;; Project management
 (setq project-vc-extra-root-markers
