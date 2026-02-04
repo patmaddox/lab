@@ -14,6 +14,7 @@
         (c-or-c++-mode . c-or-c++-ts-mode)
         (css-mode . css-ts-mode)
         (html-mode . html-ts-mode)
+        (mhtml-mode . html-ts-mode)
         (java-mode . java-ts-mode)
         (js-mode . js-ts-mode)
         (json-mode . json-ts-mode)
@@ -31,12 +32,13 @@
 (add-to-list 'auto-mode-alist '("/go\\.mod\\'" . go-mod-ts-mode))
 (add-to-list 'auto-mode-alist '("\\.heex\\'" . heex-ts-mode))
 (add-to-list 'auto-mode-alist '("\\.lua\\'" . lua-ts-mode))
-(add-to-list 'auto-mode-alist '("\\.php\\'" . php-ts-mode))
 (add-to-list 'auto-mode-alist '("\\.rs\\'" . rust-ts-mode))
 (add-to-list 'auto-mode-alist '("\\.toml\\'" . toml-ts-mode))
 (add-to-list 'auto-mode-alist '("\\.ts\\'" . typescript-ts-mode))
 (add-to-list 'auto-mode-alist '("\\.tsx\\'" . tsx-ts-mode))
 (add-to-list 'auto-mode-alist '("\\.ya?ml\\'" . yaml-ts-mode))
+(add-to-list 'auto-mode-alist '("\\.js\\'" . js-ts-mode))
+(add-to-list 'auto-mode-alist '("\\.json\\'" . json-ts-mode))
 
 ;; Languages that do not have a built-in mode
 (require 'markdown-mode)
@@ -140,6 +142,10 @@
           (lambda ()
             (setq indent-tabs-mode nil)
             (define-key emacs-lisp-mode-map (kbd "C-x C-e") 'pp-eval-last-sexp)))
+
+;; JavaScript/TypeScript (2-space indent, JS convention)
+(setq js-indent-level 2)
+(setq typescript-ts-mode-indent-offset 2)
 
 ;; Shell scripts (FreeBSD style, detects shell from shebang)
 (add-hook 'bash-ts-mode-hook 'freebsd-sh-style-ts)
