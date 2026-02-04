@@ -111,9 +111,10 @@
           (lambda ()
             (add-hook 'before-save-hook 'delete-trailing-whitespace nil t)))
 
-;; C (FreeBSD style(9))
+;; C/C++ (FreeBSD style(9))
 (require 'freebsd-style-ts)
 (add-hook 'c-ts-mode-hook 'freebsd-c-style-ts)
+(add-hook 'c++-ts-mode-hook 'freebsd-c-style-ts)
 
 ;; Elixir
 (add-hook 'elixir-ts-mode-hook

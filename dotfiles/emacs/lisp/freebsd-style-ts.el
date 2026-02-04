@@ -8,13 +8,24 @@
 (require 'c-ts-mode)
 (require 'sh-script)
 
-(defun freebsd-c-style-ts--rules ()
+(defun freebsd-c-style-ts--rules (&optional language)
   "Return FreeBSD style(9) indent rules extending the built-in BSD style.
+LANGUAGE is 'c or 'cpp, passed by the mode.  Defaults to 'c.
 Primary indent: 8 spaces (1 tab).
 Continuation indent: 4 spaces."
-  (let ((continuation 4))
+  (let ((continuation 4)
+        (offset 8)
+        (lang (or language 'c)))
     (append
-     `(;; Continuation: 4-space indent for wrapped arguments/parameters
+     `(;; C++ access specifiers (public:, private:, protected:) at column 0
+       ((node-is "access_specifier") parent-bol 0)
+       ;; Closing braces at same level as opening construct
+       ((node-is "}") standalone-parent 0)
+       ;; C++ class members (after access specifier) at standard indent
+       ((parent-is "field_declaration_list") parent-bol ,offset)
+       ;; C++ field initializer list uses continuation indent
+       ((node-is "field_initializer_list") parent-bol ,continuation)
+       ;; Continuation: 4-space indent for wrapped arguments/parameters
        ((parent-is "argument_list") standalone-parent ,continuation)
        ((parent-is "parameter_list") standalone-parent ,continuation)
        ((parent-is "init_declarator") standalone-parent ,continuation)
@@ -22,8 +33,8 @@ Continuation indent: 4 spaces."
        ((parent-is "conditional_expression") standalone-parent ,continuation)
        ((parent-is "assignment_expression") standalone-parent ,continuation)
        ((parent-is "concatenated_string") first-sibling 0))
-     ;; Include the built-in BSD rules
-     (alist-get 'bsd (c-ts-mode--indent-styles 'c)))))
+     ;; Include the built-in BSD rules for the appropriate language
+     (alist-get 'bsd (c-ts-mode--indent-styles lang)))))
 
 ;; Set the indent style globally when this file loads
 (setq c-ts-mode-indent-style #'freebsd-c-style-ts--rules)
