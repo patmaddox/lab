@@ -141,6 +141,9 @@
             (setq indent-tabs-mode nil)
             (define-key emacs-lisp-mode-map (kbd "C-x C-e") 'pp-eval-last-sexp)))
 
+;; Shell scripts (FreeBSD style, detects shell from shebang)
+(add-hook 'bash-ts-mode-hook 'freebsd-sh-style-ts)
+
 ;;; Project management
 (setq project-vc-extra-root-markers
       '(".emacs-project"
