@@ -1,5 +1,8 @@
 ;; -*-no-byte-compile: t; -*-
 
+;; Custom extensions
+(add-to-list 'load-path (expand-file-name "lisp" user-emacs-directory))
+
 ;; textproc/tree-sitter-grammars provides grammars for a ton of
 ;; languages.
 (setq treesit-extra-load-path '("/usr/local/share/tree-sitter-grammars"))
@@ -18,8 +21,7 @@
         (ruby-mode . ruby-ts-mode)
         (sh-mode . bash-ts-mode)))
 
-;; Add auto-mode-alist entries for languages without built-in modes
-;; or where the built-in mode doesn't have file associations
+;; Built-in tree-sitter modes that need file associations
 (add-to-list 'auto-mode-alist '("\\.cmake\\'" . cmake-ts-mode))
 (add-to-list 'auto-mode-alist '("CMakeLists\\.txt\\'" . cmake-ts-mode))
 (add-to-list 'auto-mode-alist '("\\(?:Dockerfile\\(?:\\..*\\)?\\|\\.[Dd]ockerfile\\)\\'" . dockerfile-ts-mode))
@@ -43,6 +45,7 @@
 ;;; UI/UX
 (blink-cursor-mode -1)
 (column-number-mode 1)
+(electric-indent-mode 1)
 (electric-pair-mode 1)
 (global-display-line-numbers-mode 1)
 (global-hl-line-mode 1)
@@ -101,6 +104,10 @@
 
 ;;; Language-specific
 
+;; C (FreeBSD style(9))
+(require 'freebsd-style-ts)
+(add-hook 'c-ts-mode-hook 'freebsd-c-style-ts)
+
 ;; Elixir
 (add-hook 'elixir-ts-mode-hook
           (lambda ()
@@ -112,7 +119,7 @@
                           (revert-buffer t t t)))
                       nil t)))
 
-;; HEEx
+;; Elixir - HEEx
 (add-hook 'heex-ts-mode-hook
           (lambda ()
             (add-hook 'before-save-hook
@@ -369,6 +376,4 @@ Items are identified as indented lines (starting with whitespace)."
 ;; Auto-save destination buffer after refiling
 (add-hook 'org-after-refile-insert-hook 'save-buffer)
 
-;; Custom extensions
-(add-to-list 'load-path (expand-file-name "lisp" user-emacs-directory))
 (require 'pm-nirvana)
