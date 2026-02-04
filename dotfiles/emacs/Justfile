@@ -1,19 +1,19 @@
 help:
   just -l
 
-test:
+pkg:
+  redo-ifchange patmaddox-emacs.pkg
+
+test: pkg
   kyua test
 
-demo:
+install: pkg
+  INSTALL_AS_USER=yes pkg -r ~ install -U $(realpath patmaddox-emacs.pkg)
+
+demo file="": pkg
   #!/bin/sh
   set -eu
-  tmpdir=$(mktemp -d -t emacs-dev)/.emacs
+  tmpdir=$(mktemp -d -t emacs-dev)
   echo "emacs tmpdir is ${tmpdir}"
-  make -s install DESTDIR=${tmpdir}
-  emacs --init-directory=${tmpdir}
-
-# Install to .emacs.dev
-install-dev:
-  rm -rf $HOME/.emacs.dev
-  make -s 2>/dev/null
-  make -s install DESTDIR=$HOME/.emacs.dev
+  INSTALL_AS_USER=yes pkg -r ${tmpdir} add $(realpath patmaddox-emacs.pkg)
+  emacs --init-directory=${tmpdir}/.emacs.d {{file}}

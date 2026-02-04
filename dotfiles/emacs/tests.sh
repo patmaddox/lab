@@ -6,7 +6,7 @@ atf_init_test_cases() {
 }
 
 helper::install() {
-    atf_check make -C ${src_dir} -s
+    atf_check -o ignore env INSTALL_AS_USER=yes pkg -r ${HOME} add ${src_dir}/patmaddox-emacs.pkg
 }
 
 ## install_and_load
