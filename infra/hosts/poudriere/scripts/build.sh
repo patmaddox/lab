@@ -60,7 +60,14 @@ install_base() {
     ${pkg_cmd} add ${PKGBASE_DIR}/FreeBSD-set-base-${major_version}.*.pkg
     ${pkg_cmd} add ${PKGBASE_DIR}/FreeBSD-set-kernels-${major_version}.*.pkg
     ${pkg_cmd} add ${PKGBASE_DIR}/FreeBSD-set-tests-${major_version}.*.pkg
-    ${pkg_cmd} install -r FreeBSD -y poudriere-devel tmux
+    ${pkg_cmd} install -r FreeBSD -y \
+        deskutils/just \
+        net/rsync \
+        ports-mgmt/pkg \
+        ports-mgmt/poudriere-devel \
+        sysutils/htop \
+        sysutils/tmux \
+        www/nginx
     doas zfs snapshot -r poudriere--zroot@base
 }
 
