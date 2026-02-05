@@ -1,0 +1,10 @@
+help:
+  just -l
+
+issue-cert:
+  acme.sh --issue --dns -d p7x.dev -d '*.p7x.dev' \
+    --yes-I-know-dns-manual-mode-enough-go-ahead-please
+
+renew-cert:
+  acme.sh --renew -d p7x.dev -d '*.p7x.dev' \
+    --yes-I-know-dns-manual-mode-enough-go-ahead-please
