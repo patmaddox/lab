@@ -138,6 +138,28 @@
                           (revert-buffer t t t)))
                       nil t)))
 
+;; Go (gofmt on save)
+(add-hook 'go-ts-mode-hook
+          (lambda ()
+            (add-hook 'after-save-hook
+                      (lambda ()
+                        (when (eq major-mode 'go-ts-mode)
+                          (shell-command-to-string
+                           (format "gofmt -w %s" (buffer-file-name)))
+                          (revert-buffer t t t)))
+                      nil t)))
+
+;; Rust (rustfmt on save)
+(add-hook 'rust-ts-mode-hook
+          (lambda ()
+            (add-hook 'after-save-hook
+                      (lambda ()
+                        (when (eq major-mode 'rust-ts-mode)
+                          (shell-command-to-string
+                           (format "rustfmt %s" (buffer-file-name)))
+                          (revert-buffer t t t)))
+                      nil t)))
+
 ;; Emacs Lisp
 (add-hook 'emacs-lisp-mode-hook
           (lambda ()

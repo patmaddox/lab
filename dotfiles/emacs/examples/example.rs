@@ -14,7 +14,10 @@ impl Person {
     }
 
     fn greet(&self) -> String {
-        format!("Hello, my name is {} and I am {} years old", self.name, self.age)
+        format!(
+            "Hello, my name is {} and I am {} years old",
+            self.name, self.age
+        )
     }
 }
 

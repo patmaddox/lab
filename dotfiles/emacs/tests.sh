@@ -167,7 +167,7 @@ format_go_head() {
 }
 format_go_body() {
     helper::install
-    helper::check_mode ${src_dir}/examples/example.go go-ts-mode
+    helper::check_format_on_save ${src_dir}/examples/example.go go-ts-mode
 }
 
 ## format_heex
@@ -277,7 +277,7 @@ format_rust_head() {
 }
 format_rust_body() {
     helper::install
-    helper::check_mode ${src_dir}/examples/example.rs rust-ts-mode
+    helper::check_format_on_save ${src_dir}/examples/example.rs rust-ts-mode
 }
 
 ## format_toml
