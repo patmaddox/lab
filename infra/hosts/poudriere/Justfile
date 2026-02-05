@@ -1,0 +1,5 @@
+help:
+  just -l
+
+upload-certs:
+  ./scripts/upload-certs.sh
