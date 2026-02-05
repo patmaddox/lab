@@ -7,6 +7,7 @@
 ./etc/ssh/sshd_config
 ./opt/bootstrap.sh mode=0744
 ./root/.ssh/authorized_keys mode=0400
+./usr/local/bin/poudriere-sign.sh mode=744
 ./usr/local/etc/doas.conf
 ./usr/local/etc/nginx/nginx.conf
 ./usr/local/etc/pkg/repos/poudriere.conf
