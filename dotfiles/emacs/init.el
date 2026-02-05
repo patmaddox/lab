@@ -278,7 +278,8 @@
 
 ;;; Integration with consult-buffer
 (with-eval-after-load 'consult
-  (consult-customize consult--source-buffer :hidden t :default nil)
+  ;; Hide default buffer source, use perspective's instead
+  (consult-customize consult-source-buffer :hidden t :default nil)
   (add-to-list 'consult-buffer-sources persp-consult-source))
 
 ;;; IRC (rcirc)
