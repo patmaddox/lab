@@ -15,3 +15,9 @@ clone:
 
 testport *args:
   doas poudriere testport -j 142 -p dev {{args}}
+
+[no-cd]
+format-patch jjid:
+  jj log -r {{jjid}} --no-graph -T 'commit_id ++ "\n"' | \
+    xargs -I {} git format-patch -1 -C 99999 --stdout {} | \
+    grep -v '^Change-Id: I'
