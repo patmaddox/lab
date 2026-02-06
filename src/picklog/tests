@@ -1,0 +1,165 @@
+#!/usr/bin/env atf-sh
+picklog=$(atf_get_srcdir)/_build/picklog
+
+atf_init_test_cases() {
+    atf_add_test_case no_picks
+    atf_add_test_case pick
+    atf_add_test_case multiple_branches
+    atf_add_test_case merge
+}
+
+atf_test_case no_picks
+no_picks_head() {
+    atf_set "descr" "Timeline with no picks"
+}
+
+no_picks_body() {
+    git init -q -b main repo
+    cd repo
+
+    git config user.name picklog-user
+    git config user.email picklog@example.com
+
+    echo 'foo1' > foo
+    git add foo
+    git commit -q -m 'foo1'
+
+    git branch -q stable
+
+    echo 'foo2' >> foo
+    git commit -aq -m 'foo2'
+    foo2=$(git rev-parse --short=12 HEAD)
+
+    echo 'foo3' >> foo
+    git commit -aq -m 'foo3'
+    foo3=$(git rev-parse --short=12 HEAD)
+
+    git checkout -q stable
+    echo 'bar' >> bar
+    git add bar
+    git commit -q -m 'branching-stable'
+
+    atf_check -o inline:"${foo3} -            foo3\n${foo2} -            foo2\n" ${picklog} main stable
+}
+
+atf_test_case pick
+pick_head() {
+    atf_set "descr" "Timeline with a clean cherry pick"
+}
+
+pick_body() {
+    git init -q -b main repo
+    cd repo
+
+    git config user.name picklog-user
+    git config user.email picklog@example.com
+
+    echo 'foo1' > foo
+    git add foo
+    git commit -q -m 'foo1'
+
+    git branch -q stable
+
+    echo 'foo2' >> foo
+    git commit -aq -m 'foo2'
+    foo2=$(git rev-parse --short=12 HEAD)
+
+    echo 'foo3' >> foo
+    git commit -aq -m 'foo3'
+    foo3=$(git rev-parse --short=12 HEAD)
+
+    git checkout -q stable
+    echo 'bar' >> bar
+    git add bar
+    git commit -q -m 'branching-stable'
+    git cherry-pick -x ${foo2}
+    stable_foo2=$(git rev-parse --short=12 HEAD)
+
+    atf_check -o inline:"${foo3} -            foo3\n${foo2} ${stable_foo2} foo2\n" ${picklog} main stable
+}
+
+atf_test_case multiple_branches
+multiple_branches_head() {
+    atf_set "descr" "Timeline with multiple branches"
+}
+
+multiple_branches_body() {
+    git init -q -b main repo
+    cd repo
+
+    git config user.name picklog-user
+    git config user.email picklog@example.com
+
+    echo 'foo1' > foo
+    git add foo
+    git commit -q -m 'foo1'
+
+    git branch -q stable
+
+    echo 'foo2' >> foo
+    git commit -aq -m 'foo2'
+    foo2=$(git rev-parse --short=12 HEAD)
+
+    echo 'foo3' >> foo
+    git commit -aq -m 'foo3'
+    foo3=$(git rev-parse --short=12 HEAD)
+
+    git checkout -q stable
+    echo 'bar1' >> bar
+    git add bar
+    git commit -q -m 'branching-stable'
+
+    git branch -q releng
+    git checkout -q releng
+    echo 'baz' >> baz
+    git add baz
+    git commit -q -m 'branching-releng'
+
+    git checkout -q stable
+    git cherry-pick -x ${foo2}
+    stable_foo2=$(git rev-parse --short=12 HEAD)
+
+    git checkout -q releng
+    git cherry-pick -x ${stable_foo2}
+    releng_foo2=$(git rev-parse --short=12 HEAD)
+
+    atf_check -o inline:"${foo3} -            -            foo3\n${foo2} ${stable_foo2} ${releng_foo2} foo2\n" ${picklog} main stable releng
+}
+
+atf_test_case merge
+merge_head() {
+    atf_set "descr" "Timeline excludes children of merge commits (keeps first parent only)"
+}
+
+merge_body() {
+    git init -q -b main repo
+    cd repo
+
+    git config user.name picklog-user
+    git config user.email picklog@example.com
+
+    echo 'foo1' > foo
+    git add foo
+    git commit -q -m 'foo1'
+
+    git branch -q stable
+
+    echo 'foo2' >> foo
+    git commit -aq -m 'foo2'
+    foo2=$(git rev-parse --short=12 HEAD)
+
+    git checkout -q -b topic-branch
+    echo 'topic' > topic
+    git add topic
+    git commit -q -m 'topic-branch'
+    git checkout main
+    git merge -q --no-ff -m 'foo3' topic-branch
+    foo3=$(git rev-parse --short=12 HEAD)
+
+    git checkout -q stable
+    echo 'bar' >> bar
+    git add bar
+    git commit -q -m 'branching-stable'
+
+    atf_check -o inline:"${foo3} -            foo3\n${foo2} -            foo2\n" ${picklog} main stable
+}
