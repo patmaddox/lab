@@ -87,7 +87,7 @@ vm-image() {
     cat > ${pkgbase_conf_dir}/FreeBSD-base.conf <<EOF
 FreeBSD-base: { url: "file://$(realpath ${repodir})/${pkg_abi}/latest", enabled: yes}
 EOF
-    _make_release PKGBASE_REPO_DIR=$(realpath ${repodir}) VMCONFIG=$(realpath ${jjdir}/../tools/vm-nodbg32.conf) VMFORMATS=raw -DWITH_VMIMAGES vm-image
+    _make_release PKGBASE_REPO_DIR=$(realpath ${repodir}) VM_IMAGE_CONFIG=$(realpath ${jjdir}/../tools/vm-nodbg32.conf) VMFORMATS=raw -DWITH_VMIMAGES vm-image
 }
 
 _make() {

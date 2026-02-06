@@ -9,6 +9,7 @@
 # ln -s do.freebsd-src current.buildworld.do
 # ln -s do.freebsd-src current.buildkernel.do
 # ln -s do.freebsd-src current.pkgbase.do
+# ln -s do.freebsd-src current.vm-image.do
 set -eu
 set -o pipefail
 
@@ -32,6 +33,9 @@ case "${target}" in
 	;;
     pkgbase)
 	srcs="${config}.buildworld ${config}.buildkernel"
+	;;
+    vm-image)
+	srcs="${config}.pkgbase tools/vm-nodbg32.conf"
 	;;
     *)
 	echo "E: unknown target ${target}" >&2
