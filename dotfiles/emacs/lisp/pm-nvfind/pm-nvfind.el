@@ -62,11 +62,22 @@ Signals an error if SCOPE is nil."
 
 (defun pm-nvfind--open (directories query)
   "Search DIRECTORIES for files matching QUERY and open the selected result.
+Uses consult with file preview when available, falls back to completing-read.
 Displays a message if no files match."
   (let ((results (pm-nvfind--search directories query)))
     (if results
-        (find-file (completing-read "Open: " results nil t))
+        (find-file (pm-nvfind--pick-file results))
       (message "No matches for \"%s\"" query))))
+
+(defun pm-nvfind--pick-file (files)
+  "Prompt the user to select a file from FILES.
+Uses consult with file preview when available, otherwise completing-read."
+  (if (fboundp 'consult--read)
+      (consult--read files
+                     :prompt "Open: "
+                     :require-match t
+                     :state (consult--file-state))
+    (completing-read "Open: " files nil t)))
 
 (defun pm-nvfind--read-scopes ()
   "Prompt for scope names with completion, returning a list.
