@@ -409,3 +409,7 @@ Items are identified as indented lines (starting with whitespace)."
 (add-hook 'org-after-refile-insert-hook 'save-buffer)
 
 (require 'pm-nirvana)
+
+;; pm-nvfind: nvALT-style search
+(add-to-list 'load-path (expand-file-name "lisp/pm-nvfind" user-emacs-directory))
+(require 'pm-nvfind)
