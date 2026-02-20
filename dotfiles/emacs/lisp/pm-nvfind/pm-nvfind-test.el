@@ -66,3 +66,9 @@ With SUBDIRS, return paths to those subdirectories as a list."
   (let ((results (pm-nvfind--search (pm-nvfind-test--fixtures "dir-a" "dir-b") "beta alpha")))
     (should (= (length results) 1))
     (should (string-match-p "dir-b/alpha-beta\\.md$" (car results)))))
+
+;;; Error handling tests
+
+(ert-deftest pm-nvfind-search-nonexistent-directory ()
+  (should-error (pm-nvfind--search '("/nonexistent/directory") "foo")
+                :type 'error))
