@@ -413,3 +413,10 @@ Items are identified as indented lines (starting with whitespace)."
 ;; pm-nvfind: nvALT-style search
 (add-to-list 'load-path (expand-file-name "lisp/pm-nvfind" user-emacs-directory))
 (require 'pm-nvfind)
+
+(setq pm-nvfind-scopes
+      '(("doc" . ("~/lab.jj/doc"))
+        ("infra" . ("~/lab.jj/infra"))
+        ("freebsd-man" . ("~/lab.jj/oss/freebsd-src/main.jj/share/man"))))
+
+(setq pm-nvfind-default-scope "doc")
