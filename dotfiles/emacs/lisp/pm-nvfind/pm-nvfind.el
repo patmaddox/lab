@@ -15,24 +15,27 @@
   "Split QUERY string into a list of non-empty words."
   (split-string query " " t))
 
-(defun pm-nvfind--build-rg-command (words directory)
-  "Build a chained rg shell command from WORDS searching DIRECTORY.
+(defun pm-nvfind--build-rg-command (words directories)
+  "Build a chained rg shell command from WORDS searching DIRECTORIES.
+DIRECTORIES is a list of directory paths.
 Returns a shell command string that pipes rg -l calls to find
 files containing all WORDS.  Returns nil if WORDS is empty."
   (when words
     (let ((first (car words))
-          (rest (cdr words)))
+          (rest (cdr words))
+          (dirs (mapconcat #'shell-quote-argument directories " ")))
       (concat "rg -l " (shell-quote-argument first)
-              " " (shell-quote-argument directory)
+              " " dirs
               (mapconcat (lambda (word)
                            (concat " | xargs rg -l " (shell-quote-argument word)))
                          rest "")))))
 
-(defun pm-nvfind--search (directory query)
-  "Search DIRECTORY for files containing all words in QUERY.
+(defun pm-nvfind--search (directories query)
+  "Search DIRECTORIES for files containing all words in QUERY.
+DIRECTORIES is a list of directory paths.
 Returns a list of matching file paths."
   (let* ((words (pm-nvfind--split-query query))
-         (cmd (pm-nvfind--build-rg-command words directory)))
+         (cmd (pm-nvfind--build-rg-command words directories)))
     (if cmd
         (let ((output (shell-command-to-string cmd)))
           (split-string output "\n" t))

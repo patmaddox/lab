@@ -6,9 +6,12 @@
 (defvar pm-nvfind-test--dir
   (file-name-directory (or load-file-name buffer-file-name)))
 
-(defun pm-nvfind-test--fixtures ()
-  "Return path to test fixtures directory."
-  (concat pm-nvfind-test--dir "fixtures/"))
+(defun pm-nvfind-test--fixtures (&rest subdirs)
+  "Return path to test fixtures directory.
+With SUBDIRS, return paths to those subdirectories as a list."
+  (if subdirs
+      (mapcar (lambda (d) (concat pm-nvfind-test--dir "fixtures/" d "/")) subdirs)
+    (list (concat pm-nvfind-test--dir "fixtures/"))))
 
 ;;; Split query tests
 
@@ -50,3 +53,16 @@
 (ert-deftest pm-nvfind-search-empty-query ()
   (let ((results (pm-nvfind--search (pm-nvfind-test--fixtures) "")))
     (should (null results))))
+
+;;; Multi-directory tests
+
+(ert-deftest pm-nvfind-search-multiple-directories ()
+  (let ((results (pm-nvfind--search (pm-nvfind-test--fixtures "dir-a" "dir-b") "alpha")))
+    (should (= (length results) 2))
+    (should (cl-some (lambda (f) (string-match-p "dir-a/alpha\\.md$" f)) results))
+    (should (cl-some (lambda (f) (string-match-p "dir-b/alpha-beta\\.md$" f)) results))))
+
+(ert-deftest pm-nvfind-search-multiple-directories-two-words ()
+  (let ((results (pm-nvfind--search (pm-nvfind-test--fixtures "dir-a" "dir-b") "beta alpha")))
+    (should (= (length results) 1))
+    (should (string-match-p "dir-b/alpha-beta\\.md$" (car results)))))
