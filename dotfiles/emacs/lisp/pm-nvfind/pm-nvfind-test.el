@@ -137,3 +137,15 @@ With SUBDIRS, return paths to those subdirectories as a list."
 
 (ert-deftest pm-nvfind-choice-empty ()
   (should-not (pm-nvfind--scope-choice-valid-p "")))
+
+;;; Normalize scope tests
+
+(ert-deftest pm-nvfind-normalize-string ()
+  (should (equal (pm-nvfind--normalize-scope "docs") '("docs"))))
+
+(ert-deftest pm-nvfind-normalize-list ()
+  (should (equal (pm-nvfind--normalize-scope '("docs" "notes")) '("docs" "notes"))))
+
+(ert-deftest pm-nvfind-normalize-nil ()
+  (should-error (pm-nvfind--normalize-scope nil)
+                :type 'error))

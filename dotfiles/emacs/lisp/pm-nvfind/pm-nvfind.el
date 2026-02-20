@@ -26,6 +26,15 @@ A scope name string or a list of scope name strings."
 
 ;;; Interactive commands
 
+(defun pm-nvfind ()
+  "Search the default scope for files matching a query.
+Uses `pm-nvfind-default-scope' to determine which directories to search.
+Prompts for a query, then opens the selected file."
+  (interactive)
+  (let ((directories (pm-nvfind--resolve-scopes
+                      (pm-nvfind--normalize-scope pm-nvfind-default-scope))))
+    (pm-nvfind--open directories (read-string "Search: "))))
+
 (defun pm-nvfind-in (directory query)
   "Search DIRECTORY for files containing all words in QUERY.
 Prompts for a directory and query, then opens the selected file."
@@ -41,6 +50,15 @@ Prompts for scope names, then a query, then opens the selected file."
     (pm-nvfind--open directories (read-string "Search: "))))
 
 ;;; Internal functions
+
+(defun pm-nvfind--normalize-scope (scope)
+  "Normalize SCOPE to a list of scope name strings.
+SCOPE may be a string, a list of strings, or nil.
+Signals an error if SCOPE is nil."
+  (cond
+   ((null scope) (error "pm-nvfind: no default scope configured"))
+   ((stringp scope) (list scope))
+   (t scope)))
 
 (defun pm-nvfind--open (directories query)
   "Search DIRECTORIES for files matching QUERY and open the selected result.
