@@ -11,6 +11,9 @@
 
 ;;; Code:
 
+(defvar pm-nvfind--history nil
+  "History list for pm-nvfind search queries.")
+
 (defcustom pm-nvfind-scopes nil
   "Alist of named search scopes.
 Each entry is (NAME . (DIR ...)) where NAME is a string
@@ -29,25 +32,26 @@ A scope name string or a list of scope name strings."
 (defun pm-nvfind ()
   "Search the default scope for files matching a query.
 Uses `pm-nvfind-default-scope' to determine which directories to search.
-Prompts for a query, then opens the selected file."
+Prompts for a query, shows results with preview.  Select a file
+to open it, or press C-r to refine the query."
   (interactive)
   (let ((directories (pm-nvfind--resolve-scopes
                       (pm-nvfind--normalize-scope pm-nvfind-default-scope))))
-    (pm-nvfind--open directories (read-string "Search: "))))
+    (pm-nvfind--iterative-search directories)))
 
-(defun pm-nvfind-in (directory query)
-  "Search DIRECTORY for files containing all words in QUERY.
-Prompts for a directory and query, then opens the selected file."
-  (interactive "DDirectory: \nsSearch: ")
-  (pm-nvfind--open (list directory) query))
+(defun pm-nvfind-in (directory)
+  "Search DIRECTORY for files matching a query.
+Prompts for a directory, then a query with iterative refinement."
+  (interactive "DDirectory: ")
+  (pm-nvfind--iterative-search (list directory)))
 
 (defun pm-nvfind-scope ()
   "Search selected scopes for files matching a query.
-Prompts for scope names, then a query, then opens the selected file."
+Prompts for scope names, then a query with iterative refinement."
   (interactive)
   (let* ((scopes (pm-nvfind--read-scopes))
          (directories (pm-nvfind--resolve-scopes scopes)))
-    (pm-nvfind--open directories (read-string "Search: "))))
+    (pm-nvfind--iterative-search directories)))
 
 ;;; Internal functions
 
@@ -59,25 +63,6 @@ Signals an error if SCOPE is nil."
    ((null scope) (error "pm-nvfind: no default scope configured"))
    ((stringp scope) (list scope))
    (t scope)))
-
-(defun pm-nvfind--open (directories query)
-  "Search DIRECTORIES for files matching QUERY and open the selected result.
-Uses consult with file preview when available, falls back to completing-read.
-Displays a message if no files match."
-  (let ((results (pm-nvfind--search directories query)))
-    (if results
-        (find-file (pm-nvfind--pick-file results))
-      (message "No matches for \"%s\"" query))))
-
-(defun pm-nvfind--pick-file (files)
-  "Prompt the user to select a file from FILES.
-Uses consult with file preview when available, otherwise completing-read."
-  (if (fboundp 'consult--read)
-      (consult--read files
-                     :prompt "Open: "
-                     :require-match t
-                     :state (consult--file-state))
-    (completing-read "Open: " files nil t)))
 
 (defun pm-nvfind--read-scopes ()
   "Prompt for scope names with completion, returning a list.
@@ -175,5 +160,56 @@ files containing all WORDS.  Returns nil if WORDS is empty."
               (mapconcat (lambda (word)
                            (concat " | xargs rg -l " (shell-quote-argument word)))
                          rest "")))))
+
+(defvar pm-nvfind--refine-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map (kbd "C-r") (lambda () (interactive) (throw 'refine nil)))
+    map)
+  "Keymap active during file selection in iterative search.
+C-r throws back to query editing.")
+
+(defun pm-nvfind--pick-file (files)
+  "Prompt the user to select from FILES with preview but no auto-open.
+Uses consult with file preview when available, otherwise completing-read.
+C-r refines the search query."
+  (if (fboundp 'consult--read)
+      (consult--read files
+                     :prompt "Open (C-r to refine): "
+                     :require-match t
+                     :state (consult--file-preview)
+                     :history 'pm-nvfind--history
+                     :keymap pm-nvfind--refine-map)
+    (completing-read "Open: " files nil t)))
+
+(defun pm-nvfind--read-query (initial)
+  "Read a search query with INITIAL as initial input.
+Uses completing-read with an empty collection so that vertico
+displays its full frame, keeping the minibuffer height consistent
+with the results picker.  Temporarily disables prescient recording
+to prevent search terms from polluting M-x and other completion histories."
+  (if (fboundp 'prescient-remember)
+      (cl-letf (((symbol-function 'prescient-remember) #'ignore))
+        (completing-read "Search: " nil nil nil initial 'pm-nvfind--history))
+    (completing-read "Search: " nil nil nil initial 'pm-nvfind--history)))
+
+(defun pm-nvfind--iterative-search (directories)
+  "Search DIRECTORIES with iterative query refinement.
+Prompts for a query, shows results with preview.  Select a file
+to open it, or press C-r to refine the query."
+  (let ((query ""))
+    (catch 'done
+      (while t
+        (setq query (pm-nvfind--read-query query))
+        (let ((results (pm-nvfind--search directories query)))
+          (if results
+              (let ((choice (catch 'refine
+                              (pm-nvfind--pick-file results))))
+                (if choice
+                    (progn (find-file choice)
+                           (throw 'done nil))
+                  (unless (string-suffix-p " " query)
+                    (setq query (concat query " ")))))
+            (message "No matches for \"%s\"" query)
+            (sit-for 1)))))))
 
 (provide 'pm-nvfind)
