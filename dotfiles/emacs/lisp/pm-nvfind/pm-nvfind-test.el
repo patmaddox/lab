@@ -97,3 +97,43 @@ With SUBDIRS, return paths to those subdirectories as a list."
   (let ((pm-nvfind-scopes '(("docs" . ("/home/user/docs")))))
     (should-error (pm-nvfind--resolve-scopes '("bogus"))
                   :type 'error)))
+
+;;; Scope candidate tests
+
+(ert-deftest pm-nvfind-candidates-none-selected ()
+  (should (equal (pm-nvfind--scope-candidates '("docs" "notes" "infra") nil)
+                 '("docs" "notes" "infra"))))
+
+(ert-deftest pm-nvfind-candidates-one-selected ()
+  (should (equal (pm-nvfind--scope-candidates '("docs" "notes" "infra") '("docs"))
+                 '("[done]" "notes" "infra"))))
+
+(ert-deftest pm-nvfind-candidates-preserves-order ()
+  (should (equal (pm-nvfind--scope-candidates '("docs" "notes" "infra") '("notes"))
+                 '("[done]" "docs" "infra"))))
+
+(ert-deftest pm-nvfind-candidates-all-selected ()
+  (should (equal (pm-nvfind--scope-candidates '("docs" "notes") '("docs" "notes"))
+                 '("[done]"))))
+
+;;; Scope prompt tests
+
+(ert-deftest pm-nvfind-prompt-no-selection ()
+  (should (equal (pm-nvfind--scope-prompt nil) "Scope: ")))
+
+(ert-deftest pm-nvfind-prompt-one-selected ()
+  (should (equal (pm-nvfind--scope-prompt '("docs")) "Scope [docs]: ")))
+
+(ert-deftest pm-nvfind-prompt-multiple-selected ()
+  (should (equal (pm-nvfind--scope-prompt '("docs" "notes")) "Scope [docs, notes]: ")))
+
+;;; Scope choice validity tests
+
+(ert-deftest pm-nvfind-choice-valid-scope ()
+  (should (pm-nvfind--scope-choice-valid-p "docs")))
+
+(ert-deftest pm-nvfind-choice-done ()
+  (should-not (pm-nvfind--scope-choice-valid-p "[done]")))
+
+(ert-deftest pm-nvfind-choice-empty ()
+  (should-not (pm-nvfind--scope-choice-valid-p "")))
