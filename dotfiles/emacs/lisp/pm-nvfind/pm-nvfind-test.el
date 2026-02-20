@@ -72,3 +72,28 @@ With SUBDIRS, return paths to those subdirectories as a list."
 (ert-deftest pm-nvfind-search-nonexistent-directory ()
   (should-error (pm-nvfind--search '("/nonexistent/directory") "foo")
                 :type 'error))
+
+;;; Scope resolution tests
+
+(ert-deftest pm-nvfind-resolve-single-scope ()
+  (let ((pm-nvfind-scopes '(("docs" . ("/home/user/docs"))
+                             ("notes" . ("/home/user/notes")))))
+    (should (equal (pm-nvfind--resolve-scopes '("docs"))
+                   '("/home/user/docs")))))
+
+(ert-deftest pm-nvfind-resolve-multiple-scopes ()
+  (let ((pm-nvfind-scopes '(("docs" . ("/home/user/docs"))
+                             ("notes" . ("/home/user/notes")))))
+    (should (equal (pm-nvfind--resolve-scopes '("docs" "notes"))
+                   '("/home/user/docs" "/home/user/notes")))))
+
+(ert-deftest pm-nvfind-resolve-deduplicates ()
+  (let ((pm-nvfind-scopes '(("docs" . ("/home/user/docs" "/home/user/shared"))
+                             ("notes" . ("/home/user/notes" "/home/user/shared")))))
+    (should (equal (pm-nvfind--resolve-scopes '("docs" "notes"))
+                   '("/home/user/docs" "/home/user/shared" "/home/user/notes")))))
+
+(ert-deftest pm-nvfind-resolve-unknown-scope ()
+  (let ((pm-nvfind-scopes '(("docs" . ("/home/user/docs")))))
+    (should-error (pm-nvfind--resolve-scopes '("bogus"))
+                  :type 'error)))

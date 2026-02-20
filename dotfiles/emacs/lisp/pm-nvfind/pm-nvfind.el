@@ -11,6 +11,34 @@
 
 ;;; Code:
 
+(defcustom pm-nvfind-scopes nil
+  "Alist of named search scopes.
+Each entry is (NAME . (DIR ...)) where NAME is a string
+and each DIR is a directory path."
+  :type '(alist :key-type string :value-type (repeat directory))
+  :group 'pm-nvfind)
+
+(defcustom pm-nvfind-default-scope nil
+  "Default scope for `pm-nvfind'.
+A scope name string or a list of scope name strings."
+  :type '(choice string (repeat string))
+  :group 'pm-nvfind)
+
+(defun pm-nvfind--resolve-scopes (scope-names)
+  "Resolve SCOPE-NAMES to a deduplicated list of directories.
+SCOPE-NAMES is a list of scope name strings.
+Returns the union of all directories across the named scopes."
+  (let ((dirs '()))
+    (dolist (name scope-names)
+      (let ((scope (assoc name pm-nvfind-scopes)))
+        (if scope
+            (dolist (dir (cdr scope))
+              (let ((expanded (expand-file-name dir)))
+                (unless (member expanded dirs)
+                  (push expanded dirs))))
+          (error "pm-nvfind: unknown scope \"%s\"" name))))
+    (nreverse dirs)))
+
 (defun pm-nvfind--split-query (query)
   "Split QUERY string into a list of non-empty words."
   (split-string query " " t))
