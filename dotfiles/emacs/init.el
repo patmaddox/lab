@@ -3,6 +3,11 @@
 ;; Custom extensions
 (add-to-list 'load-path (expand-file-name "lisp" user-emacs-directory))
 
+;; Third-party packages (checked into repo under contrib/)
+(dolist (dir (directory-files (expand-file-name "contrib" user-emacs-directory) t "^[^.]"))
+  (when (file-directory-p dir)
+    (add-to-list 'load-path dir)))
+
 ;; textproc/tree-sitter-grammars provides grammars for a ton of
 ;; languages.
 (setq treesit-extra-load-path '("/usr/local/share/tree-sitter-grammars"))

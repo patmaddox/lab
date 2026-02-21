@@ -10,6 +10,10 @@ test: pkg
 install: pkg
   INSTALL_AS_USER=yes pkg -r ~ install -U $(realpath patmaddox-emacs.pkg)
 
+# Update contrib/ from oss/ clones
+contrib-update:
+  ./scripts/contrib-update.sh
+
 demo file="": pkg
   #!/bin/sh
   set -eu
