@@ -1,0 +1,18 @@
+shanty_init() {
+	shanty_stanza foo
+	shanty_stanza bar
+}
+
+foo__here() {
+	echo "foo local" > foo.local
+}
+foo__copy() {
+	${CP} foo.local ${THERE}foo.remote
+}
+foo__there() {
+	echo "foo remote" >> foo.remote
+}
+
+bar__there() {
+	echo "bar remote" >> foo.remote
+}

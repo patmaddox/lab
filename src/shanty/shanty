@@ -1,0 +1,32 @@
+#!/bin/sh
+. ${1:?E: ${usage}}
+
+_shanty_stanzas=""
+
+shanty_stanza() {
+	local stanza
+	stanza=${1:?missing stanza name}
+	_shanty_stanzas="${_shanty_stanzas} ${stanza}"
+}
+
+shanty_init
+CP=cp
+REMOTE=
+
+_shanty_has_fn() {
+	type ${1:?} >/dev/null 2>&1
+}
+
+for s in ${_shanty_stanzas}; do
+	if _shanty_has_fn ${s}__here; then ${s}__here; fi
+	if _shanty_has_fn ${s}__copy; then ${s}__copy; fi
+
+	if _shanty_has_fn ${s}__stream && _shanty_has_fn ${s}__there; then
+		${s}__stream | ${s}__there
+	elif _shanty_has_fn ${s}__stream; then
+		echo "E: Must define ${s}__there to receive ${s}__stream" >&2
+		exit 1
+	elif _shanty_has_fn ${s}__there; then
+		${s}__there
+	fi
+done
