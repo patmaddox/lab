@@ -11,7 +11,7 @@ main() {
     outfile=${1:?$(usage)}; shift
 
     scp ${portsfile} root@poudriere:/tmp/${image_name}-${jail_name}.ports
-    ssh -t root@poudriere "poudriere image -j ${jail_name} -p main -t zfs+send+be -f /tmp/${image_name}-${jail_name}.ports -n ${image_name}${jail_name} -s 20G"
+    ssh -t root@poudriere "poudriere image -j ${jail_name} -p local -t zfs+send+be -f /tmp/${image_name}-${jail_name}.ports -n ${image_name}${jail_name} -s 20G"
     scp root@poudriere:/usr/local/poudriere/data/images/${image_name}${jail_name}.be.zfs ${outfile}.tmp
     mv ${outfile}.tmp ${outfile}
 }

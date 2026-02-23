@@ -6,7 +6,7 @@ build_be_sh = ./infra/scripts/build-be.sh
 deploy_sh = ./infra/scripts/deploy.sh
 
 rule packages
-  command = ssh -t root@poudriere "poudriere bulk -j ${jail} -p main -f ~/lab.jj/${src_root}/ports" && touch ${out}
+  command = ssh -t root@poudriere "poudriere bulk -j ${jail} -p local -f ~/lab.jj/${src_root}/ports" && touch ${out}
   pool = console
 
 rule build-be
