@@ -19,7 +19,7 @@ graphics/drm-61-kmod
 graphics/gpu-firmware-amd-kmod@green_sardine
 lang/elixir-devel
 lang/erlang-runtime28
-lang/go123
+lang/go
 lang/rust
 lang/zig
 net/rclone
