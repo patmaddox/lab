@@ -1,0 +1,58 @@
+be_name="new-be"
+sync_users="root patmaddox"
+sync_groups="patmaddox wheel operator video webcamd"
+
+shanty_init() {
+	shanty_stanza import_be
+	shanty_stanza mount_be
+	shanty_stanza config
+	shanty_stanza sync_pw
+	shanty_stanza copy_data
+	shanty_stanza umount_be
+}
+
+import_be__check() {
+	zfs list zroot/ROOT/${be_name} >/dev/null 2>&1
+}
+import_be__stream() {
+	cat $(jj root)/ninja-out/infra/hosts/beastie/beastie.be.zfs
+}
+import_be__there() {
+	doas bectl import ${be_name}
+}
+
+mount_be__there() {
+	doas bectl mount ${be_name} /tmp/${be_name} >/dev/null
+}
+
+config__stream() {
+	tar -C dist -c @dist.mtree
+}
+config__there() {
+	doas tar -C /tmp/${be_name} -x
+	doas tzsetup -C /tmp/${be_name} America/Los_Angeles
+}
+
+sync_pw__copy() {
+	${CP} $(jj root)/src/sync-pw/sync-pw ${REMOTE}/tmp/sync-pw
+}
+sync_pw__there() {
+	for u in ${sync_users}; do
+		doas /tmp/sync-pw /etc /tmp/${be_name}/etc u ${u}
+	done
+
+	for g in ${sync_groups}; do
+		doas /tmp/sync-pw /etc /tmp/${be_name}/etc g ${g}
+	done
+}
+
+copy_data__copy() {
+	${CP} dist/data.mtree ${REMOTE}/tmp/data.mtree
+}
+copy_data__there() {
+	doas tar -C / -c @/tmp/data.mtree | doas tar -C /tmp/${be_name} -x
+}
+
+umount_be__there() {
+	doas bectl umount ${be_name}
+}
