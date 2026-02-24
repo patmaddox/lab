@@ -1,4 +1,5 @@
 shanty_init() {
+	shanty_mode push
 	shanty_stanza foo
 	shanty_stanza bar
 }

@@ -1,5 +1,5 @@
 shanty_init() {
-	shanty_pull_mode
+	shanty_mode pull
 	shanty_stanza foo
 	shanty_stanza bar
 }

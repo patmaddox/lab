@@ -3,12 +3,26 @@ set -eu
 . ${1:?E: ${usage}}
 
 _shanty_stanzas=""
-_shanty_from="here"
-_shanty_to="there"
 
-shanty_pull_mode() {
-	_shanty_from="there"
-	_shanty_to="here"
+shanty_mode() {
+	if [ -n "${_shanty_from:-}" ]; then
+		echo "E: Must call shanty_mode only once" >&2
+		exit 1
+	fi
+	case "${1:?}" in
+	push)
+		_shanty_from="here"
+		_shanty_to="there"
+		;;
+	pull)
+		_shanty_from="there"
+		_shanty_to="here"
+		;;
+	*)
+		echo "E: Unknown shanty_mode: ${1}" >&2
+		exit 1
+		;;
+	esac
 }
 
 shanty_stanza() {
@@ -21,10 +35,14 @@ shanty_init
 CP=cp
 THERE=
 
+if [ -z "${_shanty_from:-}" ]; then
+	echo "E: Must call shanty_mode with push or pull" >&2
+	exit 1
+fi
+
 _shanty_has_fn() {
 	type ${1:?} >/dev/null 2>&1
 }
-
 
 
 for s in ${_shanty_stanzas}; do
