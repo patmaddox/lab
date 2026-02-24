@@ -1,7 +1,15 @@
 #!/bin/sh
+set -eu
 . ${1:?E: ${usage}}
 
 _shanty_stanzas=""
+_shanty_from="here"
+_shanty_to="there"
+
+shanty_pull_mode() {
+	_shanty_from="there"
+	_shanty_to="here"
+}
 
 shanty_stanza() {
 	local stanza
@@ -11,22 +19,24 @@ shanty_stanza() {
 
 shanty_init
 CP=cp
-REMOTE=
+THERE=
 
 _shanty_has_fn() {
 	type ${1:?} >/dev/null 2>&1
 }
 
+
+
 for s in ${_shanty_stanzas}; do
-	if _shanty_has_fn ${s}__here; then ${s}__here; fi
+	if _shanty_has_fn ${s}__${_shanty_from}; then ${s}__${_shanty_from}; fi
 	if _shanty_has_fn ${s}__copy; then ${s}__copy; fi
 
-	if _shanty_has_fn ${s}__stream && _shanty_has_fn ${s}__there; then
-		${s}__stream | ${s}__there
+	if _shanty_has_fn ${s}__stream && _shanty_has_fn ${s}__${_shanty_to}; then
+		${s}__stream | ${s}__${_shanty_to}
 	elif _shanty_has_fn ${s}__stream; then
-		echo "E: Must define ${s}__there to receive ${s}__stream" >&2
+		echo "E: Must define ${s}__${_shanty_to} to receive ${s}__stream" >&2
 		exit 1
-	elif _shanty_has_fn ${s}__there; then
-		${s}__there
+	elif _shanty_has_fn ${s}__${_shanty_to}; then
+		${s}__${_shanty_to}
 	fi
 done
