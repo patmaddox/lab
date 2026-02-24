@@ -1,0 +1,19 @@
+shanty_init() {
+	shanty_stanza foo
+	shanty_stanza bar
+}
+
+foo__here() {
+	echo "foo local" > foo.local
+}
+foo__stream() {
+	cat foo.local
+}
+foo__there() {
+	cat > foo.remote
+	echo "foo remote" >> foo.remote
+}
+
+bar__there() {
+	echo "bar remote" >> foo.remote
+}
