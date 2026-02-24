@@ -81,7 +81,7 @@
 
 ;; terminal emulators
 (require 'eat)
-(require 'vterm)
+;(require 'vterm)
 
 ;; eat configuration - make ESC work in vim while keeping M-x working
 ;; In GUI Emacs, <escape> is distinct from ESC (Meta prefix)

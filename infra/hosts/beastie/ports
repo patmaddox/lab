@@ -23,6 +23,7 @@ devel/gmake
 devel/hs-ShellCheck
 devel/hs-git-annex
 devel/jujutsu
+devel/lua-cjson@lua54
 devel/ninja
 devel/ob-rust
 devel/py-awscli@py311
