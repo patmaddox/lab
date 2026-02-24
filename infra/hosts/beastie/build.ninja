@@ -1,6 +1,6 @@
 host_name = beastie
-jail = 143
-version = 2025-10-10
+jail = 150
+version = 2026-02-23
 
 userland = 14.3-RELEASE-p4
 kernel = FreeBSD 14.3-RELEASE-p3 GENERIC
