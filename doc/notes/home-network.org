@@ -1,0 +1,97 @@
+* VLANs and subnets (10.VLAN.0.0)
+
+- [-] migrate workstations to VLAN 10
+  - [X] add beastie to 10
+  - [X] switch padillac_admin to 10
+  - [ ] remove beastie from 1 (after verifying NFS)
+- [ ] migrate servers to VLAN 20
+  - [ ] add rowdy to 20
+  - [ ] update pf
+  - [ ] update unbound
+  - [ ] add andre to 20
+  - [ ] add poudriere to 20
+  - [ ] add devbsd to 20
+  - [ ] beastie sharenfs with server subnet
+  - [ ] remove andre from 1
+  - [ ] remove poudriere from 1
+  - [ ] remove devbsd from 1
+- [X] migrate media to VLAN 30
+  - [X] add rowdy to 30
+  - [X] update pf
+  - [X] update unbound
+  - [X] dhcp 30
+  - [X] update switch for tagged 30
+  - [X] switch wifi to 30
+- [X] migrate guest to VLAN 123
+  - [X] add rowdy to 123
+  - [X] update pf
+  - [X] update unbound
+  - [X] dhcp 123
+  - [X] update switch for tagged 123
+  - [X] switch wifi to 123
+
+** 1 - unconfigured
+** 10 - trusted workstations
+| name     |        ip | mac |
+|----------+-----------+-----|
+| rowdy    | 10.10.0.1 |     |
+| beastie  | 10.10.0.2 |     |
+| gulliver | 10.10.0.3 |     |
+** 20 - servers
+| name      |        ip | mac |
+|-----------+-----------+-----|
+| rowdy     | 10.20.0.1 |     |
+| andre     | 10.20.0.2 |     |
+| poudriere | 10.20.0.3 |     |
+| devbsd    | 10.20.0.4 |     |
+** 30 - media
+| name    |        ip | mac |
+|---------+-----------+-----|
+| rowdy   | 10.30.0.1 |     |
+| ps5     | 10.30.0.2 |     |
+| tv      | 10.30.0.3 |     |
+| printer | 10.30.0.4 |     |
+** 99 - management
+| name      |        ip | mac |
+|-----------+-----------+-----|
+| rowdy     | 10.99.0.1 |     |
+| wap       | 10.99.0.2 |     |
+| switch1   | 10.99.0.3 |     |
+| switch2   | 10.99.0.4 |     |
+| andre ilo | 10.99.0.5 |     |
+** 123 - guest
+* switches
+* switch1 (office)
+| port | vpid | device  |
+|------+------+---------|
+|    1 |    1 | rowdy   |
+|    2 |    1 | switch2 |
+|    3 |   99 | wap     |
+|    7 |    1 | beastie |
+|   15 |   30 | sonos   |
+|   16 |   30 | printer |
+
+| vlan | untagged ports | tagged ports |
+|------+----------------+--------------|
+|    1 | 1-16           |              |
+|    2 |                | 1-3          |
+|    3 | 15,16          | 1-3          |
+|   16 |                | 1-3          |
+|   10 |                | 1,7          |
+|   30 | 15,16          | 1,3          |
+|   99 |                | 1,2          |
+* switch2 (laundry)
+| port | vpid | device  |
+|------+------+---------|
+|    1 |    1 | switch1 |
+|    2 |   30 | tv room |
+|    3 |    1 | garage  |
+
+| vlan | untagged ports | tagged ports |
+|------+----------------+--------------|
+|    1 |           1-16 |              |
+|    2 |                | 1,16         |
+|    3 |                | 1,16         |
+|   16 |                | 1,16         |
+|   30 |              2 |              |
+|   99 |                | 1,3          |
