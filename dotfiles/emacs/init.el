@@ -81,6 +81,9 @@
 
 ;; terminal emulators
 (require 'eat)
+; unlimited scrollback
+(setq eat-term-scrollback-size nil)
+
 ;(require 'vterm)
 
 ;; eat configuration - make ESC work in vim while keeping M-x working
