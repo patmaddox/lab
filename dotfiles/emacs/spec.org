@@ -1,0 +1,50 @@
+* Overview
+This spec defines functionality that I want to add to my emacs
+configuration, which is contained in this directory.
+
+Your job is to write elisp code that meets the requirements.
+
+* Rules
+Your response MUST include a <promise> tag indicating the result.
+This is the only structured output requirement - you may output other
+text as needed to do your work.
+
+All third-party code must be stored in the `vendor/` dir.
+
+* Development process
+1. Study this entire spec
+2. Work on the best available task
+** Selecting the best available task
+If a specific task is provided in the prompt, do that one.
+
+If not, choose a task that matches ALL of the following criteria
+
+- is in state TODO
+- does not have :later: tag
+- you are confident you can complete it
+- has no dependencies on other tasks
+
+When choosing among the available tasks, prioritize harder / more
+uncertain tasks first. We don't want to knock out a bunch of easy
+stuff and then get stuck.
+
+If you cannot find a task meeting any of these criteria, output:
+    <promise>error: no matching tasks</promise>
+
+If all of the tasks in the file are marked DONE, output:
+    <promise>ok</promise>
+
+** Working on tasks
+Your work product is elisp code in one or more of the following places:
+- init.el
+- lisp/
+- vendor/
+
+If you cannot complete a task:
+1. Update the task in spec.org to have :error: tag
+2. Add a sub-heading to the task with the error information
+3. Output <promise>continue</promise> and nothing else
+
+When you complete a task:
+1. Update the task type in spec.org to DONE
+2. Output <promise>continue</promise> and nothing else

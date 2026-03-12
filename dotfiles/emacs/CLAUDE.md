@@ -2,6 +2,8 @@
 
 Emacs (X, not terminal) on FreeBSD. Dependencies from ports, not emacs package managers.
 
+When the prompt is "dev", follow the development process defined in @spec.org
+
 ## File Structure
 
 - `init.el` - main config
@@ -15,6 +17,16 @@ Emacs (X, not terminal) on FreeBSD. Dependencies from ports, not emacs package m
 - `just install` - build and install package to ~/.emacs.d/
 - `just test` - build package and run kyua tests
 - `just demo [file]` - install to tmpdir and launch emacs
+
+## Version Control
+
+Use `jj commit -m` to commit after successful work. Do not commit after errors.
+
+Commit message style follows FreeBSD conventions:
+- Subject line: ~50 chars, imperative mood, prefixed with "[CLAUDE] emacs: " (e.g. "[CLAUDE] emacs: Add org-capture template for notes")
+- Wrap body at 72 characters
+- Explain why, not what — the diff shows what changed
+- Reference: https://docs.freebsd.org/en/articles/committers-guide/#commit-log-message
 
 ## FreeBSD Style
 
