@@ -24,7 +24,7 @@ Always reference jj change IDs (e.g. `kmnwrmrx`), not git commit hashes.
 
 Always use `--git` with `jj diff` and `jj show` for line-separated diffs. The default format combines changes on single lines which is harder to read.
 
-Before committing, review the diff and recent history. "Commit" means do whatever is needed: split, squash, reorder, or abandon commits to keep history clean. Use `jj squash --into` to fold later fixes into earlier commits when appropriate. Abandon commits that are made obsolete by later work. Do not create commits that only change task state — include the state change in the commit that does the actual work.
+Before committing, review the diff and recent history. "Commit" means do whatever is needed: split, squash, reorder, or abandon commits to keep history clean. Use `jj squash --into` to fold later fixes into earlier commits when appropriate. When squashing into a commit, review the commit message to ensure it still accurately describes the commit's content. Abandon commits that are made obsolete by later work. Do not create commits that only change task state — include the state change in the commit that does the actual work.
 
 Commit message style follows FreeBSD conventions:
 - Subject line: ~50 chars, imperative mood, prefixed with `[CLAUDE] <area>: ` where `<area>` matches the relevant subdirectory (e.g. `[CLAUDE] emacs: Add org-capture template`). If the change spans multiple areas or is repo-wide, omit the area (e.g. `[CLAUDE] Promote version control rules`)
