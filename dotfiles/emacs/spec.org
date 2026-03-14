@@ -12,8 +12,10 @@ text as needed to do your work.
 All third-party code must be stored in the `vendor/` dir.
 
 * Development process
+When the prompt is "continue":
 1. Study this entire spec
-2. Work on the best available task
+2. If any TODO tasks lack both :ready: and :blocked: tags, do "plan"
+3. Otherwise, do "dev"
 ** Selecting the best available task
 If a specific task is provided in the prompt, do that one.
 
