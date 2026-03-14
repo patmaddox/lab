@@ -60,6 +60,11 @@ This is Weinberg's Fieldstone Method applied to code (and prose and
 ideas). Collect stones — commits, notes, fragments — as they come.
 When it's time to build, select the ones that fit and assemble them.
 The pipeline (submit → review → promote) is the assembly process.
+
+The =/todo= workflow makes this literal: I speak an idea to Claude
+(collecting the stone), and the LLM figures out where it fits —
+updating an existing entry or creating a new one (building the wall).
+The human collects, the LLM places.
 * TODO Write about using jj to manipulate the git DAG
 jj treats commits as malleable objects that can be rebased, split,
 squashed, and reordered freely. The git DAG is just a serialization
