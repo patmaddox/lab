@@ -18,6 +18,8 @@ This repo uses jj (Jujutsu) for version control.
 
 Use `jj commit -m` to commit after successful work. Do not commit after errors.
 
+Never run `just promote` or `promote.sh` — promotion is done manually.
+
 ### Concurrency lock
 
 Multiple Claude sessions share the same working copy. Acquire the
