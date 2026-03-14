@@ -58,12 +58,17 @@ Only modify commits that have `[CLAUDE]` in the description with no other tags (
 
 Always reference jj change IDs (e.g. `kmnwrmrx`), not git commit hashes.
 
+Stay at the tip of `wip::` — do not `jj edit` or `jj new` to jump
+to other commits. Instead, use `jj squash --into` to modify earlier
+commits from the tip, and `jj file show`/`jj file list` to read
+files at other revisions. This avoids disrupting the working copy.
+
 Always use `--git` with `jj diff` and `jj show` for line-separated diffs. The default format combines changes on single lines which is harder to read.
 
 Before committing, review the diff and recent history. "Commit" means do whatever is needed: split, squash, reorder, or abandon commits to keep history clean. Use `jj squash --into` to fold later fixes into earlier commits when appropriate. When squashing into a commit, review the commit message to ensure it still accurately describes the commit's content. Abandon commits that are made obsolete by later work. Do not create commits that only change task state — include the state change in the commit that does the actual work.
 
 Commit message style follows FreeBSD conventions:
-- Subject line: ~50 chars, imperative mood, prefixed with `[CLAUDE] <area>: ` where `<area>` matches the relevant subdirectory (e.g. `[CLAUDE] emacs: Add org-capture template`). If the change spans multiple areas or is repo-wide, omit the area (e.g. `[CLAUDE] Promote version control rules`)
+- Subject line: ~50 chars, imperative mood, prefixed with `[CLAUDE] <area>: ` where `<area>` matches the relevant subdirectory (e.g. `[CLAUDE] emacs: Add org-capture template`). Use `claude:` for changes to CLAUDE.md, `.claude/` skills, and Claude infrastructure (e.g. `[CLAUDE] claude: Add stay-at-tip rule`). If the change spans multiple areas or is repo-wide, omit the area (e.g. `[CLAUDE] Promote version control rules`)
 - Bracketed prefixes like [CLAUDE] or [WIP] are excluded from the ~50 char count (they are temporary and will be removed)
 - Wrap body at 72 characters
 - Explain why, not what — the diff shows what changed
