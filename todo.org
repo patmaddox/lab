@@ -37,6 +37,11 @@ Update create draft command to send the data back to the buffer
 where it came from (assuming origin buffer is a claude-code buffer).
 Otherwise use default behavior and send to the default claude-code
 buffer, or show selection in case of multiple.
+* TODO Version control jj repo config (revset aliases, etc.)
+=.jj/repo/config.toml= contains revset aliases and jj aliases that
+the review pipeline depends on, but it lives inside =.jj/= so it
+is not version controlled. Investigate whether jj supports loading
+config from a tracked file, or if we need a sync mechanism.
 * TODO Create a skill to look up man pages
 Auto-trigger when unsure how to use a system tool. Read the man page
 and apply what it says rather than guessing at flags.
