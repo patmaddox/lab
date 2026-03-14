@@ -438,3 +438,7 @@ Items are identified as indented lines (starting with whitespace)."
       (lambda (buffer) (pop-to-buffer-same-window buffer) (selected-window)))
 (setq claude-code-program
       (expand-file-name "lisp/claude-code/claude-jail.sh" user-emacs-directory))
+;; Restore C-g to normal Emacs behavior (upstream binds it to send ESC)
+(add-hook 'claude-code-start-hook
+          (lambda ()
+            (define-key (current-local-map) (kbd "C-g") nil)))
