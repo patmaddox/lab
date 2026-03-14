@@ -428,3 +428,13 @@ Items are identified as indented lines (starting with whitespace)."
         ("freebsd-man" . ("~/lab.jj/oss/freebsd-src/main.jj/share/man"))))
 
 (setq pm-nvfind-default-scope "doc")
+
+;;; Claude Code
+(add-to-list 'load-path (expand-file-name "vendor/claude-code" user-emacs-directory))
+(add-to-list 'load-path (expand-file-name "vendor/inheritenv" user-emacs-directory))
+(require 'claude-code)
+(setq claude-code-terminal-backend 'eat)
+(setq claude-code-display-window-fn
+      (lambda (buffer) (pop-to-buffer-same-window buffer) (selected-window)))
+(setq claude-code-program
+      (expand-file-name "lisp/claude-code/claude-jail.sh" user-emacs-directory))
