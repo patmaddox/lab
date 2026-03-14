@@ -18,6 +18,44 @@ This repo uses jj (Jujutsu) for version control.
 
 Use `jj commit -m` to commit after successful work. Do not commit after errors.
 
+### Concurrency lock
+
+Multiple Claude sessions share the same working copy. Acquire the
+repo lock before jj operations within a turn, and release it when
+the turn's jj work is done. Do not hold the lock across turns —
+scripted sessions need to run between interactive turns.
+
+```sh
+# Acquire (before jj work in a turn):
+lock="$(jj root)/.jj/claude.lock"
+nohup lockf -k "$lock" sleep 86400 >/dev/null 2>&1 &
+echo $! > "$(jj root)/.jj/claude.lock.pid"
+
+# Release (after jj work in the same turn):
+kill $(cat "$(jj root)/.jj/claude.lock.pid") 2>/dev/null
+rm -f "$(jj root)/.jj/claude.lock.pid"
+```
+
+The `-k` flag keeps the lock file between uses, which guarantees
+ordering and reduces CPU churn from concurrent create/delete cycles.
+The `sleep 86400` is just a long-lived process to hold the fd open;
+it gets killed explicitly on release, so the value doesn't matter.
+
+If the lock is already held, `lockf` will block until it is released.
+Scripted sessions use `libexec/just/claude-run.sh` which handles
+locking automatically.
+
+### Working copy protocol
+
+Always begin and end a session on an empty commit that is the youngest
+descendant of `wip::`. Before doing work, verify this:
+```sh
+jj log -r 'latest(wip::)' --no-graph
+```
+If the tip has changes, run `jj new` to create an empty commit on top.
+When finished, if `@` has uncommitted changes, run `jj new` to leave
+a clean empty commit at the tip.
+
 Only modify commits that have `[CLAUDE]` in the description with no other tags (no `[REVIEW]`, `[FEEDBACK]`, etc.), or commits with no description (WIP work). Never modify commits outside this set. Exception: when running `/pm-feedback`, you may modify any commit with `[CLAUDE]` in the description regardless of other tags.
 
 Always reference jj change IDs (e.g. `kmnwrmrx`), not git commit hashes.
