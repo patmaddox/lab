@@ -72,6 +72,14 @@ and stop each time), but the caller manages state between calls by
 controlling the files and commit graph before handing off. The
 interesting part: state management lives in the orchestration layer
 (shell scripts, jj), not in the LLM.
+* TODO Write about learning from inputs (Code Convos)
+To learn from experts, watch their inputs — not just the outputs.
+Racing sim players learn by watching someone's steering, braking,
+throttle inputs and seeing the results. Same idea applies to code:
+observe what someone types, what prompts they give, how they
+orchestrate tools, and see what comes out. That's the thesis behind
+Code Convos — watch the inputs to someone's system and learn their
+craft.
 * TODO Create a skill to look up man pages
 Auto-trigger when unsure how to use a system tool. Read the man page
 and apply what it says rather than guessing at flags.
