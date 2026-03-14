@@ -430,6 +430,14 @@ Items are identified as indented lines (starting with whitespace)."
 (setq pm-nvfind-default-scope "doc")
 
 ;;; Claude Code
+;; Claude Code sessions run inside a FreeBSD jail via a wrapper script
+;; (lisp/claude-code/claude-jail.sh) using the eat terminal backend.
+;;
+;; Commands (all via M-x):
+;;   claude-code            - start a Claude session in default-directory
+;;   claude-code-send-region - send the selected region to the session
+;;   claude-code-send-buffer - send the entire buffer to the session
+;;   claude-code-new-instance - open an additional concurrent session
 (add-to-list 'load-path (expand-file-name "vendor/claude-code" user-emacs-directory))
 (add-to-list 'load-path (expand-file-name "vendor/inheritenv" user-emacs-directory))
 (require 'claude-code)
