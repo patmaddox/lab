@@ -22,7 +22,7 @@ If a specific task is provided in the prompt, do that one.
 If not, choose a task that matches ALL of the following criteria
 
 - is in state TODO
-- does not have :later: tag
+- has :ready: tag
 - you are confident you can complete it
 - has no dependencies on other tasks
 
@@ -35,6 +35,59 @@ If you cannot find a task meeting any of these criteria, output:
 
 If all of the tasks in the file are marked DONE, output:
     <promise>ok</promise>
+
+** Requirements analysis
+This is a separate role from implementation. The goal is to make
+tasks well-defined enough that claude code can implement them
+autonomously.
+
+When the prompt is "plan", perform requirements analysis:
+1. Study this entire spec, including DONE tasks
+2. Check all tasks for =:FEEDBACK:= drawers. If any task (including
+   DONE) has feedback, revert it to TODO, incorporate the feedback
+   into the plan, and remove the drawer.
+3. Find ONE TODO task that still needs a :ready: tag (skip :blocked: tasks)
+3. Analyze requirements, clarify ambiguities, break into subtasks if
+   the work has distinct steps or components
+4. When a task (or subtask) has clear enough requirements for
+   implementation, add the :ready: tag
+5. Refer to existing tasks in the file for how to structure new ones
+6. Subtasks are org sub-headings under the parent task with their own
+   TODO state
+
+Do NOT write code during requirements analysis. Only update spec.org.
+
+Ignore :blocked: tasks entirely — they do not count when determining
+whether all tasks are planned.
+
+If all non-hold TODO tasks already have :ready: tag, output:
+    <promise>ok</promise>
+
+Before analyzing a task, check for answered questions. Answered
+questions have a response after the checkbox text, e.g.:
+
+- [X] what language are we using? elixir
+
+Incorporate each answer into the task requirements and remove the
+question item. Remove the =:QUESTIONS:= drawer when all questions
+are resolved.
+
+If you cannot make a task ready (e.g. ambiguous requirements that
+need human input), add questions in a =:QUESTIONS:= drawer:
+
+:QUESTIONS:
+- [ ] what jail name should the wrapper script use?
+- [ ] where should the script be installed?
+:END:
+
+Add the :blocked: tag to the task so it does not block progress.
+A task must never be marked :ready: if it still has open questions.
+
+Then output:
+    <promise>error: reason</promise>
+
+When you finish planning a task, output:
+    <promise>continue</promise>
 
 ** Working on tasks
 Your work product is elisp code in one or more of the following places:
