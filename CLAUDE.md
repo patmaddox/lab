@@ -98,6 +98,14 @@ happened — do not create separate fieldstone-only commits. Use org
 headings (`* Title`) to organize by theme. Merge into existing
 entries when the idea extends prior thinking.
 
+`fieldstones.org` and `todo.org` are collaborative documents — the
+user edits them directly in emacs. **Always re-read the file
+immediately before modifying it.** Never rely on a previously read
+version. Never use the Write tool to overwrite the entire file —
+use Edit to make targeted changes. When squashing commits that
+touch these files, verify the current file content first to avoid
+discarding the user's edits.
+
 ## Vendored Code
 
 If vendoring third-party code, see `dotfiles/emacs/CLAUDE.md` for the established pattern. If the pattern gets reused elsewhere, promote it here.
