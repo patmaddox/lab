@@ -25,6 +25,14 @@ Commands evolve through stages as they prove useful:
    → =jj submit foo= becomes a single emacs command that shows the
    top of the submittable stack, lets you inspect, and submits.
 Each stage adds independence from the scaffolding that preceded it.
+
+This progression is the spectrum from creativity to engineering.
+LLMs are non-deterministic — great for exploring ideas and bringing
+them to life. As an idea proves useful, promote it through stages
+that add determinism: from a skill description (LLM interprets
+freely) to a script (deterministic). Science explores what's
+possible, engineering makes it reliable and rigorous. Command
+promotion is the mechanism for that transition.
 * TODO Surface related commits for review
 Commits that don't touch the same files but share a theme (e.g.
 "add locking to scripts" and "add locking to skills") should be
