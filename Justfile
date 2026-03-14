@@ -35,6 +35,10 @@ pr-review *id:
   if [ -z "$id" ]; then echo "No [REVIEW] commits found"; exit 1; fi
   JJ_EDITOR="./libexec/just/emacs-diff-edit.sh" jj describe -r "$id"
 
+# sink reviewed commits toward dev, promoting when ready
+promote:
+  ./libexec/just/promote.sh
+
 cleanup:
   find . -name '*~' -delete
   find . -type d -empty -delete
