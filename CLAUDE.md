@@ -1,11 +1,16 @@
 # lab.jj
 
-## Files
+## System
+
+This runs on FreeBSD. Use FreeBSD (BSD) variants of tools — `make`, `grep`, `sed`, `awk`, etc. Do not assume GNU flags or behavior. When unsure how to use a tool, read its man page with `man <tool>`.
+
+## Repo Structure
 
 .org files are emacs org-mode files
 
-- notebook/tasks.org task list
-- notebook/fieldstones.org notes reminiscent of Gerald Weinberg fieldstone method
+- `dotfiles/emacs/` — Emacs configuration (has its own CLAUDE.md)
+- `notebook/fieldstones.org` notes reminiscent of Gerald Weinberg fieldstone method
+- `notebook/tasks.org` task list
 
 ## Version Control
 
