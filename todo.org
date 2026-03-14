@@ -13,6 +13,18 @@ The promote workflow sinks reviewed commits down the stack toward
 dev, using conflict detection to identify dependencies. Commits
 that conflict are marked [BLOCKED], revealing which reviews to
 prioritize. Deterministic process via =just promote=.
+* TODO Document command progression maturity levels
+Commands evolve through stages as they prove useful:
+1. Description in a Claude skill (SKILL.md) — Claude interprets instructions
+2. Script embedded in Claude skill — reusable but coupled to skill
+3. Standalone script — usable outside Claude
+4. Just command — discoverable via =just -l=, composable
+5. First-class command — standalone binary/script on PATH, no just dependency
+6. Emacs command — streamlines multi-step terminal workflows with
+   state and inspection. Example: =jj submittable= → =jj show foo=
+   → =jj submit foo= becomes a single emacs command that shows the
+   top of the submittable stack, lets you inspect, and submits.
+Each stage adds independence from the scaffolding that preceded it.
 * TODO Create a skill to look up man pages
 Auto-trigger when unsure how to use a system tool. Read the man page
 and apply what it says rather than guessing at flags.
