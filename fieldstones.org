@@ -12,8 +12,12 @@ The /todo workflow makes this literal: the human speaks an idea,
 the LLM figures out where it fits — collecting and placing stones
 together.
 
-* Command progression: creativity to engineering
-Commands evolve through maturity stages:
+* Incremental formalization
+Start loose, add structure as patterns stabilize. Science discovers,
+engineering delivers. The progression applies at multiple levels.
+
+Command progression is a specific instance — commands evolve through
+maturity stages:
 1. Skill description — LLM interprets freely (non-deterministic)
 2. Script in skill — reusable but coupled
 3. Standalone script — deterministic, testable
@@ -21,9 +25,16 @@ Commands evolve through maturity stages:
 5. First-class command — standalone, no scaffolding
 6. Emacs command — streamlines multi-step workflows with state
 
-This is the spectrum from science to engineering. LLMs explore
-what's possible. Each promotion step adds determinism and rigor.
-Science discovers, engineering delivers.
+Org-mode is a natural substrate for incremental formalization.
+Procedures start as plain org text that humans follow and LLMs
+interpret. When a procedure stabilizes, promote it to elisp
+operating on the same org files. Then skills can call those elisp
+scripts directly. The format stays the same — the formalization
+happens in the tooling around it, not in a format migration.
+
+Shipping software for others is an even higher layer — packaging,
+documentation, compatibility, and support on top of the working
+tool. The progression extends beyond personal use into product.
 
 * LLMs as operating systems
 LLMs follow Unix patterns: processes (start, do work, exit), stdio
@@ -74,6 +85,15 @@ commit" step, just elevated from file-level to commit-level.
 The pm-submit / pm-feedback workflow embeds diffs and review comments
 directly in jj commit messages, eliminating the need for a separate
 code review tool like Gerrit.
+
+Submit creates the review context — the [REVIEW] tag and :FEEDBACK:
+drawer with the diff are the unit of review. Once submitted, the
+commit carries its review state. If the commit changes (squash,
+amend), the drawer must evolve too: merge new diff changes, keep
+existing comments, mark outdated ones as (outdated) when the
+underlying code has changed. The drawer is a living document, not
+a snapshot. This means =just review= as a separate step may go
+away — submit IS the act that opens the review.
 
 * Commit promotion as pipeline
 The promote workflow sinks reviewed commits toward trunk, using
