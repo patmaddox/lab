@@ -80,6 +80,10 @@ observe what someone types, what prompts they give, how they
 orchestrate tools, and see what comes out. That's the thesis behind
 Code Convos — watch the inputs to someone's system and learn their
 craft.
+* TODO Set up a local LLM for personal workflow
+Run this review pipeline (submit, feedback, promote) with a local
+model so it can be used for personal/private content without sending
+data to external APIs.
 * TODO Create a skill to look up man pages
 Auto-trigger when unsure how to use a system tool. Read the man page
 and apply what it says rather than guessing at flags.
