@@ -117,6 +117,7 @@ status, and changelog — like FreeBSD status reports but built from
 git commits. Link to commits as needed. Mostly auto-generated from
 =jj log= / =git log= output, grouped by area, with summaries.
 Could be a just command or a periodic build.
+* TODO Migrate patmaddox.com content from old platform to new
 * TODO Create a skill to look up man pages
 Auto-trigger when unsure how to use a system tool. Read the man page
 and apply what it says rather than guessing at flags.
