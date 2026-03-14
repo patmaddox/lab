@@ -118,6 +118,17 @@ git commits. Link to commits as needed. Mostly auto-generated from
 =jj log= / =git log= output, grouped by area, with summaries.
 Could be a just command or a periodic build.
 * TODO Migrate patmaddox.com content from old platform to new
+* TODO Create a /todo-report skill to triage the backlog
+Analyze =todo.org= and produce a concise report with three
+categories, showing the top 5-10 items in each:
+1. *Ready to pursue* — well-defined, feasible, high value.
+   These should be worked on soon.
+2. *Worth advancing* — promising but needs more definition or
+   groundwork. Invest in sharpening these.
+3. *Stale — progress or discard* — haven't been touched or
+   developed in a while. Either push them forward or let them go.
+Score items on definition, feasibility, and value. Keep the report
+short enough to scan in a minute.
 * TODO Create a skill to look up man pages
 Auto-trigger when unsure how to use a system tool. Read the man page
 and apply what it says rather than guessing at flags.
