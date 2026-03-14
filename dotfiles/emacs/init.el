@@ -207,6 +207,17 @@
         "transient"
         "tree-sitter"))
 
+;;; Version control: jj (Jujutsu)
+(add-to-list 'load-path (expand-file-name "vendor/vc-jj" user-emacs-directory))
+(require 'vc-jj)
+(require 'project-jj)
+
+(require 'pm-jj)
+(global-set-key (kbd "C-c j l") #'pm-jj-log)
+(global-set-key (kbd "C-c j a") #'pm-jj-actionable)
+(global-set-key (kbd "C-c j b") #'pm-jj-blocked)
+(global-set-key (kbd "C-c j B") #'pm-jj-blockers)
+
 ;;; Completion: Vertico + Orderless + Consult + Marginalia
 
 ;; Save minibuffer history across sessions
