@@ -24,6 +24,17 @@ rebase-n +commits:
 clone:
   for d in src/freebsd-ports src/freebsd-src src/jj src/please; do just -f ${d}/Justfile clone; done
 
+# review a [REVIEW] commit (earliest by default, or specify a change id)
+pr-review *id:
+  #!/bin/sh
+  if [ -n "{{id}}" ]; then
+    id="{{id}}"
+  else
+    id=$(jj log --no-graph --reversed --limit 1 -r 'subject(substring:"[REVIEW]")' -T 'change_id')
+  fi
+  if [ -z "$id" ]; then echo "No [REVIEW] commits found"; exit 1; fi
+  JJ_EDITOR="./libexec/just/emacs-diff-edit.sh" jj describe -r "$id"
+
 cleanup:
   find . -name '*~' -delete
   find . -type d -empty -delete
