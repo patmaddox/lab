@@ -24,20 +24,24 @@ rebase-n +commits:
 clone:
   for d in src/freebsd-ports src/freebsd-src src/jj src/please; do just -f ${d}/Justfile clone; done
 
-# review a [REVIEW] commit (earliest by default, or specify a change id)
-pr-review *id:
+# review a [REVIEW] or [SIGNOFF] commit (earliest by default, or specify a change id)
+review *id:
   #!/bin/sh
   if [ -n "{{id}}" ]; then
     id="{{id}}"
   else
-    id=$(jj log --no-graph --reversed --limit 1 -r 'subject(substring:"[REVIEW]")' -T 'change_id')
+    id=$(jj log --no-graph --reversed --limit 1 -r 'reviews() | needs_signoff()' -T 'change_id')
   fi
-  if [ -z "$id" ]; then echo "No [REVIEW] commits found"; exit 1; fi
-  JJ_EDITOR="./libexec/just/emacs-diff-edit.sh" jj describe -r "$id"
+  if [ -z "$id" ]; then echo "No reviewable commits found"; exit 1; fi
+  if jj log --no-graph -r "$id & needs_signoff()" -T 'change_id' | grep -q .; then
+    JJ_EDITOR="./libexec/just/signoff-edit.sh" jj describe -r "$id"
+  else
+    JJ_EDITOR="./libexec/just/emacs-diff-edit.sh" jj describe -r "$id"
+  fi
 
-# sink reviewed commits toward dev, promoting when ready
-promote:
-  ./libexec/just/promote.sh
+# sink reviewed commits toward trunk, promoting when ready
+promote *revset:
+  ./libexec/just/promote.sh "{{revset}}"
 
 cleanup:
   find . -name '*~' -delete
