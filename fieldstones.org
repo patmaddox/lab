@@ -61,6 +61,15 @@ jj treats commits as malleable objects that can be rebased, split,
 squashed, and reordered freely. The git DAG is just a serialization
 format — jj lets you reshape it without the ceremony git requires.
 
+* WIP commits as the new jj status
+The old workflow: edit files, run =jj st=, interactively commit.
+The new workflow: the LLM produces commits, the human reviews them.
+WIP commits replace =jj status= as the primary view of in-flight
+work. It's a more sophisticated version of jj's working copy
+model — instead of one anonymous working copy, you get a stream
+of named, reviewable changes. The review itself is the "interactive
+commit" step, just elevated from file-level to commit-level.
+
 * Replacing Gerrit with inline review
 The pm-submit / pm-feedback workflow embeds diffs and review comments
 directly in jj commit messages, eliminating the need for a separate
