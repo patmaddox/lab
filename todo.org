@@ -103,6 +103,14 @@ cross-reference without ceremony. Hard edges of multiple repos
 interfere with that fluidity. Still a hunch — need to experiment
 more. Already doing it to some degree: the metarepo clones OSS
 projects to work on alongside custom code, blurring the boundary.
+* TODO Write about LLMs as the new Unix
+LLMs follow the same patterns as Unix: processes (start, do work,
+exit), stdio pipes (prompt in, response out), permissions (tool
+access, sandboxing). The just/claude-run.sh workflow is literally
+process management. Skills are like shell scripts. The jail is
+the permission model. Favorite operating systems: FreeBSD, Elixir
+(Erlang/OTP), Emacs — and now LLMs. Each is a platform for building
+systems on top of, with its own process model and composition story.
 * TODO Create a skill to look up man pages
 Auto-trigger when unsure how to use a system tool. Read the man page
 and apply what it says rather than guessing at flags.
