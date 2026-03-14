@@ -110,6 +110,15 @@ links to commits. Could be a just command or periodic build.
 Run the review pipeline with a local model for personal/private
 content. Same tools, no external API dependency.
 
+* Streaming Claude output as Emacs events
+Long-running Claude commands (feedback, review) currently dump raw
+text into an async buffer. Instead, use =--output-format stream-json=
+and process the NDJSON events in elisp — render assistant text
+incrementally, show tool calls as collapsible sections, surface
+errors inline. The async buffer becomes a live dashboard, not a
+log dump. Maybe a flag on =claude-run.sh= to opt into streaming
+so existing CLI usage stays unchanged.
+
 * Single files to RAG spectrum
 A single document works well — the LLM sees everything and spots
 connections naturally. As content grows across files, that breaks
