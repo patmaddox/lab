@@ -12,6 +12,17 @@ text as needed to do your work.
 All third-party code must be stored in the `vendor/` dir.
 
 * Development process
+Log progress to =claude.log= so it can be monitored via =tail -f=:
+- At session start: log the command being run (e.g. "=== continue ===")
+- After each tool use or significant step: a brief status line
+- After each commit: log =jj show -s= output
+- At session end: log the promise output and session end
+: echo "$(date '+%H:%M:%S') === continue ===" >> claude.log
+: echo "$(date '+%H:%M:%S') Read spec.org" >> claude.log
+: jj show -s -r @- >> claude.log
+: echo "$(date '+%H:%M:%S') <promise>continue</promise>" >> claude.log
+: echo "$(date '+%H:%M:%S') === done: continue ===" >> claude.log
+
 When the prompt is "continue":
 1. Study this entire spec
 2. If any TODO tasks lack both :ready: and :blocked: tags, do "plan"
