@@ -1245,8 +1245,10 @@ With double prefix ARG (\\[universal-argument] \\[universal-argument]), prompt f
          (buffer (claude-code--term-make claude-code-terminal-backend buffer-name claude-code-program program-switches)))
 
     ;; Check if the claude program is available
-    (unless (executable-find claude-code-program)
-      (error "Claude Code program '%s' not found in PATH" claude-code-program))
+    (unless (or (executable-find claude-code-program)
+               (and (file-name-absolute-p claude-code-program)
+                    (file-executable-p claude-code-program)))
+      (error "Claude Code program '%s' not found" claude-code-program))
 
     ;; Check if buffer was successfully created
     (unless (buffer-live-p buffer)
