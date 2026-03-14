@@ -479,3 +479,13 @@ Output streams into a new buffer displayed immediately."
               (goto-char (point-max))
               (insert "\n--- done ---\n"))))))
     (display-buffer buf)))
+
+(defun claude-code-oneshot-kill-all ()
+  "Kill all *claude-oneshot* buffers."
+  (interactive)
+  (let ((killed 0))
+    (dolist (buf (buffer-list))
+      (when (string-prefix-p "*claude-oneshot*" (buffer-name buf))
+        (kill-buffer buf)
+        (setq killed (1+ killed))))
+    (message "Killed %d oneshot buffer(s)" killed)))
