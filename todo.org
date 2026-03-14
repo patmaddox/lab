@@ -84,6 +84,12 @@ craft.
 Run this review pipeline (submit, feedback, promote) with a local
 model so it can be used for personal/private content without sending
 data to external APIs.
+* TODO Write about monorepo reducing barriers to fluid work
+Monorepo makes moving stuff around frictionless — rename, reorganize,
+cross-reference without ceremony. Hard edges of multiple repos
+interfere with that fluidity. Still a hunch — need to experiment
+more. Already doing it to some degree: the metarepo clones OSS
+projects to work on alongside custom code, blurring the boundary.
 * TODO Create a skill to look up man pages
 Auto-trigger when unsure how to use a system tool. Read the man page
 and apply what it says rather than guessing at flags.
