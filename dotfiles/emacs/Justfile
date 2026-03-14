@@ -8,7 +8,7 @@ test: pkg
   kyua test
 
 install: pkg
-  INSTALL_AS_USER=yes pkg -r ~ install -U $(realpath patmaddox-emacs.pkg)
+  INSTALL_AS_USER=yes REPOS_DIR=/dev/null pkg -r ~ install -y -U $(realpath patmaddox-emacs.pkg)
 
 # Update contrib/ from oss/ clones
 contrib-update:
