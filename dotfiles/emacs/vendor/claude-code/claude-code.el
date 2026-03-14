@@ -932,18 +932,10 @@ BUFFER can be either a buffer object or a buffer name string."
     (and name (string-match-p "^\\*claude:" name))))
 
 (defun claude-code--directory ()
-  "Get get the root Claude directory for the current buffer.
+  "Get the directory for the current buffer.
 
-If not in a project and no buffer file return `default-directory'."
-  (let* ((project (project-current))
-         (current-file (buffer-file-name)))
-    (cond
-     ;; Case 1: In a project
-     (project (project-root project))
-     ;; Case 2: Has buffer file (when not in VC repo)
-     (current-file (file-name-directory current-file))
-     ;; Case 3: No project and no buffer file
-     (t default-directory))))
+Always returns `default-directory'."
+  default-directory)
 
 (defun claude-code--find-all-claude-buffers ()
   "Find all active Claude buffers across all directories.
