@@ -64,6 +64,14 @@ to spot connections across files without reading them all. RAG
 could restore that by surfacing related docs the way the single
 file lets it find related entries. Understand where the breakpoints
 are and when to introduce each layer.
+* TODO Write about just commands as GenServers for Claude
+The =just feedback=, =just review= etc. commands treat Claude like
+a GenServer — start a process, pass it state (files + skill prompt),
+let it do work, collect the result. The "server" is ephemeral (start
+and stop each time), but the caller manages state between calls by
+controlling the files and commit graph before handing off. The
+interesting part: state management lives in the orchestration layer
+(shell scripts, jj), not in the LLM.
 * TODO Create a skill to look up man pages
 Auto-trigger when unsure how to use a system tool. Read the man page
 and apply what it says rather than guessing at flags.
