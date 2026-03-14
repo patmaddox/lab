@@ -32,6 +32,11 @@ surfaced as related so a reviewer can consider them together. Could
 use commit message similarity, shared keywords, or LLM-based
 semantic grouping. Useful during review and when selecting feedback
 commits to work on.
+* TODO emacs: Route draft-reply back to origin buffer
+Update create draft command to send the data back to the buffer
+where it came from (assuming origin buffer is a claude-code buffer).
+Otherwise use default behavior and send to the default claude-code
+buffer, or show selection in case of multiple.
 * TODO Create a skill to look up man pages
 Auto-trigger when unsure how to use a system tool. Read the man page
 and apply what it says rather than guessing at flags.
