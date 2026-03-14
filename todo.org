@@ -42,6 +42,20 @@ buffer, or show selection in case of multiple.
 the review pipeline depends on, but it lives inside =.jj/= so it
 is not version controlled. Investigate whether jj supports loading
 config from a tracked file, or if we need a sync mechanism.
+* TODO Write about commits as corpus, not DAG
+We used to focus on producing a specific history — a DAG. Now we
+produce a corpus of commits and use tools (submit, promote, review,
+feedback) to flow them through to delivery. The DAG is an output of
+the process, not an input we craft by hand.
+
+This is Weinberg's Fieldstone Method applied to code (and prose and
+ideas). Collect stones — commits, notes, fragments — as they come.
+When it's time to build, select the ones that fit and assemble them.
+The pipeline (submit → review → promote) is the assembly process.
+* TODO Write about using jj to manipulate the git DAG
+jj treats commits as malleable objects that can be rebased, split,
+squashed, and reordered freely. The git DAG is just a serialization
+format — jj lets you reshape it without the ceremony git requires.
 * TODO Create a skill to look up man pages
 Auto-trigger when unsure how to use a system tool. Read the man page
 and apply what it says rather than guessing at flags.
