@@ -77,11 +77,26 @@ Commit message style follows FreeBSD conventions:
 
 When discussing a topic — especially planning, design, or ideas —
 check these locations for existing context before starting fresh:
-- `todo.org` — ideas, plans, and writing topics
+- `fieldstones.org` — ideas, design rationale, connections, analogies
+- `todo.org` — actionable items and writing topics
 - `notes/` — longer-form notes (if present)
 
 The user has often already captured partial thoughts. Build on what
 exists rather than starting from scratch.
+
+## Fieldstones
+
+`fieldstones.org` is a living document of ideas and thinking that
+develops during conversations. Proactively update it when you notice:
+- Design rationale or "why" behind decisions
+- Analogies and connections between concepts
+- Principles or patterns that emerge from the work
+- Ideas worth remembering that aren't actionable TODOs
+
+Include updates in the commit for the turn where the thinking
+happened — do not create separate fieldstone-only commits. Use org
+headings (`* Title`) to organize by theme. Merge into existing
+entries when the idea extends prior thinking.
 
 ## Vendored Code
 

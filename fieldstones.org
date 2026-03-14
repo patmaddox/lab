@@ -1,0 +1,66 @@
+* Commits as corpus, not DAG
+We produce a corpus of commits and use tools (submit, promote,
+review, feedback) to flow them through to delivery. The DAG is an
+output of the process, not an input we craft by hand.
+
+This is Weinberg's Fieldstone Method applied to code, prose, and
+ideas. Collect stones as they come. When it's time to build, select
+the ones that fit and assemble them. The pipeline is the assembly
+process.
+
+The /todo workflow makes this literal: the human speaks an idea,
+the LLM figures out where it fits — collecting and placing stones
+together.
+
+* Command progression: creativity to engineering
+Commands evolve through maturity stages:
+1. Skill description — LLM interprets freely (non-deterministic)
+2. Script in skill — reusable but coupled
+3. Standalone script — deterministic, testable
+4. Just command — discoverable, composable
+5. First-class command — standalone, no scaffolding
+6. Emacs command — streamlines multi-step workflows with state
+
+This is the spectrum from science to engineering. LLMs explore
+what's possible. Each promotion step adds determinism and rigor.
+Science discovers, engineering delivers.
+
+* LLMs as operating systems
+LLMs follow Unix patterns: processes (start, do work, exit), stdio
+pipes (prompt in, response out), permissions (tool access, jails).
+
+The just/claude-run.sh workflow is process management. Skills are
+shell scripts. The jail is the permission model.
+
+Favorite operating systems: FreeBSD, Elixir/OTP, Emacs — and now
+LLMs. Each is a platform with its own process model and composition
+story.
+
+* Just commands as GenServers
+The =just feedback=, =just review= commands treat Claude like a
+GenServer — start a process, pass it state (files + skill prompt),
+let it do work, collect the result. The server is ephemeral but the
+caller manages state between calls by controlling the files and
+commit graph before handing off. State management lives in the
+orchestration layer, not the LLM.
+
+* Learning from inputs
+To learn from experts, watch their inputs — not the outputs. Racing
+sim players learn by watching steering, braking, throttle inputs.
+Same for code: observe prompts, tool orchestration, decisions. The
+thesis behind Code Convos.
+
+* Monorepo as fluid workspace
+Monorepo makes moving stuff around frictionless. Hard edges of
+multiple repos interfere with fluidity. The metarepo pattern
+(cloning OSS projects alongside custom code) blurs the boundary.
+Still a hunch — needs more experimentation.
+
+* Single files to RAG spectrum
+A single document works well — the LLM sees everything and spots
+connections naturally. As content grows across files, that breaks
+down. RAG could restore cross-file awareness. Start with simple
+instructions to check known locations, graduate to retrieval as
+the corpus grows. Key insight: in interactive sessions, the user
+has often thought about a topic before — prior context should
+inform the conversation.
