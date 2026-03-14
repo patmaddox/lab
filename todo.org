@@ -25,6 +25,13 @@ Commands evolve through stages as they prove useful:
    → =jj submit foo= becomes a single emacs command that shows the
    top of the submittable stack, lets you inspect, and submits.
 Each stage adds independence from the scaffolding that preceded it.
+* TODO Surface related commits for review
+Commits that don't touch the same files but share a theme (e.g.
+"add locking to scripts" and "add locking to skills") should be
+surfaced as related so a reviewer can consider them together. Could
+use commit message similarity, shared keywords, or LLM-based
+semantic grouping. Useful during review and when selecting feedback
+commits to work on.
 * TODO Create a skill to look up man pages
 Auto-trigger when unsure how to use a system tool. Read the man page
 and apply what it says rather than guessing at flags.
