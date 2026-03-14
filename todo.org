@@ -4,35 +4,6 @@ Figure out how to invoke skills from =claude -p=. Possible approaches:
 - =--append-system-prompt-file= to load skill as system prompt
 - Extract "dev", "plan", "continue" soft skills from spec.org
   into =/pm-dev=, =/pm-plan= skill files
-* TODO Write about replacing Gerrit code review with inline jj + Claude Code review
-The pm-submit / pm-feedback workflow embeds diffs and review comments
-directly in jj commit messages, eliminating the need for a separate
-code review tool like Gerrit.
-* TODO Write about commit promotion workflow (sink toward dev)
-The promote workflow sinks reviewed commits down the stack toward
-dev, using conflict detection to identify dependencies. Commits
-that conflict are marked [BLOCKED], revealing which reviews to
-prioritize. Deterministic process via =just promote=.
-* TODO Document command progression maturity levels
-Commands evolve through stages as they prove useful:
-1. Description in a Claude skill (SKILL.md) — Claude interprets instructions
-2. Script embedded in Claude skill — reusable but coupled to skill
-3. Standalone script — usable outside Claude
-4. Just command — discoverable via =just -l=, composable
-5. First-class command — standalone binary/script on PATH, no just dependency
-6. Emacs command — streamlines multi-step terminal workflows with
-   state and inspection. Example: =jj submittable= → =jj show foo=
-   → =jj submit foo= becomes a single emacs command that shows the
-   top of the submittable stack, lets you inspect, and submits.
-Each stage adds independence from the scaffolding that preceded it.
-
-This progression is the spectrum from creativity to engineering.
-LLMs are non-deterministic — great for exploring ideas and bringing
-them to life. As an idea proves useful, promote it through stages
-that add determinism: from a skill description (LLM interprets
-freely) to a script (deterministic). Science explores what's
-possible, engineering makes it reliable and rigorous. Command
-promotion is the mechanism for that transition.
 * TODO Surface related commits for review
 Commits that don't touch the same files but share a theme (e.g.
 "add locking to scripts" and "add locking to skills") should be
@@ -50,82 +21,10 @@ buffer, or show selection in case of multiple.
 the review pipeline depends on, but it lives inside =.jj/= so it
 is not version controlled. Investigate whether jj supports loading
 config from a tracked file, or if we need a sync mechanism.
-* TODO Write about commits as corpus, not DAG
-We used to focus on producing a specific history — a DAG. Now we
-produce a corpus of commits and use tools (submit, promote, review,
-feedback) to flow them through to delivery. The DAG is an output of
-the process, not an input we craft by hand.
-
-This is Weinberg's Fieldstone Method applied to code (and prose and
-ideas). Collect stones — commits, notes, fragments — as they come.
-When it's time to build, select the ones that fit and assemble them.
-The pipeline (submit → review → promote) is the assembly process.
-
-The =/todo= workflow makes this literal: I speak an idea to Claude
-(collecting the stone), and the LLM figures out where it fits —
-updating an existing entry or creating a new one (building the wall).
-The human collects, the LLM places.
-* TODO Write about using jj to manipulate the git DAG
-jj treats commits as malleable objects that can be rebased, split,
-squashed, and reordered freely. The git DAG is just a serialization
-format — jj lets you reshape it without the ceremony git requires.
-* TODO Explore spectrum from single files to RAG for knowledge docs
-A single =todo.org= works well — Claude sees the whole file and
-finds thematic overlap naturally. But as it grows, it will need to
-split into multiple files. At that point Claude loses the ability
-to spot connections across files without reading them all. RAG
-could restore that by surfacing related docs the way the single
-file lets it find related entries. Understand where the breakpoints
-are and when to introduce each layer. Start with simple CLAUDE.md
-instructions to check known locations (todo.org, notes/). As the
-corpus grows, graduate to RAG. The key insight: when a user asks
-about a topic in an interactive session, there's a good chance
-they've thought about it before — prior context lives in the corpus
-and should inform the conversation rather than starting fresh.
-* TODO Write about just commands as GenServers for Claude
-The =just feedback=, =just review= etc. commands treat Claude like
-a GenServer — start a process, pass it state (files + skill prompt),
-let it do work, collect the result. The "server" is ephemeral (start
-and stop each time), but the caller manages state between calls by
-controlling the files and commit graph before handing off. The
-interesting part: state management lives in the orchestration layer
-(shell scripts, jj), not in the LLM.
-* TODO Write about learning from inputs (Code Convos)
-To learn from experts, watch their inputs — not just the outputs.
-Racing sim players learn by watching someone's steering, braking,
-throttle inputs and seeing the results. Same idea applies to code:
-observe what someone types, what prompts they give, how they
-orchestrate tools, and see what comes out. That's the thesis behind
-Code Convos — watch the inputs to someone's system and learn their
-craft.
-* TODO Set up a local LLM for personal workflow
-Run this review pipeline (submit, feedback, promote) with a local
-model so it can be used for personal/private content without sending
-data to external APIs.
-* TODO Write about monorepo reducing barriers to fluid work
-Monorepo makes moving stuff around frictionless — rename, reorganize,
-cross-reference without ceremony. Hard edges of multiple repos
-interfere with that fluidity. Still a hunch — need to experiment
-more. Already doing it to some degree: the metarepo clones OSS
-projects to work on alongside custom code, blurring the boundary.
-* TODO Write about LLMs as the new Unix
-LLMs follow the same patterns as Unix: processes (start, do work,
-exit), stdio pipes (prompt in, response out), permissions (tool
-access, sandboxing). The just/claude-run.sh workflow is literally
-process management. Skills are like shell scripts. The jail is
-the permission model. Favorite operating systems: FreeBSD, Elixir
-(Erlang/OTP), Emacs — and now LLMs. Each is a platform for building
-systems on top of, with its own process model and composition story.
-* TODO "What's cooking in the lab?" status page
-Dynamically generated status page showing recent work, project
-status, and changelog — like FreeBSD status reports but built from
-git commits. Link to commits as needed. Mostly auto-generated from
-=jj log= / =git log= output, grouped by area, with summaries.
-Could be a just command or a periodic build.
 * TODO Migrate patmaddox.com content from old platform to new
 * TODO Create a /todo-report skill to triage the backlog
-Analyze =todo.org= and produce a concise report with three
-categories, showing the top 5-10 items in each:
+Analyze =todo.org= and =fieldstones.org= and produce a concise
+report with three categories, showing the top 5-10 items in each:
 1. *Ready to pursue* — well-defined, feasible, high value.
    These should be worked on soon.
 2. *Worth advancing* — promising but needs more definition or

@@ -56,6 +56,31 @@ multiple repos interfere with fluidity. The metarepo pattern
 (cloning OSS projects alongside custom code) blurs the boundary.
 Still a hunch — needs more experimentation.
 
+* jj as git DAG manipulator
+jj treats commits as malleable objects that can be rebased, split,
+squashed, and reordered freely. The git DAG is just a serialization
+format — jj lets you reshape it without the ceremony git requires.
+
+* Replacing Gerrit with inline review
+The pm-submit / pm-feedback workflow embeds diffs and review comments
+directly in jj commit messages, eliminating the need for a separate
+code review tool like Gerrit.
+
+* Commit promotion as pipeline
+The promote workflow sinks reviewed commits toward trunk, using
+conflict detection to identify dependencies. Commits that conflict
+are marked [BLOCKED], revealing which reviews to prioritize.
+Deterministic process via =just promote=.
+
+* "What's cooking in the lab?"
+A dynamically generated status page — like FreeBSD status reports
+but built from git commits. Grouped by area, with summaries and
+links to commits. Could be a just command or periodic build.
+
+* Local LLM for private workflow
+Run the review pipeline with a local model for personal/private
+content. Same tools, no external API dependency.
+
 * Single files to RAG spectrum
 A single document works well — the LLM sees everything and spots
 connections naturally. As content grows across files, that breaks
