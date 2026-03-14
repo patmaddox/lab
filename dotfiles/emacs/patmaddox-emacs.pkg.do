@@ -17,29 +17,13 @@ redo-ifchange ${elfiles}
 stagedir=$(mktemp -d)
 trap "rm -rf ${stagedir}" EXIT
 
-pkg_comment=";; Installed by ${name} package"
-
 for f in ${elfiles}; do
     relpath="${f#${srcdir}/}"
     destdir="${stagedir}${prefix}/$(dirname "$relpath")"
     destfile="${destdir}/$(basename "$relpath")"
     mkdir -p "${destdir}"
-
-    # Add package comment after any emacs file-local variables line
-    firstline=$(head -1 "$f")
-    case "$firstline" in
-        *-\*-*-\*-*)
-            # First line is emacs file-local vars, insert comment after
-            head -1 "$f" > "${destfile}"
-            echo "${pkg_comment}" >> "${destfile}"
-            tail -n +2 "$f" >> "${destfile}"
-            ;;
-        *)
-            # No file-local vars, insert comment at top
-            echo "${pkg_comment}" > "${destfile}"
-            cat "$f" >> "${destfile}"
-            ;;
-    esac
+    cp "$f" "${destfile}"
+    chmod a-w "${destfile}"
 done
 
 # Calculate flatsize
