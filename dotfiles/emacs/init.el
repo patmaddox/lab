@@ -450,3 +450,32 @@ Items are identified as indented lines (starting with whitespace)."
 (add-hook 'claude-code-start-hook
           (lambda ()
             (define-key (current-local-map) (kbd "C-g") nil)))
+
+(defun claude-code-oneshot ()
+  "Run Claude with -p flag on region or prompted input.
+If a region is active, send the region text.  Otherwise prompt for input.
+Output streams into a new buffer displayed immediately."
+  (interactive)
+  (let* ((input (if (use-region-p)
+                    (buffer-substring-no-properties (region-beginning) (region-end))
+                  (read-string (format "Prompt [%s]: " (abbreviate-file-name default-directory)))))
+         (buf (generate-new-buffer "*claude-oneshot*"))
+         (proc (start-process "claude-oneshot" buf claude-code-program "-p" input)))
+    (with-current-buffer buf
+      (insert "--- claude-oneshot running ---\n\n"))
+    (set-process-filter proc
+      (lambda (p output)
+        (when (buffer-live-p (process-buffer p))
+          (with-current-buffer (process-buffer p)
+            (goto-char (point-max))
+            (insert (replace-regexp-in-string
+                     "\r\\|\033\\[[?<>=!0-9;]*[a-zA-Z-~]\\|\033\\][^\007]*\007" ""
+                     output))))))
+    (set-process-sentinel proc
+      (lambda (p _event)
+        (when (eq (process-status p) 'exit)
+          (when (buffer-live-p (process-buffer p))
+            (with-current-buffer (process-buffer p)
+              (goto-char (point-max))
+              (insert "\n--- done ---\n"))))))
+    (display-buffer buf)))
