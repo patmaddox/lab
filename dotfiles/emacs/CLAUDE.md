@@ -24,6 +24,34 @@ See top-level `CLAUDE.md` for general version control rules.
 
 The commit prefix for this directory is `[CLAUDE] emacs: ` (e.g. `[CLAUDE] emacs: Add org-capture template for notes`). Use the actual task name, not generic labels like "parent task".
 
+## Vendored Code
+
+Third-party code lives in `vendor/`, one subdirectory per package.
+
+- **Import commits** contain an exact copy of upstream — no local
+  modifications. One commit per import/update.
+- **Local patches** go in separate commits on top of the import.
+  Never squash local changes into the import commit.
+- **Updating**: import the new upstream version (replaces the
+  directory). Then create a new commit that re-applies any local
+  patches still needed. The commit message should list which
+  local changes were re-applied and which were dropped (e.g.
+  because upstream incorporated the fix). Reference the original
+  patch commits by git commit hash (stable, unlike change IDs).
+
+  Example commit message:
+  ```
+  [CLAUDE] emacs: Re-apply local patches to claude-code.el
+
+  Updated claude-code.el from upstream v2.1.0.
+
+  Re-applied:
+  - Accept absolute paths in claude-code-program (a1b2c3d)
+
+  Dropped:
+  - Fix buffer name uniqueness (d4e5f6a) — fixed upstream in v2.0.5
+  ```
+
 ## FreeBSD Style
 
 File: `lisp/freebsd-style-ts.el`
