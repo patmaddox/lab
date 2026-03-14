@@ -508,3 +508,7 @@ and prefixes every line with \"> \"."
         (forward-line 1))
       (goto-char (point-min)))
     (switch-to-buffer buf)))
+
+(global-set-key (kbd "C-c l c") 'claude-code-send-region)
+(global-set-key (kbd "C-c l d") 'claude-code-draft-reply)
+(global-set-key (kbd "C-c l o") 'claude-code-oneshot)
