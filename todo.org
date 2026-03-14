@@ -56,6 +56,14 @@ The pipeline (submit → review → promote) is the assembly process.
 jj treats commits as malleable objects that can be rebased, split,
 squashed, and reordered freely. The git DAG is just a serialization
 format — jj lets you reshape it without the ceremony git requires.
+* TODO Explore spectrum from single files to RAG for knowledge docs
+A single =todo.org= works well — Claude sees the whole file and
+finds thematic overlap naturally. But as it grows, it will need to
+split into multiple files. At that point Claude loses the ability
+to spot connections across files without reading them all. RAG
+could restore that by surfacing related docs the way the single
+file lets it find related entries. Understand where the breakpoints
+are and when to introduce each layer.
 * TODO Create a skill to look up man pages
 Auto-trigger when unsure how to use a system tool. Read the man page
 and apply what it says rather than guessing at flags.
