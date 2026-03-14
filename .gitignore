@@ -3,6 +3,7 @@
 *.elc
 *.img
 *.jj
+*.log
 *.pkg
 *.tmp
 *~
