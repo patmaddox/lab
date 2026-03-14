@@ -20,13 +20,9 @@ When the prompt is "dev", follow the development process defined in @spec.org
 
 ## Version Control
 
-Use `jj commit -m` to commit after successful work. Do not commit after errors.
+See top-level `CLAUDE.md` for general version control rules.
 
-Commit message style follows FreeBSD conventions:
-- Subject line: ~50 chars, imperative mood, prefixed with "[CLAUDE] emacs: " (e.g. "[CLAUDE] emacs: Add org-capture template for notes")
-- Wrap body at 72 characters
-- Explain why, not what — the diff shows what changed
-- Reference: https://docs.freebsd.org/en/articles/committers-guide/#commit-log-message
+The commit prefix for this directory is `[CLAUDE] emacs: ` (e.g. `[CLAUDE] emacs: Add org-capture template for notes`). Use the actual task name, not generic labels like "parent task".
 
 ## FreeBSD Style
 
