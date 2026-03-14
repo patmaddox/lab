@@ -22,28 +22,24 @@ Never run `just promote` or `promote.sh` — promotion is done manually.
 
 ### Concurrency lock
 
-Multiple Claude sessions share the same working copy. Acquire the
-repo lock before jj operations within a turn, and release it when
-the turn's jj work is done. Do not hold the lock across turns —
-scripted sessions need to run between interactive turns.
+Multiple Claude sessions share the same working copy. Hold the
+repo lock while running jj operations. Do not hold it across
+turns — scripted sessions need to run between interactive turns.
 
+Wrap all jj commands for a turn in a single `lockf` invocation:
 ```sh
-# Acquire (before jj work in a turn):
-lock="$(jj root)/.jj/claude.lock"
-nohup lockf -k "$lock" sleep 86400 >/dev/null 2>&1 &
-echo $! > "$(jj root)/.jj/claude.lock.pid"
-
-# Release (after jj work in the same turn):
-kill $(cat "$(jj root)/.jj/claude.lock.pid") 2>/dev/null
-rm -f "$(jj root)/.jj/claude.lock.pid"
+lockf -k "$(jj root)/.jj/claude.lock" sh -c '
+  jj squash --into foo
+  jj log -r ..@ --no-graph -n 5
+'
 ```
 
 The `-k` flag keeps the lock file between uses, which guarantees
 ordering and reduces CPU churn from concurrent create/delete cycles.
-The `sleep 86400` is just a long-lived process to hold the fd open;
-it gets killed explicitly on release, so the value doesn't matter.
+`lockf` blocks if another session holds the lock and releases
+automatically when the `sh -c` exits — no background processes,
+no PID files, no cleanup needed.
 
-If the lock is already held, `lockf` will block until it is released.
 Scripted sessions use `libexec/just/claude-run.sh` which handles
 locking automatically.
 
