@@ -8,6 +8,11 @@ Figure out how to invoke skills from =claude -p=. Possible approaches:
 The pm-submit / pm-feedback workflow embeds diffs and review comments
 directly in jj commit messages, eliminating the need for a separate
 code review tool like Gerrit.
+* TODO Write about commit promotion workflow (sink toward dev)
+The promote workflow sinks reviewed commits down the stack toward
+dev, using conflict detection to identify dependencies. Commits
+that conflict are marked [BLOCKED], revealing which reviews to
+prioritize. Deterministic process via =just promote=.
 * TODO Create a skill to look up man pages
 Auto-trigger when unsure how to use a system tool. Read the man page
 and apply what it says rather than guessing at flags.
