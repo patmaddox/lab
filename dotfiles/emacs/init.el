@@ -489,3 +489,22 @@ Output streams into a new buffer displayed immediately."
         (kill-buffer buf)
         (setq killed (1+ killed))))
     (message "Killed %d oneshot buffer(s)" killed)))
+
+(defun claude-code-draft-reply (beg end)
+  "Create a reply buffer with the region quoted like an email.
+Copies the region between BEG and END, deletes trailing whitespace,
+and prefixes every line with \"> \"."
+  (interactive "r")
+  (let ((text (buffer-substring-no-properties beg end))
+        (dir default-directory)
+        (buf (generate-new-buffer "*claude-draft-reply*")))
+    (with-current-buffer buf
+      (setq default-directory dir)
+      (insert text)
+      (delete-trailing-whitespace)
+      (goto-char (point-min))
+      (while (not (eobp))
+        (insert "> ")
+        (forward-line 1))
+      (goto-char (point-min)))
+    (switch-to-buffer buf)))
