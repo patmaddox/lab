@@ -30,7 +30,9 @@ When the prompt is "continue":
 ** Selecting the best available task
 If a specific task is provided in the prompt, do that one.
 
-If not, choose a task that matches ALL of the following criteria
+If not, choose ONE task that matches ALL of the following criteria
+(subtasks count as individual tasks — do not work on a parent and
+its subtasks together):
 
 - is in state TODO
 - has :ready: tag
@@ -112,5 +114,9 @@ If you cannot complete a task:
 3. Output <promise>continue</promise> and nothing else
 
 When you complete a task:
-1. Update the task type in spec.org to DONE
-2. Output <promise>continue</promise> and nothing else
+1. Mark ONLY that task as DONE — never mark other tasks in the same turn
+2. Include the spec.org update in the commit that completes the work
+3. For a parent task with children: select it as your task, verify all
+   children are DONE and acceptance criteria are met, then mark it DONE.
+   This is its own turn — do not combine with completing a child task.
+4. Output <promise>continue</promise> and nothing else
