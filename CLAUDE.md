@@ -73,6 +73,16 @@ Commit message style follows FreeBSD conventions:
 - Explain why, not what — the diff shows what changed
 - Reference: https://docs.freebsd.org/en/articles/committers-guide/#commit-log-message
 
+## Prior thinking
+
+When discussing a topic — especially planning, design, or ideas —
+check these locations for existing context before starting fresh:
+- `todo.org` — ideas, plans, and writing topics
+- `notes/` — longer-form notes (if present)
+
+The user has often already captured partial thoughts. Build on what
+exists rather than starting from scratch.
+
 ## Vendored Code
 
 If vendoring third-party code, see `dotfiles/emacs/CLAUDE.md` for the established pattern. If the pattern gets reused elsewhere, promote it here.

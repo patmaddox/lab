@@ -76,7 +76,12 @@ split into multiple files. At that point Claude loses the ability
 to spot connections across files without reading them all. RAG
 could restore that by surfacing related docs the way the single
 file lets it find related entries. Understand where the breakpoints
-are and when to introduce each layer.
+are and when to introduce each layer. Start with simple CLAUDE.md
+instructions to check known locations (todo.org, notes/). As the
+corpus grows, graduate to RAG. The key insight: when a user asks
+about a topic in an interactive session, there's a good chance
+they've thought about it before — prior context lives in the corpus
+and should inform the conversation rather than starting fresh.
 * TODO Write about just commands as GenServers for Claude
 The =just feedback=, =just review= etc. commands treat Claude like
 a GenServer — start a process, pass it state (files + skill prompt),
