@@ -18,7 +18,7 @@ This repo uses jj (Jujutsu) for version control.
 
 Use `jj commit -m` to commit after successful work. Do not commit after errors.
 
-Only modify commits that descend from the `claude_start()` revset. Never rewrite, squash into, or otherwise alter commits outside that range.
+Only modify commits that have `[CLAUDE]` in the description with no other tags (no `[REVIEW]`, `[FEEDBACK]`, etc.), or commits with no description (WIP work). Never modify commits outside this set. Exception: when running `/pm-feedback`, you may modify any commit with `[CLAUDE]` in the description regardless of other tags.
 
 Always reference jj change IDs (e.g. `kmnwrmrx`), not git commit hashes.
 
