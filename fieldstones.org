@@ -188,11 +188,23 @@ this. See "Planning as problem solving, LLMs as translation" —
 keeping problem-solving in human hands is partly about preventing
 the LLM from solving the wrong problem.
 
-Examples > rules. LLMs pattern-match from concrete input/output
-pairs better than from prose descriptions. A scenario with
-before/after stacks communicates more reliably than an algorithm
-described in words. Vague specs force the LLM to invent, and
-invention is where it goes wrong.
+Examples > rules — but not because LLMs can't process rules.
+LLMs generate examples from rules constantly (every implementation
+is an example satisfying spec-rules). The problem is minimality:
+rules leave the solution space open, and LLMs fill it with more
+than necessary. They find /a/ solution, not the /simplest/
+solution — adding safety margins, extra phases, extra code paths
+to ensure constraints are met. Training rewards robustness over
+minimality: complex solutions that handle edge cases look like
+good code, simple solutions that happen to work look like bugs.
+
+Examples in the spec do the minimality work for the LLM. A
+scenario with before/after stacks shows the simplest correct
+behavior — the LLM matches that pattern rather than inventing
+its own over-specified solution. The harder the constraint
+interactions (familiar patterns vs novel combinations), the more
+examples matter. Independent rules are fine as prose; interacting
+rules need concrete examples showing how they combine.
 
 Concrete mandates > subjective ones. "Write a failing test" is
 actionable — you either produce one or you don't. "Is this
