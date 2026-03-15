@@ -162,6 +162,21 @@ Connects to the "favorite operating systems" theme (see LLMs
 as operating systems) — Elixir/OTP as a platform for creative
 tools, not just infrastructure.
 
+* The ralph loop — agentic work cycle
+The basic loop for autonomous/agentic work:
+1. Validate state — is there anything left to do? If not, done.
+2. Plan next increment of progress
+3. Implement
+4. Review — look for holes in the implementation and/or plan
+
+This is the abstract pattern behind trunq's dev process
+(analyst → speccer → coder → tester), but generalized. The
+roles are a specialization of this loop — each role does one
+phase, and the rotation ensures all four happen. The loop also
+reinforces planning as problem solving (see above) — step 2
+keeps problem-solving in human/analyst hands before handing off
+to implementation.
+
 * Single files to RAG spectrum
 A single document works well — the LLM sees everything and spots
 connections naturally. As content grows across files, that breaks
