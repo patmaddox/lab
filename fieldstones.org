@@ -68,7 +68,8 @@ the progression from loose text to structured spec to code isn't
 just about maturity, it's about keeping problem solving in human
 hands and translation in machine hands. The GenServer pattern
 reinforces this: the human manages state and decisions, the LLM
-executes.
+executes. See "Principles of LLM coding" for specific failure
+modes when this boundary is violated.
 
 * Learning from inputs
 To learn from experts, watch their inputs — not the outputs. Racing
@@ -176,6 +177,39 @@ phase, and the rotation ensures all four happen. The loop also
 reinforces planning as problem solving (see above) — step 2
 keeps problem-solving in human/analyst hands before handing off
 to implementation.
+
+* Principles of LLM coding
+LLMs pre-reason rather than iterate. A human tries the simple
+thing, sees it fail, adds complexity. An LLM predicts failure
+modes upfront and builds in complexity preemptively — solving
+problems that may not exist. Explicit guidance to try the naive
+approach first and let tests tell you what's needed counteracts
+this. See "Planning as problem solving, LLMs as translation" —
+keeping problem-solving in human hands is partly about preventing
+the LLM from solving the wrong problem.
+
+Examples > rules. LLMs pattern-match from concrete input/output
+pairs better than from prose descriptions. A scenario with
+before/after stacks communicates more reliably than an algorithm
+described in words. Vague specs force the LLM to invent, and
+invention is where it goes wrong.
+
+Concrete mandates > subjective ones. "Write a failing test" is
+actionable — you either produce one or you don't. "Is this
+simpler than needed?" is subjective and gets deprioritized when
+competing with concrete tasks. Structure agentic work so each
+step has an observable output.
+
+Tests communicate better than prose. Failing tests are
+unambiguous. Task descriptions are ambiguous. Each prose-to-code
+translation step loses fidelity. Wherever possible, express
+intent as executable artifacts rather than natural language.
+
+Separation of turns prevents confirmation bias. The same model
+that wrote the code will justify it. A fresh session with a
+different mandate questions what the prior session took for
+granted. This is why role rotation matters in agentic loops
+even though it's the same model underneath.
 
 * Single files to RAG spectrum
 A single document works well — the LLM sees everything and spots
