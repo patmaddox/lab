@@ -206,6 +206,16 @@ interactions (familiar patterns vs novel combinations), the more
 examples matter. Independent rules are fine as prose; interacting
 rules need concrete examples showing how they combine.
 
+LLMs generate forward — they produce tokens sequentially,
+never backtracking. A human solving constraints can search:
+try an approach, hit a wall, back up, try another. LLMs
+compensate for the lack of backtracking with redundancy —
+building in extra handling "just in case" because they can't
+course-correct mid-generation. This is the mechanical reason
+behind pre-reasoning over iterating. External iteration (test
+→ fail → revise) substitutes for the backtracking that
+forward generation can't do.
+
 Concrete mandates > subjective ones. "Write a failing test" is
 actionable — you either produce one or you don't. "Is this
 simpler than needed?" is subjective and gets deprioritized when
@@ -222,6 +232,21 @@ that wrote the code will justify it. A fresh session with a
 different mandate questions what the prior session took for
 granted. This is why role rotation matters in agentic loops
 even though it's the same model underneath.
+
+* Commit history as progressive examples
+The commit history IS the set of progressive implementation
+examples — each surviving commit is something a human said
+"yes" to. LLMs in agentic loops should review recent history
+to calibrate scale and style against what's been accepted.
+This is cheaper than maintaining example implementations in
+the spec and stays current automatically.
+
+Nuance: in autonomous runs (dev.sh), later turns calibrate
+against earlier LLM-produced commits, not human-curated ones.
+The first few commits matter disproportionately — they seed
+the pattern. This argues for human review of the first cycle
+before letting the loop run autonomously. See "Learning from
+inputs" — the history is the expert's inputs made visible.
 
 * Single files to RAG spectrum
 A single document works well — the LLM sees everything and spots
