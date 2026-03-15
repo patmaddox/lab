@@ -55,6 +55,21 @@ caller manages state between calls by controlling the files and
 commit graph before handing off. State management lives in the
 orchestration layer, not the LLM.
 
+* Planning as problem solving, LLMs as translation
+LLMs are bad at problem solving but good at translation. Planning
+matters because it's where the human solves the problem — quickly,
+in a form that can be agreed upon — so the LLM can translate it
+into code. The spec is the contract between human insight and
+machine output. Get the spec wrong and the LLM will confidently
+produce the wrong thing.
+
+This is the "why" behind incremental formalization (see above) —
+the progression from loose text to structured spec to code isn't
+just about maturity, it's about keeping problem solving in human
+hands and translation in machine hands. The GenServer pattern
+reinforces this: the human manages state and decisions, the LLM
+executes.
+
 * Learning from inputs
 To learn from experts, watch their inputs — not the outputs. Racing
 sim players learn by watching steering, braking, throttle inputs.
@@ -100,6 +115,17 @@ The promote workflow sinks reviewed commits toward trunk, using
 conflict detection to identify dependencies. Commits that conflict
 are marked [BLOCKED], revealing which reviews to prioritize.
 Deterministic process via =just promote=.
+
+The current scripts grew organically — each command (submit,
+promote, feedback) handles its own slice with ad-hoc tags and
+independent jj calls. Works, but no unified model: fragile, hard
+to reason about, and slow (~7 jj subprocesses per commit per sink
+level).
+
+Sinker (=src/sinker=) replaces this with a proper state machine
+for the full commit lifecycle. The structure is the point —
+performance follows from having a coherent model rather than
+stitching independent scripts together.
 
 * "What's cooking in the lab?"
 A dynamically generated status page — like FreeBSD status reports
