@@ -272,6 +272,29 @@ the pattern. This argues for human review of the first cycle
 before letting the loop run autonomously. See "Learning from
 inputs" — the history is the expert's inputs made visible.
 
+* Humans seed patterns, LLMs replicate them
+LLMs are good at identifying and replicating patterns but need
+humans to provide them. Without human input, LLMs fall back on
+training data patterns — generic, over-engineered, not fitted
+to the project. The human's job is to seed the right patterns;
+the LLM's job is to recognize and extend them.
+
+This is the same boundary as "Planning as problem solving, LLMs
+as translation" — humans provide insight, LLMs execute — but at
+a different level. Planning is about /what/ to build; pattern
+seeding is about /how/ to build it. Commit history is one
+concrete mechanism for seeding patterns (see "Commit history as
+progressive examples") — each accepted commit teaches the LLM
+what "good" looks like in this project.
+
+The "Examples > rules" principle in "Principles of LLM coding"
+connects directly: examples ARE the human-provided patterns.
+Rules leave the solution space open and LLMs fill it with
+training-data defaults. Examples constrain the space to what
+the human actually wants. This is why a few well-chosen
+examples outperform detailed specifications — they transfer
+pattern, not just intent.
+
 * Single files to RAG spectrum
 A single document works well — the LLM sees everything and spots
 connections naturally. As content grows across files, that breaks
