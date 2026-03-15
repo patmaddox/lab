@@ -119,6 +119,13 @@ errors inline. The async buffer becomes a live dashboard, not a
 log dump. Maybe a flag on =claude-run.sh= to opt into streaming
 so existing CLI usage stays unchanged.
 
+* POF — pile of files
+Content-addressable block storage for file sync, git/jj style.
+A Rust library for block-level content addressing looked promising
+as a foundation — handles chunking and dedup at the storage layer,
+leaving the sync semantics to a higher level. Basically the plumbing
+that git's object store provides, but as a reusable library.
+
 * Single files to RAG spectrum
 A single document works well — the LLM sees everything and spots
 connections naturally. As content grows across files, that breaks
