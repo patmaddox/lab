@@ -152,6 +152,16 @@ as a foundation — handles chunking and dedup at the storage layer,
 leaving the sync semantics to a higher level. Basically the plumbing
 that git's object store provides, but as a reusable library.
 
+* Notex — music composition in Elixir Livebook
+An Elixir Livebook-based music composition system inspired by
+Opusmodus and its OMN (Opus Modus Notation). Livebook's reactive
+cells and Elixir's pattern matching are a natural fit for
+algorithmic composition — similar to how Opusmodus uses Lisp
+but with Elixir's concurrency and Livebook's interactivity.
+Connects to the "favorite operating systems" theme (see LLMs
+as operating systems) — Elixir/OTP as a platform for creative
+tools, not just infrastructure.
+
 * Single files to RAG spectrum
 A single document works well — the LLM sees everything and spots
 connections naturally. As content grows across files, that breaks
