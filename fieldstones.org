@@ -206,15 +206,39 @@ interactions (familiar patterns vs novel combinations), the more
 examples matter. Independent rules are fine as prose; interacting
 rules need concrete examples showing how they combine.
 
-LLMs generate forward — they produce tokens sequentially,
-never backtracking. A human solving constraints can search:
-try an approach, hit a wall, back up, try another. LLMs
-compensate for the lack of backtracking with redundancy —
-building in extra handling "just in case" because they can't
-course-correct mid-generation. This is the mechanical reason
-behind pre-reasoning over iterating. External iteration (test
-→ fail → revise) substitutes for the backtracking that
-forward generation can't do.
+Forward generation vs search. An LLM produces tokens
+sequentially — like writing with pen on paper. You can write
+"wait, actually..." but you can't erase what came before; it
+still shapes everything after. A chess engine, by contrast,
+explores many lines, abandons bad ones, and commits only at
+the end. A human programmer does the same: try approach A,
+run tests, delete it entirely, try approach B. The final code
+has no trace of A.
+
+An LLM generating in a single pass can't do this. If it
+realizes mid-stream that an edge case might exist, it adds
+handling rather than restarting simpler. The output carries
+the weight of every concern encountered during generation.
+
+The key difference from human memory: a human remembers THAT
+approach A failed and WHY, but the artifact (code) is clean —
+A is gone. Memory and artifact are separate channels. In a
+single LLM generation, context is both working memory and
+output artifact simultaneously — there's no separation.
+
+The dev process gives LLMs this separation. Code is the clean
+artifact. Tests are the spec. Lessons learned (dev.log,
+commit messages) are the search history — what was tried and
+why it was abandoned. Without lessons as explicit artifacts,
+a future turn might re-try approach A. With them, the search
+makes progress across turns instead of going in circles.
+
+Iteration is the search algorithm. Each turn is a step, tests
+are the evaluation function, "try again" is the backtrack.
+The iterative dev process isn't just separation of concerns —
+it provides the search mechanism that forward generation
+lacks, with clean memory/artifact separation that single-pass
+generation can't achieve.
 
 Concrete mandates > subjective ones. "Write a failing test" is
 actionable — you either produce one or you don't. "Is this
