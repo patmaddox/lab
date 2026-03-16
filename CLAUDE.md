@@ -1,5 +1,12 @@
 # lab.jj
 
+## Files
+
+.org files are emacs org-mode files
+
+- notebook/tasks.org task list
+- notebook/fieldstones.org notes reminiscent of Gerald Weinberg fieldstone method
+
 ## Version Control
 
 This repo uses jj (Jujutsu) for version control.
