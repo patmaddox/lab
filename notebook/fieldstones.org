@@ -1,0 +1,382 @@
+* Commits as corpus, not DAG
+We produce a corpus of commits and use tools (submit, promote,
+review, feedback) to flow them through to delivery. The DAG is an
+output of the process, not an input we craft by hand.
+
+This is Weinberg's Fieldstone Method applied to code, prose, and
+ideas. Collect stones as they come. When it's time to build, select
+the ones that fit and assemble them. The pipeline is the assembly
+process.
+
+The /todo workflow makes this literal: the human speaks an idea,
+the LLM figures out where it fits — collecting and placing stones
+together.
+
+* Incremental formalization
+Start loose, add structure as patterns stabilize. Science discovers,
+engineering delivers. The progression applies at multiple levels.
+
+Command progression is a specific instance — commands evolve through
+maturity stages:
+1. Skill description — LLM interprets freely (non-deterministic)
+2. Script in skill — reusable but coupled
+3. Standalone script — deterministic, testable
+4. Just command — discoverable, composable
+5. First-class command — standalone, no scaffolding
+6. Emacs command — streamlines multi-step workflows with state
+
+Org-mode is a natural substrate for incremental formalization.
+Procedures start as plain org text that humans follow and LLMs
+interpret. When a procedure stabilizes, promote it to elisp
+operating on the same org files. Then skills can call those elisp
+scripts directly. The format stays the same — the formalization
+happens in the tooling around it, not in a format migration.
+
+Shipping software for others is an even higher layer — packaging,
+documentation, compatibility, and support on top of the working
+tool. The progression extends beyond personal use into product.
+
+* LLMs as operating systems
+LLMs follow Unix patterns: processes (start, do work, exit), stdio
+pipes (prompt in, response out), permissions (tool access, jails).
+
+The just/claude-run.sh workflow is process management. Skills are
+shell scripts. The jail is the permission model.
+
+Favorite operating systems: FreeBSD, Elixir/OTP, Emacs — and now
+LLMs. Each is a platform with its own process model and composition
+story.
+
+* Just commands as GenServers
+The =just feedback=, =just review= commands treat Claude like a
+GenServer — start a process, pass it state (files + skill prompt),
+let it do work, collect the result. The server is ephemeral but the
+caller manages state between calls by controlling the files and
+commit graph before handing off. State management lives in the
+orchestration layer, not the LLM.
+
+* Planning as problem solving, LLMs as translation
+LLMs are bad at problem solving but good at translation. Planning
+matters because it's where the human solves the problem — quickly,
+in a form that can be agreed upon — so the LLM can translate it
+into code. The spec is the contract between human insight and
+machine output. Get the spec wrong and the LLM will confidently
+produce the wrong thing.
+
+This is the "why" behind incremental formalization (see above) —
+the progression from loose text to structured spec to code isn't
+just about maturity, it's about keeping problem solving in human
+hands and translation in machine hands. The GenServer pattern
+reinforces this: the human manages state and decisions, the LLM
+executes. See "Principles of LLM coding" for specific failure
+modes when this boundary is violated.
+
+* Learning from inputs
+To learn from experts, watch their inputs — not the outputs. Racing
+sim players learn by watching steering, braking, throttle inputs.
+Same for code: observe prompts, tool orchestration, decisions. The
+thesis behind Code Convos.
+
+* Monorepo as fluid workspace
+Monorepo makes moving stuff around frictionless. Hard edges of
+multiple repos interfere with fluidity. The metarepo pattern
+(cloning OSS projects alongside custom code) blurs the boundary.
+Still a hunch — needs more experimentation.
+
+* jj as git DAG manipulator
+jj treats commits as malleable objects that can be rebased, split,
+squashed, and reordered freely. The git DAG is just a serialization
+format — jj lets you reshape it without the ceremony git requires.
+
+* WIP commits as the new jj status
+The old workflow: edit files, run =jj st=, interactively commit.
+The new workflow: the LLM produces commits, the human reviews them.
+WIP commits replace =jj status= as the primary view of in-flight
+work. It's a more sophisticated version of jj's working copy
+model — instead of one anonymous working copy, you get a stream
+of named, reviewable changes. The review itself is the "interactive
+commit" step, just elevated from file-level to commit-level.
+
+* Replacing Gerrit with inline review
+The pm-submit / pm-feedback workflow embeds diffs and review comments
+directly in jj commit messages, eliminating the need for a separate
+code review tool like Gerrit.
+
+Submit creates the review context — the [REVIEW] tag and :FEEDBACK:
+drawer with the diff are the unit of review. Once submitted, the
+commit carries its review state. If the commit changes (squash,
+amend), the drawer must evolve too: merge new diff changes, keep
+existing comments, mark outdated ones as (outdated) when the
+underlying code has changed. The drawer is a living document, not
+a snapshot. This means =just review= as a separate step may go
+away — submit IS the act that opens the review.
+
+* Commit promotion as pipeline
+The promote workflow sinks reviewed commits toward trunk, using
+conflict detection to identify dependencies. Commits that conflict
+are marked [BLOCKED], revealing which reviews to prioritize.
+Deterministic process via =just promote=.
+
+The current scripts grew organically — each command (submit,
+promote, feedback) handles its own slice with ad-hoc tags and
+independent jj calls. Works, but no unified model: fragile, hard
+to reason about, and slow (~7 jj subprocesses per commit per sink
+level).
+
+Trunq (=src/trunq=) replaces this with a proper state machine
+for the full commit lifecycle. The structure is the point —
+performance follows from having a coherent model rather than
+stitching independent scripts together.
+
+* "What's cooking in the lab?"
+A dynamically generated status page — like FreeBSD status reports
+but built from git commits. Grouped by area, with summaries and
+links to commits. Could be a just command or periodic build.
+
+* Local LLM for private workflow
+Run the review pipeline with a local model for personal/private
+content. Same tools, no external API dependency.
+
+* Streaming Claude output as Emacs events
+Long-running Claude commands (feedback, review) currently dump raw
+text into an async buffer. Instead, use =--output-format stream-json=
+and process the NDJSON events in elisp — render assistant text
+incrementally, show tool calls as collapsible sections, surface
+errors inline. The async buffer becomes a live dashboard, not a
+log dump. Maybe a flag on =claude-run.sh= to opt into streaming
+so existing CLI usage stays unchanged.
+
+* POF — pile of files
+Content-addressable block storage for file sync, git/jj style.
+A Rust library for block-level content addressing looked promising
+as a foundation — handles chunking and dedup at the storage layer,
+leaving the sync semantics to a higher level. Basically the plumbing
+that git's object store provides, but as a reusable library.
+
+* Notex — music composition in Elixir Livebook
+An Elixir Livebook-based music composition system inspired by
+Opusmodus and its OMN (Opus Modus Notation). Livebook's reactive
+cells and Elixir's pattern matching are a natural fit for
+algorithmic composition — similar to how Opusmodus uses Lisp
+but with Elixir's concurrency and Livebook's interactivity.
+Connects to the "favorite operating systems" theme (see LLMs
+as operating systems) — Elixir/OTP as a platform for creative
+tools, not just infrastructure.
+
+* The ralph loop — agentic work cycle
+The basic loop for autonomous/agentic work:
+1. Validate state — is there anything left to do? If not, done.
+2. Plan next increment of progress
+3. Implement
+4. Review — look for holes in the implementation and/or plan
+
+This is the abstract pattern behind trunq's dev process
+(analyst → speccer → coder → tester), but generalized. The
+roles are a specialization of this loop — each role does one
+phase, and the rotation ensures all four happen. The loop also
+reinforces planning as problem solving (see above) — step 2
+keeps problem-solving in human/analyst hands before handing off
+to implementation.
+
+* Principles of LLM coding
+LLMs pre-reason rather than iterate. A human tries the simple
+thing, sees it fail, adds complexity. An LLM predicts failure
+modes upfront and builds in complexity preemptively — solving
+problems that may not exist. Explicit guidance to try the naive
+approach first and let tests tell you what's needed counteracts
+this. See "Planning as problem solving, LLMs as translation" —
+keeping problem-solving in human hands is partly about preventing
+the LLM from solving the wrong problem.
+
+Examples > rules — but not because LLMs can't process rules.
+LLMs generate examples from rules constantly (every implementation
+is an example satisfying spec-rules). The problem is minimality:
+rules leave the solution space open, and LLMs fill it with more
+than necessary. They find /a/ solution, not the /simplest/
+solution — adding safety margins, extra phases, extra code paths
+to ensure constraints are met. Training rewards robustness over
+minimality: complex solutions that handle edge cases look like
+good code, simple solutions that happen to work look like bugs.
+
+Examples in the spec do the minimality work for the LLM. A
+scenario with before/after stacks shows the simplest correct
+behavior — the LLM matches that pattern rather than inventing
+its own over-specified solution. The harder the constraint
+interactions (familiar patterns vs novel combinations), the more
+examples matter. Independent rules are fine as prose; interacting
+rules need concrete examples showing how they combine.
+
+Forward generation vs search. An LLM produces tokens
+sequentially — like writing with pen on paper. You can write
+"wait, actually..." but you can't erase what came before; it
+still shapes everything after. A chess engine, by contrast,
+explores many lines, abandons bad ones, and commits only at
+the end. A human programmer does the same: try approach A,
+run tests, delete it entirely, try approach B. The final code
+has no trace of A.
+
+An LLM generating in a single pass can't do this. If it
+realizes mid-stream that an edge case might exist, it adds
+handling rather than restarting simpler. The output carries
+the weight of every concern encountered during generation.
+
+The key difference from human memory: a human remembers THAT
+approach A failed and WHY, but the artifact (code) is clean —
+A is gone. Memory and artifact are separate channels. In a
+single LLM generation, context is both working memory and
+output artifact simultaneously — there's no separation.
+
+The dev process gives LLMs this separation. Code is the clean
+artifact. Tests are the spec. Lessons learned (dev.log,
+commit messages) are the search history — what was tried and
+why it was abandoned. Without lessons as explicit artifacts,
+a future turn might re-try approach A. With them, the search
+makes progress across turns instead of going in circles.
+
+Iteration is the search algorithm. Each turn is a step, tests
+are the evaluation function, "try again" is the backtrack.
+The iterative dev process isn't just separation of concerns —
+it provides the search mechanism that forward generation
+lacks, with clean memory/artifact separation that single-pass
+generation can't achieve.
+
+Concrete mandates > subjective ones. "Write a failing test" is
+actionable — you either produce one or you don't. "Is this
+simpler than needed?" is subjective and gets deprioritized when
+competing with concrete tasks. Structure agentic work so each
+step has an observable output.
+
+Tests communicate better than prose. Failing tests are
+unambiguous. Task descriptions are ambiguous. Each prose-to-code
+translation step loses fidelity. Wherever possible, express
+intent as executable artifacts rather than natural language.
+
+Separation of turns prevents confirmation bias. The same model
+that wrote the code will justify it. A fresh session with a
+different mandate questions what the prior session took for
+granted. This is why role rotation matters in agentic loops
+even though it's the same model underneath.
+
+* Commit history as progressive examples
+The commit history IS the set of progressive implementation
+examples — each surviving commit is something a human said
+"yes" to. LLMs in agentic loops should review recent history
+to calibrate scale and style against what's been accepted.
+This is cheaper than maintaining example implementations in
+the spec and stays current automatically.
+
+Nuance: in autonomous runs (dev.sh), later turns calibrate
+against earlier LLM-produced commits, not human-curated ones.
+The first few commits matter disproportionately — they seed
+the pattern. This argues for human review of the first cycle
+before letting the loop run autonomously. See "Learning from
+inputs" — the history is the expert's inputs made visible.
+
+* Humans seed patterns, LLMs replicate them
+LLMs are good at identifying and replicating patterns but need
+humans to provide them. Without human input, LLMs fall back on
+training data patterns — generic, over-engineered, not fitted
+to the project. The human's job is to seed the right patterns;
+the LLM's job is to recognize and extend them.
+
+This is the same boundary as "Planning as problem solving, LLMs
+as translation" — humans provide insight, LLMs execute — but at
+a different level. Planning is about /what/ to build; pattern
+seeding is about /how/ to build it. Commit history is one
+concrete mechanism for seeding patterns (see "Commit history as
+progressive examples") — each accepted commit teaches the LLM
+what "good" looks like in this project.
+
+The "Examples > rules" principle in "Principles of LLM coding"
+connects directly: examples ARE the human-provided patterns.
+Rules leave the solution space open and LLMs fill it with
+training-data defaults. Examples constrain the space to what
+the human actually wants. This is why a few well-chosen
+examples outperform detailed specifications — they transfer
+pattern, not just intent.
+
+* README for humans, CLAUDE.md for LLMs
+README.md communicates human→human; CLAUDE.md communicates
+human→LLM. Both channels exist because the audiences need
+different things. Humans need context and motivation — /why/
+does this project exist, how does it fit together? LLMs need
+constraints and examples — /do this, don't do that, here's
+what good looks like/.
+
+LLMs /can/ read human-intended docs — they're trained on them.
+The issue isn't comprehension, it's signal-to-noise. A README
+explains; a CLAUDE.md directs. An LLM reading a README gets
+useful background but no actionable constraints. An LLM reading
+CLAUDE.md gets marching orders but may miss the bigger picture.
+The two complement each other.
+
+This repo already demonstrates the dual-audience pattern through
+"Incremental formalization" — the same org-mode files serve as
+procedures humans follow and instructions LLMs interpret. The
+format is human-readable, but the content (step-by-step
+procedures, explicit constraints) is LLM-actionable. That's
+the sweet spot: documents that work for both audiences because
+the structure carries the signal.
+
+Don't collapse the two channels. README stays descriptive and
+explanatory; CLAUDE.md stays directive and example-driven. They
+address different failure modes: without README, new humans
+can't orient; without CLAUDE.md, LLMs fall back to
+training-data defaults instead of project-specific patterns.
+
+The earlier framing is about consumption — who /reads/ each doc.
+But production tells a sharper story. There are three document
+types, not two, and they sit on a production spectrum. README is
+human-authored: subjective, carrying intent and motivation that
+only the author can supply. An LLM can review for gaps or
+inconsistencies, but the human is the author. CLAUDE.md is also
+human-authored but LLM-assisted: it's the human's directives to
+the LLM, and the LLM can review for LLM-friendliness, but the
+human owns the content. Man pages are the third type: LLM-
+generated, mostly unattended. They're objective — describing
+what exists, not opining on how or why. That's translation from
+implementation to reference docs, which is exactly what LLMs
+excel at. Three production models: human-authored (README),
+human-authored/LLM-assisted (CLAUDE.md), LLM-generated (man
+page). This maps directly to "Planning as problem solving, LLMs
+as translation" — README production is problem-solving, man page
+production is translation, CLAUDE.md is the boundary contract.
+And it's a formalization gradient in the "Incremental
+formalization" sense: code → man page is a formalization step
+(implementation → objective reference), and the spectrum itself
+runs from subjective (human) through collaborative to objective
+(LLM).
+
+The "Humans seed patterns, LLMs replicate them" insight applies
+here too — human-written docs (README, prose, commit messages)
+ARE patterns that LLMs pick up on, even when not written for
+them. CLAUDE.md just makes the pattern transfer explicit and
+deliberate. And the "Planning as problem solving, LLMs as
+translation" boundary clarifies /which/ communication goes
+where: solving happens in human-readable docs (README, design
+notes), translating happens through LLM-targeted docs
+(CLAUDE.md, examples, procedures).
+
+* Operator expertise determines epistemic status of LLM output
+An LLM produces the same content regardless of who prompts it —
+but the operator's expertise determines whether that content is a
+definitive answer or a hypothesis requiring validation. An expert
+can verify LLM output against experience; a non-expert receives
+plausible-sounding claims that need research to confirm.
+
+This means the same response has fundamentally different value
+depending on who reads it. When you know the domain, the LLM
+drafts and you confirm. When you don't, treat every claim as a
+hypothesis — validate through research and experimentation before
+acting on it. See "Planning as problem solving, LLMs as
+translation" — the human's role isn't just directing the LLM,
+it's evaluating the output. Expertise is what closes the loop.
+
+* Single files to RAG spectrum
+A single document works well — the LLM sees everything and spots
+connections naturally. As content grows across files, that breaks
+down. RAG could restore cross-file awareness. Start with simple
+instructions to check known locations, graduate to retrieval as
+the corpus grows. Key insight: in interactive sessions, the user
+has often thought about a topic before — prior context should
+inform the conversation.

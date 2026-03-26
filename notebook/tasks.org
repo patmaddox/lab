@@ -1,0 +1,41 @@
+* TODO Super simple code review with git-format-patch
+Just format the patches, open them in emacs, and edit. Feed it into
+the LLM.
+* TODO Claude experiment - send patches to sourcehut mailing list
+I need to be able to review the code that Claude produces. I can find
+some tool to do it - but it would be interesting to do it using the
+sourcehut model. Set up a run, do a brief look at the commits to make
+sure they're reasonable, and push them to sourcehut. Review by
+responding in email.
+
+This is also a chance to experiment with how to use it, specifically
+how to provide feedback. Once I give feedback, here are two ways to use it:
+
+1. Tell Claude CLI to read the feedback and incorporate it into the
+   spec before I run it. Essentially I am using Claude to iterate on
+   the spec.
+2. Keep the spec as is, and tell Claude to fetch the feedback before
+   it runs. This doesn't update the spec, but provides feedback from
+   an earlier run.
+
+This is A/B testing Claude behavior.
+* TODO Configure Claude CLI to know how to work with tasks.org and fieldstones.org
+* TODO Set up jj aliases with params
+=util exec= accepts shell position params e.g.
+: ctx = ['util', 'exec', '--', 'sh', '-c', 'jj log -r "context(${1:-@})"', '']
+* TODO M-x claude-todo to capture a todo from anywhere in emacs
+An interactive Emacs command that prompts for a todo description and
+sends it to Claude via /todo, so you can capture tasks without
+switching to a shell or the notebook.jj directory.
+* TODO Investigate why service jail lists status twice          :freebsd:
+=service jail= appears to list status twice. Figure out why and
+whether it's a bug or expected behavior.
+* TODO Understand how rc service commands are documented        :freebsd:
+rc services expose commands (start, stop, status, restart, etc.) but
+it's unclear what each actually does beyond the name. Look into how
+these are documented — man pages, rc.subr source, service scripts —
+and whether there's a standard reference for the full command set.
+* TODO Find a way to list available jails from jail.conf       :freebsd:
+=jls= shows running jails, but is there a way to list all defined
+jails in jail.conf (including stopped ones)? Check if jail(8) or
+sysrc provides this, or if parsing jail.conf is the only option.
