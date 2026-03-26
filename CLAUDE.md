@@ -4,6 +4,13 @@
 
 This runs on FreeBSD. Use FreeBSD (BSD) variants of tools — `make`, `grep`, `sed`, `awk`, etc. Do not assume GNU flags or behavior. When unsure how to use a tool, read its man page with `man <tool>`.
 
+## Directory READMEs
+
+When working in any directory, check for a README file (README,
+README.md, README.txt, README.org, etc.) and read it before
+proceeding. READMEs contain context about the directory's purpose,
+conventions, and how to work with its contents.
+
 ## Repo Structure
 
 .org files are emacs org-mode files
