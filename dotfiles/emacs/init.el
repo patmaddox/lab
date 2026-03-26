@@ -457,10 +457,31 @@ Items are identified as indented lines (starting with whitespace)."
       (lambda (buffer) (pop-to-buffer-same-window buffer) (selected-window)))
 (setq claude-code-program
       (expand-file-name "lisp/claude-code/claude-jail.sh" user-emacs-directory))
+
+;; Hide Emacs cursor in claude-code so the TUI cursor is visible.
+;; In read-only mode (C-c C-e), show a box cursor for navigation.
+(define-minor-mode claude-code-cursor-mode
+  "Toggle cursor type for claude-code eat buffers."
+  :lighter nil
+  :keymap (let ((map (make-sparse-keymap)))
+            (define-key map (kbd "C-c C-e")
+                        (lambda () (interactive)
+                          (eat-emacs-mode)
+                          (setq-local cursor-type 'box)))
+            (define-key map (kbd "C-c C-j")
+                        (lambda () (interactive)
+                          (eat-semi-char-mode)
+                          (setq-local cursor-type nil)))
+            map)
+  (when claude-code-cursor-mode
+    (setq-local eat-default-cursor-type '(nil nil nil))
+    (setq-local eat-invisible-cursor-type '(nil nil nil))))
+
 ;; Restore C-g to normal Emacs behavior (upstream binds it to send ESC)
 (add-hook 'claude-code-start-hook
           (lambda ()
-            (define-key (current-local-map) (kbd "C-g") nil)))
+            (define-key (current-local-map) (kbd "C-g") nil)
+            (claude-code-cursor-mode 1)))
 
 (defun claude-code-oneshot ()
   "Run Claude with -p flag on region or prompted input.
