@@ -372,6 +372,44 @@ acting on it. See "Planning as problem solving, LLMs as
 translation" — the human's role isn't just directing the LLM,
 it's evaluating the output. Expertise is what closes the loop.
 
+* Use cases as plan structure
+Alistair Cockburn's use cases may be a natural fit for LLM work
+plans. A use case describes a goal, preconditions, a main success
+scenario, and extensions — which maps well to the plan format of
+Goal, Context, Tasks, Done-when. The use case tradition emphasizes
+writing at different levels of detail (brief, casual, fully dressed)
+which matches the plan lifecycle: a stub plan is a brief use case,
+a fleshed-out plan is fully dressed.
+
+User stories ("placeholder for a conversation") work as draft plans.
+The conversation happens between human and LLM while developing the
+plan. The use case is what gets accepted and executed. This connects
+to "Planning as problem solving, LLMs as translation" — the use case
+is the contract, the conversation is the problem-solving phase.
+
+Worth exploring: do use case extensions (alternative flows, error
+handling) map to plan dependencies or to separate plans? How
+detailed should the "main success scenario" be for LLM execution?
+
+* Heterogeneous structure for LLM, homogeneous for deterministic software
+Deterministic software needs homogeneous, consistent structure —
+parsers, schemas, APIs all demand uniformity. LLMs thrive on
+heterogeneous input because they extract meaning regardless of
+format. This suggests a workflow: use LLMs to work with messy,
+varied inputs (drafts, notes, mixed formats), then gradually
+formalize the outputs into consistent structure that deterministic
+tools can consume.
+
+This is incremental formalization (see above) viewed through the
+lens of input structure. The LLM is the bridge between human-messy
+and machine-clean. Plans don't need to be 100% consistent in format
+because the LLM consumer can handle variation — but the code they
+produce does need consistency because compilers can't.
+
+The Makefile generating INDEX.md from plan frontmatter is a concrete
+example: heterogeneous plan content, homogeneous index output.
+Deterministic tool (make) operates on the formalized layer.
+
 * Single files to RAG spectrum
 A single document works well — the LLM sees everything and spots
 connections naturally. As content grows across files, that breaks
