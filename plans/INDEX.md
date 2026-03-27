@@ -2,6 +2,10 @@
 
 Generated from plan frontmatter. Do not edit.
 
+## ready
+
+- [prompt-plan](./prompt-plan.md) — Prompt: plan
+
 ## draft
 
 - [agentic-commands](./agentic-commands.md) — Agentic commands decoupled from Claude Code
