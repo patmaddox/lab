@@ -126,7 +126,7 @@ Each plan is a separate markdown file with YAML frontmatter:
 
 ```markdown
 ---
-status: draft | accepted | active | done | abandoned | rejected
+status: draft | ready | active | done | abandoned | rejected
 depends: [other-plan-name]
 priority: low | medium | high  (optional)
 ---
@@ -144,12 +144,12 @@ backlog. A plan starts as a stub and gets fleshed out when ready
 to work on. Status tracks the lifecycle:
 
 - **draft**: idea captured, not yet detailed enough to execute
-- **accepted**: plan is clear and ready to be picked up
+- **ready**: plan is clear and ready to be picked up
 - **active**: currently being worked on
 - **done/abandoned/rejected**: move to `plans/archive/` and add
   a Postmortem section
 
-Active plans (draft, accepted, active) stay in `plans/`.
+Active plans (draft, ready, active) stay in `plans/`.
 Completed plans move to `plans/archive/`.
 
 ### Executing a plan

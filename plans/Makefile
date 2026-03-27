@@ -11,7 +11,7 @@ ${INDEX}: ${PLANS}
 	@rm -f ${.TARGET}
 	@printf '# Plans Index\n\n' > ${.TARGET}
 	@printf 'Generated from plan frontmatter. Do not edit.\n\n' >> ${.TARGET}
-	@for status in active accepted draft done abandoned rejected; do \
+	@for status in active ready draft done abandoned rejected; do \
 		files=$$(grep -l "status: $${status}" ${PLANS} 2>/dev/null || true); \
 		if [ -n "$${files}" ]; then \
 			printf '## %s\n\n' "$${status}" >> ${.TARGET}; \
