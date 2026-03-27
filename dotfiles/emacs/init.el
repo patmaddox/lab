@@ -92,6 +92,13 @@
   ;; Make invisible cursor actually visible (otherwise can't see cursor in emacs mode)
   (setq eat-invisible-cursor-type '(box nil nil))
 
+  ;; Disable cursor blinking entirely -- programs like tmux request
+  ;; blinking cursors, and eat has a bug where run-with-timer receives
+  ;; t instead of a number, causing post-command-hook errors.
+  (setq eat-very-visible-cursor-type `(,(default-value 'cursor-type) nil nil))
+  (setq eat-very-visible-vertical-bar-cursor-type '(bar nil nil))
+  (setq eat-very-visible-horizontal-bar-cursor-type '(hbar nil nil))
+
   (when (display-graphic-p)
     ;; Bind the physical <escape> key to send itself to terminal
     (define-key eat-semi-char-mode-map (kbd "<escape>") #'eat-self-input)
