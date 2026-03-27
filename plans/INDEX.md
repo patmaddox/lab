@@ -5,6 +5,7 @@ Generated from plan frontmatter. Do not edit.
 ## draft
 
 - [consolidate-notes-and-tasks](./consolidate-notes-and-tasks.md) — Consolidate fieldstones, todo, and tasks
+- [index-navigation](./index-navigation.md) — Navigate from INDEX.md links to plan files
 - [optional-plan-status](./optional-plan-status.md) — Make plan status optional with proper index ordering
 - [split-claude-md](./split-claude-md.md) — Extract plan conventions from top-level CLAUDE.md
 - [split-fieldstones](./split-fieldstones.md) — Split fieldstones.org into separate files
