@@ -357,6 +357,33 @@ where: solving happens in human-readable docs (README, design
 notes), translating happens through LLM-targeted docs
 (CLAUDE.md, examples, procedures).
 
+* Dev loop vs release loop
+Two distinct workflows for building software: a dev loop for fast
+iteration and a release loop for clean, reproducible builds. The
+dev loop prioritizes speed and tight feedback — edit locally, build
+a dirty tree, run tests, fix, repeat. The release loop prioritizes
+correctness and reproducibility — build from pushed branches, never
+from a dirty tree.
+
+The architectural split maps to infrastructure: the dev environment
+needs to match the target (e.g. a CURRENT kernel VM to run tests
+against a CURRENT build), while the release environment just needs
+to produce artifacts (any FreeBSD version can cross-build). Dev
+needs NFS or local access for zero-friction editing. Release needs
+only branch access — fetch and build.
+
+This pattern applies across domains: freebsd-src (dev build vs
+pkgbase release), ports (test a port locally vs poudriere clean
+build), and potentially application code. The same build scripts
+can serve both loops — the difference is where the source comes
+from (dirty working copy vs clean checkout from a branch).
+
+Connects to "Incremental formalization" — the dev loop is the
+loose exploration phase, the release loop is the formalized
+delivery phase. And to "Commits as corpus, not DAG" — the release
+loop builds from commits (the corpus), while the dev loop works
+with uncommitted changes (stones not yet placed).
+
 * Single files to RAG spectrum
 A single document works well — the LLM sees everything and spots
 connections naturally. As content grows across files, that breaks
