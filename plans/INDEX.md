@@ -4,6 +4,7 @@ Generated from plan frontmatter. Do not edit.
 
 ## draft
 
+- [agentic-commands](./agentic-commands.md) — Agentic commands decoupled from Claude Code
 - [consolidate-notes-and-tasks](./consolidate-notes-and-tasks.md) — Consolidate fieldstones, todo, and tasks
 - [index-navigation](./index-navigation.md) — Navigate from INDEX.md links to plan files
 - [migrate-proposals-to-plans](./migrate-proposals-to-plans.md) — Migrate doc/proposals to plans
