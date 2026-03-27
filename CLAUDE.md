@@ -114,6 +114,78 @@ use Edit to make targeted changes. When squashing commits that
 touch these files, verify the current file content first to avoid
 discarding the user's edits.
 
+## Plans
+
+Plans are LLM-executable specs for chunks of work. They live in
+`plans/` at the repo root (for repo-wide work) or in a project's
+own `plans/` directory (e.g. `oss/freebsd-src/plans/`).
+
+### Format
+
+Each plan is a separate markdown file with YAML frontmatter:
+
+```markdown
+---
+status: draft | accepted | active | done | abandoned | rejected
+depends: [other-plan-name]
+priority: low | medium | high  (optional)
+---
+
+# Short descriptive title
+
+Content varies by maturity — a stub may be just a sentence,
+a ready-to-execute plan has Goal, Context, Tasks, Done-when.
+```
+
+### Lifecycle
+
+Plans are a corpus at varying levels of detail, not an ordered
+backlog. A plan starts as a stub and gets fleshed out when ready
+to work on. Status tracks the lifecycle:
+
+- **draft**: idea captured, not yet detailed enough to execute
+- **accepted**: plan is clear and ready to be picked up
+- **active**: currently being worked on
+- **done/abandoned/rejected**: move to `plans/archive/` and add
+  a Postmortem section
+
+Active plans (draft, accepted, active) stay in `plans/`.
+Completed plans move to `plans/archive/`.
+
+### Executing a plan
+
+When asked to execute a plan, read it and implement the tasks.
+When the plan is complete, update its status to `done` and add
+a Postmortem section:
+
+```markdown
+## Postmortem
+### Claude
+What worked, what was unclear, what needed adjustment.
+### Pat
+(filled in by Pat after reviewing the work)
+```
+
+### Checking dependencies
+
+Before starting a plan with `depends`, verify the dependencies
+are satisfied (status is `done`). If not, flag this.
+
+### INDEX.md
+
+Run `make` in the plans/ directory to regenerate `INDEX.md` from
+frontmatter. INDEX.md is generated — do not edit it by hand.
+
+### Relationship to other docs
+
+- **README.md / DESIGN.md**: durable, human-readable docs about
+  architecture and design. Plans reference these for context.
+  Plans produce updates to these docs as part of their work.
+- **fieldstones.org**: design rationale and thinking. Plans may
+  generate new fieldstones during execution.
+- **CLAUDE.md**: directives for LLM behavior. Plans may produce
+  updates to CLAUDE.md when new conventions are established.
+
 ## Vendored Code
 
 If vendoring third-party code, see `dotfiles/emacs/CLAUDE.md` for the established pattern. If the pattern gets reused elsewhere, promote it here.
