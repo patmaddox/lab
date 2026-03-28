@@ -37,7 +37,7 @@ discovery of plan conventions.
   can elevate it later.
 - No plans/CLAUDE.md. Prompts carry their own context.
 - No pointer in top-level CLAUDE.md.
-- Execute prompt is tracked separately in plans/execute-plan-prompt.md.
+- Implement prompt is tracked separately in plans/implement-plan-prompt.md.
 - Refactor prompt is tracked separately in plans/refactor-prompt.md.
 - Each task is an atomic move: relocate content and remove from
   CLAUDE.md in one step, not batch additions then cleanup.
