@@ -1,5 +1,5 @@
 ---
-status: active
+status: feedback
 ---
 
 # iterate.sh - shell script driving the ralph loop
@@ -68,6 +68,12 @@ the plan is done or human input is needed.
   action is `plan` or `implement` and plan-file is the full path
   as given on the command line. Use the repo lock
   (`lockf -k "$(jj root)/.jj/claude.lock"`) around jj operations.
+
+- [ ] Add the main loop with max iterations. Wrap the iterate/dispatch
+  logic in a loop that repeats until `ok` or `halt`, or a max iteration
+  count is reached. Accept a `-n` flag for the max (default to 1).
+  Print `[i/n]` before each iteration. Exit with a message if the
+  limit is hit.
 
 ## Done-when
 
