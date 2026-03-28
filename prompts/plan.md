@@ -59,7 +59,7 @@ each concrete enough for an LLM to act on without guessing:
 
 ## What you do
 
-### 1. Integrate feedback annotations
+### 1. Respond to feedback annotations
 
 Before anything else, check if the human has annotated the plan
 by quoting parts with `>` and writing responses below. For example:
@@ -69,25 +69,65 @@ by quoting parts with `>` and writing responses below. For example:
 No, the prompt file is the interface. Keep it simple.
 ```
 
-When you find these annotations:
+Annotations come in two forms - directives and questions.
+
+**Directives** tell you what to do:
+
+```
+> Should we use a wrapper script?
+No, the prompt file is the interface. Keep it simple.
+```
+
+When you find directives:
 - Rewrite the quoted section to incorporate the feedback
 - Remove the annotation (the `>` quote and the response)
 - Produce clean prose that reflects the decision
 
-This applies anywhere in the document -- Problem, Context, Tasks,
-Goals, wherever. The result should read as if the feedback was
-always part of the plan.
+**Questions** ask you to find out or figure out something:
+
+```
+> We'll store config in SQLite.
+Does SQLite handle concurrent writes from multiple processes?
+```
+
+When you find questions:
+- Research the answer - read code, check docs, reason it through
+- Move the question and your response to a `## Research` section.
+  Double-quote the human's question and single-quote your response
+  so the entire exchange is quoted:
+
+```
+>> We'll store config in SQLite.
+>> Does SQLite handle concurrent writes from multiple processes?
+>
+> SQLite uses file-level locking. Concurrent reads are fine, but
+> concurrent writes serialize behind a lock. With WAL mode, writers
+> do not block readers. For this use case (infrequent config writes,
+> frequent reads) it handles concurrency well.
+```
+
+- If you cannot answer confidently, say what you found and what
+  remains unclear. A partial answer is still useful.
+
+Research items block progress just like open questions - the human
+needs the information before they can give a directive. On the
+next pass the human may accept the research and provide a
+directive, ask a follow-up, or redirect.
+
+Both forms apply anywhere in the document - Problem, Context,
+Tasks, Goals, wherever. For directives, the result should read
+as if the feedback was always part of the plan.
 
 **Distinguishing feedback from legitimate quotes**: not every `>`
 block is feedback. Quotes that reference external sources, show
 example output, or appear inside code blocks are legitimate
-content -- leave them alone. Use context the way a human would
+content - leave them alone. Use context the way a human would
 reading a mailing-list thread: feedback annotations are a quoted
 passage from the plan followed by a direct response.
 
-If you integrated feedback, record any decisions that emerged
-(see step 5) and stop. Integrating feedback is the step for
-this invocation.
+If you processed annotations, record any decisions that emerged
+(see step 5) and stop. Responding to annotations is the step
+for this invocation.
 
 ### 2. Assess the plan
 
@@ -136,15 +176,15 @@ The frontmatter status is an output for deterministic tools (make,
 queries), not an input to your assessment. Set it based on what
 you found in step 2:
 - `ready` if all four criteria are concretely met
-- `feedback` if you added open questions that block progress
+- `feedback` if you added open questions or research that block progress
 - `draft` otherwise
 
 ## Rules
 
-- **Open questions go before the first `##` section.** Place
-  `## Open questions` immediately before the first `##` content
-  section. If there are no open questions, omit the section
-  entirely.
+- **Open questions and Research go before the first content
+  section.** Place `## Open questions` and `## Research`
+  immediately before the first `##` content section, in that
+  order. Omit either section if it has no entries.
 
 ```markdown
 # Short descriptive title
@@ -164,6 +204,15 @@ Summary paragraph.
 >
 > No clear recommendation - depends on compliance requirements
 > and how often historical data is actually queried.
+
+## Research
+
+>> We'll store config in SQLite.
+>> Does SQLite handle concurrent writes from multiple processes?
+>
+> SQLite uses file-level locking. Concurrent reads are fine,
+> but concurrent writes serialize behind a lock. With WAL mode,
+> writers do not block readers.
 
 ## Context
 ...
