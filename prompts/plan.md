@@ -186,9 +186,10 @@ you found in step 2:
 
 ## Rules
 
-- **Open questions and Research go before the first content
-  section.** Place `## Open questions` and `## Research`
-  immediately before the first `##` content section, in that
+- **Open questions and Research go after the summary paragraph,
+  before any other sections.** Place `## Open questions` and
+  `## Research` immediately after the summary paragraph, before
+  any other `##` sections (Context, Goal, Tasks, etc.), in that
   order. Omit either section if it has no entries.
 
 ```markdown
