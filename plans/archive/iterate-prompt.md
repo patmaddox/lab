@@ -1,5 +1,5 @@
 ---
-status: ready
+status: done
 ---
 
 # Create an iterate prompt that combines plan, implement, refactor
@@ -41,7 +41,7 @@ plan-implement cycle but not prescriptive.
 
 ## Tasks
 
-- [ ] Create `prompts/iterate.md` - a router prompt that receives a
+- [x] Create `prompts/iterate.md` - a router prompt that receives a
   plan file, reads its frontmatter status, checks for open questions,
   checks task completion state, and outputs exactly one
   `%iterate%:<action>` line. Decision logic:
@@ -67,3 +67,18 @@ plan-implement cycle but not prescriptive.
   divergence returning to draft)
 - A caller can extract the action with:
   `awk -F: '$1 == "%iterate%" {print $2}'`
+
+## Postmortem
+
+### Claude
+
+The plan was a single well-defined task with clear decision logic
+spelled out. The existing prompts (plan.md, implement.md) provided
+a strong template for structure and voice. The divergence case
+(implementation sets plan back to draft) didn't need special handling -
+it falls naturally out of checking status as `draft` in rule 2.
+
+### Pat
+
+Again this seems to have gone well. I haven't actually run it yet, so
+we'll see.
