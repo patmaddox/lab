@@ -175,7 +175,9 @@ decisions were made, create one in the Context area.
 The frontmatter status is an output for deterministic tools (make,
 queries), not an input to your assessment. Set it based on what
 you found in step 2:
-- `ready` if all four criteria are concretely met
+- `ready` if all four criteria are concretely met and no tasks
+  have started
+- `active` if tasks exist and some are complete but work remains
 - `feedback` if you added open questions or research that block progress
 - `draft` otherwise
 
