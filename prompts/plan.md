@@ -25,8 +25,10 @@ each concrete enough for an LLM to act on without guessing:
 
 ### 1. Read the plan and assess it
 
-Identify what is missing, vague, or contradictory. Compare against
-the readiness criteria above.
+For each readiness criterion (Goal, Context, Tasks, Done-when),
+state whether it is met and why. Identify what is missing, vague,
+or contradictory. The frontmatter status is for tooling, not for you.
+Do not let it influence your assessment.
 
 ### 2. Read the codebase for context
 
@@ -89,17 +91,13 @@ If the plan has a **Decided** section, add any decisions that
 emerged during this pass. If there is no Decided section and
 decisions were made, create one in the Context area.
 
-### 6. Assess readiness and update status
+### 6. Set status from your assessment
 
-Assess the plan against the readiness criteria regardless of its
-current status. A plan marked `ready` may have gained new criteria,
-or its details may have drifted out of date -- the frontmatter
-status is for querying, not for determining whether work remains.
-
-If the plan meets all readiness criteria (Goal, Context, Tasks,
-Done-when -- all concrete enough to execute), set status to `ready`.
-If it does not, set status to `draft` even if it was previously
-`ready`.
+The frontmatter status is an output for deterministic tools (make,
+queries), not an input to your assessment. Set it based on what
+you found in step 1:
+- `ready` if all four criteria are concretely met
+- `draft` otherwise
 
 ## Rules
 
