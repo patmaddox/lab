@@ -112,7 +112,13 @@ that one gap and stop.
 - If you find yourself weighing alternatives or unsure of the
   right approach, add a question instead. Place questions in an
   **Open questions** section (see placement rule below). Use `>`
-  quoted format.
+  quoted format. Below the question, still within the `>` block,
+  provide a concise analysis: describe the possible approaches,
+  note the pros and cons of each, and offer a recommendation.
+  Be clear about the strength of the recommendation - if there
+  is no clear winner, say so and leave the decision to the human.
+  Keeping the entire analysis in `>` blocks separates LLM text
+  from human responses.
 
 Do not ask questions in conversation. Write them into the plan
 file, then tell the human there are open questions and name the
@@ -147,6 +153,16 @@ Summary paragraph.
 ## Open questions
 
 > Should the migration preserve historical data or start fresh?
+>
+> **Preserve history**: Keeps audit trail, no data loss.
+> Downside: complex migration, schema mapping may be lossy.
+>
+> **Start fresh**: Simpler migration, clean schema.
+> Downside: loses historical context, may need parallel access
+> to old system during transition.
+>
+> No clear recommendation - depends on compliance requirements
+> and how often historical data is actually queried.
 
 ## Context
 ...
