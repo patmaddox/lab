@@ -59,19 +59,19 @@ content -- leave them alone. Use context the way a human would
 reading a mailing-list thread: feedback annotations are a quoted
 passage from the plan followed by a direct response.
 
-### 4. Fill in detail
+### 4. Fill in detail or ask questions
 
-Where you have enough information (from the plan, the codebase,
-or established conventions), fill in missing sections. Write
-concretely -- specific files, specific behaviors, specific
-criteria. Avoid hedging language.
+For each gap you identified in step 1, decide: do you have enough
+information to fill it in, or do you need to ask?
 
-### 5. Add questions for what you cannot fill in
-
-If you lack information to fill in a section, add specific
-questions. Place them in an **Open questions** section at the top
-of the document, directly after the title and summary paragraph,
-before the Problem section. Use `>` quoted format:
+- If the answer is clear from the plan, codebase, or established
+  conventions, fill it in. Write concretely -- specific files,
+  specific behaviors, specific criteria. Avoid hedging language.
+- If you find yourself weighing alternatives or unsure of the
+  right approach, add a question instead. Place questions in an
+  **Open questions** section at the top of the document, directly
+  after the title and summary paragraph, before the Problem
+  section. Use `>` quoted format:
 
 ```markdown
 ## Open questions
@@ -83,13 +83,13 @@ before the Problem section. Use `>` quoted format:
 
 If there are no open questions, omit the section entirely.
 
-### 6. Record decisions
+### 5. Record decisions
 
 If the plan has a **Decided** section, add any decisions that
 emerged during this pass. If there is no Decided section and
 decisions were made, create one in the Context area.
 
-### 7. Assess readiness and update status
+### 6. Assess readiness and update status
 
 Assess the plan against the readiness criteria regardless of its
 current status. A plan marked `ready` may have gained new criteria,
