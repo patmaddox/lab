@@ -1,9 +1,8 @@
 # Develop a plan
 
 You are developing a plan file. A plan is an LLM-executable spec
-for a chunk of work. Your job is to make one pass over the plan:
-fill in what you can, ask questions about what you can't, and
-leave the file in better shape than you found it.
+for a chunk of work. Your job is to move the plan forward by one
+step: find the most important gap, address it, and stop.
 
 ## Input
 
@@ -21,24 +20,12 @@ each concrete enough for an LLM to act on without guessing:
   reviewable change
 - **Done-when** -- concrete completion criteria
 
-## What you do on each pass
+## What you do
 
-### 1. Read the plan and assess it
+### 1. Integrate feedback annotations
 
-For each readiness criterion (Goal, Context, Tasks, Done-when),
-state whether it is met and why. Identify what is missing, vague,
-or contradictory. The frontmatter status is for tooling, not for you.
-Do not let it influence your assessment.
-
-### 2. Read the codebase for context
-
-Look at relevant files, existing conventions, and related plans to
-ground your understanding. Do not invent context -- find it.
-
-### 3. Integrate feedback annotations
-
-The human may have annotated the plan by quoting parts with `>`
-and writing responses below. For example:
+Before anything else, check if the human has annotated the plan
+by quoting parts with `>` and writing responses below. For example:
 
 ```
 > Should we use a wrapper script?
@@ -61,10 +48,26 @@ content -- leave them alone. Use context the way a human would
 reading a mailing-list thread: feedback annotations are a quoted
 passage from the plan followed by a direct response.
 
-### 4. Fill in detail or ask questions
+If you integrated feedback, record any decisions that emerged
+(see step 5) and stop. Integrating feedback is the step for
+this invocation.
 
-For each gap you identified in step 1, decide: do you have enough
-information to fill it in, or do you need to ask?
+### 2. Assess the plan
+
+For each readiness criterion (Goal, Context, Tasks, Done-when),
+state whether it is met and why. Identify what is missing, vague,
+or contradictory. The frontmatter status is for tooling, not for
+you. Do not let it influence your assessment.
+
+### 3. Read the codebase for context
+
+Look at relevant files, existing conventions, and related plans to
+ground your understanding. Do not invent context -- find it.
+
+### 4. Address the most important gap
+
+Pick the single most important gap from your assessment. Work on
+that one gap and stop.
 
 - If the answer is clear from the plan, codebase, or established
   conventions, fill it in. Write concretely -- specific files,
@@ -79,8 +82,6 @@ information to fill it in, or do you need to ask?
 ## Open questions
 
 > Should the migration preserve historical data or start fresh?
-
-> What is the expected latency budget for this endpoint?
 ```
 
 If there are no open questions, omit the section entirely.
@@ -99,7 +100,7 @@ decisions were made, create one in the Context area.
 
 The frontmatter status is an output for deterministic tools (make,
 queries), not an input to your assessment. Set it based on what
-you found in step 1:
+you found in step 2:
 - `ready` if all four criteria are concretely met
 - `draft` otherwise
 
@@ -109,9 +110,10 @@ you found in step 1:
 - **Do not commit.** The human commits when ready.
 - **Work on any status.** Draft, ready, active -- develop
   whatever is given to you.
-- **One pass per invocation.** Fill in what you can, ask what
-  you cannot, stop. The human will answer questions and invoke
-  you again.
+- **One step per invocation.** Find the most important gap,
+  address it or ask about it, stop. The human will review and
+  invoke you again. Do not try to flesh out the whole plan at
+  once.
 - **Be concrete.** "Implement the feature" is not a task.
   "Add a `parse_config` function to `lib/config.py` that reads
   YAML and returns a dict" is a task.
