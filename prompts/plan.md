@@ -85,6 +85,10 @@ information to fill it in, or do you need to ask?
 
 If there are no open questions, omit the section entirely.
 
+Do not ask questions in conversation. Write them into the plan
+file, then tell the human there are open questions and name the
+file so they know where to look.
+
 ### 5. Record decisions
 
 If the plan has a **Decided** section, add any decisions that
