@@ -125,11 +125,6 @@ What worked, what was unclear, what needed adjustment.
 Before starting a plan with `depends`, verify the dependencies
 are satisfied (status is `done`). If not, flag this.
 
-### INDEX.md
-
-Run `make` in the plans/ directory to regenerate `INDEX.md` from
-frontmatter. INDEX.md is generated — do not edit it by hand.
-
 ### Relationship to other docs
 
 - **README.md / DESIGN.md**: durable, human-readable docs about

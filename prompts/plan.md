@@ -36,6 +36,11 @@ to work on. Status tracks the lifecycle:
 Active plans (draft, ready, active) stay in `plans/`.
 Completed plans move to `plans/archive/`.
 
+### INDEX.md
+
+Run `make` in the plans/ directory to regenerate `INDEX.md` from
+frontmatter. INDEX.md is generated - do not edit it by hand.
+
 ## Input
 
 You receive a plan file (markdown with YAML frontmatter). It

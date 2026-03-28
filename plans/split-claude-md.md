@@ -64,7 +64,7 @@ discovery of plan conventions.
 2. [x] Move lifecycle to prompts/plan.md -- move status values and
    their meanings, archiving rules for done/abandoned/rejected
    from CLAUDE.md into prompts/plan.md and remove from CLAUDE.md
-3. Move INDEX.md context to prompts/plan.md -- move the INDEX.md
+3. [x] Move INDEX.md context to prompts/plan.md -- move the INDEX.md
    generation note from CLAUDE.md into prompts/plan.md and remove
    from CLAUDE.md
 4. Move relationship-to-other-docs to prompts/plan.md -- move how
