@@ -99,42 +99,6 @@ version. Never use the Write tool to overwrite the entire file —
 use Edit to make targeted changes. When squashing commits that
 touch these files, verify the current file content first to avoid
 discarding the user's edits.
-
-## Plans
-
-Plans are LLM-executable specs for chunks of work. They live in
-`plans/` at the repo root (for repo-wide work) or in a project's
-own `plans/` directory (e.g. `oss/freebsd-src/plans/`).
-
-### Executing a plan
-
-When asked to execute a plan, read it and implement the tasks.
-When the plan is complete, update its status to `done` and add
-a Postmortem section:
-
-```markdown
-## Postmortem
-### Claude
-What worked, what was unclear, what needed adjustment.
-### Pat
-(filled in by Pat after reviewing the work)
-```
-
-### Checking dependencies
-
-Before starting a plan with `depends`, verify the dependencies
-are satisfied (status is `done`). If not, flag this.
-
-### Relationship to other docs
-
-- **README.md / DESIGN.md**: durable, human-readable docs about
-  architecture and design. Plans reference these for context.
-  Plans produce updates to these docs as part of their work.
-- **fieldstones.org**: design rationale and thinking. Plans may
-  generate new fieldstones during execution.
-- **CLAUDE.md**: directives for LLM behavior. Plans may produce
-  updates to CLAUDE.md when new conventions are established.
-
 ## Vendored Code
 
 If vendoring third-party code, see `dotfiles/emacs/CLAUDE.md` for the established pattern. If the pattern gets reused elsewhere, promote it here.

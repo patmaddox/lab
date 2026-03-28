@@ -1,5 +1,5 @@
 ---
-status: active
+status: done
 ---
 
 # Move plan conventions from CLAUDE.md into prompts
@@ -67,10 +67,10 @@ discovery of plan conventions.
 3. [x] Move INDEX.md context to prompts/plan.md -- move the INDEX.md
    generation note from CLAUDE.md into prompts/plan.md and remove
    from CLAUDE.md
-4. Move relationship-to-other-docs to prompts/plan.md -- move how
+4. [x] Move relationship-to-other-docs to prompts/plan.md -- move how
    plans relate to README, fieldstones, CLAUDE.md from CLAUDE.md
    into prompts/plan.md and remove from CLAUDE.md
-5. Remove remaining Plans section scaffolding from CLAUDE.md --
+5. [x] Remove remaining Plans section scaffolding from CLAUDE.md --
    delete the section header, intro paragraph ("What plans are,
    where they live"), and any leftover text after tasks 1-4
 
@@ -81,3 +81,20 @@ discovery of plan conventions.
 - The Plans section is gone from CLAUDE.md
 - Existing plans still work -- no format or convention changes,
   just moving where the instructions live
+
+## Postmortem
+
+### Claude
+
+The plan was well-structured with atomic tasks that each moved one
+piece of content and removed it from CLAUDE.md in the same step.
+Task 5 (scaffolding removal) was straightforward since the previous
+tasks had already moved all substantive content - only the section
+header, intro paragraph, "Executing a plan", and "Checking
+dependencies" subsections remained, and those were marked for
+removal or tracked by separate plans. No surprises or adjustments
+needed.
+
+### Pat
+
+(filled in by Pat after reviewing the work)

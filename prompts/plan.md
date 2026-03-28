@@ -180,3 +180,13 @@ Summary paragraph.
 - **Update fieldstones.** If design thinking emerges during
   development (rationale, analogies, principles), note it for
   inclusion in fieldstones.org.
+
+## Relationship to other docs
+
+- **README.md / DESIGN.md**: durable, human-readable docs about
+  architecture and design. Plans reference these for context.
+  Plans produce updates to these docs as part of their work.
+- **fieldstones.org**: design rationale and thinking. Plans may
+  generate new fieldstones during execution.
+- **CLAUDE.md**: directives for LLM behavior. Plans may produce
+  updates to CLAUDE.md when new conventions are established.
