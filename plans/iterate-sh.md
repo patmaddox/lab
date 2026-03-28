@@ -75,7 +75,7 @@ the plan is done or human input is needed.
   Print `[i/n]` before each iteration. Exit with a message if the
   limit is hit.
 
-- [ ] Support multiple plan files. Extract the iterate/dispatch/commit
+- [x] Support multiple plan files. Extract the iterate/dispatch/commit
   loop body into a function (e.g. `iterate_file`). Change argument
   parsing to accept one or more plan files instead of exactly one.
   Iterate over the file list, calling the function for each file.
