@@ -15,35 +15,45 @@ You receive a plan file (markdown with YAML frontmatter).
 
 Read the plan file. Note the frontmatter status and the contents.
 
-### 2. Check for open questions
+### 2. Check for feedback and open questions
 
-Look for an **Open questions** section. If it exists and contains
-any `>` quoted questions that have not been answered (no response
-text below the quote), the plan needs human input before it can
-proceed.
+Scan the plan file and any work products it has created or
+modified (e.g. prompts, docs) for inline feedback - `>` quoted
+blocks that were not part of the original content. These are
+comments left by the human that need to be addressed before work
+continues.
+
+Also look for an **Open questions** section with unanswered
+questions (a `>` quoted question with no response text below it).
 
 ### 3. Decide the next action
 
 Apply the first matching rule:
 
-1. **Open questions exist** - unanswered questions in the Open
+1. **Inline feedback exists** - `>` quoted feedback appears in the
+   plan or its work products. The plan needs revision to address
+   this feedback.
+   Output: `%iterate%:plan`
+
+2. **Open questions exist** - unanswered questions in the Open
    questions section need human input.
    Output: `%iterate%:feedback`
 
-2. **Status is `draft`** - the plan needs more development before
+3. **Status is `draft`** - the plan needs more development before
    it can be implemented.
    Output: `%iterate%:plan`
 
-3. **Status is `ready` or `active`, uncompleted tasks remain** -
+4. **Status is `ready` or `active`, uncompleted tasks remain** -
    the plan is ready and has work to do.
    Output: `%iterate%:implement`
 
-4. **All tasks are completed** - every task checkbox is checked.
+5. **All tasks are completed** - every task checkbox is checked.
    Output: `%iterate%:done`
 
-The rules are ordered by priority. Open questions take precedence
-over everything else. A draft plan needs development regardless of
-task state.
+The rules are ordered by priority. Inline feedback takes precedence
+over everything - the human has spoken and the plan must adapt.
+Open questions need human input before development can proceed. A
+draft plan needs development regardless of task state.
 
 This prompt is a pure router - it reads state but never writes it.
 Each step prompt owns its own state transitions (plan.md sets
