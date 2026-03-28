@@ -30,3 +30,12 @@ commit prompt."
 > squashing, reordering, and abandoning commits to keep history
 > clean. Should any of that come back in the commit prompt, or
 > is that out of scope?
+
+> Should committing be standalone - starting with no context,
+> reading the current diff, and producing a commit message
+> purely from what it sees - or contextual, running at the end
+> of another task (e.g. implement) where the context already
+> knows what it changed and why? The standalone approach is
+> simpler and composable, but a contextual commit might write a
+> better "why" in the commit message. Which produces the better
+> commit?
