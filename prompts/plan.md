@@ -4,9 +4,26 @@ You are developing a plan file. A plan is an LLM-executable spec
 for a chunk of work. Your job is to move the plan forward by one
 step: find the most important gap, address it, and stop.
 
+## Plan format
+
+Each plan is a separate markdown file with YAML frontmatter:
+
+```markdown
+---
+status: draft | ready | active | done | abandoned | rejected
+depends: [other-plan-name]
+priority: low | medium | high  (optional)
+---
+
+# Short descriptive title
+
+Content varies by maturity - a stub may be just a sentence,
+a ready-to-execute plan has Goal, Context, Tasks, Done-when.
+```
+
 ## Input
 
-You receive a plan file (markdown with optional YAML frontmatter). It
+You receive a plan file (markdown with YAML frontmatter). It
 may be anything from a one-sentence stub to a nearly-complete spec.
 
 ## What a ready plan looks like

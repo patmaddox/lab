@@ -106,23 +106,6 @@ Plans are LLM-executable specs for chunks of work. They live in
 `plans/` at the repo root (for repo-wide work) or in a project's
 own `plans/` directory (e.g. `oss/freebsd-src/plans/`).
 
-### Format
-
-Each plan is a separate markdown file with YAML frontmatter:
-
-```markdown
----
-status: draft | ready | active | done | abandoned | rejected
-depends: [other-plan-name]
-priority: low | medium | high  (optional)
----
-
-# Short descriptive title
-
-Content varies by maturity — a stub may be just a sentence,
-a ready-to-execute plan has Goal, Context, Tasks, Done-when.
-```
-
 ### Lifecycle
 
 Plans are a corpus at varying levels of detail, not an ordered

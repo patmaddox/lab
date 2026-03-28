@@ -1,5 +1,5 @@
 ---
-status: ready
+status: active
 ---
 
 # Move plan conventions from CLAUDE.md into prompts
@@ -57,7 +57,7 @@ discovery of plan conventions.
 
 ## Tasks
 
-1. Move plan format to prompts/plan.md -- move frontmatter fields
+1. [x] Move plan format to prompts/plan.md -- move frontmatter fields
    (status, depends, priority), one plan per file, markdown with
    YAML frontmatter from CLAUDE.md into prompts/plan.md and remove
    from CLAUDE.md
