@@ -384,6 +384,36 @@ delivery phase. And to "Commits as corpus, not DAG" — the release
 loop builds from commits (the corpus), while the dev loop works
 with uncommitted changes (stones not yet placed).
 
+* Router prompts - non-deterministic decisions in deterministic loops
+An LLM prompt whose only job is to read state and output a single
+machine-parseable action token (e.g. `plan`, `implement`, `done`).
+A shell script wraps it in a loop: call the router, dispatch on
+its output, repeat. The router is the non-deterministic decision
+point in an otherwise deterministic pipeline.
+
+This is the iterate prompt pattern: instead of one monolithic
+prompt that plans and implements and refactors, decompose into
+specialist prompts (plan.md, implement.md) and a router that
+picks the next one. The router sees the whole plan and decides;
+each specialist sees its narrow task and executes.
+
+Connects to "Just commands as GenServers" - the shell script is
+the supervisor, the router prompt is a GenServer that returns a
+tagged response (`{:plan, state}` or `{:implement, state}`), and
+the specialist prompts are workers dispatched by the supervisor.
+The state lives in the plan file, not in any LLM's context.
+
+Connects to "LLMs as operating systems" - the router is a
+scheduler. It doesn't do work, it decides which process runs next.
+The deterministic loop is the kernel; the router is the policy.
+
+Connects to "Incremental formalization" - a router prompt is
+early-stage (non-deterministic, LLM-interpreted). As patterns
+stabilize, the routing logic could be promoted to a deterministic
+script that checks plan status directly. The LLM router is only
+needed while the decision logic is fuzzy enough to benefit from
+judgment.
+
 * Single files to RAG spectrum
 A single document works well — the LLM sees everything and spots
 connections naturally. As content grows across files, that breaks
