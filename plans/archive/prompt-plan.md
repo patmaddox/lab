@@ -1,5 +1,5 @@
 ---
-status: ready
+status: done
 ---
 
 # Prompt: plan
@@ -122,3 +122,21 @@ is omitted entirely.
   questions (at top of document, omitted if none)
 - A plan with all criteria met transitions to `ready`
 - fieldstones.org is updated when design thinking emerges
+
+## Postmortem
+
+### Claude
+
+Straightforward plan -- both tasks mapped directly to
+implementation. Task 2 (update CLAUDE.md) turned out to be
+unnecessary; the open questions convention belongs in the prompt file
+itself, not in CLAUDE.md. The prompt file was the only real
+deliverable.
+
+### Pat
+
+I think this went well. Seems to have gotten the job done with no
+issue.
+
+I suppose plans are also a type of prompt. I'll evolve the repo
+structure over time.
