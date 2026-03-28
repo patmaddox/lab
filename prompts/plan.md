@@ -128,6 +128,11 @@ Summary paragraph.
   YAML and returns a dict" is a task.
 - **Commit-sized tasks.** Each task should be a single,
   reviewable change.
+- **Thin vertical slices.** Each task must be a complete unit of
+  work - move, change, or delete in one step. Do not spread work
+  across phases where later tasks finish what earlier tasks started.
+  Wrong: "add content to files A, B, C" then "remove old content."
+  Right: "move X from source to destination" as one task.
 - **Tasks deliver the Goal.** Only create tasks for work that
   directly produces the Goal. Supporting infrastructure, shell
   scripts, and tooling that the Goal does not name are out of
