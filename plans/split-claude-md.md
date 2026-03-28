@@ -61,7 +61,7 @@ discovery of plan conventions.
    (status, depends, priority), one plan per file, markdown with
    YAML frontmatter from CLAUDE.md into prompts/plan.md and remove
    from CLAUDE.md
-2. Move lifecycle to prompts/plan.md -- move status values and
+2. [x] Move lifecycle to prompts/plan.md -- move status values and
    their meanings, archiving rules for done/abandoned/rejected
    from CLAUDE.md into prompts/plan.md and remove from CLAUDE.md
 3. Move INDEX.md context to prompts/plan.md -- move the INDEX.md

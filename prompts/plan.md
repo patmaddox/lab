@@ -21,6 +21,21 @@ Content varies by maturity - a stub may be just a sentence,
 a ready-to-execute plan has Goal, Context, Tasks, Done-when.
 ```
 
+## Lifecycle
+
+Plans are a corpus at varying levels of detail, not an ordered
+backlog. A plan starts as a stub and gets fleshed out when ready
+to work on. Status tracks the lifecycle:
+
+- **draft**: idea captured, not yet detailed enough to execute
+- **ready**: plan is clear and ready to be picked up
+- **active**: currently being worked on
+- **done/abandoned/rejected**: move to `plans/archive/` and add
+  a Postmortem section
+
+Active plans (draft, ready, active) stay in `plans/`.
+Completed plans move to `plans/archive/`.
+
 ## Input
 
 You receive a plan file (markdown with YAML frontmatter). It

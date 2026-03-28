@@ -106,21 +106,6 @@ Plans are LLM-executable specs for chunks of work. They live in
 `plans/` at the repo root (for repo-wide work) or in a project's
 own `plans/` directory (e.g. `oss/freebsd-src/plans/`).
 
-### Lifecycle
-
-Plans are a corpus at varying levels of detail, not an ordered
-backlog. A plan starts as a stub and gets fleshed out when ready
-to work on. Status tracks the lifecycle:
-
-- **draft**: idea captured, not yet detailed enough to execute
-- **ready**: plan is clear and ready to be picked up
-- **active**: currently being worked on
-- **done/abandoned/rejected**: move to `plans/archive/` and add
-  a Postmortem section
-
-Active plans (draft, ready, active) stay in `plans/`.
-Completed plans move to `plans/archive/`.
-
 ### Executing a plan
 
 When asked to execute a plan, read it and implement the tasks.
