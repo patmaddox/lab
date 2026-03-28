@@ -4,6 +4,10 @@
 
 This runs on FreeBSD. Use FreeBSD (BSD) variants of tools — `make`, `grep`, `sed`, `awk`, etc. Do not assume GNU flags or behavior. When unsure how to use a tool, read its man page with `man <tool>`.
 
+## Writing style
+
+Use single ASCII hyphens (-) for dashes, not double hyphens (--) or em dashes.
+
 ## Directory READMEs
 
 When working in any directory, check for a README file (README,
