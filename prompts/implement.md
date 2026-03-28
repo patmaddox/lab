@@ -48,10 +48,11 @@ with the simplest possible solution. Do not over-engineer, add
 unnecessary abstractions, or go beyond what the task specifies.
 
 If the task cannot be completed as written -- it is wrong, unclear,
-blocked, or reality has diverged from the spec -- stop immediately.
-Tell the human that the plan needs revision and explain what is
-wrong. Do not attempt to fix the plan or improvise a different
-approach.
+blocked, or reality has diverged from the spec -- add an open
+question to the plan file explaining what is wrong and what you
+need answered, using the same `>` quoted format described in
+plan.md. Set the frontmatter status to `feedback` and stop. Do
+not attempt to fix the plan or improvise a different approach.
 
 ### 6. Check off the task
 

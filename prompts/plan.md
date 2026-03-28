@@ -136,6 +136,7 @@ The frontmatter status is an output for deterministic tools (make,
 queries), not an input to your assessment. Set it based on what
 you found in step 2:
 - `ready` if all four criteria are concretely met
+- `feedback` if you added open questions that block progress
 - `draft` otherwise
 
 ## Rules
