@@ -65,6 +65,7 @@ Commit message style follows FreeBSD conventions:
 - Bracketed prefixes like [CLAUDE] or [WIP] are excluded from the ~50 char count (they are temporary and will be removed)
 - Wrap body at 72 characters
 - Explain why, not what — the diff shows what changed
+- Do not add Co-Authored-By trailers
 - Reference: https://docs.freebsd.org/en/articles/committers-guide/#commit-log-message
 
 ## Prior thinking
