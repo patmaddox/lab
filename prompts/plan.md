@@ -119,6 +119,11 @@ you found in step 2:
   YAML and returns a dict" is a task.
 - **Commit-sized tasks.** Each task should be a single,
   reviewable change.
+- **Tasks deliver the Goal.** Only create tasks for work that
+  directly produces the Goal. Supporting infrastructure, shell
+  scripts, and tooling that the Goal does not name are out of
+  scope - even if the Context describes how they will use the
+  deliverable.
 - **Preserve plan voice.** Match the style of what is already
   written. Do not impose a different tone.
 - **Update fieldstones.** If design thinking emerges during
