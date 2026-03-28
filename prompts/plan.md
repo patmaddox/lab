@@ -89,11 +89,17 @@ If the plan has a **Decided** section, add any decisions that
 emerged during this pass. If there is no Decided section and
 decisions were made, create one in the Context area.
 
-### 7. Transition status when ready
+### 7. Assess readiness and update status
 
-If the plan has Goal, Context, Tasks, and Done-when -- all
-concrete enough to execute -- change the frontmatter status to
-`ready`. Otherwise leave it as-is.
+Assess the plan against the readiness criteria regardless of its
+current status. A plan marked `ready` may have gained new criteria,
+or its details may have drifted out of date -- the frontmatter
+status is for querying, not for determining whether work remains.
+
+If the plan meets all readiness criteria (Goal, Context, Tasks,
+Done-when -- all concrete enough to execute), set status to `ready`.
+If it does not, set status to `draft` even if it was previously
+`ready`.
 
 ## Rules
 
