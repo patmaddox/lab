@@ -22,15 +22,31 @@ action=$(echo "${output}" | awk -F: '$1=="%iterate%"{print $3; exit}')
 case "${signal}" in
 ok)
 	echo "Done: ${PLAN}"
+	exit 0
 	;;
 halt)
 	echo "${PLAN}"
+	exit 0
 	;;
 continue)
-	echo "Action: ${action}"
 	;;
 *)
 	echo "Error: unknown signal: ${signal}" >&2
+	exit 1
+	;;
+esac
+
+echo "Action: ${action} ${PLAN}"
+
+case "${action}" in
+plan)
+	${CLAUDE} -p "@prompts/plan.md develop @${PLAN}"
+	;;
+implement)
+	${CLAUDE} -p "@prompts/implement.md implement @${PLAN}"
+	;;
+*)
+	echo "Error: unknown action: ${action}" >&2
 	exit 1
 	;;
 esac

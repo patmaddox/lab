@@ -57,11 +57,10 @@ the plan is done or human input is needed.
   exits. For now, the `continue` handler just prints the action
   (`plan` or `implement`) and exits - real dispatch comes next.
 
-- [ ] Add dispatch to `plan.md` and `implement.md`. When the action
+- [x] Add dispatch to `plan.md` and `implement.md`. When the action
   is `plan`, call `claude -p prompts/plan.md` with the plan file.
   When the action is `implement`, call `claude -p prompts/implement.md`
-  with the plan file. After each dispatch, loop back to the iterate
-  call.
+  with the plan file. Single-pass - dispatch once and exit.
 
 - [ ] Add commit-after-step. After each dispatch call, check if jj
   shows modified files (`jj status`). If yes, commit with
