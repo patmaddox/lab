@@ -15,28 +15,30 @@ You receive a plan file (markdown with YAML frontmatter).
 
 Read the plan file. Note the frontmatter status and the contents.
 
-### 2. Check for feedback and open questions
+### 2. Check for feedback annotations and open questions
 
-Scan the plan file and any work products it has created or
-modified (e.g. prompts, docs) for inline feedback - `>` quoted
-blocks that were not part of the original content. These are
-comments left by the human that need to be addressed before work
-continues.
+Scan the plan file for:
 
-Also look for an **Open questions** section with unanswered
-questions (a `>` quoted question with no response text below it).
+- **Feedback annotations** - a `>` quoted passage from the plan
+  followed by a direct response (unquoted text). These are the
+  human's answers to open questions or comments on the plan.
+- **Open questions awaiting response** - `>` quoted questions in
+  the Open questions section with no unquoted response below them.
+  The human has not yet answered these.
 
 ### 3. Decide the next action
 
 Apply the first matching rule:
 
-1. **Inline feedback exists** - `>` quoted feedback appears in the
-   plan or its work products. The plan needs revision to address
-   this feedback.
+1. **Feedback annotations exist** - the human has responded to
+   open questions or commented on the plan. The plan needs
+   revision to integrate this feedback, even if status is
+   `feedback`.
    Output: `%iterate%:plan`
 
-2. **Open questions exist** - unanswered questions in the Open
-   questions section need human input.
+2. **Status is `feedback`** - a prompt set `feedback` because it
+   needs human input, and no feedback annotations have been
+   provided yet. Wait for the human.
    Output: `%iterate%:feedback`
 
 3. **Status is `draft`** - the plan needs more development before
@@ -50,18 +52,17 @@ Apply the first matching rule:
 5. **All tasks are completed** - every task checkbox is checked.
    Output: `%iterate%:done`
 
-The rules are ordered by priority. Inline feedback takes precedence
-over everything - the human has spoken and the plan must adapt.
-Open questions need human input before development can proceed. A
-draft plan needs development regardless of task state.
+The rules are ordered by priority. Feedback annotations take
+precedence over everything - the human has spoken and the plan
+must adapt. A `feedback` status without annotations means the
+loop must wait. A draft plan needs development regardless of task
+state.
 
 This prompt is a pure router - it reads state but never writes it.
 Each step prompt owns its own state transitions (plan.md sets
-`draft`/`ready`, implement.md sets `active`/`done`). This keeps
-iterate idempotent: you can run it multiple times and it just
-re-reads and re-decides. If implementation flags divergence, the
-implement prompt sets the plan back to `draft` and rule 2 handles
-it naturally on the next iteration.
+`draft`/`ready`/`feedback`, implement.md sets
+`active`/`done`/`feedback`). This keeps iterate idempotent: you
+can run it multiple times and it just re-reads and re-decides.
 
 ### 4. Output the action
 
