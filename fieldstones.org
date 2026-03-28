@@ -414,6 +414,22 @@ script that checks plan status directly. The LLM router is only
 needed while the decision logic is fuzzy enough to benefit from
 judgment.
 
+* "What would you change about the prompt?"
+When an LLM does something wrong, ask "what could I change about the
+prompt so that you don't make that mistake again?" The LLM identifies
+the gap between its behavior and the intent, then suggests a fix.
+This works because the LLM can see both sides - what the prompt said
+and why it did what it did - and bridge the difference. The human
+spots the wrong behavior; the LLM diagnoses the cause.
+
+This is another instance of "Planning as problem solving, LLMs as
+translation" - the human identifies the problem (wrong behavior),
+the LLM translates that into a prompt fix. And it connects to
+"Humans seed patterns, LLMs replicate them" - the prompt IS the
+pattern, and this technique iteratively refines it. Each correction
+makes the pattern more precise, reducing the space where the LLM
+falls back to training-data defaults.
+
 * Single files to RAG spectrum
 A single document works well — the LLM sees everything and spots
 connections naturally. As content grows across files, that breaks
