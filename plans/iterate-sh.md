@@ -75,6 +75,13 @@ the plan is done or human input is needed.
   Print `[i/n]` before each iteration. Exit with a message if the
   limit is hit.
 
+- [ ] Support multiple plan files. Extract the iterate/dispatch/commit
+  loop body into a function (e.g. `iterate_file`). Change argument
+  parsing to accept one or more plan files instead of exactly one.
+  Iterate over the file list, calling the function for each file.
+  The `-n` max applies per file, not total - each file gets up to
+  `$MAX` iterations independently.
+
 ## Done-when
 
 - `iterate.sh` is a working POSIX shell script at the repo root
