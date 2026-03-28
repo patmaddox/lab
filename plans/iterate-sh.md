@@ -1,5 +1,5 @@
 ---
-status: active
+status: done
 ---
 
 # iterate.sh - shell script driving the ralph loop
@@ -91,3 +91,23 @@ the plan is done or human input is needed.
   (needs human input)
 - Commits use `[WIP] iterate: <action> <plan-file>` format with full path
 - All jj operations use lockf for concurrency safety
+
+## Postmortem
+
+### Claude
+
+The implementation was straightforward across all five tasks. The plan
+was well-structured with clear, incremental steps - each task built
+naturally on the previous one. Extracting the loop body into
+`iterate_file` for multi-file support was clean since the loop was
+already self-contained. Using `return` instead of `exit` in the
+function was the main thing to get right so one file's completion
+doesn't kill the whole run. The plan's context section (decided items)
+eliminated ambiguity about commit format, locking, and feedback
+handling.
+
+### Pat
+
+This was the first real test, and it went well. It was cool once I had
+enough of iterate.sh working to use it on itself. Now to put it to the
+test on other plans.
