@@ -74,7 +74,7 @@ iterate_file() {
 		# Commit if files were modified
 		has_changes=$(lockf -k "${LOCK}" jj status 2>&1)
 		if echo "${has_changes}" | grep -q '^[AMDR]'; then
-			lockf -k "${LOCK}" jj commit -m "[WIP] iterate: ${action} ${plan}"
+			lockf -k "${LOCK}" jj commit -m "[CLAUDE] iterate ${action} ${plan}"
 		fi
 
 		i=$((i + 1))
