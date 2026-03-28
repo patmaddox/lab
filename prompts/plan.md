@@ -149,6 +149,9 @@ that one gap and stop.
 - If the answer is clear from the plan, codebase, or established
   conventions, fill it in. Write concretely -- specific files,
   specific behaviors, specific criteria. Avoid hedging language.
+- If you chose between alternatives while writing, that is
+  uncertainty -- add it as an open question instead of deciding
+  and hedging in conversation afterward.
 - If you find yourself weighing alternatives or unsure of the
   right approach, add a question instead. Place questions in an
   **Open questions** section (see placement rule below). Use `>`
