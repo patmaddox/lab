@@ -74,17 +74,8 @@ that one gap and stop.
   specific behaviors, specific criteria. Avoid hedging language.
 - If you find yourself weighing alternatives or unsure of the
   right approach, add a question instead. Place questions in an
-  **Open questions** section at the top of the document, directly
-  after the title and summary paragraph, before the Problem
-  section. Use `>` quoted format:
-
-```markdown
-## Open questions
-
-> Should the migration preserve historical data or start fresh?
-```
-
-If there are no open questions, omit the section entirely.
+  **Open questions** section (see placement rule below). Use `>`
+  quoted format.
 
 Do not ask questions in conversation. Write them into the plan
 file, then tell the human there are open questions and name the
@@ -105,6 +96,24 @@ you found in step 2:
 - `draft` otherwise
 
 ## Rules
+
+- **Open questions go before the first `##` section.** Place
+  `## Open questions` immediately before the first `##` content
+  section. If there are no open questions, omit the section
+  entirely.
+
+```markdown
+# Short descriptive title
+
+Summary paragraph.
+
+## Open questions
+
+> Should the migration preserve historical data or start fresh?
+
+## Context
+...
+```
 
 - **Modify the file in place.** Do not create new files.
 - **Do not commit.** The human commits when ready.
