@@ -34,23 +34,23 @@ Apply the first matching rule:
    open questions or commented on the plan. The plan needs
    revision to integrate this feedback, even if status is
    `feedback`.
-   Output: `%iterate%:plan`
+   Output: `%iterate%:continue:plan`
 
 2. **Status is `feedback`** - a prompt set `feedback` because it
    needs human input, and no feedback annotations have been
    provided yet. Wait for the human.
-   Output: `%iterate%:feedback`
+   Output: `%iterate%:halt:feedback`
 
 3. **Status is `draft`** - the plan needs more development before
    it can be implemented.
-   Output: `%iterate%:plan`
+   Output: `%iterate%:continue:plan`
 
 4. **Status is `ready` or `active`, uncompleted tasks remain** -
    the plan is ready and has work to do.
-   Output: `%iterate%:implement`
+   Output: `%iterate%:continue:implement`
 
 5. **All tasks are completed** - every task checkbox is checked.
-   Output: `%iterate%:done`
+   Output: `%iterate%:ok`
 
 The rules are ordered by priority. Feedback annotations take
 precedence over everything - the human has spoken and the plan
@@ -69,10 +69,14 @@ can run it multiple times and it just re-reads and re-decides.
 Write exactly one line in your response in this format:
 
 ```
-%iterate%:<action>
+%iterate%:<signal>:<action>
 ```
 
-Where `<action>` is one of: `plan`, `implement`, `feedback`, `done`.
+The format is `%iterate%:<signal>:<action>` for `continue` and
+`halt`, or `%iterate%:ok` for completion. This is inspired by
+Elixir's tagged-tuple convention (`{:ok, result}`,
+`{:error, reason}`) - the caller pattern-matches on the tag to
+decide control flow. Keep this convention when adding new actions.
 
 Briefly explain why you chose this action (one or two sentences),
 then output the action line.
@@ -82,7 +86,7 @@ then output the action line.
 - **One action per invocation.** Read the plan, decide, output
   the action line, stop.
 - **Exactly one action line.** Your response must contain exactly
-  one `%iterate%:<action>` line. No more, no less.
+  one `%iterate%:<signal>:<action>` line. No more, no less.
 - **Do not modify the plan.** You are a router, not an editor.
   Other prompts handle plan changes and implementation.
 - **Do not implement.** Your only job is to decide what happens
