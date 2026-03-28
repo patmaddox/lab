@@ -1,5 +1,5 @@
 ---
-status: ready
+status: active
 ---
 
 # iterate.sh - shell script driving the ralph loop
@@ -47,7 +47,7 @@ the plan is done or human input is needed.
 
 ## Tasks
 
-- [ ] Create `iterate.sh` with argument parsing and the main loop
+- [x] Create `iterate.sh` with argument parsing and the main loop
   skeleton. Accept a plan file path as the single argument. Validate
   it exists. Set up `CLAUDE` variable pointing to `claude-jail.sh`
   via `$(jj root)`. The main loop calls `claude -p prompts/iterate.md`
