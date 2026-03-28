@@ -50,3 +50,10 @@ implement)
 	exit 1
 	;;
 esac
+
+# Commit if files were modified
+LOCK="$(jj root)/.jj/claude.lock"
+has_changes=$(lockf -k "${LOCK}" jj status 2>&1)
+if echo "${has_changes}" | grep -q '^[AMDR]'; then
+	lockf -k "${LOCK}" jj commit -m "[WIP] iterate: ${action} ${PLAN}"
+fi

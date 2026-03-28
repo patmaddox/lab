@@ -1,5 +1,5 @@
 ---
-status: feedback
+status: active
 ---
 
 # iterate.sh - shell script driving the ralph loop
@@ -62,7 +62,7 @@ the plan is done or human input is needed.
   When the action is `implement`, call `claude -p prompts/implement.md`
   with the plan file. Single-pass - dispatch once and exit.
 
-- [ ] Add commit-after-step. After each dispatch call, check if jj
+- [x] Add commit-after-step. After each dispatch call, check if jj
   shows modified files (`jj status`). If yes, commit with
   `jj commit -m '[WIP] iterate: <action> <plan-file>'` where
   action is `plan` or `implement` and plan-file is the full path
