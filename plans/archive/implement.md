@@ -1,5 +1,5 @@
 ---
-status: ready
+status: done
 ---
 
 # Create a prompt for implementing plans
@@ -48,7 +48,7 @@ Source material for the prompt content:
 
 ## Tasks
 
-1. Write `prompts/implement.md` covering these concerns:
+1. [x] Write `prompts/implement.md` covering these concerns:
    - Read the plan and verify it is ready (four sections present)
    - Check that `depends` plans are satisfied (status is done)
    - Find the next unchecked task
@@ -69,3 +69,14 @@ Source material for the prompt content:
 - The prompt does not duplicate instructions that CLAUDE.md already
   provides (commit conventions, repo structure, etc.) -- it
   complements CLAUDE.md rather than replacing it
+
+## Postmortem
+### Claude
+Straightforward single-task plan. The main design work was deciding
+how to structure the steps -- landed on a linear flow (verify, check
+deps, set active, find task, implement, check off, handle completion)
+that mirrors how plan.md structures its passes. Kept the rules section
+tight to avoid duplicating CLAUDE.md conventions. The plan's Decided
+section made every judgment call clear, so there was nothing to guess.
+### Pat
+(filled in by Pat after reviewing the work)
