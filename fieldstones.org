@@ -430,6 +430,24 @@ pattern, and this technique iteratively refines it. Each correction
 makes the pattern more precise, reducing the space where the LLM
 falls back to training-data defaults.
 
+* Interactive sessions before prompts
+It's tempting to devise the perfect prompt upfront. It's more
+effective to do an interactive session, get the result you want,
+and then consolidate the work into a clean, repeatable prompt.
+Test the prompt's effectiveness by trying to produce the same
+result.
+
+This is the fieldstone method applied to prompts themselves -
+collect the stones (interactive discoveries, corrections, "what
+would you change?") and then build the wall (the prompt). Trying
+to design the wall first means guessing which stones you'll need.
+
+Connects to "Incremental formalization" - an interactive session
+is the loose exploration phase, the prompt is the formalized
+artifact. And to "What would you change about the prompt?" - each
+correction in the interactive session is a stone that goes into
+the final prompt.
+
 * Single files to RAG spectrum
 A single document works well — the LLM sees everything and spots
 connections naturally. As content grows across files, that breaks
