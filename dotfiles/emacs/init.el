@@ -557,3 +557,20 @@ and prefixes every line with \"> \"."
 (setenv "NOTMUCH_CONFIG" "/home/patmaddox/lab/repos/lab-devel/default.jj/.notmuch-config")
 (setq notmuch-show-logo nil)
 (add-hook 'notmuch-hello-mode-hook (lambda () (display-line-numbers-mode -1)))
+;; I only save drafts, no need to save the file locally
+(setq notmuch-fcc-dirs nil)
+(setq notmuch-draft-tags '("+draft" "-inbox" "-unread"))
+(defun notmuch-edit-raw-message ()
+  (interactive)
+  (let ((id (notmuch-show-get-message-id))
+        (filename (notmuch-show-get-filename)))
+    (find-file filename)
+    (message-mode)
+    (setq-local notmuch-edit-message-id id)
+    (add-hook 'after-save-hook #'notmuch-reindex-after-save nil t)))
+
+(defun notmuch-reindex-after-save ()
+  (when notmuch-edit-message-id
+    (call-process "notmuch" nil nil nil "reindex" notmuch-edit-message-id)))
+
+(define-key notmuch-show-mode-map "E" #'notmuch-edit-raw-message)
