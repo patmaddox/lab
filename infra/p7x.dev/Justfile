@@ -2,9 +2,16 @@ help:
   just -l
 
 issue-cert:
+  mkdir -p tmp
   acme.sh --issue --dns -d p7x.dev -d '*.p7x.dev' \
     --yes-I-know-dns-manual-mode-enough-go-ahead-please
 
 renew-cert:
-  acme.sh --renew -d p7x.dev -d '*.p7x.dev' \
+  mkdir -p tmp
+  acme.sh --renew --force -d p7x.dev -d '*.p7x.dev' \
     --yes-I-know-dns-manual-mode-enough-go-ahead-please
+
+install-cert:
+  scp tmp/poudriere.p7x.dev.*.pem root@poudriere:/usr/local/etc/nginx/
+  rm tmp/poudriere.p7x.dev.*.pem
+  ssh root@poudriere "service nginx reload"
