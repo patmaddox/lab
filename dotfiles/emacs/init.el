@@ -551,3 +551,9 @@ and prefixes every line with \"> \"."
 (global-set-key (kbd "C-c l c") 'claude-code-send-region)
 (global-set-key (kbd "C-c l d") 'claude-code-draft-reply)
 (global-set-key (kbd "C-c l o") 'claude-code-oneshot)
+
+;;; notmuch
+(require 'notmuch)
+(setenv "NOTMUCH_CONFIG" "/home/patmaddox/lab/repos/lab-devel/default.jj/.notmuch-config")
+(setq notmuch-show-logo nil)
+(add-hook 'notmuch-hello-mode-hook (lambda () (display-line-numbers-mode -1)))
