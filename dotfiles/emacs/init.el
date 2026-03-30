@@ -560,6 +560,7 @@ and prefixes every line with \"> \"."
 ;; I only save drafts, no need to save the file locally
 (setq notmuch-fcc-dirs nil)
 (setq notmuch-draft-tags '("+draft" "-inbox" "-unread"))
+(setq notmuch-search-oldest-first nil)
 (defun notmuch-edit-raw-message ()
   (interactive)
   (let ((id (notmuch-show-get-message-id))
