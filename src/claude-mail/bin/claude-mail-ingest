@@ -1,9 +1,10 @@
 #!/bin/sh
-set -e
+set -eu
 
-OUTDIR="/tmp/claude-replies"
+inboxes=${@:-/tmp/claude-replies}
 
-for f in "$OUTDIR"/*.eml; do
-	notmuch insert < "$f"
-	rm "$f"
+for d in ${inboxes}; do
+	for f in "${d}"/*.eml; do
+		notmuch insert < "${f}" && rm "${f}"
+	done
 done
