@@ -1,0 +1,9 @@
+#!/bin/sh
+set -e
+
+OUTDIR="/tmp/claude-replies"
+
+for f in "$OUTDIR"/*.eml; do
+	notmuch insert < "$f"
+	rm "$f"
+done
