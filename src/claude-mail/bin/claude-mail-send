@@ -1,0 +1,23 @@
+#!/bin/sh
+set -e
+
+MSG_ID="$1"
+OUTDIR="/tmp/claude-replies"
+SCRIPT_DIR="$(dirname $(realpath $0))"
+
+system_prompt=$(cat<<EOF
+$(cat ${SCRIPT_DIR}/../lib/mail-reply.prompt)
+
+The current date/time is: $(date -R).
+Use this value for the Date header in your email reply.
+EOF
+)
+
+mkdir -p "$OUTDIR"
+OUTFILE="$OUTDIR/$(date +%s).$$.eml"
+
+msg=$(notmuch show --format=raw "$MSG_ID")
+result=$(echo "${msg}" | claude -p --append-system-prompt "${system_prompt}")
+echo "${result}"| sed -n '/^<email>$/,/^<\/email>$/{//d;p;}' > "$OUTFILE"
+
+echo "$OUTFILE"
