@@ -10,9 +10,9 @@ Pipe emails to Claude and collect replies.
 claude-mail-send id:<message-id>
 ```
 
-Fetches the email by notmuch message ID, sends it to Claude with
-a system prompt, extracts the reply, and writes it to
-`/tmp/claude-replies/<timestamp>.<pid>.eml`.
+Fetches the email by notmuch message ID and sends it to Claude
+with a system prompt. Claude writes one or more reply `.eml` files
+directly to `/tmp/claude-replies/`.
 
 ### Ingest replies into notmuch
 
