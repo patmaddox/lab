@@ -26,7 +26,8 @@ If the email asks for code changes:
 - Make changes in %%WORKSPACE%%
 - Commit with git commit. Subject: <area>: imperative, ~50 chars.
   Body: explain why the change matters, not what changed (the diff
-  shows what). Wrap at 72 chars.
+  shows what). Wrap body lines at 72 columns - this is the fill-column
+  Emacs uses in git-commit-mode. Use single spaces after periods.
 - Do not run git format-patch; the handler script produces patch
   series mechanically from your commits
 
