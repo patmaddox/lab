@@ -5,8 +5,18 @@ MSG_ID="$1"
 OUTDIR="/tmp/claude-replies"
 SCRIPT_DIR="$(dirname $(realpath $0))"
 
-system_prompt=$(cat ${SCRIPT_DIR}/../lib/mail-reply.prompt)
+system_prompt=$(cat ${SCRIPT_DIR}/../lib/handle-message.prompt)
 
 mkdir -p "$OUTDIR"
 
-notmuch show --format=raw "$MSG_ID" | claude -p --append-system-prompt "${system_prompt}"
+WORKSPACE="/tmp/claude-ws-mail-$(date +%Y%m%d-%H%M%S)"
+git clone "${HOME}/lab/default.jj/.git" "${WORKSPACE}"
+git -C "${WORKSPACE}" config user.name "claude"
+git -C "${WORKSPACE}" config user.email "claude"
+
+mkdir -p "${WORKSPACE}/tmp"
+notmuch show --format=raw "${MSG_ID}" > "${WORKSPACE}/tmp/input.eml"
+
+cat "${WORKSPACE}/tmp/input.eml" \
+  | WORKSPACE="${WORKSPACE}" claude -p \
+      --append-system-prompt "${system_prompt}"
