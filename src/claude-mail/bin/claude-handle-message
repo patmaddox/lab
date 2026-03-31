@@ -3,14 +3,12 @@ set -e
 
 JAIL_ROOT="/jails/instances/claude"
 MSG_ID="$1"
-OUTDIR="/tmp/claude-messages"
 SCRIPT_DIR="$(dirname $(realpath $0))"
 SYSTEM_PROMPT_FILE=/tmp/system.prompt
 WORKSPACE="/tmp/claude-ws-mail-$(date +%Y%m%d-%H%M%S)"
 JAIL_WORKSPACE=${JAIL_ROOT}${WORKSPACE}
 
 echo ${JAIL_WORKSPACE}
-mkdir -p ${OUTDIR}
 
 git clone "${HOME}/lab/default.jj/.git" "${JAIL_WORKSPACE}"
 git -C "${JAIL_WORKSPACE}" config user.name "claude"
@@ -31,5 +29,5 @@ if [ -z "${messages}" ]; then
 	exit 1
 fi
 
-# Stage complete - mv each file atomically into the shared inbox
-mv ${messages} ${OUTDIR}/
+# Ingest replies directly from the staging dir
+${SCRIPT_DIR}/claude-mail-ingest "${JAIL_WORKSPACE}/tmp/claude-messages"

@@ -59,6 +59,3 @@ dev:
 claude-mail-purge:
   NOTMUCH_CONFIG=$(realpath ../repos/lab-devel/default.jj/.notmuch-config) notmuch search --output=files 'tag:deleted' | xargs rm
 
-# ingest responses from claude agents
-claude-mail-ingest:
-  ./src/claude-mail/bin/claude-mail-ingest /tmp/claude-messages/

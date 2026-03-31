@@ -14,17 +14,9 @@ claude-handle-message id:<message-id>
 
 Fetches the email by notmuch message ID, clones the repo to a
 temporary workspace, and sends the message to Claude with a system
-prompt. Claude writes reply `.eml` files and patch series to
-`/tmp/claude-replies/`.
-
-### Ingest replies into notmuch
-
-```sh
-claude-mail-ingest
-```
-
-Reads all `.eml` files from `/tmp/claude-replies/`, runs
-`notmuch insert` on each, and removes the originals.
+prompt. Claude writes reply `.eml` files and patch series to a
+staging directory in the workspace, then ingests them into notmuch
+automatically.
 
 ## Files
 
