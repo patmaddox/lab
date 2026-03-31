@@ -554,7 +554,7 @@ and prefixes every line with \"> \"."
 
 ;;; notmuch
 (require 'notmuch)
-(setenv "NOTMUCH_CONFIG" "/home/patmaddox/lab/repos/lab-devel/default.jj/.notmuch-config")
+(setenv "NOTMUCH_CONFIG" "/home/patmaddox/lab/default.jj/.notmuch-config")
 (setq notmuch-show-logo nil)
 (add-hook 'notmuch-hello-mode-hook (lambda () (display-line-numbers-mode -1)))
 ;; I only save drafts, no need to save the file locally

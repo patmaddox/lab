@@ -57,5 +57,5 @@ dev:
 
 # purge deleted tag emails from notmuch database
 claude-mail-purge:
-  NOTMUCH_CONFIG=$(realpath ../repos/lab-devel/default.jj/.notmuch-config) notmuch search --output=files 'tag:deleted' | xargs rm
+  NOTMUCH_CONFIG=$(realpath .notmuch-config) notmuch search --output=files 'tag:deleted' | xargs rm
 
