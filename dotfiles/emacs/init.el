@@ -563,12 +563,12 @@ and prefixes every line with \"> \"."
 (setq notmuch-search-oldest-first nil)
 (setq notmuch-show-only-matching-messages t)
 (setq notmuch-saved-searches
-      '((:name "inbox" :query "tag:inbox and not tag:deleted" :key "i")
-        (:name "unread" :query "tag:unread and not tag:deleted" :key "u")
-        (:name "flagged" :query "tag:flagged and not tag:deleted" :key "f")
-        (:name "sent" :query "tag:sent and not tag:deleted" :key "t")
-        (:name "drafts" :query "tag:draft and not tag:deleted" :key "d")
-        (:name "all mail" :query "not tag:deleted" :key "a")))
+      '((:name "inbox" :query "tag:inbox" :key "i")
+        (:name "unread" :query "tag:unread" :key "u")
+        (:name "flagged" :query "tag:flagged" :key "f")
+        (:name "sent" :query "tag:sent" :key "t")
+        (:name "drafts" :query "tag:draft" :key "d")
+        (:name "all mail" :query "*" :key "a")))
 (advice-add 'notmuch-show--build-buffer :after
             (lambda (&rest _)
               (notmuch-show-mapc
