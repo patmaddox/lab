@@ -28,7 +28,11 @@ cleanup() {
 }
 trap cleanup EXIT
 
-echo ${JAIL_WORKSPACE}
+subject=$(notmuch show --format=json --body=false "${MSG_ID}" \
+	| sed -n 's/.*"Subject": *"\([^"]*\)".*/\1/p' | head -1)
+echo "${MSG_ID}"
+echo "${subject}"
+echo "${JAIL_WORKSPACE}"
 
 git -c advice.detachedHead=false clone -q "${HOME}/lab/default.jj/.git" "${JAIL_WORKSPACE}"
 git -C "${JAIL_WORKSPACE}" config user.name "claude"
