@@ -16,6 +16,18 @@ extract_msgid_from_header() {
 	grep -i "^${header}:" "${file}" | head -1 | grep -o '<[^>]*>' || true
 }
 
+cleanup() {
+	if [ $? -eq 0 ]; then
+		rm -rf "${JAIL_WORKSPACE}"
+	else
+		errdir="${JAIL_ROOT}/tmp/claude-ws-mail-errors"
+		mkdir -p "${errdir}"
+		mv "${JAIL_WORKSPACE}" "${errdir}/"
+		echo "workspace preserved: ${errdir}/$(basename ${JAIL_WORKSPACE})" >&2
+	fi
+}
+trap cleanup EXIT
+
 echo ${JAIL_WORKSPACE}
 
 git -c advice.detachedHead=false clone -q "${HOME}/lab/default.jj/.git" "${JAIL_WORKSPACE}"
