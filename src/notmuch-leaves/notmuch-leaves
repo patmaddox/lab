@@ -7,7 +7,7 @@ notmuch show --format=json --body=false -- "$query" \
     | jq -r '
         def leaves:
           .[0] as $msg | .[1] as $replies |
-          if ($replies | length) == 0 then $msg.id
+          if ($replies | length) == 0 then "id:" + $msg.id
           else $replies[] | leaves
           end;
         .[][] | leaves
