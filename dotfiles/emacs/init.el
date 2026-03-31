@@ -576,8 +576,6 @@ and prefixes every line with \"> \"."
                            (notmuch-show-get-message-properties)
                            nil)))
               (goto-char (point-min))
-              (notmuch-show-message-visible
-               (notmuch-show-get-message-properties) t)
               (force-window-update (selected-window))))
 (require 'pm-notmuch)
 (add-to-list 'notmuch-hello-sections
