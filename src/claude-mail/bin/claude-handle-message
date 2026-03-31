@@ -18,7 +18,7 @@ extract_msgid_from_header() {
 
 echo ${JAIL_WORKSPACE}
 
-git clone "${HOME}/lab/default.jj/.git" "${JAIL_WORKSPACE}"
+git -c advice.detachedHead=false clone -q "${HOME}/lab/default.jj/.git" "${JAIL_WORKSPACE}"
 git -C "${JAIL_WORKSPACE}" config user.name "claude"
 git -C "${JAIL_WORKSPACE}" config user.email "claude"
 CLONE_HEAD=$(git -C "${JAIL_WORKSPACE}" rev-parse HEAD)
