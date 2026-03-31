@@ -569,4 +569,14 @@ and prefixes every line with \"> \"."
         (:name "sent" :query "tag:sent and not tag:deleted" :key "t")
         (:name "drafts" :query "tag:draft and not tag:deleted" :key "d")
         (:name "all mail" :query "not tag:deleted" :key "a")))
+(advice-add 'notmuch-show--build-buffer :after
+            (lambda (&rest _)
+              (notmuch-show-mapc
+               (lambda () (notmuch-show-message-visible
+                           (notmuch-show-get-message-properties)
+                           nil)))
+              (goto-char (point-min))
+              (notmuch-show-message-visible
+               (notmuch-show-get-message-properties) t)
+              (force-window-update (selected-window))))
 (require 'pm-notmuch)
