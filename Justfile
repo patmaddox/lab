@@ -54,3 +54,7 @@ cleanup:
 # select a project and start a dev session
 dev:
   ./libexec/just/dev.sh
+
+# purge deleted tag emails from notmuch database
+claude-mail-purge:
+  NOTMUCH_CONFIG=$(realpath ../repos/lab-devel/default.jj/.notmuch-config) notmuch search --output=files 'tag:deleted' | xargs rm
