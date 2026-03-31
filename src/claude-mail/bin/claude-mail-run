@@ -1,0 +1,9 @@
+#!/bin/sh
+set -e
+
+SCRIPT_DIR="$(dirname $(realpath $0))"
+
+notmuch-leaves tag:inbox and to:claude \
+    | while read -r msgid; do
+        "${SCRIPT_DIR}/claude-handle-message" "${msgid}" || true
+    done
