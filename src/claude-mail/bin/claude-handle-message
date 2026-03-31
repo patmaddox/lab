@@ -8,11 +8,20 @@ SYSTEM_PROMPT_FILE=/tmp/system.prompt
 WORKSPACE="/tmp/claude-ws-mail-$(date +%Y%m%d-%H%M%S)"
 JAIL_WORKSPACE=${JAIL_ROOT}${WORKSPACE}
 
+# Extract the first message-id from a named header in an email file.
+extract_msgid_from_header() {
+	local header file
+	header="${1}"
+	file="${2}"
+	grep -i "^${header}:" "${file}" | head -1 | grep -o '<[^>]*>' || true
+}
+
 echo ${JAIL_WORKSPACE}
 
 git clone "${HOME}/lab/default.jj/.git" "${JAIL_WORKSPACE}"
 git -C "${JAIL_WORKSPACE}" config user.name "claude"
 git -C "${JAIL_WORKSPACE}" config user.email "claude"
+CLONE_HEAD=$(git -C "${JAIL_WORKSPACE}" rev-parse HEAD)
 
 mkdir -p "${JAIL_WORKSPACE}/tmp/claude-messages"
 cat ${SCRIPT_DIR}/../lib/handle-message.prompt \
@@ -22,10 +31,31 @@ notmuch show --format=raw "${MSG_ID}" > "${JAIL_WORKSPACE}/tmp/input.eml"
 
 cat "${JAIL_WORKSPACE}/tmp/input.eml" | claude -p --append-system-prompt-file ${WORKSPACE}${SYSTEM_PROMPT_FILE}
 
-# Verify claude actually produced output
-messages=$(find "${JAIL_WORKSPACE}/tmp/claude-messages" -maxdepth 1 -type f)
+# Produce patch series from any new commits
+thread_root=$(extract_msgid_from_header "References" \
+	"${JAIL_WORKSPACE}/tmp/input.eml")
+if [ -z "${thread_root}" ]; then
+	thread_root=$(extract_msgid_from_header "Message-ID" \
+		"${JAIL_WORKSPACE}/tmp/input.eml")
+fi
+
+# Generate cover letter description from commit log
+git -C "${JAIL_WORKSPACE}" log --reverse --format='%s%n%n%b' \
+	"${CLONE_HEAD}..HEAD" > "${JAIL_WORKSPACE}/tmp/cover-description"
+
+git -C "${JAIL_WORKSPACE}" format-patch --patience \
+	--cover-letter --thread \
+	--cover-from-description=auto \
+	--description-file="${JAIL_WORKSPACE}/tmp/cover-description" \
+	--in-reply-to="${thread_root}" \
+	-o "${JAIL_WORKSPACE}/tmp/claude-messages" \
+	"${CLONE_HEAD}"
+
+# Verify output exists (either a reply .eml or generated .patch files)
+messages=$(find "${JAIL_WORKSPACE}/tmp/claude-messages" -maxdepth 1 -type f \
+	\( -name '*.eml' -o -name '*.patch' \))
 if [ -z "${messages}" ]; then
-	echo "E: claude produced no reply files in ${JAIL_WORKSPACE}/tmp/claude-messages/" >&2
+	echo "E: no reply or patches in ${JAIL_WORKSPACE}/tmp/claude-messages/" >&2
 	exit 1
 fi
 

@@ -25,12 +25,8 @@ If the email asks for code changes:
 
 - Make changes in %%WORKSPACE%%
 - Commit with git commit using concise, descriptive messages
-- Run git format-patch with --patience and a cover letter to produce a
-  patch series (origin/main..HEAD or similar)
-- Move the patch files into %%WORKSPACE%%/tmp/claude-messages/ so they
-  get ingested into the shared inbox
+- Do not run git format-patch; the handler script produces patch
+  series mechanically from your commits
 
-When producing a new version of a patch series, use --interdiff
-to show the difference between versions.
-
-Use --thread to produce a shallow threaded patch series.
+If the email does not require code changes (analysis, questions,
+discussion), write a reply .eml as described above.
