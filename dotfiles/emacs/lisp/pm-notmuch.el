@@ -90,13 +90,33 @@ The process runs asynchronously in a dedicated buffer."
   (interactive)
   (let* ((msg-id (notmuch-show-get-message-id))
          (buf-name (format "*claude-handle: %s*" msg-id))
-         (buf (get-buffer-create buf-name)))
+         (buf (get-buffer-create buf-name))
+         (proc))
     (with-current-buffer buf
       (erase-buffer)
       (insert (format "Running claude-handle-message %s\n\n" msg-id)))
-    (start-process "claude-handle-message" buf
-                   pm-notmuch-claude-handle-message-program msg-id)
+    (setq proc (start-process "claude-handle-message" buf
+                              pm-notmuch-claude-handle-message-program msg-id))
+    (set-process-sentinel proc #'pm-notmuch--claude-handle-sentinel)
     (display-buffer buf)))
+
+(defun pm-notmuch--claude-handle-sentinel (process event)
+  "Report the outcome of a claude-handle-message PROCESS.
+EVENT is the process status string."
+  (let ((buf (process-buffer process))
+        (success (eq 0 (process-exit-status process))))
+    (when (buffer-live-p buf)
+      (with-current-buffer buf
+        (goto-char (point-max))
+        (insert "\n"
+                (propertize (if success
+                                "claude-handle-message finished"
+                              (format "claude-handle-message failed (exit %d)"
+                                      (process-exit-status process)))
+                            'face (if success 'success 'error))
+                "\n")))
+    (message "claude-handle-message %s"
+             (if success "finished" "failed"))))
 
 (define-key notmuch-show-mode-map "H" #'pm-notmuch-claude-handle-message)
 
