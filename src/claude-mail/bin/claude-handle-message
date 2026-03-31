@@ -1,28 +1,35 @@
 #!/bin/sh
 set -e
 
+JAIL_ROOT="/jails/instances/claude"
 MSG_ID="$1"
-OUTDIR="/tmp/claude-replies"
+OUTDIR="/tmp/claude-messages"
 SCRIPT_DIR="$(dirname $(realpath $0))"
-
-system_prompt=$(cat ${SCRIPT_DIR}/../lib/handle-message.prompt)
-
-mkdir -p "$OUTDIR"
-
+SYSTEM_PROMPT_FILE=/tmp/system.prompt
 WORKSPACE="/tmp/claude-ws-mail-$(date +%Y%m%d-%H%M%S)"
-git clone "${HOME}/lab/default.jj/.git" "${WORKSPACE}"
-git -C "${WORKSPACE}" config user.name "claude"
-git -C "${WORKSPACE}" config user.email "claude"
+JAIL_WORKSPACE=${JAIL_ROOT}${WORKSPACE}
 
-mkdir -p "${WORKSPACE}/tmp/claude-messages"
-notmuch show --format=raw "${MSG_ID}" > "${WORKSPACE}/tmp/input.eml"
+echo ${JAIL_WORKSPACE}
+mkdir -p ${OUTDIR}
 
-cat "${WORKSPACE}/tmp/input.eml" \
-  | WORKSPACE="${WORKSPACE}" claude -p \
-      --append-system-prompt "${system_prompt}"
+git clone "${HOME}/lab/default.jj/.git" "${JAIL_WORKSPACE}"
+git -C "${JAIL_WORKSPACE}" config user.name "claude"
+git -C "${JAIL_WORKSPACE}" config user.email "claude"
+
+mkdir -p "${JAIL_WORKSPACE}/tmp/claude-messages"
+cat ${SCRIPT_DIR}/../lib/handle-message.prompt \
+    | sed -e "s|%%WORKSPACE%%|${WORKSPACE}|g" \
+    > ${JAIL_WORKSPACE}${SYSTEM_PROMPT_FILE}
+notmuch show --format=raw "${MSG_ID}" > "${JAIL_WORKSPACE}/tmp/input.eml"
+
+cat "${JAIL_WORKSPACE}/tmp/input.eml" | claude -p --append-system-prompt-file ${WORKSPACE}${SYSTEM_PROMPT_FILE}
+
+# Verify claude actually produced output
+messages=$(find "${JAIL_WORKSPACE}/tmp/claude-messages" -maxdepth 1 -type f)
+if [ -z "${messages}" ]; then
+	echo "E: claude produced no reply files in ${JAIL_WORKSPACE}/tmp/claude-messages/" >&2
+	exit 1
+fi
 
 # Stage complete - mv each file atomically into the shared inbox
-for f in "${WORKSPACE}"/tmp/claude-messages/*; do
-  [ -e "$f" ] || continue
-  mv "$f" "$OUTDIR/"
-done
+mv ${messages} ${OUTDIR}/

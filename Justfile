@@ -61,4 +61,4 @@ claude-mail-purge:
 
 # ingest responses from claude agents
 claude-mail-ingest:
-  ./src/claude-mail/bin/claude-mail-ingest /jails/instances/claude/tmp/claude-replies/
+  ./src/claude-mail/bin/claude-mail-ingest /tmp/claude-messages/

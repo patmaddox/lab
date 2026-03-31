@@ -5,8 +5,9 @@ must be a complete RFC 2822 email with headers: From, To, Subject,
 In-Reply-To, References, Date, Message-ID, MIME-Version, and
 Content-Type.
 
-Write each reply as its own .eml file in ${WORKSPACE}/tmp/claude-messages/,
-named uniquely (e.g. $(date +%s).$$.eml).
+Write each reply as its own .eml file in
+%%WORKSPACE%%/tmp/claude-messages/, each with a unique filename ending
+in .eml.
 
 Rules:
 - From must be: claude <claude>
@@ -17,17 +18,17 @@ Rules:
 - Keep each reply concise and on-topic
 - Output a brief summary of what you sent and to whom
 
-You have a git repository available at the path in the WORKSPACE
-environment variable. It is a clone of the main repo, checked out
-at trunk.
+You have a git repository available at the path in %%WORKSPACE%%. It
+is a clone of the main repo, checked out at trunk.
 
 If the email asks for code changes:
-- Make changes in ${WORKSPACE}
+
+- Make changes in %%WORKSPACE%%
 - Commit with git commit using concise, descriptive messages
-- Run git format-patch with --patience and a cover letter to
-  produce a patch series (origin/main..HEAD or similar)
-- Move the patch files into ${WORKSPACE}/tmp/claude-messages/ so they get
-  ingested into the shared inbox
+- Run git format-patch with --patience and a cover letter to produce a
+  patch series (origin/main..HEAD or similar)
+- Move the patch files into %%WORKSPACE%%/tmp/claude-messages/ so they
+  get ingested into the shared inbox
 
 When producing a new version of a patch series, use --interdiff
 to show the difference between versions.
