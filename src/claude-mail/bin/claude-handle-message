@@ -5,8 +5,16 @@ JAIL_ROOT="/jails/instances/claude"
 MSG_ID="$1"
 SCRIPT_DIR="$(dirname $(realpath $0))"
 SYSTEM_PROMPT_FILE=/tmp/system.prompt
-WORKSPACE="/tmp/claude-ws-mail-$(date +%Y%m%d-%H%M%S)"
+WS_HASH=$(printf '%s' "${MSG_ID}" | sha256 | head -c 16)
+WORKSPACE="/tmp/claude-ws-mail-${WS_HASH}"
 JAIL_WORKSPACE=${JAIL_ROOT}${WORKSPACE}
+LOCKFILE="${JAIL_ROOT}/tmp/claude-ws-mail-${WS_HASH}.lock"
+
+# Acquire an exclusive lock; exit immediately if already held.
+if [ "${CLAUDE_MAIL_LOCKED:-}" != "${WS_HASH}" ]; then
+	CLAUDE_MAIL_LOCKED="${WS_HASH}" \
+		exec lockf -t 0 "${LOCKFILE}" "$0" "$@"
+fi
 
 # Extract the first message-id from a named header in an email file.
 extract_msgid_from_header() {
@@ -27,6 +35,11 @@ cleanup() {
 	fi
 }
 trap cleanup EXIT
+
+if [ -d "${JAIL_WORKSPACE}" ]; then
+	echo "E: stale workspace ${JAIL_WORKSPACE} exists" >&2
+	exit 1
+fi
 
 subject=$(notmuch show --format=json --body=false "${MSG_ID}" \
 	| sed -n 's/.*"Subject": *"\([^"]*\)".*/\1/p' | head -1)
