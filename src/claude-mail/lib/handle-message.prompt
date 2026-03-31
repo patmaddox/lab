@@ -24,7 +24,9 @@ is a clone of the main repo, checked out at trunk.
 If the email asks for code changes:
 
 - Make changes in %%WORKSPACE%%
-- Commit with git commit using concise, descriptive messages
+- Commit with git commit. Subject: <area>: imperative, ~50 chars.
+  Body: explain why the change matters, not what changed (the diff
+  shows what). Wrap at 72 chars.
 - Do not run git format-patch; the handler script produces patch
   series mechanically from your commits
 

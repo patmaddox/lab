@@ -33,3 +33,12 @@ locking automatically.
 FreeBSD style. Subject ~50 chars, imperative mood, prefixed with
 `<area>: ` where area matches the subdirectory. Body wrapped at
 72 chars - explain why, not what. No Co-Authored-By trailers.
+
+Good body: "Cloning prints a detached HEAD advisory and progress
+           info that clutter handler output, making errors harder
+           to spot."
+Bad body:  "Set advice.detachedHead=false on the clone command and
+           pass -q to suppress all clone noise."
+
+The diff already shows what changed. The body should say why it
+matters.
