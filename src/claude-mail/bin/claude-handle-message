@@ -14,9 +14,15 @@ git clone "${HOME}/lab/default.jj/.git" "${WORKSPACE}"
 git -C "${WORKSPACE}" config user.name "claude"
 git -C "${WORKSPACE}" config user.email "claude"
 
-mkdir -p "${WORKSPACE}/tmp"
+mkdir -p "${WORKSPACE}/tmp/claude-messages"
 notmuch show --format=raw "${MSG_ID}" > "${WORKSPACE}/tmp/input.eml"
 
 cat "${WORKSPACE}/tmp/input.eml" \
   | WORKSPACE="${WORKSPACE}" claude -p \
       --append-system-prompt "${system_prompt}"
+
+# Stage complete - mv each file atomically into the shared inbox
+for f in "${WORKSPACE}"/tmp/claude-messages/*; do
+  [ -e "$f" ] || continue
+  mv "$f" "$OUTDIR/"
+done
