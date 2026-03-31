@@ -25,7 +25,12 @@ extract_msgid_from_header() {
 }
 
 cleanup() {
-	if [ $? -eq 0 ]; then
+	_rc=$?
+	# Unmount the nullfs mount if it is still active.
+	if mount -p | grep -q "${JAIL_WORKSPACE}/tmp/mail"; then
+		doas umount "${JAIL_WORKSPACE}/tmp/mail"
+	fi
+	if [ $_rc -eq 0 ]; then
 		rm -rf "${JAIL_WORKSPACE}"
 	else
 		errdir="${JAIL_ROOT}/tmp/claude-ws-mail-errors"
@@ -58,6 +63,18 @@ cat ${SCRIPT_DIR}/../lib/handle-message.prompt \
     > ${JAIL_WORKSPACE}${SYSTEM_PROMPT_FILE}
 notmuch show --format=raw "${MSG_ID}" > "${JAIL_WORKSPACE}/tmp/input.eml"
 
+# Make the notmuch database available inside the workspace so the
+# agent can search and read mail.
+NOTMUCH_DB=$(notmuch config get database.path)
+JAIL_MAIL_DIR="${JAIL_WORKSPACE}/tmp/mail"
+mkdir -p "${JAIL_MAIL_DIR}"
+doas mount_nullfs -o ro "${NOTMUCH_DB}" "${JAIL_MAIL_DIR}"
+
+sed -e "s|^path=.*|path=${WORKSPACE}/tmp/mail|" \
+    "${JAIL_WORKSPACE}/.notmuch-config" \
+    > "${JAIL_WORKSPACE}/tmp/notmuch.conf"
+
+export CLAUDE_ENV_NOTMUCH_CONFIG="${WORKSPACE}/tmp/notmuch.conf"
 cat "${JAIL_WORKSPACE}/tmp/input.eml" | claude -p --append-system-prompt-file ${WORKSPACE}${SYSTEM_PROMPT_FILE}
 
 # Produce patch series from any new commits
