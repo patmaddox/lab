@@ -55,6 +55,10 @@ cleanup:
 dev:
   ./libexec/just/dev.sh
 
+# set author to me on commits matching revset
+jj-authorme revset:
+  jj metaedit --update-author -r '{{revset}}'
+
 # purge deleted tag emails from notmuch database
 claude-mail-purge:
   NOTMUCH_CONFIG=$(realpath .notmuch-config) notmuch search --output=files 'tag:deleted' | xargs rm
