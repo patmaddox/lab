@@ -79,5 +79,26 @@ Added to `notmuch-show-insert-text/plain-hook'."
 (add-hook 'notmuch-show-insert-text/plain-hook
           #'pm-notmuch-highlight-diff-regions)
 
+;;; Claude message handling
+
+(defvar pm-notmuch-claude-handle-message-program "claude-handle-message"
+  "Path to the claude-handle-message script.")
+
+(defun pm-notmuch-claude-handle-message ()
+  "Run claude-handle-message on the current notmuch message.
+The process runs asynchronously in a dedicated buffer."
+  (interactive)
+  (let* ((msg-id (notmuch-show-get-message-id))
+         (buf-name (format "*claude-handle: %s*" msg-id))
+         (buf (get-buffer-create buf-name)))
+    (with-current-buffer buf
+      (erase-buffer)
+      (insert (format "Running claude-handle-message %s\n\n" msg-id)))
+    (start-process "claude-handle-message" buf
+                   pm-notmuch-claude-handle-message-program msg-id)
+    (display-buffer buf)))
+
+(define-key notmuch-show-mode-map "H" #'pm-notmuch-claude-handle-message)
+
 (provide 'pm-notmuch)
 ;;; pm-notmuch.el ends here
