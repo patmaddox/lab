@@ -114,7 +114,15 @@ EVENT is the process status string."
                               (format "claude-handle-message failed (exit %d)"
                                       (process-exit-status process)))
                             'face (if success 'success 'error))
-                "\n")))
+                "\n"))
+      (let* ((old-name (buffer-name buf))
+             (tag (if success "done" "FAIL"))
+             (new-name (replace-regexp-in-string
+                        "\\`\\*claude-handle:"
+                        (format "*claude-handle:%s:" tag)
+                        old-name)))
+        (with-current-buffer buf
+          (rename-buffer new-name t))))
     (message "claude-handle-message %s"
              (if success "finished" "failed"))))
 
