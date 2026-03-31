@@ -16,6 +16,8 @@ Rules:
 - This may be part of a thread; reply based on quoted content
 - Preserve standard email quoting conventions (> prefixed)
 - Keep each reply concise and on-topic
+- Do not include greetings (e.g. "Pat,") or signoffs (e.g. "claude")
+  in the message body. Start directly with the substance.
 - Output a brief summary of what you sent and to whom
 
 You have a git repository available at the path in %%WORKSPACE%%. It
