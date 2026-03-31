@@ -575,3 +575,59 @@ and prefixes every line with \"> \"."
     (call-process "notmuch" nil nil nil "reindex" notmuch-edit-message-id)))
 
 (define-key notmuch-show-mode-map "E" #'notmuch-edit-raw-message)
+
+;; diff highlighting in notmuch-show
+(defun pm-notmuch-diff-line-type ()
+  "Return the diff line type for the current line, or nil."
+  (save-excursion
+    (beginning-of-line)
+    (cond
+     ((looking-at "^diff ") 'file-header)
+     ((looking-at "^--- ") 'file-header)
+     ((looking-at "^\\+\\+\\+ ") 'file-header)
+     ((looking-at "^@@ ") 'hunk-header)
+     ((looking-at "^\\+") 'added)
+     ((looking-at "^-") 'removed)
+     ((looking-at "^ ") 'context)
+     (t nil))))
+
+(defun pm-notmuch-highlight-diff-regions (_msg _depth)
+  "Highlight diff regions in notmuch text/plain parts.
+Added to `notmuch-show-insert-text/plain-hook'."
+  (save-excursion
+    (goto-char (point-min))
+    (let (in-diff)
+      (while (not (eobp))
+        (let ((type (pm-notmuch-diff-line-type)))
+          (cond
+           ;; Entering a diff region
+           ((and (not in-diff)
+                 (memq type '(file-header hunk-header)))
+            (setq in-diff t)
+            (pm-notmuch--apply-diff-face type))
+           ;; Inside a diff region
+           (in-diff
+            (if type
+                (pm-notmuch--apply-diff-face type)
+              ;; Non-diff line - check if it's blank (context can have
+              ;; empty lines) or truly exits the diff
+              (if (looking-at "^$")
+                  nil ; blank line, stay in diff
+                (setq in-diff nil))))))
+        (forward-line 1)))))
+
+(defun pm-notmuch--apply-diff-face (type)
+  "Apply the appropriate diff face overlay to the current line."
+  (let ((face (pcase type
+                ('file-header 'diff-file-header)
+                ('hunk-header 'diff-hunk-header)
+                ('added 'diff-added)
+                ('removed 'diff-removed)
+                (_ nil))))
+    (when face
+      (let ((ov (make-overlay (line-beginning-position) (line-end-position))))
+        (overlay-put ov 'face face)
+        (overlay-put ov 'pm-notmuch-diff t)))))
+
+(add-hook 'notmuch-show-insert-text/plain-hook
+          #'pm-notmuch-highlight-diff-regions)
