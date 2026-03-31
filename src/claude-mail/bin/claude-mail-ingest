@@ -4,7 +4,7 @@ set -eu
 inboxes=${@:-/tmp/claude-replies}
 
 for d in ${inboxes}; do
-	for f in "${d}"/*.eml; do
+	for f in $(find "${d}" \( -name '*.eml' -o -name '*.patch' \)); do
 		notmuch insert < "${f}" && rm "${f}"
 	done
 done
