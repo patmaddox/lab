@@ -13,7 +13,7 @@ extract_msgid_from_header() {
 	local header file
 	header="${1}"
 	file="${2}"
-	grep -i "^${header}:" "${file}" | head -1 | grep -o '<[^>]*>' || true
+	grep -i "^${header}:" "${file}" | head -1 | grep -o '<[^>]*>' | head -1 || true
 }
 
 cleanup() {
