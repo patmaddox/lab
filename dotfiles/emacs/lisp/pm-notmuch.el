@@ -128,5 +128,28 @@ EVENT is the process status string."
 
 (define-key notmuch-show-mode-map "H" #'pm-notmuch-claude-handle-message)
 
+;;; Leaf message search
+
+(defvar pm-notmuch-leaves-program "notmuch-leaves"
+  "Path to the notmuch-leaves script.")
+
+(defun pm-notmuch-search-leaves ()
+  "Search for leaf messages - thread endpoints with no replies."
+  (interactive)
+  (let* ((ids (with-temp-buffer
+                (call-process pm-notmuch-leaves-program nil t nil "tag:inbox")
+                (string-trim (buffer-string)))))
+    (if (string-empty-p ids)
+        (message "No leaf messages found")
+      (notmuch-search (mapconcat #'identity (split-string ids "\n") " or ")))))
+
+(defun pm-notmuch-hello-insert-leaves ()
+  "Insert a button on the notmuch hello page to search leaf messages."
+  (widget-insert "  ")
+  (widget-create 'push-button
+                 :notify (lambda (&rest _) (pm-notmuch-search-leaves))
+                 "Leaf messages")
+  (widget-insert "\n"))
+
 (provide 'pm-notmuch)
 ;;; pm-notmuch.el ends here

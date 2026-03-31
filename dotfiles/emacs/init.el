@@ -580,3 +580,5 @@ and prefixes every line with \"> \"."
                (notmuch-show-get-message-properties) t)
               (force-window-update (selected-window))))
 (require 'pm-notmuch)
+(add-to-list 'notmuch-hello-sections
+             #'pm-notmuch-hello-insert-leaves t)
