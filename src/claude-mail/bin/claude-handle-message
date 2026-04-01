@@ -47,7 +47,7 @@ if [ -d "${JAIL_WORKSPACE}" ]; then
 fi
 
 subject=$(notmuch show --format=json --body=false "${MSG_ID}" \
-	| sed -n 's/.*"Subject": *"\([^"]*\)".*/\1/p' | head -1)
+	| jq -r '.. | objects | select(.match == true) | .headers.Subject' | head -1)
 echo "${MSG_ID}"
 echo "${subject}"
 echo "${JAIL_WORKSPACE}"
