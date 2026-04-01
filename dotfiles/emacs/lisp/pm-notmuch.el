@@ -126,8 +126,6 @@ EVENT is the process status string."
     (message "claude-handle-message %s"
              (if success "finished" "failed"))))
 
-(define-key notmuch-show-mode-map "H" #'pm-notmuch-claude-handle-message)
-
 ;;; Leaf message search
 
 (defvar pm-notmuch-leaves-program "notmuch-leaves"
