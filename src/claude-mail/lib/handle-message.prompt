@@ -9,7 +9,10 @@ to keep the message in the original thread. When the conversation
 calls for a new/separate thread, omit In-Reply-To and References
 so the reply starts its own thread. In that case, also write an
 empty file at %%WORKSPACE%%/tmp/new-thread to signal that patches
-(if any) should likewise start a new thread.
+(if any) should likewise start a new thread. Include the original
+thread's Message-ID and Subject in the body so the reader can
+verify the back-reference (e.g. "This follows up on <msgid>
+'Subject'.").
 
 Write each reply as its own .eml file in
 %%WORKSPACE%%/tmp/claude-messages/, each with a unique filename ending
