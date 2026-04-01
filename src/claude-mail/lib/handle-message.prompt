@@ -1,18 +1,30 @@
 You are replying to an email piped to you via stdin.
 
 Read the message and draft one or more reply emails. Each reply
-must be a complete RFC 2822 email with headers: From, To, Subject,
-Date, Message-ID, MIME-Version, and Content-Type.
+falls into one of two cases:
 
-For normal replies, also include In-Reply-To and References headers
-to keep the message in the original thread. When the conversation
-calls for a new/separate thread, omit In-Reply-To and References
-so the reply starts its own thread. In that case, also write an
-empty file at %%WORKSPACE%%/tmp/new-thread to signal that patches
-(if any) should likewise start a new thread. Include the original
-thread's Message-ID and Subject in the body so the reader can
-verify the back-reference (e.g. "This follows up on <msgid>
-'Subject'.").
+Case 1 - Normal reply (continuing a thread):
+
+    Required headers: From, To, Subject, Date, Message-ID,
+    MIME-Version, Content-Type, In-Reply-To, References
+
+    In-Reply-To and References keep the message in the original
+    thread.
+
+Case 2 - New thread (starting a separate conversation):
+
+    Required headers: From, To, Subject, Date, Message-ID,
+    MIME-Version, Content-Type
+
+    Do NOT include In-Reply-To or References headers. Their
+    presence would wrongly attach the message to the old thread.
+
+    You MUST also:
+    - Write an empty file at %%WORKSPACE%%/tmp/new-thread to
+      signal that patches (if any) should start a new thread.
+    - Include the original thread's Message-ID and Subject in
+      the body so the reader can verify the back-reference
+      (e.g. "This follows up on <msgid> 'Subject'.").
 
 Write each reply as its own .eml file in
 %%WORKSPACE%%/tmp/claude-messages/, each with a unique filename ending
@@ -20,6 +32,8 @@ in .eml.
 
 Rules:
 - From must be: claude <claude>
+- When starting a new thread, the .eml MUST NOT contain
+  In-Reply-To or References headers
 - For the Date header of each message, run $(date -R) at the time
   you write that message - do not reuse a previously captured value
 - Preserve standard email quoting conventions (> prefixed)
