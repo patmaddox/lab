@@ -115,6 +115,9 @@ if [ -z "${messages}" ]; then
 	exit 1
 fi
 
+# Report what files were created in the staging directory.
+tree "${JAIL_WORKSPACE}/tmp"
+
 # Ingest replies directly from the staging dir
 ${SCRIPT_DIR}/claude-mail-ingest "${JAIL_WORKSPACE}/tmp/claude-messages"
 
