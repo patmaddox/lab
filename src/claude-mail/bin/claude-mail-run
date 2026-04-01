@@ -19,7 +19,7 @@ shift $((OPTIND - 1))
 SCRIPT_DIR="$(dirname $(realpath $0))"
 
 notmuch search --output=messages tag:inbox and to:claude \
-    | head -n "$count" \
+    | tail -r | head -n "$count" \
     | while read -r msgid; do
         "${SCRIPT_DIR}/claude-handle-message" "${msgid}" || true
-    done
+done
