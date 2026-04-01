@@ -45,6 +45,7 @@ primary_email=pat@patmaddox.com
 #		in the mail store.
 #
 [new]
+tags=new
 # Search configuration
 #
 # The following option is supported here:

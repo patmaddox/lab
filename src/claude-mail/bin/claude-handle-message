@@ -114,5 +114,5 @@ fi
 # Ingest replies directly from the staging dir
 ${SCRIPT_DIR}/claude-mail-ingest "${JAIL_WORKSPACE}/tmp/claude-messages"
 
-# Mark the processed message as handled by removing the inbox tag.
-notmuch tag -inbox -- "${MSG_ID}"
+# Mark the processed message as handled by removing the new tag.
+notmuch tag -new -- "${MSG_ID}"
