@@ -563,7 +563,7 @@ and prefixes every line with \"> \"."
 (setq notmuch-search-oldest-first nil)
 (setq notmuch-show-only-matching-messages t)
 (setq notmuch-saved-searches
-      '((:name "my inbox" :query "tag:inbox and to:pat not tag:flagged" :key "i")
+      '((:name "my inbox" :query "tag:inbox not tag:flagged not to:claude" :key "i")
         (:name "claude inbox" :query "tag:inbox and to:claude" :key "c")
         (:name "flagged" :query "tag:flagged" :key "f")
         (:name "unread" :query "tag:unread" :key "u")
