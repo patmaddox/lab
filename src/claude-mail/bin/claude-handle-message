@@ -4,7 +4,7 @@ set -e
 JAIL_ROOT="/jails/instances/claude"
 MSG_ID="$1"
 SCRIPT_DIR="$(dirname $(realpath $0))"
-SYSTEM_PROMPT_FILE=/tmp/system.prompt
+SYSTEM_PROMPT_FILE=/tmp/input/system.prompt
 WS_HASH=$(printf '%s' "${MSG_ID}" | sha256 | head -c 16)
 WORKSPACE="/tmp/claude-ws-mail-${WS_HASH}"
 JAIL_WORKSPACE=${JAIL_ROOT}${WORKSPACE}
@@ -15,6 +15,10 @@ if [ "${CLAUDE_MAIL_LOCKED:-}" != "${WS_HASH}" ]; then
 	CLAUDE_MAIL_LOCKED="${WS_HASH}" \
 		exec lockf -t 0 "${LOCKFILE}" "$0" "$@"
 fi
+
+log() {
+	echo "[claude-handle-message] ${@}"
+}
 
 # Extract the first message-id from a named header in an email file.
 extract_msgid_from_header() {
@@ -52,16 +56,20 @@ echo "${MSG_ID}"
 echo "${subject}"
 echo "${JAIL_WORKSPACE}"
 
+log "clone repo"
 git -c advice.detachedHead=false clone -q "${HOME}/lab/default.jj/.git" "${JAIL_WORKSPACE}"
 git -C "${JAIL_WORKSPACE}" config user.name "claude"
 git -C "${JAIL_WORKSPACE}" config user.email "claude"
 CLONE_HEAD=$(git -C "${JAIL_WORKSPACE}" rev-parse HEAD)
 
-mkdir -p "${JAIL_WORKSPACE}/tmp/claude-messages"
+mkdir -p "${JAIL_WORKSPACE}/tmp/input"
+mkdir -p "${JAIL_WORKSPACE}/tmp/output-agent"
+mkdir -p "${JAIL_WORKSPACE}/tmp/output-script"
 cat ${SCRIPT_DIR}/../lib/handle-message.prompt \
     | sed -e "s|%%WORKSPACE%%|${WORKSPACE}|g" \
-    > ${JAIL_WORKSPACE}${SYSTEM_PROMPT_FILE}
-notmuch show --format=raw "${MSG_ID}" > "${JAIL_WORKSPACE}/tmp/input.eml"
+    > "${JAIL_WORKSPACE}/${SYSTEM_PROMPT_FILE}"
+log "get message info"
+notmuch show --format=raw "${MSG_ID}" > "${JAIL_WORKSPACE}/tmp/input/input.eml"
 
 # Make the notmuch database available inside the workspace so the
 # agent can search and read mail.
@@ -74,53 +82,59 @@ sed -e "s|^path=.*|path=${WORKSPACE}/tmp/mail|" \
     "${JAIL_WORKSPACE}/.notmuch-config" \
     > "${JAIL_WORKSPACE}/tmp/notmuch.conf"
 
+log "prompting claude..."
 export CLAUDE_ENV_NOTMUCH_CONFIG="${WORKSPACE}/tmp/notmuch.conf"
-echo "Read and act on the email at ${WORKSPACE}/tmp/input.eml" \
+echo "Read and act on the email at ${WORKSPACE}/tmp/input/input.eml" \
 	| claude -p --append-system-prompt-file ${WORKSPACE}${SYSTEM_PROMPT_FILE}
 
 # Produce patch series from any new commits
 thread_root=$(extract_msgid_from_header "References" \
-	"${JAIL_WORKSPACE}/tmp/input.eml")
+	"${JAIL_WORKSPACE}/tmp/input/input.eml")
 if [ -z "${thread_root}" ]; then
 	thread_root=$(extract_msgid_from_header "Message-ID" \
-		"${JAIL_WORKSPACE}/tmp/input.eml")
+		"${JAIL_WORKSPACE}/tmp/input/input.eml")
 fi
 
 # Generate cover letter description from commit log
 git -C "${JAIL_WORKSPACE}" log --reverse --format='%s%n%n%b' \
-	"${CLONE_HEAD}..HEAD" > "${JAIL_WORKSPACE}/tmp/cover-description"
+	"${CLONE_HEAD}..HEAD" > "${JAIL_WORKSPACE}/tmp/output-script/cover-description"
 
 commit_count=$(git -C "${JAIL_WORKSPACE}" rev-list --count \
 	"${CLONE_HEAD}..HEAD")
 
 cover_args=""
 if [ "${commit_count}" -gt 1 ]; then
-	cover_args="--cover-letter --cover-from-description=auto --description-file=${JAIL_WORKSPACE}/tmp/cover-description"
+	cover_args="--cover-letter --cover-from-description=auto --description-file=${JAIL_WORKSPACE}/tmp/output-script/cover-description"
 fi
 
 reply_to_args="--in-reply-to=${thread_root}"
-if [ -f "${JAIL_WORKSPACE}/tmp/new-thread" ]; then
+if [ -f "${JAIL_WORKSPACE}/tmp/output-agent/new-thread" ]; then
 	reply_to_args=""
 fi
 
 git -C "${JAIL_WORKSPACE}" format-patch --patience \
 	--thread ${cover_args} ${reply_to_args} \
-	-o "${JAIL_WORKSPACE}/tmp/claude-messages" \
+	-o "${JAIL_WORKSPACE}/tmp/output-script" \
 	"${CLONE_HEAD}"
 
 # Verify output exists (either a reply .eml or generated .patch files)
-messages=$(find "${JAIL_WORKSPACE}/tmp/claude-messages" -maxdepth 1 -type f \
-	\( -name '*.eml' -o -name '*.patch' \))
-if [ -z "${messages}" ]; then
-	echo "E: no reply or patches in ${JAIL_WORKSPACE}/tmp/claude-messages/" >&2
+replies=$(find "${JAIL_WORKSPACE}/tmp/output-agent" -maxdepth 1 -name '*.eml' -type f 2>/dev/null || true)
+patches=$(find "${JAIL_WORKSPACE}/tmp/output-script" -maxdepth 1 -name '*.patch' -type f 2>/dev/null || true)
+if [ -z "${replies}" ] && [ -z "${patches}" ]; then
+	echo "E: no reply .eml files in tmp/output-agent/ or .patch files in tmp/output-script/" >&2
 	exit 1
 fi
 
 # Report what files were created in the staging directory.
-tree "${JAIL_WORKSPACE}/tmp"
+tree -I 'mail' "${JAIL_WORKSPACE}/tmp"
 
 # Ingest replies directly from the staging dir
-${SCRIPT_DIR}/claude-mail-ingest "${JAIL_WORKSPACE}/tmp/claude-messages"
+log "ingesting replies"
+${SCRIPT_DIR}/claude-mail-ingest "${JAIL_WORKSPACE}/tmp/output-agent"
+${SCRIPT_DIR}/claude-mail-ingest "${JAIL_WORKSPACE}/tmp/output-script"
 
 # Mark the processed message as handled by removing the new tag.
+log "remove new tag from message"
 notmuch tag -new -- "${MSG_ID}"
+
+log "done ${MSG_ID}"

@@ -20,14 +20,14 @@ Case 2 - New thread (starting a separate conversation):
     presence would wrongly attach the message to the old thread.
 
     You MUST also:
-    - Write an empty file at %%WORKSPACE%%/tmp/new-thread to
+    - Write an empty file at %%WORKSPACE%%/tmp/output-agent/new-thread to
       signal that patches (if any) should start a new thread.
     - Include the original thread's Message-ID and Subject in
       the body so the reader can verify the back-reference
       (e.g. "This follows up on <msgid> 'Subject'.").
 
 Write each reply as its own .eml file in
-%%WORKSPACE%%/tmp/claude-messages/, each with a unique filename ending
+%%WORKSPACE%%/tmp/output-agent/, each with a unique filename ending
 in .eml.
 
 Rules:
