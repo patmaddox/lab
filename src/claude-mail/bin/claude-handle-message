@@ -97,9 +97,13 @@ if [ "${commit_count}" -gt 1 ]; then
 	cover_args="--cover-letter --cover-from-description=auto --description-file=${JAIL_WORKSPACE}/tmp/cover-description"
 fi
 
+reply_to_args="--in-reply-to=${thread_root}"
+if [ -f "${JAIL_WORKSPACE}/tmp/new-thread" ]; then
+	reply_to_args=""
+fi
+
 git -C "${JAIL_WORKSPACE}" format-patch --patience \
-	--thread ${cover_args} \
-	--in-reply-to="${thread_root}" \
+	--thread ${cover_args} ${reply_to_args} \
 	-o "${JAIL_WORKSPACE}/tmp/claude-messages" \
 	"${CLONE_HEAD}"
 
