@@ -75,7 +75,8 @@ sed -e "s|^path=.*|path=${WORKSPACE}/tmp/mail|" \
     > "${JAIL_WORKSPACE}/tmp/notmuch.conf"
 
 export CLAUDE_ENV_NOTMUCH_CONFIG="${WORKSPACE}/tmp/notmuch.conf"
-cat "${JAIL_WORKSPACE}/tmp/input.eml" | claude -p --append-system-prompt-file ${WORKSPACE}${SYSTEM_PROMPT_FILE}
+echo "Read and act on the email at ${WORKSPACE}/tmp/input.eml" \
+	| claude -p --append-system-prompt-file ${WORKSPACE}${SYSTEM_PROMPT_FILE}
 
 # Produce patch series from any new commits
 thread_root=$(extract_msgid_from_header "References" \
