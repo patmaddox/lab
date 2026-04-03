@@ -117,6 +117,35 @@ git -C "${JAIL_WORKSPACE}" format-patch --patience \
 	-o "${JAIL_WORKSPACE}/tmp/output-script" \
 	"${CLONE_HEAD}"
 
+# Embed agent reply bodies into patch commentary.
+# When the agent produces both a reply .eml and commits, the reply
+# body becomes commentary in the first patch (cover letter or sole
+# patch) and the .eml is suppressed.
+eml_files=$(find "${JAIL_WORKSPACE}/tmp/output-agent" -maxdepth 1 -name '*.eml' -type f 2>/dev/null | sort)
+first_patch=$(find "${JAIL_WORKSPACE}/tmp/output-script" -maxdepth 1 -name '*.patch' -type f 2>/dev/null | sort | head -1)
+if [ -n "${eml_files}" ] && [ -n "${first_patch}" ]; then
+	commentary="${JAIL_WORKSPACE}/tmp/output-script/commentary"
+	for eml in ${eml_files}; do
+		sed '1,/^$/d' "${eml}" >> "${commentary}"
+	done
+	awk -v cf="${commentary}" '
+		/^---$/ && !done {
+			print
+			print ""
+			while ((getline l < cf) > 0) print l
+			done = 1
+			next
+		}
+		{ print }
+	' "${first_patch}" > "${first_patch}.tmp"
+	mv "${first_patch}.tmp" "${first_patch}"
+	rm -f "${commentary}"
+	for eml in ${eml_files}; do
+		rm "${eml}"
+	done
+	log "embedded agent reply in ${first_patch##*/}"
+fi
+
 # Verify output exists (either a reply .eml or generated .patch files)
 replies=$(find "${JAIL_WORKSPACE}/tmp/output-agent" -maxdepth 1 -name '*.eml' -type f 2>/dev/null || true)
 patches=$(find "${JAIL_WORKSPACE}/tmp/output-script" -maxdepth 1 -name '*.patch' -type f 2>/dev/null || true)
