@@ -2,6 +2,7 @@ host_name := "$(basename $(pwd))"
 newbe_src := "../../../src/new-be"
 freebsd_src := "../../../src/freebsd-src"
 
+[default]
 help:
   just -l
 
