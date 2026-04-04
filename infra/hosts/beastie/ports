@@ -1,6 +1,6 @@
 archivers/gtar
 benchmarks/iperf3
-comms/emacs-eat
+comms/emacs-eat@full
 databases/duckdb
 databases/postgresql17-client
 databases/postgresql17-contrib
@@ -8,7 +8,7 @@ databases/postgresql17-server
 databases/tcl-sqlite3
 deskutils/i3lock
 deskutils/just
-#deskutils/zk
+deskutils/recoll
 devel/atf
 devel/autoconf
 devel/bear
@@ -24,6 +24,7 @@ devel/hs-ShellCheck
 devel/hs-git-annex
 devel/jujutsu
 devel/lua-cjson@lua54
+devel/magit@full
 devel/ninja
 devel/ob-rust
 devel/py-awscli@py311
@@ -42,10 +43,11 @@ editors/libreoffice
 editors/marginalia.el@full
 editors/neovim
 editors/orderless.el@full
-editors/perspective.el
+editors/perspective.el@full
 editors/prescient.el
 editors/vertico.el@full
 emulators/linux_base-rl9
+filesystems/ntfs
 ftp/wget
 games/gtypist
 graphics/drm-61-kmod
@@ -64,6 +66,8 @@ lang/python310
 lang/rust
 lang/tcl-wrapper
 lang/zig
+mail/notmuch
+mail/notmuch-emacs@full
 multimedia/webcamd
 net/google-cloud-sdk
 net/haproxy
@@ -76,6 +80,7 @@ ports-mgmt/portlint
 ports-mgmt/poudriere-devel
 security/1password-client2
 security/acme.sh
+security/age
 security/aws-vault
 security/doas
 security/libsodium
@@ -107,6 +112,7 @@ sysutils/zellij
 sysutils/zelta
 textproc/docproj
 textproc/fzf
+textproc/go-yq
 textproc/groff
 textproc/hs-pandoc
 textproc/jq
