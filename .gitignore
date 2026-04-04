@@ -15,6 +15,7 @@
 .plzconfig.local
 .pnpm-store
 .redo*
+/lib
 _build
 dotfiles/nvim/lazy
 ninja-out
