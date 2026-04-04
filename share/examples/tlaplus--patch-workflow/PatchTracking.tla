@@ -1,23 +1,26 @@
 ---- MODULE PatchTracking ----
+CONSTANTS new, review, waiting, applied, dropped
+
 VARIABLES state
 
-States == {"new", "in-review", "waiting", "applied", "dropped"}
-IsDone == state \in {"applied", "dropped"}
+States == {new, review, waiting, applied, dropped}
 
-Init == state = "new"
+IsDone == state \in {applied, dropped}
+
+Init == state = new
 
 Done == IsDone /\ UNCHANGED state
 
-Review == state = "new" /\ state' = "in-review"
+Review == state = new /\ state' = review
 
-Apply == state = "in-review" /\ state' = "applied"
+Apply == state = review /\ state' = applied
 
-Revise == state = "in-review" /\ state' = "waiting"
+Revise == state = review /\ state' = waiting
 
-Drop == state \in {"new", "in-review", "waiting"}
-    /\ state' = "dropped"
+Drop == state \in {new, review, waiting}
+    /\ state' = dropped
 
-Reopen == state = "dropped" /\ state' = "new"
+Reopen == state = dropped /\ state' = new
 
 Next == Review \/ Apply \/ Revise \/ Drop \/ Reopen \/ Done
 
@@ -25,7 +28,7 @@ Spec == Init /\ [][Next]_state /\ WF_state(Next)
 
 TypeOK == state \in States
 
-NoAppliedEscape == [](state = "applied" => [](state = "applied"))
+NoAppliedEscape == [](state = applied => [](state = applied))
 
 EventuallyDone == <>(IsDone)
 
