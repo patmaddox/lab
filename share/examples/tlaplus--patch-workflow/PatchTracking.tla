@@ -25,6 +25,8 @@ Spec == Init /\ [][Next]_state /\ WF_state(Next)
 
 TypeOK == state \in States
 
+NoAppliedEscape == [](state = "applied" => [](state = "applied"))
+
 EventuallyDone == <>(IsDone)
 
 ====
