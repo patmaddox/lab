@@ -2,7 +2,7 @@
 set -eu
 
 main() {
-    (flavored_ports; unflavored_ports) | unique_ports | format_ports
+    (flavored_ports; unflavored_ports) | exclude_pkgbase | unique_ports | format_ports
 }
 
 flavored_ports() {
@@ -11,6 +11,10 @@ flavored_ports() {
 
 unflavored_ports() {
     pkg query -e '%a = 0' '%o'
+}
+
+exclude_pkgbase() {
+	grep -v ^base\/FreeBSD
 }
 
 unique_ports() {
