@@ -280,6 +280,10 @@
 (advice-add #'register-preview :override #'consult-register-window)
 
 ;; C-x bindings (ctl-x-map)
+(global-set-key (kbd "C-x C-c")
+                (lambda () (interactive)
+                  (when (y-or-n-p "Really close this frame? ")
+                    (save-buffers-kill-terminal))))
 (global-set-key (kbd "C-x b") 'consult-buffer)
 (global-set-key (kbd "C-x 4 b") 'consult-buffer-other-window)
 (global-set-key (kbd "C-x 5 b") 'consult-buffer-other-frame)
