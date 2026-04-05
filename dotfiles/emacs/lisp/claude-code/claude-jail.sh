@@ -22,4 +22,4 @@ if [ -n "${_env_fwd}" ]; then
 fi
 
 exec doas jexec -l -d "$(pwd)" -U "$(whoami)" claude \
-    ${_env_fwd} /home/patmaddox/.npm-global/bin/claude "$@"
+    ${_env_fwd} /usr/local/bin/claude "$@"
