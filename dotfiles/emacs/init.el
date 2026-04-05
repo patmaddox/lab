@@ -566,6 +566,7 @@ and prefixes every line with \"> \"."
 (setq notmuch-draft-tags '("+draft"))
 (setq notmuch-search-oldest-first nil)
 (setq notmuch-show-only-matching-messages t)
+(setq notmuch-show-mark-read-tags nil)
 (setq notmuch-saved-searches
       '((:name "my inbox" :query "tag:new not tag:patch not tag:flagged not to:claude" :key "i")
         (:name "claude inbox" :query "tag:new and to:claude not tag:draft" :key "c")
