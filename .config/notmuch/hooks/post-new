@@ -1,0 +1,5 @@
+#!/bin/sh
+# Purge messages tagged deleted from disk.
+# The database catches up on the next notmuch-new run.
+notmuch search --format=text0 --output=files tag:deleted \
+  | xargs -0 rm -f

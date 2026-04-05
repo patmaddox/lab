@@ -13,6 +13,7 @@
 #
 [database]
 path=/home/patmaddox/lab/repos/lab-devel/default.jj/mail
+hook_dir=/home/patmaddox/lab/default.jj/.config/notmuch/hooks
 # User configuration
 #
 # Here is where you can let notmuch know how you would like to be
