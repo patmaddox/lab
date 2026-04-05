@@ -567,14 +567,13 @@ and prefixes every line with \"> \"."
 (setq notmuch-search-oldest-first nil)
 (setq notmuch-show-only-matching-messages t)
 (setq notmuch-saved-searches
-      '((:name "todo" :query "tag:todo" :key "t")
-        (:name "patches - open" :query "tag:patch not tag:patch:applied not tag:patch:rejected not tag:patch:abandoned" :key "p")
+      '((:name "flagged" :query "tag:flagged" :key "f")
+        (:name "patches - open" :query "tag:patch not tag:patch:applied not tag:patch:dropped" :key "p")
         (:name "my inbox" :query "tag:new not tag:patch not tag:flagged not to:claude" :key "i")
         (:name "drafts" :query "tag:draft" :key "d")
         (:name "claude inbox" :query "tag:new and to:claude not tag:draft" :key "c")
-        (:name "patches - closed" :query "tag:patch:applied or tag:patch:rejected" :key "P or tag:patch:abandoned")
+        (:name "patches - closed" :query "tag:patch:applied or tag:patch:dropped")
         (:name "open" :query "not tag:closed" :key "o")
-        ;;(:name "flagged" :query "tag:flagged" :key "f")
         ;;(:name "unread" :query "tag:unread" :key "u")
         (:name "sent" :query "tag:sent" :key "s")
         (:name "all mail" :query "*" :key "a")))
@@ -586,6 +585,7 @@ and prefixes every line with \"> \"."
                            nil)))
               (goto-char (point-min))
               (force-window-update (selected-window))))
+
 (require 'pm-notmuch)
 (add-to-list 'notmuch-hello-sections
              #'pm-notmuch-hello-insert-leaves t)
