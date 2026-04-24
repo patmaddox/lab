@@ -99,6 +99,9 @@
   (setq eat-very-visible-vertical-bar-cursor-type '(bar nil nil))
   (setq eat-very-visible-horizontal-bar-cursor-type '(hbar nil nil))
 
+  ;; Don't let C-c C-k kill the process
+  (define-key eat-mode-map (kbd "C-c C-k") nil)
+
   (when (display-graphic-p)
     ;; Bind the physical <escape> key to send itself to terminal
     (define-key eat-semi-char-mode-map (kbd "<escape>") #'eat-self-input)
