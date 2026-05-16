@@ -190,6 +190,7 @@
 
 ;; Shell scripts (FreeBSD style, detects shell from shebang)
 (add-hook 'bash-ts-mode-hook 'freebsd-sh-style-ts)
+(add-hook 'sh-mode-hook 'freebsd-sh-style-ts)
 
 ;;; Project management
 (setq project-vc-extra-root-markers
