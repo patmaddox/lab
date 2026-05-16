@@ -1,6 +1,6 @@
 archivers/gtar
 benchmarks/iperf3
-comms/emacs-eat@full
+comms/emacs-eat
 databases/duckdb
 databases/postgresql17-client
 databases/postgresql17-contrib
@@ -24,7 +24,7 @@ devel/hs-ShellCheck
 devel/hs-git-annex
 devel/jujutsu
 devel/lua-cjson@lua54
-devel/magit@full
+devel/magit
 devel/ninja
 devel/ob-rust
 devel/py-awscli@py311
@@ -37,15 +37,15 @@ devel/tcllib
 devel/uclcmd
 devel/valgrind-devel
 dns/bind-tools
-editors/consult.el@full
-editors/emacs@full
+editors/consult.el
+editors/emacs
 editors/libreoffice
-editors/marginalia.el@full
+editors/marginalia.el
 editors/neovim
-editors/orderless.el@full
-editors/perspective.el@full
+editors/orderless.el
+editors/perspective.el
 editors/prescient.el
-editors/vertico.el@full
+editors/vertico.el
 emulators/linux_base-rl9
 filesystems/ntfs
 ftp/wget
@@ -67,7 +67,7 @@ lang/rust
 lang/tcl-wrapper
 lang/zig
 mail/notmuch
-mail/notmuch-emacs@full
+mail/notmuch-emacs
 multimedia/webcamd
 net/google-cloud-sdk
 net/haproxy
@@ -116,7 +116,7 @@ textproc/go-yq
 textproc/groff
 textproc/hs-pandoc
 textproc/jq
-textproc/markdown-mode.el@full
+textproc/markdown-mode.el
 textproc/p5-ack
 textproc/ripgrep
 textproc/tree-sitter-grammars
