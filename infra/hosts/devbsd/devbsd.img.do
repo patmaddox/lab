@@ -116,7 +116,7 @@ install_bootloader() {
 }
 
 cleanup() {
-    doas zfs set readonly=on devbsd--zroot/ROOT/default
+#    doas zfs set readonly=on devbsd--zroot/ROOT/default
     doas zpool export devbsd--zroot || true
     [ -n "${mdid}" ] && doas mdconfig -d -u ${mdid} || true
     doas rm -rf ${rootdir} ${bootdir} ${repoconfdir}
