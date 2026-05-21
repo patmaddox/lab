@@ -2,9 +2,11 @@
 set -eu
 set -o pipefail
 
-buildroot=/var/tmp/freebsd-src
+. "$(dirname "$(realpath "$0")")/build-common.sh"
 
 main() {
+    renice -n 20 -p $$ > /dev/null
+
     local cmd
     cmd=${1}; shift
 
@@ -33,7 +35,7 @@ parse_build_args() {
     rev=${1}; shift
 
     src=${buildroot}/${config}
-    objroot=${src}/obj/  # trailing / required by src.sys.obj.mk
+    objroot=$(build_objroot "${config}")
     pkgbase=${buildroot}/pkgbase/${config}
 
     sha=$(jj -R ${JJ_ROOT} log -r "${rev}" -T 'commit_id' --no-graph)
@@ -46,20 +48,20 @@ checkout_code() {
 }
 
 buildworld() {
-    _make buildworld
+    _build buildworld
 }
 
 buildkernel() {
-    _make buildkernel
+    _build buildkernel
 }
 
 pkgbase() {
     mkdir -p ${pkgbase}
-    _make REPODIR=${pkgbase} packages
+    _build REPODIR=${pkgbase} packages
 }
 
 vm-image() {
-    _make_release clean -DWITH_VMIMAGES
+    _build_release clean -DWITH_VMIMAGES
 
     local objtop pkg_abi pkgbase_conf_dir
     objtop=$(OBJROOT=${objroot} make -C ${src} -V OBJTOP)
@@ -69,41 +71,15 @@ vm-image() {
     cat > ${pkgbase_conf_dir}/FreeBSD-base.conf <<EOF
 FreeBSD-base: { url: "file://${pkgbase}/${pkg_abi}/latest", enabled: yes}
 EOF
-    _make_release PKGBASE_REPO_DIR=${pkgbase} VM_IMAGE_CONFIG=$(realpath ${VM_IMAGE_CONFIG}) VMFORMATS=raw -DWITH_VMIMAGES vm-image
+    _build_release PKGBASE_REPO_DIR=${pkgbase} VM_IMAGE_CONFIG=$(realpath ${VM_IMAGE_CONFIG}) VMFORMATS=raw -DWITH_VMIMAGES vm-image
 }
 
-_make() {
-    __MAKE_CONF=/dev/null \
-	CCACHE_BASEDIR='${SRCTOP}' \
-	CCACHE_CONFIGPATH=$(realpath ${CCACHE_CONFIGPATH}) \
-	KERNCONF=${KERNCONF} \
-	OBJROOT=${objroot} \
-	SRCCONF=$(realpath ${SRCCONF}) \
-	WITH_META_MODE=YES \
-	nice -n 20 \
-	make -C ${src} \
-	-s \
-	-j$(sysctl -n hw.ncpu) \
-	-DNO_ROOT \
-	${@}
+_build() {
+    build_make -C ${src} -s -j$(sysctl -n hw.ncpu) -DNO_ROOT "${@}"
 }
 
-_make_release() {
-    __MAKE_CONF=/dev/null \
-	CCACHE_BASEDIR='${SRCTOP}' \
-	CCACHE_CONFIGPATH=$(realpath ${CCACHE_CONFIGPATH}) \
-	KERNCONF=${KERNCONF} \
-	OBJROOT=${objroot} \
-	SRCCONF=$(realpath ${SRCCONF}) \
-	WITH_META_MODE=YES \
-	nice -n 20 \
-	make -C ${src}/release \
-	-s \
-	-j$(sysctl -n hw.ncpu) \
-	-DNO_ROOT \
-	-DNOPORTS \
-	-DNOSRC \
-	${@}
+_build_release() {
+    build_make -C ${src}/release -s -j$(sysctl -n hw.ncpu) -DNO_ROOT -DNOPORTS -DNOSRC "${@}"
 }
 
 main "${@}"
