@@ -2,6 +2,8 @@
 set -eu
 set -o pipefail
 
+buildroot=/var/tmp/freebsd-src
+
 main() {
     local cmd
     cmd=${1}; shift
@@ -13,7 +15,7 @@ main() {
  	    : ${KERNCONF}
  	    : ${SRCCONF}
 
-	    local config rev outdir src obj sha
+	    local config rev src pkgbase sha
 	    parse_build_args "${@}"
 	    checkout_code
 
@@ -29,17 +31,15 @@ main() {
 parse_build_args() {
     config=${1}; shift
     rev=${1}; shift
-    outdir=${1}; shift
 
-    src=${outdir}/src
-    obj=${outdir}/obj
+    src=${buildroot}/${config}
+    objroot=${src}/obj/  # trailing / required by src.sys.obj.mk
+    pkgbase=${buildroot}/pkgbase/${config}
 
     sha=$(jj -R ${JJ_ROOT} log -r "${rev}" -T 'commit_id' --no-graph)
 }
 
 checkout_code() {
-    mkdir -p ${obj}
-
     test -d ${src}/.git || git clone --no-checkout ${JJ_ROOT} ${src}
     git -C ${src} remote update
     git -C ${src} checkout -f ${sha}
@@ -55,32 +55,30 @@ buildkernel() {
 }
 
 pkgbase() {
-    local repodir
-    repodir=${outdir}/pkgbase
-    mkdir -p ${repodir}
-    _make REPODIR=$(realpath ${repodir}) packages
+    mkdir -p ${pkgbase}
+    _make REPODIR=${pkgbase} packages
 }
 
 vm-image() {
     _make_release clean -DWITH_VMIMAGES
 
-    local repodir objtop pkg_abi pkgbase_conf_dir
-    objtop=$(make -C ${src} -V OBJTOP OBJROOT=$(realpath ${obj})/)
+    local objtop pkg_abi pkgbase_conf_dir
+    objtop=$(OBJROOT=${objroot} make -C ${src} -V OBJTOP)
     pkg_abi=$(pkg -o ABI_FILE=${objtop}/worldstage/usr/bin/uname config ABI)
     pkgbase_conf_dir=${objtop}/release/pkgbase-repo-dir
     mkdir -p ${pkgbase_conf_dir}
-    repodir=${outdir}/pkgbase
     cat > ${pkgbase_conf_dir}/FreeBSD-base.conf <<EOF
-FreeBSD-base: { url: "file://$(realpath ${repodir})/${pkg_abi}/latest", enabled: yes}
+FreeBSD-base: { url: "file://${pkgbase}/${pkg_abi}/latest", enabled: yes}
 EOF
-    _make_release PKGBASE_REPO_DIR=$(realpath ${repodir}) VM_IMAGE_CONFIG=$(realpath ${VM_IMAGE_CONFIG}) VMFORMATS=raw -DWITH_VMIMAGES vm-image
+    _make_release PKGBASE_REPO_DIR=${pkgbase} VM_IMAGE_CONFIG=$(realpath ${VM_IMAGE_CONFIG}) VMFORMATS=raw -DWITH_VMIMAGES vm-image
 }
 
 _make() {
     __MAKE_CONF=/dev/null \
+	CCACHE_BASEDIR='${SRCTOP}' \
 	CCACHE_CONFIGPATH=$(realpath ${CCACHE_CONFIGPATH}) \
 	KERNCONF=${KERNCONF} \
-	OBJROOT=$(realpath ${obj})/ \
+	OBJROOT=${objroot} \
 	SRCCONF=$(realpath ${SRCCONF}) \
 	nice -n 20 \
 	make -C ${src} \
@@ -92,9 +90,10 @@ _make() {
 
 _make_release() {
     __MAKE_CONF=/dev/null \
+	CCACHE_BASEDIR='${SRCTOP}' \
 	CCACHE_CONFIGPATH=$(realpath ${CCACHE_CONFIGPATH}) \
 	KERNCONF=${KERNCONF} \
-	OBJROOT=$(realpath ${obj})/ \
+	OBJROOT=${objroot} \
 	SRCCONF=$(realpath ${SRCCONF}) \
 	nice -n 20 \
 	make -C ${src}/release \

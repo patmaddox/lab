@@ -32,7 +32,9 @@ EOF
 	exit 0
 	;;
     clean)
-	rm -rf ${SRC_ROOT}/_build/${config}
+	buildroot=/var/tmp/freebsd-src
+	rm -rf ${buildroot}/${config}
+	rm -rf ${buildroot}/pkgbase/${config}
 	rm -f buildworld buildkernel pkgbase vm-image
 	exit 0
 	;;
@@ -70,8 +72,5 @@ export SRCCONF=$(realpath ${SRC_ROOT}/src.conf)
 #     make: illegal argument to -j -- must be positive integer!
 unset MAKEFLAGS
 
-outdir=${SRC_ROOT}/_build/${config}
-mkdir -p ${outdir}
-
 redo-ifchange ${srcs} ${SRC_ROOT}/share/build.sh
-${SRC_ROOT}/share/build.sh ${target} ${config} ${rev} ${outdir} | tee ${3}
+${SRC_ROOT}/share/build.sh ${target} ${config} ${rev} | tee ${3}
