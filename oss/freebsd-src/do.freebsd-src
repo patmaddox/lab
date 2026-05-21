@@ -44,7 +44,7 @@ esac
 
 export SRC_ROOT=$(pwd)
 export CCACHE_CONFIGPATH=${SRC_ROOT}/ccache.conf
-export GIT_MAIN=$(realpath ${SRC_ROOT}/main.jj)
+export GIT_MAIN=$(realpath ${SRC_ROOT}/default.jj)
 export KERNCONF=${kernel}
 export SRCCONF=$(realpath ${SRC_ROOT}/src.conf)
 
