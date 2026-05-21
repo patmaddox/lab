@@ -31,6 +31,11 @@ Config: ${config}
 EOF
 	exit 0
 	;;
+    clean)
+	rm -rf ${SRC_ROOT}/_build/${config}
+	rm -f buildworld buildkernel pkgbase vm-image
+	exit 0
+	;;
     rev.stamp)
 	redo-always
 	jj -R ${SRC_ROOT}/default.jj log -r "${rev}" -T 'commit_id' --no-graph | redo-stamp
