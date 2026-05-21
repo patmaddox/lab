@@ -4,8 +4,7 @@
 #
 # Symlink this as default.do in each target directory.
 # Redo passes the target name as $2 (e.g. buildworld, pkgbase).
-# Each target dir has a src symlink to its source tree and a
-# config file with kernel settings.
+# Each target dir has a config file with rev and kernel settings.
 set -eu
 set -o pipefail
 
@@ -16,7 +15,6 @@ config=$(basename $(pwd))
 target=$2
 
 . ./config
-tree=$(realpath ./src)
 
 case "${target}" in
     help)
@@ -28,13 +26,18 @@ Targets:
   vm-image     Build VM image (depends on pkgbase)
 
 Config: ${config}
-  tree:   ${tree}
+  rev:    ${rev}
   kernel: ${kernel}
 EOF
 	exit 0
 	;;
+    rev.stamp)
+	redo-always
+	jj -R ${SRC_ROOT}/default.jj log -r "${rev}" -T 'commit_id' --no-graph | redo-stamp
+	exit 0
+	;;
     buildworld)
-	srcs=${tree}/.jj/working_copy/checkout
+	srcs=rev.stamp
 	;;
     buildkernel)
 	srcs=buildworld
@@ -54,7 +57,7 @@ esac
 
 export SRC_ROOT
 export CCACHE_CONFIGPATH=${SRC_ROOT}/ccache.conf
-export GIT_MAIN=$(realpath ${SRC_ROOT}/trees/default.jj)
+export JJ_ROOT=$(realpath ${SRC_ROOT}/default.jj)
 export KERNCONF=${kernel}
 export SRCCONF=$(realpath ${SRC_ROOT}/src.conf)
 
@@ -66,4 +69,4 @@ outdir=${SRC_ROOT}/_build/${config}
 mkdir -p ${outdir}
 
 redo-ifchange ${srcs} ${SRC_ROOT}/share/build.sh
-${SRC_ROOT}/share/build.sh ${target} ${config} ${tree} ${outdir} | tee ${3}
+${SRC_ROOT}/share/build.sh ${target} ${config} ${rev} ${outdir} | tee ${3}

@@ -9,11 +9,11 @@ main() {
     case "${cmd}" in
 	buildworld|buildkernel|pkgbase|vm-image)
  	    : ${CCACHE_CONFIGPATH}
- 	    : ${GIT_MAIN}
+ 	    : ${JJ_ROOT}
  	    : ${KERNCONF}
  	    : ${SRCCONF}
 
-	    local config jjdir outdir src obj sha branch
+	    local config rev outdir src obj sha
 	    parse_build_args "${@}"
 	    checkout_code
 
@@ -28,36 +28,22 @@ main() {
 
 parse_build_args() {
     config=${1}; shift
-    jjdir=${1}; shift
+    rev=${1}; shift
     outdir=${1}; shift
-
-    ensure_not_dirty
 
     src=${outdir}/src
     obj=${outdir}/obj
 
-    sha=$(jj -R ${jjdir} log -r '@-' -T 'commit_id' --no-graph)
-    branch=$(jj -R ${jjdir} log -r '::@ & bookmarks()' -n 1 -T 'self.local_bookmarks()' --no-graph | sed 's/\*$//')
-}
-
-ensure_not_dirty() {
-    set +o pipefail
-    if ! jj -R ${jjdir} status --quiet | grep -q '^Working copy .* (empty) (no description set)'; then
-	echo "E: refusing to build in a dirty tree: ${jjdir}" >&2
-	exit 1
-    fi
-    set -o pipefail
+    sha=$(jj -R ${JJ_ROOT} log -r "${rev}" -T 'commit_id' --no-graph)
 }
 
 checkout_code() {
     mkdir -p ${obj}
 
-    test -d ${src}/.git || git clone --no-checkout ${GIT_MAIN} ${src}
+    test -d ${src}/.git || git clone --no-checkout ${JJ_ROOT} ${src}
     git -C ${src} remote update
-    git -C ${src} fetch origin ${sha}
+    git -C ${src} checkout -f ${sha}
     git -C ${src} clean -fdx
-    git -C ${src} checkout ${branch}
-    git -C ${src} reset --hard ${sha}
 }
 
 buildworld() {
@@ -87,7 +73,7 @@ vm-image() {
     cat > ${pkgbase_conf_dir}/FreeBSD-base.conf <<EOF
 FreeBSD-base: { url: "file://$(realpath ${repodir})/${pkg_abi}/latest", enabled: yes}
 EOF
-    _make_release PKGBASE_REPO_DIR=$(realpath ${repodir}) VM_IMAGE_CONFIG=$(realpath ${jjdir}/../tools/vm-nodbg32.conf) VMFORMATS=raw -DWITH_VMIMAGES vm-image
+    _make_release PKGBASE_REPO_DIR=$(realpath ${repodir}) VM_IMAGE_CONFIG=$(realpath ${VM_IMAGE_CONFIG}) VMFORMATS=raw -DWITH_VMIMAGES vm-image
 }
 
 _make() {
