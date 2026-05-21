@@ -1,2 +1,1 @@
-172.21.1.30:/home/patmaddox/lab.jj /root/lab.jj nfs rw,soft,intr,bgnow,retrycnt=3 0 0
-
+beastie.p7x.dev:/home/patmaddox/lab /root/lab nfs rw,soft,intr,bgnow,retrycnt=3 0 0

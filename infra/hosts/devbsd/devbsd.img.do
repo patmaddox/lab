@@ -7,6 +7,7 @@ exec >&2
 version=16
 pkgdir=../../../oss/freebsd-src/_build/current/pkgbase/FreeBSD:${version}:amd64/latest
 distfiles=$(jj file list dist)
+labpath=root/lab
 
 base_packages="
     FreeBSD-set-base
@@ -99,7 +100,7 @@ install_base() {
 
 install_config() {
     # nfs mount point
-    doas mkdir ${rootdir}/root/lab.jj
+    doas mkdir ${rootdir}/${labpath}
 
     # config
     distmtree=$(realpath dist.mtree)
