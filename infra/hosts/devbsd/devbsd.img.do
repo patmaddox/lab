@@ -8,6 +8,17 @@ version=16
 pkgdir=../../../oss/freebsd-src/_build/current/pkgbase/FreeBSD:${version}:amd64/latest
 distfiles=$(jj file list dist)
 
+base_packages="
+    FreeBSD-set-base
+    FreeBSD-set-kernels
+    FreeBSD-set-tests
+"
+extra_packages="
+    ccache4
+    perl5
+    tmux
+"
+
 # redo secret sauce
 redo-ifchange \
     ../../../oss/freebsd-src/targets/current/pkgbase \
@@ -28,7 +39,21 @@ prepare_disk() {
     bootdir=${rootdir}-boot
     mkdir ${bootdir}
 
-    pkg_cmd="doas env ABI=FreeBSD:${version}:amd64 IGNORE_OSVERSION=yes pkg -r ${rootdir}"
+    repoconfdir=$(mktemp -d -t devbsd-repo)
+    cat > ${repoconfdir}/FreeBSD-base.conf <<EOF
+FreeBSD-base: { url: "file://$(realpath ${pkgdir})", enabled: yes }
+EOF
+    cat > ${repoconfdir}/FreeBSD.conf <<EOF
+FreeBSD: {
+  url: "pkg+https://pkg.FreeBSD.org/\${ABI}/latest",
+  mirror_type: "srv",
+  signature_type: "fingerprints",
+  fingerprints: "/usr/share/keys/pkg",
+  enabled: yes
+}
+EOF
+
+    pkg_cmd="doas pkg --rootdir ${rootdir} --repo-conf-dir ${repoconfdir} -o ASSUME_ALWAYS_YES=yes -o IGNORE_OSVERSION=yes -o ABI=FreeBSD:${version}:amd64"
 
     truncate -s 1300m ${outfile}
     md=$(doas mdconfig -a -f ${outfile})
@@ -66,10 +91,9 @@ prepare_zpool() {
 }
 
 install_base() {
-    ${pkg_cmd} add $(realpath ${pkgdir}/FreeBSD-set-base-${version}.*.pkg)
-    ${pkg_cmd} add $(realpath ${pkgdir}/FreeBSD-set-kernels-${version}.*.pkg)
-    ${pkg_cmd} add $(realpath ${pkgdir}/FreeBSD-set-tests-${version}.*.pkg)
-    ${pkg_cmd} install -r FreeBSD -y ccache4 perl5 tmux
+    ${pkg_cmd} update
+    ${pkg_cmd} install -U -r FreeBSD-base ${base_packages}
+    ${pkg_cmd} install -r FreeBSD ${extra_packages}
     doas zfs snapshot -r devbsd--zroot@base
 }
 
@@ -95,7 +119,7 @@ cleanup() {
     doas zfs set readonly=on devbsd--zroot/ROOT/default
     doas zpool export devbsd--zroot || true
     [ -n "${mdid}" ] && doas mdconfig -d -u ${mdid} || true
-    doas rm -rf ${rootdir} ${bootdir}
+    doas rm -rf ${rootdir} ${bootdir} ${repoconfdir}
 }
 
 main
