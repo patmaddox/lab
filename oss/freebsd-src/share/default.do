@@ -40,7 +40,7 @@ EOF
 	;;
     rev.stamp)
 	redo-always
-	jj -R ${SRC_ROOT}/default.jj log -r "${rev}" -T 'commit_id' --no-graph | redo-stamp
+	jj -R ${SRC_ROOT}/default.jj show -r "${rev}" -T 'commit_id' --tool true | redo-stamp
 	exit 0
 	;;
     buildworld)
@@ -73,7 +73,8 @@ export SRCCONF=$(realpath ${SRC_ROOT}/src.conf)
 unset MAKEFLAGS
 
 redo-ifchange ${srcs} ${SRC_ROOT}/share/build.sh
+sha=$(jj -R ${SRC_ROOT}/default.jj show -r "${rev}" -T 'commit_id' --tool true)
 tmplog=/tmp/freebsd-build.${config}.${target}.log
-${SRC_ROOT}/share/build.sh ${target} ${config} ${rev} | tee ${tmplog}
+${SRC_ROOT}/share/build.sh ${target} ${config} ${sha} | tee ${tmplog}
 cp ${tmplog} ${3}
 rm ${tmplog}

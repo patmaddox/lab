@@ -18,6 +18,19 @@ Commands:
 | `just objdir-release` | print .OBJDIR/release for the build                   |
 | `just command-table`  | Print the command list in markdown table format       |
 
+## Setup
+
+### Source server
+
+Enable fetching arbitrary commits by SHA from the jj-colocated
+git repo:
+
+    git -C /path/to/default.jj config uploadpack.allowReachableSHA1InWant true
+
+This is needed because jj stores commits that are not on any git
+branch. Without this setting, `git clone` and `git fetch` cannot
+retrieve those commits.
+
 ## Config
 
 Builds are configured via config files and built with `scripts/build.sh`.

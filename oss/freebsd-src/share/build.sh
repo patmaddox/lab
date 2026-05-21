@@ -17,7 +17,7 @@ main() {
  	    : ${KERNCONF}
  	    : ${SRCCONF}
 
-	    local config rev src pkgbase sha
+	    local config sha src pkgbase
 	    parse_build_args "${@}"
 	    checkout_code
 
@@ -32,18 +32,19 @@ main() {
 
 parse_build_args() {
     config=${1}; shift
-    rev=${1}; shift
+    sha=${1}; shift
 
     src=${buildroot}/${config}
     objroot=$(build_objroot "${config}")
     pkgbase=${buildroot}/pkgbase/${config}
-
-    sha=$(jj -R ${JJ_ROOT} log -r "${rev}" -T 'commit_id' --no-graph)
 }
 
 checkout_code() {
-    test -d ${src}/.git || git clone --no-checkout ${JJ_ROOT} ${src}
+    if [ ! -d ${src}/.git ]; then
+	git clone --no-checkout ${JJ_ROOT} ${src}
+    fi
     git -C ${src} remote update
+    git -C ${src} fetch origin ${sha}
     git -C ${src} checkout -f ${sha}
 }
 
