@@ -1,1 +1,1 @@
-beastie.p7x.dev:/home/patmaddox/lab /root/lab nfs rw,soft,intr,bgnow,retrycnt=3 0 0
+beastie.p7x.dev:/home/patmaddox/lab /root/lab nfs rw,nfsv4,bgnow 0 0
