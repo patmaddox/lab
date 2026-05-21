@@ -10,7 +10,7 @@ distfiles=$(jj file list dist)
 
 # redo secret sauce
 redo-ifchange \
-    ../../../oss/freebsd-src/current.pkgbase \
+    ../../../oss/freebsd-src/targets/current/pkgbase \
     ${distfiles} \
     dist.mtree
 outfile=${3}

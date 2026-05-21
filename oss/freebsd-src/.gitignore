@@ -1,6 +1,6 @@
-*.buildkernel
-*.buildworld
-*.pkgbase
-*.vm-image
+buildkernel
+buildworld
+pkgbase
+vm-image
 dev-head
 patches

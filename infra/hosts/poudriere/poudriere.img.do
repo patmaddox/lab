@@ -8,7 +8,7 @@ config=current
 redo-ifchange \
     dist.mtree \
     $(jj file list dist) \
-    ../../../oss/freebsd-src/${config}.pkgbase
+    ../../../oss/freebsd-src/targets/${config}/pkgbase
 
 # not using export, because
 # export FOO=$(cmd that fails)
