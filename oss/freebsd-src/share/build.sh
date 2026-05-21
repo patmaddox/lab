@@ -43,7 +43,6 @@ checkout_code() {
     test -d ${src}/.git || git clone --no-checkout ${JJ_ROOT} ${src}
     git -C ${src} remote update
     git -C ${src} checkout -f ${sha}
-    git -C ${src} clean -fdx
 }
 
 buildworld() {
@@ -80,6 +79,7 @@ _make() {
 	KERNCONF=${KERNCONF} \
 	OBJROOT=${objroot} \
 	SRCCONF=$(realpath ${SRCCONF}) \
+	WITH_META_MODE=YES \
 	nice -n 20 \
 	make -C ${src} \
 	-s \
@@ -95,6 +95,7 @@ _make_release() {
 	KERNCONF=${KERNCONF} \
 	OBJROOT=${objroot} \
 	SRCCONF=$(realpath ${SRCCONF}) \
+	WITH_META_MODE=YES \
 	nice -n 20 \
 	make -C ${src}/release \
 	-s \
