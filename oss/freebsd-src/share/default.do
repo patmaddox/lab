@@ -73,4 +73,7 @@ export SRCCONF=$(realpath ${SRC_ROOT}/src.conf)
 unset MAKEFLAGS
 
 redo-ifchange ${srcs} ${SRC_ROOT}/share/build.sh
-${SRC_ROOT}/share/build.sh ${target} ${config} ${rev} | tee ${3}
+tmplog=/tmp/freebsd-build.${config}.${target}.log
+${SRC_ROOT}/share/build.sh ${target} ${config} ${rev} | tee ${tmplog}
+cp ${tmplog} ${3}
+rm ${tmplog}
