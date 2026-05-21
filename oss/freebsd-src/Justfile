@@ -33,6 +33,11 @@ pkgbase config:
 vm-image config:
   {{ninja}} ninja-out/{{src_root}}/{{config}}/vm-image.stamp
 
+# Enter a build environment shell (run from a target dir)
+[no-cd]
+buildenv:
+  {{justfile_directory()}}/share/buildenv.sh
+
 [no-cd]
 format-patch change="":
   #!/bin/sh
