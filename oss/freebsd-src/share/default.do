@@ -67,8 +67,8 @@ export JJ_ROOT=$(realpath ${SRC_ROOT}/default.jj)
 export KERNCONF=${kernel}
 export SRCCONF=$(realpath ${SRC_ROOT}/src.conf)
 
-# redo-rs sets MAKEFLAGS in a way that produces
-#     make: illegal argument to -j -- must be positive integer!
+# some redo implementations set MAKEFLAGS for GNU jobserver
+# protocol. FreeBSD make does not understand it.
 unset MAKEFLAGS
 
 redo-ifchange ${srcs} ./config ${SRC_ROOT}/share/build.sh ${SRC_ROOT}/share/build-common.sh
