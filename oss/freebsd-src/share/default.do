@@ -40,7 +40,7 @@ EOF
 	;;
     rev.stamp)
 	redo-always
-	jj -R ${SRC_ROOT}/default.jj show -r "${rev}" -T 'commit_id' --tool true | redo-stamp
+	jj -R ${SRC_ROOT}/default.jj show -r "${rev}" -T 'commit_id' --tool true > "$3"
 	exit 0
 	;;
     buildworld)
