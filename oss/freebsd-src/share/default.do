@@ -72,7 +72,7 @@ export SRCCONF=$(realpath ${SRC_ROOT}/src.conf)
 #     make: illegal argument to -j -- must be positive integer!
 unset MAKEFLAGS
 
-redo-ifchange ${srcs} ${SRC_ROOT}/share/build.sh
+redo-ifchange ${srcs} ./config ${SRC_ROOT}/share/build.sh ${SRC_ROOT}/share/build-common.sh
 sha=$(jj -R ${SRC_ROOT}/default.jj show -r "${rev}" -T 'commit_id' --tool true)
 tmplog=/tmp/freebsd-build.${config}.${target}.log
 ${SRC_ROOT}/share/build.sh ${target} ${config} ${sha} | tee ${tmplog}
