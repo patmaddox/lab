@@ -19,6 +19,7 @@ case "${target}" in
     help)
 	cat >&2 <<EOF
 Targets:
+  clean        Remove build artifacts
   buildworld   Build world
   buildkernel  Build kernel (depends on buildworld)
   pkgbase      Build packages (depends on buildworld, buildkernel)
