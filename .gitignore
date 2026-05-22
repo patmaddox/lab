@@ -14,7 +14,7 @@
 .ninja_log
 .plzconfig.local
 .pnpm-store
-.redo*
+**/.redo/
 /lib
 _build
 dotfiles/nvim/lazy
