@@ -1,7 +1,3 @@
-ninja_root := `jj root`
-ninja := "ninja -C " + ninja_root
-src_root := "oss/freebsd-src"
-
 help:
   @just -l
 
@@ -16,22 +12,6 @@ ccache-watch wait='5':
 # Clone the git repository
 clone:
   if [ ! -d main.jj ]; then jj git clone --colocate https://github.com/freebsd/freebsd-src.git main.jj; fi
-
-# Run `make buildworld` for the given config
-buildworld config:
-  {{ninja}} ninja-out/{{src_root}}/{{config}}/buildworld.stamp
-
-# Run `make buildkernel` for the given config
-buildkernel config:
-  {{ninja}} ninja-out/{{src_root}}/{{config}}/buildkernel.stamp
-
-# Run `make packages` for the given config
-pkgbase config:
-  {{ninja}} ninja-out/{{src_root}}/{{config}}/pkgbase.stamp
-
-# Run `make vm-image` for the given config
-vm-image config:
-  {{ninja}} ninja-out/{{src_root}}/{{config}}/vm-image.stamp
 
 # Enter a build environment shell (run from a target dir)
 [no-cd]
