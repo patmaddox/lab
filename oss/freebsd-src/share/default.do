@@ -9,8 +9,8 @@ set -o pipefail
 
 exec >&2
 
-SRC_ROOT=$(dirname $(dirname $(realpath $0)))
-config=$(basename $(pwd))
+SRC_ROOT="$(dirname "$(dirname "$(realpath "$0")")")"
+config="$(basename "$(pwd)")"
 target=$2
 
 . ./config
@@ -39,7 +39,7 @@ EOF
 	;;
     rev.stamp)
 	redo-always
-	jj -R ${SRC_ROOT}/default.jj show -r "${rev}" -T 'commit_id' --tool true > "$3"
+	jj -R "${SRC_ROOT}/default.jj" show -r "${rev}" -T 'commit_id' --tool true > "$3"
 	exit 0
 	;;
     buildworld)
@@ -52,7 +52,7 @@ EOF
 	srcs="buildworld buildkernel"
 	;;
     vm-image)
-	export VM_IMAGE_CONFIG=${SRC_ROOT}/share/vm-nodbg32.conf
+	export VM_IMAGE_CONFIG="${SRC_ROOT}/share/vm-nodbg32.conf"
 	srcs="pkgbase ${SRC_ROOT}/share/vm-nodbg32.conf"
 	;;
     *)
@@ -62,18 +62,18 @@ EOF
 esac
 
 export SRC_ROOT
-export CCACHE_CONFIGPATH=${SRC_ROOT}/ccache.conf
-export JJ_ROOT=$(realpath ${SRC_ROOT}/default.jj)
-export KERNCONF=${kernel}
-export SRCCONF=$(realpath ${SRC_ROOT}/src.conf)
+export CCACHE_CONFIGPATH="${SRC_ROOT}/ccache.conf"
+export JJ_ROOT="$(realpath "${SRC_ROOT}/default.jj")"
+export KERNCONF="${kernel}"
+export SRCCONF="$(realpath "${SRC_ROOT}/src.conf")"
 
 # some redo implementations set MAKEFLAGS for GNU jobserver
 # protocol. FreeBSD make does not understand it.
 unset MAKEFLAGS
 
-redo-ifchange ${srcs} ./config ${SRC_ROOT}/share/build.sh ${SRC_ROOT}/share/build-common.sh
-sha=$(jj -R ${SRC_ROOT}/default.jj show -r "${rev}" -T 'commit_id' --tool true)
-tmplog=/tmp/freebsd-build.${config}.${target}.log
-${SRC_ROOT}/share/build.sh ${target} ${config} ${sha} | tee ${tmplog}
-cp ${tmplog} ${3}
-rm ${tmplog}
+redo-ifchange ${srcs} ./config "${SRC_ROOT}/share/build.sh" "${SRC_ROOT}/share/build-common.sh"
+sha="$(jj -R "${SRC_ROOT}/default.jj" show -r "${rev}" -T 'commit_id' --tool true)"
+tmplog="/tmp/freebsd-build.${config}.${target}.log"
+"${SRC_ROOT}/share/build.sh" "${target}" "${config}" "${sha}" | tee "${tmplog}"
+cp "${tmplog}" "$3"
+rm "${tmplog}"
