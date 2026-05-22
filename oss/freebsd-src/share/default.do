@@ -1,4 +1,3 @@
-#!/bin/sh
 #
 # Shared freebsd-src builder
 #
