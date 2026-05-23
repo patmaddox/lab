@@ -35,6 +35,7 @@ atf_init_test_cases() {
 	atf_add_test_case shared_dep
 	atf_add_test_case missing_dep
 	atf_add_test_case cycle
+	atf_add_test_case clean
 }
 
 atf_test_case hello_world
@@ -721,4 +722,21 @@ cycle_body() {
 	atf_check -o inline:"ss: E: cycle: a\n" cat err.out
 	test ! -f a
 	test ! -f b
+}
+
+atf_test_case clean
+clean_head() {
+	atf_set "descr" "Clean removes built target files"
+}
+clean_body() {
+	cp -r "$(atf_get_srcdir)/examples/5_multiple_targets" work
+	cd work
+	atf_check -s eq:0 ss
+	test -f hello
+	test -f libhello.o
+	atf_check -s eq:0 ss clean
+	test ! -f hello
+	test ! -f libhello.o
+	test -f hello.c
+	test -f libhello.c
 }
