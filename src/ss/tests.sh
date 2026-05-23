@@ -26,6 +26,7 @@ atf_init_test_cases() {
 	atf_add_test_case outdir_multiple
 	atf_add_test_case outdir_mixed
 	atf_add_test_case ls_targets
+	atf_add_test_case unknown_command
 }
 
 atf_test_case hello_world
@@ -327,5 +328,16 @@ ls_targets_body() {
 	atf_check -s eq:0 -o inline:"greeting\nlibhello.o\nhello\n" ss ls
 	test ! -f greeting
 	test ! -f libhello.o
+	test ! -f hello
+}
+
+atf_test_case unknown_command
+unknown_command_head() {
+	atf_set "descr" "Unknown command prints error and exits"
+}
+unknown_command_body() {
+	cp -r "$(atf_get_srcdir)/examples/1_hello_world" work
+	cd work
+	atf_check -s eq:1 -e inline:"ss: unknown target: bogus\n" ss bogus
 	test ! -f hello
 }

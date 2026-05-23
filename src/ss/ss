@@ -221,6 +221,12 @@ else
 	if ${_need_all}; then
 		. ./all.ss
 	fi
+	for _arg in "${@}"; do
+		case " ${targets} " in
+			*" ${_arg} "*) ;;
+			*) echo "ss: unknown target: ${_arg}" >&2; exit 1 ;;
+		esac
+	done
 	targets="${@}"
 fi
 build_targets
