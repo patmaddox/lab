@@ -147,17 +147,20 @@ is_ood() {
 	[ "${cur_sum}" != "${saved_sum}" ]
 }
 
+write_checksums() {
+	local _t _p
+	for _t in $(echo ${built} | tr ' ' '\n' | sort -u); do
+		_p=$(resolve_path ${_t})
+		if [ -f ${_p} ]; then
+			write_depsum ${_p} ${deps_dir}/${_t}
+		fi
+	done
+}
+
 build_targets() {
 	local target
 	for target in ${targets}; do
 		maybe_build ${target}
-	done
-	for target in $(echo ${built} | tr ' ' '\n' | sort -u); do
-		local p
-		p=$(resolve_path ${target})
-		if [ -f ${p} ]; then
-			write_depsum ${p} ${deps_dir}/${target}
-		fi
 	done
 }
 
@@ -257,4 +260,5 @@ else
 	done
 	targets="${@}"
 fi
+trap write_checksums EXIT
 build_targets

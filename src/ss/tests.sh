@@ -649,6 +649,8 @@ ss: build libhello.o
 ss: built libhello.o
 ss: build hello
 ss: E: hello
+ss: checksum libhello.c
+ss: checksum libhello.o
 EOF
 	atf_check -o file:expected.err cat ss.err
 	test -f libhello.o
@@ -657,8 +659,8 @@ EOF
 	ss -d 2>build.err; test $? -ne 0
 	grep '^ss: ' build.err > ss.err
 	cat > expected.err <<'EOF'
-ss: build libhello.o
-ss: built libhello.o
+ss: checksum libhello.o
+ss: checksum libhello.c
 ss: build hello
 ss: E: hello
 EOF
