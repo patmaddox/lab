@@ -8,6 +8,7 @@ atf_init_test_cases() {
 	atf_add_test_case hello_world_rebuild_dirty
 	atf_add_test_case hello_world_vars
 	atf_add_test_case named_build_function
+	atf_add_test_case multiple_deps
 }
 
 atf_test_case hello_world
@@ -72,4 +73,15 @@ named_build_function_body() {
 	cd work
 	atf_check -s eq:0 -e inline:"hello.out\n" ss
 	atf_check -s eq:0 -o inline:"hello world\n" ./hello.out
+}
+
+atf_test_case multiple_deps
+multiple_deps_head() {
+	atf_set "descr" "Target with multiple dependencies"
+}
+multiple_deps_body() {
+	cp -r "$(atf_get_srcdir)/examples/4_multiple_deps" work
+	cd work
+	atf_check -s eq:0 -e inline:"hello\n" ss
+	atf_check -s eq:0 -o inline:"hello world\n" ./hello
 }

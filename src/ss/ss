@@ -17,7 +17,7 @@ target() {
 }
 
 needs() {
-	deps="${1} ${deps}"
+	deps="${@} ${deps}"
 }
 
 sanitize_target() {
