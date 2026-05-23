@@ -31,10 +31,10 @@ hello() {
 ## hello world: named build function
 
 ``` shell
-target hello build_the_thing
+target hello.out build_hello
 needs hello.c
 
-build_the_thing() {
+build_hello() {
   cc -o ${target} ${deps}
 }
 ```

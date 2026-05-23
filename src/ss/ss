@@ -6,16 +6,41 @@ targets=""
 deps=""
 
 target() {
-	targets="${1} ${targets}"
+	local t
+	t=${1}; shift
+	targets="${t} ${targets}"
+
+	if [ $# -gt 0 ]; then
+		set_build_function ${t} ${1}
+	fi
 }
 
 needs() {
 	deps="${1} ${deps}"
 }
 
-. all.ss
+sanitize_target() {
+	echo "${1}" | sed -e "s/\./__DOT__/g"
+}
 
-for target in ${targets}; do
-	echo ${target} >&2
-	${target}
-done
+set_build_function() {
+	eval "__build_$(sanitize_target ${1})=${2}"
+}
+
+get_build_function() {
+	local _fn
+	eval "_fn=\${__build_$(sanitize_target ${1}):-${1}}"
+	echo "$_fn"
+}
+
+build_targets() {
+	local target
+	for target in ${targets}; do
+		echo ${target} >&2
+		build_fn=$(get_build_function ${target})
+		${build_fn}
+	done
+}
+
+. all.ss
+build_targets
