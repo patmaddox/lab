@@ -9,6 +9,8 @@ atf_init_test_cases() {
 	atf_add_test_case hello_world_vars
 	atf_add_test_case named_build_function
 	atf_add_test_case multiple_deps
+	atf_add_test_case multiple_targets
+	atf_add_test_case multiple_targets_reverse
 }
 
 atf_test_case hello_world
@@ -83,5 +85,27 @@ multiple_deps_body() {
 	cp -r "$(atf_get_srcdir)/examples/4_multiple_deps" work
 	cd work
 	atf_check -s eq:0 -e inline:"hello\n" ss
+	atf_check -s eq:0 -o inline:"hello world\n" ./hello
+}
+
+atf_test_case multiple_targets
+multiple_targets_head() {
+	atf_set "descr" "Multiple targets with dependency ordering"
+}
+multiple_targets_body() {
+	cp -r "$(atf_get_srcdir)/examples/5_multiple_targets" work
+	cd work
+	atf_check -s eq:0 -e inline:"libhello.o\nhello\n" ss
+	atf_check -s eq:0 -o inline:"hello world\n" ./hello
+}
+
+atf_test_case multiple_targets_reverse
+multiple_targets_reverse_head() {
+	atf_set "descr" "Multiple targets with reverse declaration order"
+}
+multiple_targets_reverse_body() {
+	cp -r "$(atf_get_srcdir)/examples/6_multiple_targets_reverse" work
+	cd work
+	atf_check -s eq:0 -e inline:"libhello.o\nhello\n" ss
 	atf_check -s eq:0 -o inline:"hello world\n" ./hello
 }

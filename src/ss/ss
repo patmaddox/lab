@@ -3,21 +3,34 @@ set -eu
 set -o pipefail
 
 targets=""
-deps=""
 deps_dir=${TMPDIR}/ss
+cur_target=""
 
 target() {
 	local t
 	t=${1}; shift
+	cur_target="${t}"
 	targets="${t} ${targets}"
-
-	if [ $# -gt 0 ]; then
-		set_build_function ${t} ${1}
-	fi
+	set_build_function ${t} ${1:-${t}}
 }
 
 needs() {
-	deps="${@} ${deps}"
+	add_deps "${cur_target}" "${@}"
+}
+
+add_deps() {
+	local t
+	t=${1}; shift
+	t=$(sanitize_target "${t}")
+	eval "__deps_${t}=\"$(get_deps ${t}) ${@}\""
+}
+
+get_deps() {
+	local t deps
+	t=${1}; shift
+	t=$(sanitize_target "${t}")
+	eval "deps=\${__deps_${t}:-}"
+	echo "${deps}"
 }
 
 sanitize_target() {
@@ -30,7 +43,7 @@ set_build_function() {
 
 get_build_function() {
 	local _fn
-	eval "_fn=\${__build_$(sanitize_target ${1}):-${1}}"
+	eval "_fn=\${__build_$(sanitize_target ${1}):-}"
 	echo "$_fn"
 }
 
@@ -62,14 +75,26 @@ is_ood() {
 build_targets() {
 	local target
 	for target in ${targets}; do
-		maybe_build_target ${target}
+		maybe_build ${target}
 	done
 }
 
-maybe_build_target() {
-	if any_is_ood ${target} ${deps}; then
+maybe_build() {
+	local target deps
+	target=${1}; shift
+	deps=$(get_deps ${target})
+
+	if [ -n "${deps}" ]; then
+		local d
+		for d in ${deps}; do
+			maybe_build ${d}
+		done
+	fi
+
+	local build_fn
+	build_fn=$(get_build_function ${target})
+	if [ -n "${build_fn}" ] && any_is_ood ${target} ${deps}; then
 		echo ${target} >&2
-		build_fn=$(get_build_function ${target})
 		${build_fn}
 
 		for t in ${target} ${deps}; do

@@ -50,6 +50,24 @@ hello() {
 }
 ```
 
+## hello world: multiple targets
+
+``` shell
+target hello
+needs hello.c libhello.o
+
+target libhello.o libhello
+needs libhello.c
+
+libhello() {
+  cc -c -o ${target} ${deps}
+}
+
+hello() {
+  cc -o ${target} ${deps}
+}
+```
+
 ## hello world: produces
 
 ``` shell
