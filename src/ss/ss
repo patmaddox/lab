@@ -236,6 +236,10 @@ maybe_build() {
 			errmsg "${target}"
 			exit ${_rc}
 		fi
+		if [ ! -f "${outfile}" ]; then
+			errmsg "${target}: build did not produce ${outfile}"
+			exit 1
+		fi
 		if [ "${outfile}" = "${target}" ]; then
 			dbg "built ${target}"
 		else

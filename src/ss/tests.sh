@@ -35,6 +35,7 @@ atf_init_test_cases() {
 	atf_add_test_case shared_dep
 	atf_add_test_case missing_dep
 	atf_add_test_case cycle
+	atf_add_test_case missing_output
 	atf_add_test_case clean
 }
 
@@ -722,6 +723,18 @@ cycle_body() {
 	atf_check -o inline:"ss: E: cycle: a\n" cat err.out
 	test ! -f a
 	test ! -f b
+}
+
+atf_test_case missing_output
+missing_output_head() {
+	atf_set "descr" "Build that does not produce its target fails"
+}
+missing_output_body() {
+	cp -r "$(atf_get_srcdir)/examples/24_missing_output" work
+	cd work
+	ss 2>err.out; test $? -ne 0
+	atf_check -o inline:"ss: E: hello: build did not produce hello\n" cat err.out
+	test ! -f hello
 }
 
 atf_test_case clean
