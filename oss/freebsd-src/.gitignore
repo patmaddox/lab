@@ -1,7 +1,7 @@
 buildkernel
 buildworld
 pkgbase
-rev.stamp
+rev_stamp
 vm-image
 dev-head
 patches
