@@ -33,12 +33,18 @@ get_build_function() {
 	echo "$_fn"
 }
 
+is_ood() {
+	test ! -f ${1}
+}
+
 build_targets() {
 	local target
 	for target in ${targets}; do
-		echo ${target} >&2
-		build_fn=$(get_build_function ${target})
-		${build_fn}
+		if is_ood ${target}; then
+			echo ${target} >&2
+			build_fn=$(get_build_function ${target})
+			${build_fn}
+		fi
 	done
 }
 
