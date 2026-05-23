@@ -208,17 +208,7 @@ maybe_build() {
 		else
 			dbg "built ${target} -> ${outfile}"
 		fi
-		local _b _bp
-		for _b in ${exp_deps} ${imp_deps}; do
-			case " ${built} " in
-				*" ${_b} "*) continue ;;
-			esac
-			_bp=$(resolve_path ${_b})
-			if [ -f ${_bp} ]; then
-				write_depsum ${_bp} ${deps_dir}/${_b}
-			fi
-		done
-		built="${built} ${target}"
+		built="${built} ${exp_deps} ${imp_deps} ${target}"
 	fi
 }
 

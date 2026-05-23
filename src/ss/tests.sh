@@ -32,6 +32,7 @@ atf_init_test_cases() {
 	atf_add_test_case failed_dep
 	atf_add_test_case failed_downstream
 	atf_add_test_case target_vs_outfile
+	atf_add_test_case shared_dep
 }
 
 atf_test_case hello_world
@@ -44,8 +45,8 @@ hello_world_body() {
 	cat > expected.err <<'EOF'
 ss: build hello
 ss: built hello
-ss: checksum hello.c
 ss: checksum hello
+ss: checksum hello.c
 EOF
 	atf_check -s eq:0 -e file:expected.err ss -d
 	atf_check -s eq:0 -o inline:"hello world\n" ./hello
@@ -96,8 +97,8 @@ ss: checksum hello
 ss: checksum hello.c
 ss: build hello
 ss: built hello
-ss: checksum hello.c
 ss: checksum hello
+ss: checksum hello.c
 EOF
 	atf_check -s eq:0 -e file:expected.err ss -d
 	atf_check -s eq:0 -o inline:"hello ss\n" ./hello
@@ -113,8 +114,8 @@ hello_world_vars_body() {
 	cat > expected.err <<'EOF'
 ss: build hello
 ss: built hello
-ss: checksum hello.c
 ss: checksum hello
+ss: checksum hello.c
 EOF
 	atf_check -s eq:0 -e file:expected.err ss -d
 	atf_check -s eq:0 -o inline:"hello world\n" ./hello
@@ -147,9 +148,9 @@ multiple_deps_body() {
 	cat > expected.err <<'EOF'
 ss: build hello
 ss: built hello
+ss: checksum hello
 ss: checksum hello.c
 ss: checksum libhello.c
-ss: checksum hello
 EOF
 	atf_check -s eq:0 -e file:expected.err ss -d
 	atf_check -s eq:0 -o inline:"hello world\n" ./hello
@@ -165,11 +166,11 @@ multiple_targets_body() {
 	cat > expected.err <<'EOF'
 ss: build libhello.o
 ss: built libhello.o
-ss: checksum libhello.c
 ss: build hello
 ss: built hello
-ss: checksum hello.c
 ss: checksum hello
+ss: checksum hello.c
+ss: checksum libhello.c
 ss: checksum libhello.o
 EOF
 	atf_check -s eq:0 -e file:expected.err ss -d
@@ -186,11 +187,11 @@ multiple_targets_reverse_body() {
 	cat > expected.err <<'EOF'
 ss: build libhello.o
 ss: built libhello.o
-ss: checksum libhello.c
 ss: build hello
 ss: built hello
-ss: checksum hello.c
 ss: checksum hello
+ss: checksum hello.c
+ss: checksum libhello.c
 ss: checksum libhello.o
 EOF
 	atf_check -s eq:0 -e file:expected.err ss -d
@@ -207,10 +208,10 @@ implicit_deps_body() {
 	cat > expected.err <<'EOF'
 ss: build hello
 ss: built hello
+ss: checksum hello
 ss: checksum hello.c
 ss: checksum hello.h
 ss: checksum note.txt
-ss: checksum hello
 EOF
 	atf_check -s eq:0 -e file:expected.err ss -d
 	atf_check -s eq:0 -o inline:"hello world\n" ./hello
@@ -234,10 +235,10 @@ ss: checksum hello.c
 ss: checksum hello.h
 ss: build hello
 ss: built hello
+ss: checksum hello
 ss: checksum hello.c
 ss: checksum hello.h
 ss: checksum note.txt
-ss: checksum hello
 EOF
 	atf_check -s eq:0 -e file:expected.err ss -d
 	atf_check -s eq:0 -o inline:"hello ss\n" ./hello
@@ -255,9 +256,9 @@ ss: build build_date
 ss: built build_date
 ss: build hello
 ss: built hello
-ss: checksum hello.c
 ss: checksum build_date
 ss: checksum hello
+ss: checksum hello.c
 EOF
 	atf_check -s eq:0 -e file:expected.err ss -d
 	atf_check -s eq:0 -o inline:"hello world\n" ./hello
@@ -285,9 +286,9 @@ ss: build build_timestamp
 ss: built build_timestamp
 ss: build hello
 ss: built hello
-ss: checksum hello.c
 ss: checksum build_timestamp
 ss: checksum hello
+ss: checksum hello.c
 EOF
 	atf_check -s eq:0 -e file:expected.err ss -d
 	atf_check -s eq:0 -o inline:"hello world\n" ./hello
@@ -300,9 +301,9 @@ ss: checksum hello.c
 ss: checksum build_timestamp
 ss: build hello
 ss: built hello
-ss: checksum hello.c
 ss: checksum build_timestamp
 ss: checksum hello
+ss: checksum hello.c
 EOF
 	atf_check -s eq:0 -e file:expected.err ss -d
 }
@@ -345,8 +346,8 @@ named_file_body() {
 	cat > expected.err <<'EOF'
 ss: build hello
 ss: built hello
-ss: checksum hello.c
 ss: checksum hello
+ss: checksum hello.c
 EOF
 	atf_check -s eq:0 -e file:expected.err ss -d hello
 	atf_check -s eq:0 -o inline:"hello world\n" ./hello
@@ -362,12 +363,12 @@ select_targets_body() {
 	cat > expected.err <<'EOF'
 ss: build foo
 ss: built foo
-ss: checksum foo.c
 ss: build bar
 ss: built bar
-ss: checksum bar.c
 ss: checksum bar
+ss: checksum bar.c
 ss: checksum foo
+ss: checksum foo.c
 EOF
 	atf_check -s eq:0 -e file:expected.err ss -d foo bar
 	atf_check -s eq:0 -o inline:"foo\n" ./foo
@@ -385,12 +386,12 @@ mixed_sources_body() {
 	cat > expected.err <<'EOF'
 ss: build foo
 ss: built foo
-ss: checksum foo.c
 ss: build bar
 ss: built bar
-ss: checksum bar.c
 ss: checksum bar
+ss: checksum bar.c
 ss: checksum foo
+ss: checksum foo.c
 EOF
 	atf_check -s eq:0 -e file:expected.err ss -d foo bar
 	atf_check -s eq:0 -o inline:"foo\n" ./foo
@@ -407,9 +408,9 @@ slash_dep_body() {
 	cat > expected.err <<'EOF'
 ss: build hello
 ss: built hello
+ss: checksum hello
 ss: checksum hello.c
 ss: checksum inc/hello.h
-ss: checksum hello
 EOF
 	atf_check -s eq:0 -e file:expected.err ss -d
 	atf_check -s eq:0 -o inline:"hello world\n" ./hello
@@ -422,9 +423,9 @@ ss: checksum hello.c
 ss: checksum inc/hello.h
 ss: build hello
 ss: built hello
+ss: checksum hello
 ss: checksum hello.c
 ss: checksum inc/hello.h
-ss: checksum hello
 EOF
 	atf_check -s eq:0 -e file:expected.err ss -d
 	atf_check -s eq:0 -o inline:"hello ss\n" ./hello
@@ -440,8 +441,8 @@ outdir_not_enabled_body() {
 	cat > expected.err <<'EOF'
 ss: build hello
 ss: built hello
-ss: checksum hello.c
 ss: checksum hello
+ss: checksum hello.c
 EOF
 	atf_check -s eq:0 -e file:expected.err ss -d
 	atf_check -s eq:0 -o inline:"hello world\n" ./hello
@@ -457,8 +458,8 @@ outdir_enabled_body() {
 	cat > expected.err <<EOF
 ss: build hello -> ${TMPDIR}/_build/hello
 ss: built hello -> ${TMPDIR}/_build/hello
-ss: checksum hello.c
 ss: checksum ${TMPDIR}/_build/hello
+ss: checksum hello.c
 EOF
 	atf_check -s eq:0 -e file:expected.err ss -d -o ${TMPDIR}/_build
 	test ! -f hello
@@ -481,11 +482,11 @@ outdir_multiple_body() {
 	cat > expected.err <<EOF
 ss: build libhello.o -> ${TMPDIR}/_build/libhello.o
 ss: built libhello.o -> ${TMPDIR}/_build/libhello.o
-ss: checksum libhello.c
 ss: build hello -> ${TMPDIR}/_build/hello
 ss: built hello -> ${TMPDIR}/_build/hello
-ss: checksum hello.c
 ss: checksum ${TMPDIR}/_build/hello
+ss: checksum hello.c
+ss: checksum libhello.c
 ss: checksum ${TMPDIR}/_build/libhello.o
 EOF
 	atf_check -s eq:0 -e file:expected.err ss -d -o ${TMPDIR}/_build
@@ -515,15 +516,15 @@ outdir_mixed_body() {
 	cat > expected.err <<EOF
 ss: build greeting -> ${TMPDIR}/_build/greeting
 ss: built greeting -> ${TMPDIR}/_build/greeting
-ss: checksum ${TMPDIR}/new-greeting
 ss: build libhello.o
 ss: built libhello.o
-ss: checksum libhello.in
 ss: build hello -> ${TMPDIR}/_build/hello
 ss: built hello -> ${TMPDIR}/_build/hello
-ss: checksum hello.c
+ss: checksum ${TMPDIR}/new-greeting
 ss: checksum ${TMPDIR}/_build/greeting
 ss: checksum ${TMPDIR}/_build/hello
+ss: checksum hello.c
+ss: checksum libhello.in
 ss: checksum libhello.o
 EOF
 	atf_check -s eq:0 -e file:expected.err ss -d -o ${TMPDIR}/_build
@@ -552,21 +553,21 @@ ss: checksum ${TMPDIR}/_build/greeting
 ss: checksum ${TMPDIR}/new-greeting
 ss: build greeting -> ${TMPDIR}/_build/greeting
 ss: built greeting -> ${TMPDIR}/_build/greeting
-ss: checksum ${TMPDIR}/new-greeting
 ss: checksum libhello.o
 ss: checksum libhello.in
 ss: checksum ${TMPDIR}/_build/greeting
 ss: build libhello.o
 ss: built libhello.o
-ss: checksum libhello.in
 ss: checksum ${TMPDIR}/_build/hello
 ss: checksum hello.c
 ss: checksum libhello.o
 ss: build hello -> ${TMPDIR}/_build/hello
 ss: built hello -> ${TMPDIR}/_build/hello
-ss: checksum hello.c
+ss: checksum ${TMPDIR}/new-greeting
 ss: checksum ${TMPDIR}/_build/greeting
 ss: checksum ${TMPDIR}/_build/hello
+ss: checksum hello.c
+ss: checksum libhello.in
 ss: checksum libhello.o
 EOF
 	atf_check -s eq:0 -e file:expected.err ss -d -o ${TMPDIR}/_build
@@ -646,7 +647,6 @@ failed_downstream_body() {
 	cat > expected.err <<'EOF'
 ss: build libhello.o
 ss: built libhello.o
-ss: checksum libhello.c
 ss: build hello
 ss: E: hello
 EOF
@@ -659,7 +659,6 @@ EOF
 	cat > expected.err <<'EOF'
 ss: build libhello.o
 ss: built libhello.o
-ss: checksum libhello.c
 ss: build hello
 ss: E: hello
 EOF
@@ -676,4 +675,21 @@ target_vs_outfile_body() {
 	atf_check -s eq:0 ss -o ${TMPDIR}/_build
 	test ! -f hello
 	atf_check -s eq:0 -o inline:"hello\n" cat ${TMPDIR}/_build/hello
+}
+
+atf_test_case shared_dep
+shared_dep_head() {
+	atf_set "descr" "Changing a shared dep rebuilds all dependent targets"
+}
+shared_dep_body() {
+	cp -r "$(atf_get_srcdir)/examples/21_shared_dep" work
+	cd work
+	atf_check -s eq:0 ss
+	atf_check -s eq:0 -o inline:"v1\n" cat foo
+	atf_check -s eq:0 -o inline:"v1\n" cat bar
+
+	echo "v2" > shared.txt
+	atf_check -s eq:0 ss
+	atf_check -s eq:0 -o inline:"v2\n" cat foo
+	atf_check -s eq:0 -o inline:"v2\n" cat bar
 }
