@@ -181,6 +181,15 @@ maybe_build() {
 		done
 	fi
 
+	local _d _dp
+	for _d in ${exp_deps} ${imp_deps}; do
+		_dp=$(resolve_path ${_d})
+		if [ ! -f ${_dp} ] && [ -z "$(get_build_function ${_d})" ]; then
+			errmsg "${target}: missing dep: ${_d}"
+			exit 1
+		fi
+	done
+
 	local build_fn deps
 	build_fn=$(get_build_function ${target})
 

@@ -33,6 +33,7 @@ atf_init_test_cases() {
 	atf_add_test_case failed_downstream
 	atf_add_test_case target_vs_outfile
 	atf_add_test_case shared_dep
+	atf_add_test_case missing_dep
 }
 
 atf_test_case hello_world
@@ -694,4 +695,16 @@ shared_dep_body() {
 	atf_check -s eq:0 ss
 	atf_check -s eq:0 -o inline:"v2\n" cat foo
 	atf_check -s eq:0 -o inline:"v2\n" cat bar
+}
+
+atf_test_case missing_dep
+missing_dep_head() {
+	atf_set "descr" "Missing dep without build rule prints diagnostic"
+}
+missing_dep_body() {
+	cp -r "$(atf_get_srcdir)/examples/23_missing_dep" work
+	cd work
+	ss 2>err.out; test $? -ne 0
+	atf_check -o inline:"ss: E: hello: missing dep: missing.h\n" cat err.out
+	test ! -f hello
 }
