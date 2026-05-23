@@ -4,9 +4,9 @@ target hello
 needs hello.c : build_date
 
 build_date() {
-	date +%Y-%m-%d > ${target}
+	date +%Y-%m-%d > ${outfile}
 }
 
 hello() {
-	cc -o ${target} ${deps}
+	cc -o ${outfile} ${deps}
 }

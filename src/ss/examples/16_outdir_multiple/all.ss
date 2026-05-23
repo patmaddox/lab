@@ -7,9 +7,9 @@ needs libhello.c
 out-of-tree
 
 libhello() {
-	cc -c -o ${target} ${deps}
+	cc -c -o ${outfile} ${deps}
 }
 
 hello() {
-	cc -o ${target} ${deps}
+	cc -o ${outfile} ${deps}
 }

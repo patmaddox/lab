@@ -3,5 +3,5 @@ needs hello.c
 out-of-tree
 
 hello() {
-	cc -o ${target} ${deps}
+	cc -o ${outfile} ${deps}
 }

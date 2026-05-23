@@ -31,6 +31,7 @@ atf_init_test_cases() {
 	atf_add_test_case bad_flag
 	atf_add_test_case failed_dep
 	atf_add_test_case failed_downstream
+	atf_add_test_case target_vs_outfile
 }
 
 atf_test_case hello_world
@@ -459,8 +460,8 @@ outdir_enabled_body() {
 	cp -r "$(atf_get_srcdir)/examples/15_outdir" work
 	cd work
 	cat > expected.err <<EOF
-ss: build hello
-ss: built hello
+ss: build hello -> ${TMPDIR}/_build/hello
+ss: built hello -> ${TMPDIR}/_build/hello
 ss: checksum hello.c
 ss: checksum ${TMPDIR}/_build/hello
 EOF
@@ -483,11 +484,11 @@ outdir_multiple_body() {
 	cp -r "$(atf_get_srcdir)/examples/16_outdir_multiple" work
 	cd work
 	cat > expected.err <<EOF
-ss: build libhello.o
-ss: built libhello.o
+ss: build libhello.o -> ${TMPDIR}/_build/libhello.o
+ss: built libhello.o -> ${TMPDIR}/_build/libhello.o
 ss: checksum libhello.c
-ss: build hello
-ss: built hello
+ss: build hello -> ${TMPDIR}/_build/hello
+ss: built hello -> ${TMPDIR}/_build/hello
 ss: checksum hello.c
 ss: checksum ${TMPDIR}/_build/libhello.o
 ss: checksum ${TMPDIR}/_build/hello
@@ -518,15 +519,15 @@ outdir_mixed_body() {
 	cd work
 	echo "hello world" > ${TMPDIR}/new-greeting
 	cat > expected.err <<EOF
-ss: build greeting
-ss: built greeting
+ss: build greeting -> ${TMPDIR}/_build/greeting
+ss: built greeting -> ${TMPDIR}/_build/greeting
 ss: checksum ${TMPDIR}/new-greeting
 ss: build libhello.o
 ss: built libhello.o
 ss: checksum libhello.in
 ss: checksum ${TMPDIR}/_build/greeting
-ss: build hello
-ss: built hello
+ss: build hello -> ${TMPDIR}/_build/hello
+ss: built hello -> ${TMPDIR}/_build/hello
 ss: checksum hello.c
 ss: checksum libhello.o
 ss: checksum ${TMPDIR}/_build/greeting
@@ -557,8 +558,8 @@ EOF
 	cat > expected.err <<EOF
 ss: checksum ${TMPDIR}/_build/greeting
 ss: checksum ${TMPDIR}/new-greeting
-ss: build greeting
-ss: built greeting
+ss: build greeting -> ${TMPDIR}/_build/greeting
+ss: built greeting -> ${TMPDIR}/_build/greeting
 ss: checksum ${TMPDIR}/new-greeting
 ss: checksum libhello.o
 ss: checksum libhello.in
@@ -570,8 +571,8 @@ ss: checksum ${TMPDIR}/_build/greeting
 ss: checksum ${TMPDIR}/_build/hello
 ss: checksum hello.c
 ss: checksum libhello.o
-ss: build hello
-ss: built hello
+ss: build hello -> ${TMPDIR}/_build/hello
+ss: built hello -> ${TMPDIR}/_build/hello
 ss: checksum hello.c
 ss: checksum libhello.o
 ss: checksum ${TMPDIR}/_build/greeting
@@ -673,4 +674,16 @@ ss: build hello
 ss: E: hello
 EOF
 	atf_check -o file:expected.err cat ss.err
+}
+
+atf_test_case target_vs_outfile
+target_vs_outfile_head() {
+	atf_set "descr" "Build function receives target name and outfile path"
+}
+target_vs_outfile_body() {
+	cp -r "$(atf_get_srcdir)/examples/20_target_vs_outfile" work
+	cd work
+	atf_check -s eq:0 ss -o ${TMPDIR}/_build
+	test ! -f hello
+	atf_check -s eq:0 -o inline:"hello\n" cat ${TMPDIR}/_build/hello
 }

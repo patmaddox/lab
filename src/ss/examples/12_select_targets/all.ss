@@ -8,13 +8,13 @@ target baz
 needs baz.c
 
 foo() {
-	cc -o ${target} ${deps}
+	cc -o ${outfile} ${deps}
 }
 
 bar() {
-	cc -o ${target} ${deps}
+	cc -o ${outfile} ${deps}
 }
 
 baz() {
-	cc -o ${target} ${deps}
+	cc -o ${outfile} ${deps}
 }

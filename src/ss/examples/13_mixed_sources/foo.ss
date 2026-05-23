@@ -2,5 +2,5 @@ target foo
 needs foo.c
 
 foo() {
-	cc -o ${target} ${deps}
+	cc -o ${outfile} ${deps}
 }

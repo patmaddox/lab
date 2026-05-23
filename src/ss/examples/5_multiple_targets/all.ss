@@ -5,9 +5,9 @@ target libhello.o libhello
 needs libhello.c
 
 libhello() {
-	cc -c -o ${target} ${deps}
+	cc -c -o ${outfile} ${deps}
 }
 
 hello() {
-	cc -o ${target} ${deps}
+	cc -o ${outfile} ${deps}
 }

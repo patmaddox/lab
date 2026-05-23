@@ -10,15 +10,15 @@ needs hello.c libhello.o
 out-of-tree
 
 greeting() {
-	cp ${deps} ${target}
+	cp ${deps} ${outfile}
 }
 
 build_libhello() {
 	sed "s/%%GREETING%%/$(cat $(resolve_path greeting))/" libhello.in > libhello.c
-	cc -c -o ${target} libhello.c
+	cc -c -o ${outfile} libhello.c
 	rm libhello.c
 }
 
 hello() {
-	cc -o ${target} ${deps}
+	cc -o ${outfile} ${deps}
 }

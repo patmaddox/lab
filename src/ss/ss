@@ -187,21 +187,27 @@ maybe_build() {
 		for _d in ${exp_deps}; do
 			deps="${deps} $(resolve_path ${_d})"
 		done
-		local _orig_target
-		_orig_target=${target}
-		target=$(resolve_path ${target})
-		mkdir -p "$(dirname "${target}")"
-		dbg "build ${_orig_target}"
+		local outfile
+		outfile=$(resolve_path ${target})
+		mkdir -p "$(dirname "${outfile}")"
+		if [ "${outfile}" = "${target}" ]; then
+			dbg "build ${target}"
+		else
+			dbg "build ${target} -> ${outfile}"
+		fi
 		set +e
 		${build_fn}
 		local _rc=$?
 		set -e
-		target=${_orig_target}
 		if [ ${_rc} -ne 0 ]; then
 			errmsg "${target}"
 			exit ${_rc}
 		fi
-		dbg "built ${target}"
+		if [ "${outfile}" = "${target}" ]; then
+			dbg "built ${target}"
+		else
+			dbg "built ${target} -> ${outfile}"
+		fi
 		local _b _bp
 		for _b in ${exp_deps} ${imp_deps}; do
 			_bp=$(resolve_path ${_b})
