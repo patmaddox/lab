@@ -13,6 +13,8 @@ atf_init_test_cases() {
 	atf_add_test_case multiple_targets_reverse
 	atf_add_test_case implicit_deps
 	atf_add_test_case implicit_deps_rebuild
+	atf_add_test_case stamp_stable
+	atf_add_test_case stamp_changing
 }
 
 atf_test_case hello_world
@@ -137,4 +139,30 @@ implicit_deps_rebuild_body() {
 
 	atf_check -s eq:0 -e inline:"hello\n" ss
 	atf_check -s eq:0 -o inline:"hello ss\n" ./hello
+}
+
+atf_test_case stamp_stable
+stamp_stable_head() {
+	atf_set "descr" "Stamp with stable output does not trigger rebuild"
+}
+stamp_stable_body() {
+	cp -r "$(atf_get_srcdir)/examples/8_stamp_date" work
+	cd work
+	atf_check -s eq:0 -e inline:"build_date\nhello\n" ss
+	atf_check -s eq:0 -o inline:"hello world\n" ./hello
+
+	atf_check -s eq:0 -e inline:"build_date\n" ss
+}
+
+atf_test_case stamp_changing
+stamp_changing_head() {
+	atf_set "descr" "Stamp with changing output triggers rebuild"
+}
+stamp_changing_body() {
+	cp -r "$(atf_get_srcdir)/examples/9_stamp_time" work
+	cd work
+	atf_check -s eq:0 -e inline:"build_timestamp\nhello\n" ss
+	atf_check -s eq:0 -o inline:"hello world\n" ./hello
+
+	atf_check -s eq:0 -e inline:"build_timestamp\nhello\n" ss
 }

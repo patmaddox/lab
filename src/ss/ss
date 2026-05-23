@@ -2,9 +2,10 @@
 set -eu
 set -o pipefail
 
-targets=""
-deps_dir=${TMPDIR}/ss
 cur_target=""
+deps_dir=${TMPDIR}/ss
+targets=""
+visited=""
 
 target() {
 	local t
@@ -12,6 +13,28 @@ target() {
 	cur_target="${t}"
 	targets="${t} ${targets}"
 	set_build_function ${t} ${1:-${t}}
+}
+
+stamp() {
+	target "${@}"
+	eval "__stamp_$(sanitize_target "${cur_target}")=1"
+}
+
+is_stamp() {
+	local val
+	eval "val=\${__stamp_$(sanitize_target "${1}"):-0}"
+	[ "${val}" = "1" ]
+}
+
+mark_visited() {
+	eval "__visited_$(sanitize_target ${1})=1"
+	visited="${visited} ${1}"
+}
+
+is_visited() {
+	local val
+	eval "val=\${__visited_$(sanitize_target ${1}):-0}"
+	[ "${val}" = "1" ]
 }
 
 needs() {
@@ -85,11 +108,18 @@ build_targets() {
 	for target in ${targets}; do
 		maybe_build ${target}
 	done
+	for target in ${visited}; do
+		write_depsum ${target} ${deps_dir}/${target}
+	done
 }
 
 maybe_build() {
 	local target exp_deps imp_deps
 	target=${1}; shift
+
+	if is_visited ${target}; then return 0; fi
+	mark_visited ${target}
+
 	exp_deps=$(get_deps exp ${target})
 	imp_deps=$(get_deps imp ${target})
 
@@ -102,14 +132,11 @@ maybe_build() {
 
 	local build_fn deps
 	build_fn=$(get_build_function ${target})
-	if [ -n "${build_fn}" ] && any_is_ood ${target} ${exp_deps} ${imp_deps}; then
+
+	if [ -n "${build_fn}" ] && { is_stamp ${target} || any_is_ood ${target} ${exp_deps} ${imp_deps}; }; then
 		echo ${target} >&2
 		deps=${exp_deps}
 		${build_fn}
-
-		for t in ${target} ${exp_deps} ${imp_deps}; do
-			write_depsum ${t} ${deps_dir}/${t}
-		done
 	fi
 }
 
