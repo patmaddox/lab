@@ -25,12 +25,12 @@ target vm_image build_vm_image
 needs : pkgbase "${SRC_ROOT}/share/vm-nodbg32.conf"
 
 rev_stamp() {
-	jj -R "${JJ_ROOT}" show -r "${rev}" -T 'commit_id' --tool true > "${target}"
+	jj -R "${JJ_ROOT}" --ignore-working-copy show -r "${rev}" -T 'commit_id' --tool true > "${target}"
 }
 
 _build() {
 	local sha
-	sha="$(jj -R "${JJ_ROOT}" show -r "${rev}" -T 'commit_id' --tool true)"
+	sha="$(jj -R "${JJ_ROOT}" --ignore-working-copy show -r "${rev}" -T 'commit_id' --tool true)"
 	local tmplog="/tmp/freebsd-build.${config}.${target}.log"
 	"${SRC_ROOT}/share/build.sh" "${target}" "${config}" "${sha}" \
 		2>&1 | tee "${tmplog}"
