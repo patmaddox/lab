@@ -20,6 +20,7 @@ atf_init_test_cases() {
 	atf_add_test_case named_file
 	atf_add_test_case select_targets
 	atf_add_test_case mixed_sources
+	atf_add_test_case slash_dep
 }
 
 atf_test_case hello_world
