@@ -169,7 +169,6 @@ ss: checksum libhello.c
 ss: build hello
 ss: built hello
 ss: checksum hello.c
-ss: checksum libhello.o
 ss: checksum hello
 ss: checksum libhello.o
 EOF
@@ -191,7 +190,6 @@ ss: checksum libhello.c
 ss: build hello
 ss: built hello
 ss: checksum hello.c
-ss: checksum libhello.o
 ss: checksum hello
 ss: checksum libhello.o
 EOF
@@ -259,7 +257,6 @@ ss: build hello
 ss: built hello
 ss: checksum hello.c
 ss: checksum build_date
-ss: checksum build_date
 ss: checksum hello
 EOF
 	atf_check -s eq:0 -e file:expected.err ss -d
@@ -290,7 +287,6 @@ ss: build hello
 ss: built hello
 ss: checksum hello.c
 ss: checksum build_timestamp
-ss: checksum build_timestamp
 ss: checksum hello
 EOF
 	atf_check -s eq:0 -e file:expected.err ss -d
@@ -305,7 +301,6 @@ ss: checksum build_timestamp
 ss: build hello
 ss: built hello
 ss: checksum hello.c
-ss: checksum build_timestamp
 ss: checksum build_timestamp
 ss: checksum hello
 EOF
@@ -490,7 +485,6 @@ ss: checksum libhello.c
 ss: build hello -> ${TMPDIR}/_build/hello
 ss: built hello -> ${TMPDIR}/_build/hello
 ss: checksum hello.c
-ss: checksum ${TMPDIR}/_build/libhello.o
 ss: checksum ${TMPDIR}/_build/hello
 ss: checksum ${TMPDIR}/_build/libhello.o
 EOF
@@ -525,11 +519,9 @@ ss: checksum ${TMPDIR}/new-greeting
 ss: build libhello.o
 ss: built libhello.o
 ss: checksum libhello.in
-ss: checksum ${TMPDIR}/_build/greeting
 ss: build hello -> ${TMPDIR}/_build/hello
 ss: built hello -> ${TMPDIR}/_build/hello
 ss: checksum hello.c
-ss: checksum libhello.o
 ss: checksum ${TMPDIR}/_build/greeting
 ss: checksum ${TMPDIR}/_build/hello
 ss: checksum libhello.o
@@ -567,14 +559,12 @@ ss: checksum ${TMPDIR}/_build/greeting
 ss: build libhello.o
 ss: built libhello.o
 ss: checksum libhello.in
-ss: checksum ${TMPDIR}/_build/greeting
 ss: checksum ${TMPDIR}/_build/hello
 ss: checksum hello.c
 ss: checksum libhello.o
 ss: build hello -> ${TMPDIR}/_build/hello
 ss: built hello -> ${TMPDIR}/_build/hello
 ss: checksum hello.c
-ss: checksum libhello.o
 ss: checksum ${TMPDIR}/_build/greeting
 ss: checksum ${TMPDIR}/_build/hello
 ss: checksum libhello.o
