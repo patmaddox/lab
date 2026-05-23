@@ -56,8 +56,12 @@ is_opt_outdir() {
 
 dbg() {
 	if ${debug}; then
-		echo "  ${@}" >&2
+		echo "ss: ${@}" >&2
 	fi
+}
+
+errmsg() {
+	echo "ss: E: ${@}" >&2
 }
 
 resolve_path() {
@@ -194,10 +198,10 @@ maybe_build() {
 		set -e
 		target=${_orig_target}
 		if [ ${_rc} -ne 0 ]; then
-			echo "E: ${target}" >&2
+			errmsg "${target}"
 			exit ${_rc}
 		fi
-		echo ${target} >&2
+		dbg "built ${target}"
 		local _b _bp
 		for _b in ${exp_deps} ${imp_deps}; do
 			_bp=$(resolve_path ${_b})
@@ -215,7 +219,7 @@ while getopts ":do:" _opt; do
 	case ${_opt} in
 		d) debug=true ;;
 		o) outdir=${OPTARG} ;;
-		\?) echo "ss: unknown option: -${OPTARG}" >&2; exit 1 ;;
+		\?) errmsg "unknown option: -${OPTARG}"; exit 1 ;;
 	esac
 done
 shift $((OPTIND - 1))
@@ -249,7 +253,7 @@ else
 	for _arg in "${@}"; do
 		case " ${targets} " in
 			*" ${_arg} "*) ;;
-			*) echo "ss: unknown target: ${_arg}" >&2; exit 1 ;;
+			*) errmsg "unknown target: ${_arg}"; exit 1 ;;
 		esac
 	done
 	targets="${@}"
