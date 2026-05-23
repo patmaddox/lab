@@ -194,7 +194,7 @@ maybe_build() {
 		set -e
 		target=${_orig_target}
 		if [ ${_rc} -ne 0 ]; then
-			echo "${target}: FAIL" >&2
+			echo "E: ${target}" >&2
 			exit ${_rc}
 		fi
 		echo ${target} >&2

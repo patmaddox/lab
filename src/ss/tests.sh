@@ -365,7 +365,7 @@ failed_dep_head() {
 failed_dep_body() {
 	cp -r "$(atf_get_srcdir)/examples/18_failed_dep" work
 	cd work
-	atf_check -s ne:0 -e match:"libhello.o: FAIL" ss
+	atf_check -s ne:0 -e match:"E: libhello.o" ss
 	test ! -f libhello.o
 	test ! -f hello
 }
@@ -377,9 +377,9 @@ failed_downstream_head() {
 failed_downstream_body() {
 	cp -r "$(atf_get_srcdir)/examples/19_failed_downstream" work
 	cd work
-	atf_check -s ne:0 -e match:"hello: FAIL" ss
+	atf_check -s ne:0 -e match:"E: hello" ss
 	test -f libhello.o
 	test ! -f hello
 
-	atf_check -s ne:0 -e match:"hello: FAIL" ss
+	atf_check -s ne:0 -e match:"E: hello" ss
 }
