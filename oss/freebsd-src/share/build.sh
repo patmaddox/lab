@@ -43,7 +43,6 @@ checkout_code() {
     if [ ! -d ${src}/.git ]; then
 	git clone --no-checkout ${JJ_ROOT} ${src}
     fi
-    git -C ${src} remote update
     git -C ${src} fetch origin ${sha}
     git -C ${src} checkout -f ${sha}
 }
