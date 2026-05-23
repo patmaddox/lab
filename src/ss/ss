@@ -19,17 +19,25 @@ needs() {
 }
 
 add_deps() {
-	local t
+	local t which_deps d
 	t=${1}; shift
+	which_deps="exp"
 	t=$(sanitize_target "${t}")
-	eval "__deps_${t}=\"$(get_deps ${t}) ${@}\""
+	for d in "${@}"; do
+		if [ "${d}" = ":" ]; then
+			which_deps="imp"
+			continue
+		fi
+		eval "__${which_deps}_deps_${t}=\"$(get_deps ${which_deps} ${t}) ${d}\""
+	done
 }
 
 get_deps() {
-	local t deps
+	local which_deps t deps
+	which_deps=${1}; shift
 	t=${1}; shift
 	t=$(sanitize_target "${t}")
-	eval "deps=\${__deps_${t}:-}"
+	eval "deps=\${__${which_deps}_deps_${t}:-}"
 	echo "${deps}"
 }
 
@@ -80,24 +88,26 @@ build_targets() {
 }
 
 maybe_build() {
-	local target deps
+	local target exp_deps imp_deps
 	target=${1}; shift
-	deps=$(get_deps ${target})
+	exp_deps=$(get_deps exp ${target})
+	imp_deps=$(get_deps imp ${target})
 
-	if [ -n "${deps}" ]; then
+	if [ -n "${exp_deps}" ] || [ -n "${imp_deps}" ]; then
 		local d
-		for d in ${deps}; do
+		for d in ${exp_deps} ${imp_deps}; do
 			maybe_build ${d}
 		done
 	fi
 
-	local build_fn
+	local build_fn deps
 	build_fn=$(get_build_function ${target})
-	if [ -n "${build_fn}" ] && any_is_ood ${target} ${deps}; then
+	if [ -n "${build_fn}" ] && any_is_ood ${target} ${exp_deps} ${imp_deps}; then
 		echo ${target} >&2
+		deps=${exp_deps}
 		${build_fn}
 
-		for t in ${target} ${deps}; do
+		for t in ${target} ${exp_deps} ${imp_deps}; do
 			write_depsum ${t} ${deps_dir}/${t}
 		done
 	fi

@@ -11,6 +11,8 @@ atf_init_test_cases() {
 	atf_add_test_case multiple_deps
 	atf_add_test_case multiple_targets
 	atf_add_test_case multiple_targets_reverse
+	atf_add_test_case implicit_deps
+	atf_add_test_case implicit_deps_rebuild
 }
 
 atf_test_case hello_world
@@ -108,4 +110,31 @@ multiple_targets_reverse_body() {
 	cd work
 	atf_check -s eq:0 -e inline:"libhello.o\nhello\n" ss
 	atf_check -s eq:0 -o inline:"hello world\n" ./hello
+}
+
+atf_test_case implicit_deps
+implicit_deps_head() {
+	atf_set "descr" "Implicit deps excluded from deps var"
+}
+implicit_deps_body() {
+	cp -r "$(atf_get_srcdir)/examples/7_implicit_deps" work
+	cd work
+	atf_check -s eq:0 -e inline:"hello\n" ss
+	atf_check -s eq:0 -o inline:"hello world\n" ./hello
+}
+
+atf_test_case implicit_deps_rebuild
+implicit_deps_rebuild_head() {
+	atf_set "descr" "Changing an implicit dep triggers rebuild"
+}
+implicit_deps_rebuild_body() {
+	cp -r "$(atf_get_srcdir)/examples/7_implicit_deps" work
+	cd work
+	atf_check -s eq:0 -e inline:"hello\n" ss
+	atf_check -s eq:0 -o inline:"hello world\n" ./hello
+
+	sed -i '' 's/hello world/hello ss/' hello.h
+
+	atf_check -s eq:0 -e inline:"hello\n" ss
+	atf_check -s eq:0 -o inline:"hello ss\n" ./hello
 }

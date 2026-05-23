@@ -1,0 +1,2 @@
+This file is an implicit dep to verify it is excluded from ${deps}.
+If cc receives this file, the build will fail.
