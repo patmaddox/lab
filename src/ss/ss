@@ -4,6 +4,7 @@ set -o pipefail
 
 targets=""
 deps=""
+deps_dir=${TMPDIR}/ss
 
 target() {
 	local t
@@ -33,20 +34,50 @@ get_build_function() {
 	echo "$_fn"
 }
 
+write_depsum() {
+	mkdir -p "$(dirname "${2}")"
+	md5 -q "${1}" > "${2}"
+}
+
+any_is_ood() {
+	local t
+	for t in "${@}"; do
+		if is_ood ${t}; then return 0; fi
+	done
+	return 1
+}
+
 is_ood() {
-	test ! -f ${1}
+	local t
+	t=${1}
+	if [ ! -f ${t} ]; then return 0; fi
+
+	local sum_file
+	sum_file=${deps_dir}/${t}
+	if [ ! -f ${sum_file} ]; then return 0; fi
+
+	[ "$(md5 -q ${t})" != "$(cat ${sum_file})" ]
 }
 
 build_targets() {
 	local target
 	for target in ${targets}; do
-		if is_ood ${target}; then
-			echo ${target} >&2
-			build_fn=$(get_build_function ${target})
-			${build_fn}
-		fi
+		maybe_build_target ${target}
 	done
 }
 
+maybe_build_target() {
+	if any_is_ood ${target} ${deps}; then
+		echo ${target} >&2
+		build_fn=$(get_build_function ${target})
+		${build_fn}
+
+		for t in ${target} ${deps}; do
+			write_depsum ${t} ${deps_dir}/${t}
+		done
+	fi
+}
+
+mkdir -p ${deps_dir}
 . all.ss
 build_targets
