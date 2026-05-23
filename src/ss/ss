@@ -1,0 +1,20 @@
+#!/bin/sh
+set -eu
+set -o pipefail
+
+targets=""
+
+target() {
+	targets="${1} ${targets}"
+}
+
+needs() {
+
+}
+
+. all.ss
+
+for t in ${targets}; do
+	echo ${t} >&2
+	${t}
+done
