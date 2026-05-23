@@ -2,6 +2,7 @@
 set -eu
 set -o pipefail
 
+built=""
 cur_target=""
 deps_dir=${TMPDIR:-/tmp}/ss/$(pwd)
 targets=""
@@ -96,11 +97,13 @@ is_ood() {
 	t=${1}
 	if [ ! -f ${t} ]; then return 0; fi
 
+	write_depsum ${t} ${deps_dir}/${t}.new
+
 	local sum_file
 	sum_file=${deps_dir}/${t}
 	if [ ! -f ${sum_file} ]; then return 0; fi
 
-	[ "$(md5 -q ${t})" != "$(cat ${sum_file})" ]
+	! cmp -s ${sum_file} ${deps_dir}/${t}.new
 }
 
 build_targets() {
@@ -108,8 +111,12 @@ build_targets() {
 	for target in ${targets}; do
 		maybe_build ${target}
 	done
-	for target in ${visited}; do
-		write_depsum ${target} ${deps_dir}/${target}
+	for target in $(echo ${built} | tr ' ' '\n' | sort -u); do
+		if [ -f ${deps_dir}/${target}.new ]; then
+			mv ${deps_dir}/${target}.new ${deps_dir}/${target}
+		else
+			write_depsum ${target} ${deps_dir}/${target}
+		fi
 	done
 }
 
@@ -137,6 +144,7 @@ maybe_build() {
 		echo ${target} >&2
 		deps=${exp_deps}
 		${build_fn}
+		built="${built} ${target} ${exp_deps} ${imp_deps}"
 	fi
 }
 
