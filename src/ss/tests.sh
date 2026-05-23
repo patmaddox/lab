@@ -16,6 +16,7 @@ atf_init_test_cases() {
 	atf_add_test_case stamp_stable
 	atf_add_test_case stamp_changing
 	atf_add_test_case deps_dir_per_cwd
+	atf_add_test_case colon_target
 }
 
 atf_test_case hello_world
@@ -177,4 +178,15 @@ deps_dir_per_cwd_body() {
 	cd work
 	atf_check -s eq:0 -e inline:"hello\n" ss
 	test -f "${TMPDIR}/ss/$(pwd)/hello"
+}
+
+atf_test_case colon_target
+colon_target_head() {
+	atf_set "descr" "Target name with colon"
+}
+colon_target_body() {
+	cp -r "$(atf_get_srcdir)/examples/10_colon_target" work
+	cd work
+	atf_check -s eq:0 -e inline:"hello:world\n" ss
+	atf_check -s eq:0 -o inline:"hello world\n" "./hello:world"
 }
