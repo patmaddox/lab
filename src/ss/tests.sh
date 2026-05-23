@@ -34,6 +34,7 @@ atf_init_test_cases() {
 	atf_add_test_case target_vs_outfile
 	atf_add_test_case shared_dep
 	atf_add_test_case missing_dep
+	atf_add_test_case cycle
 }
 
 atf_test_case hello_world
@@ -707,4 +708,17 @@ missing_dep_body() {
 	ss 2>err.out; test $? -ne 0
 	atf_check -o inline:"ss: E: hello: missing dep: missing.h\n" cat err.out
 	test ! -f hello
+}
+
+atf_test_case cycle
+cycle_head() {
+	atf_set "descr" "Circular dependency prints diagnostic"
+}
+cycle_body() {
+	cp -r "$(atf_get_srcdir)/examples/22_cycle" work
+	cd work
+	ss 2>err.out; test $? -ne 0
+	atf_check -o inline:"ss: E: cycle: a\n" cat err.out
+	test ! -f a
+	test ! -f b
 }

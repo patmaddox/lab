@@ -40,6 +40,20 @@ is_visited() {
 	[ "${val}" = "1" ]
 }
 
+mark_in_progress() {
+	eval "__inprog_$(sanitize_target ${1})=1"
+}
+
+is_in_progress() {
+	local val
+	eval "val=\${__inprog_$(sanitize_target ${1}):-0}"
+	[ "${val}" = "1" ]
+}
+
+clear_in_progress() {
+	eval "__inprog_$(sanitize_target ${1})=0"
+}
+
 out-of-tree() {
 	eval "__oot_$(sanitize_target "${cur_target}")=1"
 }
@@ -168,7 +182,13 @@ maybe_build() {
 	local target exp_deps imp_deps
 	target=${1}; shift
 
+	if is_in_progress ${target}; then
+		errmsg "cycle: ${target}"
+		exit 1
+	fi
 	if is_visited ${target}; then return 0; fi
+
+	mark_in_progress ${target}
 	mark_visited ${target}
 
 	exp_deps=$(get_deps exp ${target})
@@ -222,6 +242,7 @@ maybe_build() {
 		fi
 		built="${built} ${exp_deps} ${imp_deps} ${target}"
 	fi
+	clear_in_progress ${target}
 }
 
 mkdir -p ${deps_dir}
