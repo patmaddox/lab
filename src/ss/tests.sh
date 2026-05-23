@@ -28,6 +28,7 @@ atf_init_test_cases() {
 	atf_add_test_case ls_targets
 	atf_add_test_case unknown_command
 	atf_add_test_case bad_flag
+	atf_add_test_case failed_dep
 }
 
 atf_test_case hello_world
@@ -353,5 +354,17 @@ bad_flag_body() {
 	atf_check -s eq:1 -e inline:"ss: unknown option: -h\n" ss -h
 	atf_check -s eq:1 -e inline:"ss: unknown option: -h\n" ss -h foo
 	atf_check -s eq:1 -e inline:"ss: unknown option: --\n" ss --help
+	test ! -f hello
+}
+
+atf_test_case failed_dep
+failed_dep_head() {
+	atf_set "descr" "Failed dep aborts build before downstream targets"
+}
+failed_dep_body() {
+	cp -r "$(atf_get_srcdir)/examples/18_failed_dep" work
+	cd work
+	atf_check -s ne:0 -e match:"libhello.o: FAIL" ss
+	test ! -f libhello.o
 	test ! -f hello
 }

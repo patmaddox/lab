@@ -170,7 +170,6 @@ maybe_build() {
 	build_fn=$(get_build_function ${target})
 
 	if [ -n "${build_fn}" ] && { is_stamp ${target} || any_is_ood ${target} ${exp_deps} ${imp_deps}; }; then
-		echo ${target} >&2
 		local _d
 		deps=""
 		for _d in ${exp_deps}; do
@@ -180,8 +179,16 @@ maybe_build() {
 		_orig_target=${target}
 		target=$(resolve_path ${target})
 		mkdir -p "$(dirname "${target}")"
+		set +e
 		${build_fn}
+		local _rc=$?
+		set -e
 		target=${_orig_target}
+		if [ ${_rc} -ne 0 ]; then
+			echo "${target}: FAIL" >&2
+			exit ${_rc}
+		fi
+		echo ${target} >&2
 		built="${built} ${target} ${exp_deps} ${imp_deps}"
 	fi
 }
