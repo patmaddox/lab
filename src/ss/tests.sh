@@ -29,6 +29,7 @@ atf_init_test_cases() {
 	atf_add_test_case unknown_command
 	atf_add_test_case bad_flag
 	atf_add_test_case failed_dep
+	atf_add_test_case failed_downstream
 }
 
 atf_test_case hello_world
@@ -367,4 +368,18 @@ failed_dep_body() {
 	atf_check -s ne:0 -e match:"libhello.o: FAIL" ss
 	test ! -f libhello.o
 	test ! -f hello
+}
+
+atf_test_case failed_downstream
+failed_downstream_head() {
+	atf_set "descr" "Successful dep not rebuilt when downstream fails"
+}
+failed_downstream_body() {
+	cp -r "$(atf_get_srcdir)/examples/19_failed_downstream" work
+	cd work
+	atf_check -s ne:0 -e match:"hello: FAIL" ss
+	test -f libhello.o
+	test ! -f hello
+
+	atf_check -s ne:0 -e match:"hello: FAIL" ss
 }

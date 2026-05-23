@@ -124,13 +124,14 @@ is_ood() {
 	p=$(resolve_path ${t})
 	if [ ! -f ${p} ]; then return 0; fi
 
-	write_depsum ${p} ${deps_dir}/${t}.new
-
 	local sum_file
 	sum_file=${deps_dir}/${t}
 	if [ ! -f ${sum_file} ]; then return 0; fi
 
-	! cmp -s ${sum_file} ${deps_dir}/${t}.new
+	local cur_sum saved_sum
+	cur_sum=$(md5 -q "${p}")
+	saved_sum=$(cat "${sum_file}")
+	[ "${cur_sum}" != "${saved_sum}" ]
 }
 
 build_targets() {
@@ -141,9 +142,7 @@ build_targets() {
 	for target in $(echo ${built} | tr ' ' '\n' | sort -u); do
 		local p
 		p=$(resolve_path ${target})
-		if [ -f ${deps_dir}/${target}.new ]; then
-			mv ${deps_dir}/${target}.new ${deps_dir}/${target}
-		elif [ -f ${p} ]; then
+		if [ -f ${p} ]; then
 			write_depsum ${p} ${deps_dir}/${target}
 		fi
 	done
@@ -189,7 +188,14 @@ maybe_build() {
 			exit ${_rc}
 		fi
 		echo ${target} >&2
-		built="${built} ${target} ${exp_deps} ${imp_deps}"
+		local _b _bp
+		for _b in ${exp_deps} ${imp_deps}; do
+			_bp=$(resolve_path ${_b})
+			if [ -f ${_bp} ]; then
+				write_depsum ${_bp} ${deps_dir}/${_b}
+			fi
+		done
+		built="${built} ${target}"
 	fi
 }
 
