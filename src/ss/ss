@@ -14,7 +14,7 @@ target() {
 	local t
 	t=${1}; shift
 	cur_target="${t}"
-	targets="${targets} ${t}"
+	targets="${targets:+${targets} }${t}"
 	set_build_function ${t} ${1:-${t}}
 }
 
@@ -31,7 +31,7 @@ is_stamp() {
 
 mark_visited() {
 	eval "__visited_$(sanitize_target ${1})=1"
-	visited="${visited} ${1}"
+	visited="${visited:+${visited} }${1}"
 }
 
 is_visited() {
@@ -91,7 +91,7 @@ needs() {
 }
 
 add_deps() {
-	local t which_deps d
+	local t which_deps d _existing
 	t=${1}; shift
 	which_deps="exp"
 	t=$(sanitize_target "${t}")
@@ -100,7 +100,8 @@ add_deps() {
 			which_deps="imp"
 			continue
 		fi
-		eval "__${which_deps}_deps_${t}=\"$(get_deps ${which_deps} ${t}) ${d}\""
+		_existing=$(get_deps ${which_deps} ${t})
+		eval "__${which_deps}_deps_${t}=\"${_existing:+${_existing} }${d}\""
 	done
 }
 
@@ -217,7 +218,7 @@ maybe_build() {
 		local _d
 		deps=""
 		for _d in ${exp_deps}; do
-			deps="${deps} $(resolve_path ${_d})"
+			deps="${deps:+${deps} }$(resolve_path ${_d})"
 		done
 		local outfile
 		outfile=$(resolve_path ${target})
@@ -240,7 +241,7 @@ maybe_build() {
 		else
 			dbg "built ${target} -> ${outfile}"
 		fi
-		built="${built} ${exp_deps} ${imp_deps} ${target}"
+		built="${built:+${built} }${exp_deps} ${imp_deps} ${target}"
 	fi
 	clear_in_progress ${target}
 }
