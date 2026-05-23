@@ -27,6 +27,7 @@ atf_init_test_cases() {
 	atf_add_test_case outdir_mixed
 	atf_add_test_case ls_targets
 	atf_add_test_case unknown_command
+	atf_add_test_case bad_flag
 }
 
 atf_test_case hello_world
@@ -339,5 +340,18 @@ unknown_command_body() {
 	cp -r "$(atf_get_srcdir)/examples/1_hello_world" work
 	cd work
 	atf_check -s eq:1 -e inline:"ss: unknown target: bogus\n" ss bogus
+	test ! -f hello
+}
+
+atf_test_case bad_flag
+bad_flag_head() {
+	atf_set "descr" "Unknown flag prints error and exits"
+}
+bad_flag_body() {
+	cp -r "$(atf_get_srcdir)/examples/1_hello_world" work
+	cd work
+	atf_check -s eq:1 -e inline:"ss: unknown option: -h\n" ss -h
+	atf_check -s eq:1 -e inline:"ss: unknown option: -h\n" ss -h foo
+	atf_check -s eq:1 -e inline:"ss: unknown option: --\n" ss --help
 	test ! -f hello
 }

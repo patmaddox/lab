@@ -188,9 +188,10 @@ maybe_build() {
 
 mkdir -p ${deps_dir}
 
-while getopts "o:" _opt; do
+while getopts ":o:" _opt; do
 	case ${_opt} in
 		o) outdir=${OPTARG} ;;
+		\?) echo "ss: unknown option: -${OPTARG}" >&2; exit 1 ;;
 	esac
 done
 shift $((OPTIND - 1))
