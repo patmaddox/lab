@@ -152,5 +152,15 @@ maybe_build() {
 }
 
 mkdir -p ${deps_dir}
-. ./${1:-all}.ss
-build_targets
+
+if [ $# -eq 0 ]; then
+	. ./all.ss
+	build_targets
+elif [ -f "./${1}.ss" ]; then
+	. ./${1}.ss
+	build_targets
+else
+	. ./all.ss
+	targets="${@}"
+	build_targets
+fi

@@ -18,6 +18,7 @@ atf_init_test_cases() {
 	atf_add_test_case deps_dir_per_cwd
 	atf_add_test_case colon_target
 	atf_add_test_case named_file
+	atf_add_test_case select_targets
 }
 
 atf_test_case hello_world
@@ -201,4 +202,17 @@ named_file_body() {
 	cd work
 	atf_check -s eq:0 -e inline:"hello\n" ss hello
 	atf_check -s eq:0 -o inline:"hello world\n" ./hello
+}
+
+atf_test_case select_targets
+select_targets_head() {
+	atf_set "descr" "Build only specified targets from all.ss"
+}
+select_targets_body() {
+	cp -r "$(atf_get_srcdir)/examples/12_select_targets" work
+	cd work
+	atf_check -s eq:0 -e inline:"foo\nbar\n" ss foo bar
+	atf_check -s eq:0 -o inline:"foo\n" ./foo
+	atf_check -s eq:0 -o inline:"bar\n" ./bar
+	test ! -f baz
 }
