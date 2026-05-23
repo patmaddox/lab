@@ -25,6 +25,7 @@ atf_init_test_cases() {
 	atf_add_test_case outdir_enabled
 	atf_add_test_case outdir_multiple
 	atf_add_test_case outdir_mixed
+	atf_add_test_case ls_targets
 }
 
 atf_test_case hello_world
@@ -313,4 +314,18 @@ outdir_mixed_body() {
 	echo "hello ss" > ${TMPDIR}/new-greeting
 	atf_check -s eq:0 -e inline:"greeting\nlibhello.o\nhello\n" ss -o ${TMPDIR}/_build
 	atf_check -s eq:0 -o inline:"hello ss\n" ${TMPDIR}/_build/hello
+}
+
+atf_test_case ls_targets
+ls_targets_head() {
+	atf_set "descr" "List available targets without building"
+}
+ls_targets_body() {
+	cp -r "$(atf_get_srcdir)/examples/17_outdir_mixed" work
+	cd work
+	echo "hello world" > ${TMPDIR}/new-greeting
+	atf_check -s eq:0 -o inline:"greeting\nlibhello.o\nhello\n" ss ls
+	test ! -f greeting
+	test ! -f libhello.o
+	test ! -f hello
 }

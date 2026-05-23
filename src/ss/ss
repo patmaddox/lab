@@ -13,7 +13,7 @@ target() {
 	local t
 	t=${1}; shift
 	cur_target="${t}"
-	targets="${t} ${targets}"
+	targets="${targets} ${t}"
 	set_build_function ${t} ${1:-${t}}
 }
 
@@ -194,6 +194,12 @@ while getopts "o:" _opt; do
 	esac
 done
 shift $((OPTIND - 1))
+
+if [ $# -gt 0 ] && [ "${1}" = "ls" ]; then
+	. ./all.ss
+	echo "${targets}" | tr ' ' '\n' | grep .
+	exit 0
+fi
 
 if [ $# -eq 0 ]; then
 	. ./all.ss
