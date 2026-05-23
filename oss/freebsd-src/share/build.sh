@@ -11,7 +11,7 @@ main() {
     cmd=${1}; shift
 
     case "${cmd}" in
-	buildworld|buildkernel|pkgbase|vm-image)
+	buildworld|buildkernel|pkgbase|vm_image)
  	    : ${CCACHE_CONFIGPATH}
  	    : ${JJ_ROOT}
  	    : ${KERNCONF}
@@ -60,7 +60,7 @@ pkgbase() {
     _build REPODIR=${pkgbase} packages
 }
 
-vm-image() {
+vm_image() {
     _build_release clean -DWITH_VMIMAGES
 
     local objtop pkg_abi pkgbase_conf_dir
