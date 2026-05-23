@@ -3,18 +3,19 @@ set -eu
 set -o pipefail
 
 targets=""
+deps=""
 
 target() {
 	targets="${1} ${targets}"
 }
 
 needs() {
-
+	deps="${1} ${deps}"
 }
 
 . all.ss
 
-for t in ${targets}; do
-	echo ${t} >&2
-	${t}
+for target in ${targets}; do
+	echo ${target} >&2
+	${target}
 done
