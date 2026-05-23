@@ -5,6 +5,7 @@ set -o pipefail
 built=""
 cur_target=""
 deps_dir=${TMPDIR:-/tmp}/ss/$(pwd)
+outdir=""
 targets=""
 visited=""
 
@@ -36,6 +37,28 @@ is_visited() {
 	local val
 	eval "val=\${__visited_$(sanitize_target ${1}):-0}"
 	[ "${val}" = "1" ]
+}
+
+out-of-tree() {
+	eval "__oot_$(sanitize_target "${cur_target}")=1"
+}
+
+is_oot() {
+	local val
+	eval "val=\${__oot_$(sanitize_target "${1}"):-0}"
+	[ "${val}" = "1" ]
+}
+
+is_opt_outdir() {
+	[ -n "${outdir}" ]
+}
+
+resolve_path() {
+	if is_opt_outdir && is_oot "${1}"; then
+		echo "${outdir}/${1}"
+	else
+		echo "${1}"
+	fi
 }
 
 needs() {
@@ -96,11 +119,12 @@ any_is_ood() {
 }
 
 is_ood() {
-	local t
+	local t p
 	t=${1}
-	if [ ! -f ${t} ]; then return 0; fi
+	p=$(resolve_path ${t})
+	if [ ! -f ${p} ]; then return 0; fi
 
-	write_depsum ${t} ${deps_dir}/${t}.new
+	write_depsum ${p} ${deps_dir}/${t}.new
 
 	local sum_file
 	sum_file=${deps_dir}/${t}
@@ -115,10 +139,12 @@ build_targets() {
 		maybe_build ${target}
 	done
 	for target in $(echo ${built} | tr ' ' '\n' | sort -u); do
+		local p
+		p=$(resolve_path ${target})
 		if [ -f ${deps_dir}/${target}.new ]; then
 			mv ${deps_dir}/${target}.new ${deps_dir}/${target}
-		elif [ -f ${target} ]; then
-			write_depsum ${target} ${deps_dir}/${target}
+		elif [ -f ${p} ]; then
+			write_depsum ${p} ${deps_dir}/${target}
 		fi
 	done
 }
@@ -145,13 +171,29 @@ maybe_build() {
 
 	if [ -n "${build_fn}" ] && { is_stamp ${target} || any_is_ood ${target} ${exp_deps} ${imp_deps}; }; then
 		echo ${target} >&2
-		deps=${exp_deps}
+		local _d
+		deps=""
+		for _d in ${exp_deps}; do
+			deps="${deps} $(resolve_path ${_d})"
+		done
+		local _orig_target
+		_orig_target=${target}
+		target=$(resolve_path ${target})
+		mkdir -p "$(dirname "${target}")"
 		${build_fn}
+		target=${_orig_target}
 		built="${built} ${target} ${exp_deps} ${imp_deps}"
 	fi
 }
 
 mkdir -p ${deps_dir}
+
+while getopts "o:" _opt; do
+	case ${_opt} in
+		o) outdir=${OPTARG} ;;
+	esac
+done
+shift $((OPTIND - 1))
 
 if [ $# -eq 0 ]; then
 	. ./all.ss

@@ -21,6 +21,10 @@ atf_init_test_cases() {
 	atf_add_test_case select_targets
 	atf_add_test_case mixed_sources
 	atf_add_test_case slash_dep
+	atf_add_test_case outdir_not_enabled
+	atf_add_test_case outdir_enabled
+	atf_add_test_case outdir_multiple
+	atf_add_test_case outdir_mixed
 }
 
 atf_test_case hello_world
@@ -245,4 +249,68 @@ slash_dep_body() {
 
 	atf_check -s eq:0 -e inline:"hello\n" ss
 	atf_check -s eq:0 -o inline:"hello ss\n" ./hello
+}
+
+atf_test_case outdir_not_enabled
+outdir_not_enabled_head() {
+	atf_set "descr" "Out-of-tree target builds in-tree when not enabled"
+}
+outdir_not_enabled_body() {
+	cp -r "$(atf_get_srcdir)/examples/15_outdir" work
+	cd work
+	atf_check -s eq:0 -e inline:"hello\n" ss
+	atf_check -s eq:0 -o inline:"hello world\n" ./hello
+}
+
+atf_test_case outdir_enabled
+outdir_enabled_head() {
+	atf_set "descr" "Out-of-tree target builds into outdir"
+}
+outdir_enabled_body() {
+	cp -r "$(atf_get_srcdir)/examples/15_outdir" work
+	cd work
+	atf_check -s eq:0 -e inline:"hello\n" ss -o ${TMPDIR}/_build
+	test ! -f hello
+	atf_check -s eq:0 -o inline:"hello world\n" ${TMPDIR}/_build/hello
+
+	atf_check -s eq:0 ss -o ${TMPDIR}/_build
+}
+
+atf_test_case outdir_multiple
+outdir_multiple_head() {
+	atf_set "descr" "Multiple out-of-tree targets build into outdir"
+}
+outdir_multiple_body() {
+	cp -r "$(atf_get_srcdir)/examples/16_outdir_multiple" work
+	cd work
+	atf_check -s eq:0 -e inline:"libhello.o\nhello\n" ss -o ${TMPDIR}/_build
+	test ! -f libhello.o
+	test ! -f hello
+	test -f ${TMPDIR}/_build/libhello.o
+	atf_check -s eq:0 -o inline:"hello world\n" ${TMPDIR}/_build/hello
+
+	atf_check -s eq:0 ss -o ${TMPDIR}/_build
+}
+
+atf_test_case outdir_mixed
+outdir_mixed_head() {
+	atf_set "descr" "Mix of in-tree and out-of-tree targets"
+}
+outdir_mixed_body() {
+	cp -r "$(atf_get_srcdir)/examples/17_outdir_mixed" work
+	cd work
+	echo "hello world" > ${TMPDIR}/new-greeting
+	atf_check -s eq:0 -e inline:"greeting\nlibhello.o\nhello\n" ss -o ${TMPDIR}/_build
+	test -f ${TMPDIR}/_build/greeting
+	test ! -f greeting
+	test -f libhello.o
+	test ! -f ${TMPDIR}/_build/libhello.o
+	test ! -f hello
+	atf_check -s eq:0 -o inline:"hello world\n" ${TMPDIR}/_build/hello
+
+	atf_check -s eq:0 ss -o ${TMPDIR}/_build
+
+	echo "hello ss" > ${TMPDIR}/new-greeting
+	atf_check -s eq:0 -e inline:"greeting\nlibhello.o\nhello\n" ss -o ${TMPDIR}/_build
+	atf_check -s eq:0 -o inline:"hello ss\n" ${TMPDIR}/_build/hello
 }
