@@ -34,6 +34,8 @@ _build() {
 	local tmplog="/tmp/freebsd-build.${config}.${target}.log"
 	"${SRC_ROOT}/share/build.sh" "${target}" "${config}" "${sha}" \
 		2>&1 | tee "${tmplog}"
+	local _rc=${?}
+	if [ ${_rc} -ne 0 ]; then return ${_rc}; fi
 	cp "${tmplog}" "${outfile}"
 }
 
