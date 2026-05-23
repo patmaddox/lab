@@ -19,6 +19,7 @@ atf_init_test_cases() {
 	atf_add_test_case colon_target
 	atf_add_test_case named_file
 	atf_add_test_case select_targets
+	atf_add_test_case mixed_sources
 }
 
 atf_test_case hello_world
@@ -215,4 +216,32 @@ select_targets_body() {
 	atf_check -s eq:0 -o inline:"foo\n" ./foo
 	atf_check -s eq:0 -o inline:"bar\n" ./bar
 	test ! -f baz
+}
+
+atf_test_case mixed_sources
+mixed_sources_head() {
+	atf_set "descr" "Source from named .ss files and fall back to all.ss"
+}
+mixed_sources_body() {
+	cp -r "$(atf_get_srcdir)/examples/13_mixed_sources" work
+	cd work
+	atf_check -s eq:0 -e inline:"foo\nbar\n" ss foo bar
+	atf_check -s eq:0 -o inline:"foo\n" ./foo
+	atf_check -s eq:0 -o inline:"bar\n" ./bar
+}
+
+atf_test_case slash_dep
+slash_dep_head() {
+	atf_set "descr" "Dependency with slash in path"
+}
+slash_dep_body() {
+	cp -r "$(atf_get_srcdir)/examples/14_slash_dep" work
+	cd work
+	atf_check -s eq:0 -e inline:"hello\n" ss
+	atf_check -s eq:0 -o inline:"hello world\n" ./hello
+
+	sed -i '' 's/hello world/hello ss/' inc/hello.h
+
+	atf_check -s eq:0 -e inline:"hello\n" ss
+	atf_check -s eq:0 -o inline:"hello ss\n" ./hello
 }

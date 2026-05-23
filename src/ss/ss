@@ -155,12 +155,18 @@ mkdir -p ${deps_dir}
 
 if [ $# -eq 0 ]; then
 	. ./all.ss
-	build_targets
-elif [ -f "./${1}.ss" ]; then
-	. ./${1}.ss
-	build_targets
 else
-	. ./all.ss
+	_need_all=false
+	for _arg in "${@}"; do
+		if [ -f "./${_arg}.ss" ]; then
+			. ./${_arg}.ss
+		else
+			_need_all=true
+		fi
+	done
+	if ${_need_all}; then
+		. ./all.ss
+	fi
 	targets="${@}"
-	build_targets
 fi
+build_targets
