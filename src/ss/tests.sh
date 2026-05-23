@@ -15,6 +15,7 @@ atf_init_test_cases() {
 	atf_add_test_case implicit_deps_rebuild
 	atf_add_test_case stamp_stable
 	atf_add_test_case stamp_changing
+	atf_add_test_case deps_dir_per_cwd
 }
 
 atf_test_case hello_world
@@ -165,4 +166,15 @@ stamp_changing_body() {
 	atf_check -s eq:0 -o inline:"hello world\n" ./hello
 
 	atf_check -s eq:0 -e inline:"build_timestamp\nhello\n" ss
+}
+
+atf_test_case deps_dir_per_cwd
+deps_dir_per_cwd_head() {
+	atf_set "descr" "Dep checksums stored under TMPDIR with CWD path"
+}
+deps_dir_per_cwd_body() {
+	cp -r "$(atf_get_srcdir)/examples/1_hello_world" work
+	cd work
+	atf_check -s eq:0 -e inline:"hello\n" ss
+	test -f "${TMPDIR}/ss/$(pwd)/hello"
 }

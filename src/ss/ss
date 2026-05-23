@@ -3,7 +3,7 @@ set -eu
 set -o pipefail
 
 cur_target=""
-deps_dir=${TMPDIR}/ss
+deps_dir=${TMPDIR:-/tmp}/ss/$(pwd)
 targets=""
 visited=""
 
