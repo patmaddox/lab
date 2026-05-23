@@ -152,5 +152,5 @@ maybe_build() {
 }
 
 mkdir -p ${deps_dir}
-. all.ss
+. ./${1:-all}.ss
 build_targets
