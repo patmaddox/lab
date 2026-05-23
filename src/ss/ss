@@ -4,6 +4,7 @@ set -o pipefail
 
 built=""
 cur_target=""
+debug=false
 deps_dir=${TMPDIR:-/tmp}/ss/$(pwd)
 outdir=""
 targets=""
@@ -51,6 +52,12 @@ is_oot() {
 
 is_opt_outdir() {
 	[ -n "${outdir}" ]
+}
+
+dbg() {
+	if ${debug}; then
+		echo "  ${@}" >&2
+	fi
 }
 
 resolve_path() {
@@ -106,6 +113,7 @@ get_build_function() {
 }
 
 write_depsum() {
+	dbg "checksum ${1}"
 	mkdir -p "$(dirname "${2}")"
 	md5 -q "${1}" > "${2}"
 }
@@ -129,6 +137,7 @@ is_ood() {
 	if [ ! -f ${sum_file} ]; then return 0; fi
 
 	local cur_sum saved_sum
+	dbg "checksum ${p}"
 	cur_sum=$(md5 -q "${p}")
 	saved_sum=$(cat "${sum_file}")
 	[ "${cur_sum}" != "${saved_sum}" ]
@@ -178,6 +187,7 @@ maybe_build() {
 		_orig_target=${target}
 		target=$(resolve_path ${target})
 		mkdir -p "$(dirname "${target}")"
+		dbg "build ${_orig_target}"
 		set +e
 		${build_fn}
 		local _rc=$?
@@ -201,8 +211,9 @@ maybe_build() {
 
 mkdir -p ${deps_dir}
 
-while getopts ":o:" _opt; do
+while getopts ":do:" _opt; do
 	case ${_opt} in
+		d) debug=true ;;
 		o) outdir=${OPTARG} ;;
 		\?) echo "ss: unknown option: -${OPTARG}" >&2; exit 1 ;;
 	esac
@@ -211,7 +222,7 @@ shift $((OPTIND - 1))
 
 if [ $# -gt 0 ] && [ "${1}" = "help" ]; then
 	echo "usage: ss ls"
-	echo "       ss [-o outdir] [target]"
+	echo "       ss [-d] [-o outdir] [target]"
 	exit 0
 fi
 
