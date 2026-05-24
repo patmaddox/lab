@@ -307,9 +307,15 @@ is_ood() {
 	_sum_file=${deps_dir}/${_t}
 	if [ ! -f "${_sum_file}" ]; then return 0; fi
 
-	local _cur_sum _saved_sum
-	dbg "checksum ${_p}"
-	_cur_sum=$(md5 -q "${_p}")
+	local _cur_sum _saved_sum _all_produces _nl
+	_nl='
+'
+	_all_produces="${_produces:-${_t}}"
+	_cur_sum=""
+	for _pp in ${_all_produces}; do
+		dbg "checksum ${_pp}"
+		_cur_sum="${_cur_sum:+${_cur_sum}${_nl}}$(md5 -q "${_pp}")"
+	done
 	_saved_sum=$(cat "${_sum_file}")
 	[ "${_cur_sum}" != "${_saved_sum}" ]
 }
@@ -357,14 +363,22 @@ set_named_input_vars() {
 }
 
 write_checksums() {
-	local _t _p _sumfile
+	local _t _p _sumfile _produces _all_produces _pp _sum _nl
+	_nl='
+'
 	for _t in $(printf '%s\n' ${built} | sort -u); do
-		_p=$(resolve_path "${_t}")
-		if [ -f "${_p}" ]; then
-			dbg "checksum ${_p}"
+		_produces=$(get_prop produces "${_t}")
+		_all_produces="${_produces:-${_t}}"
+		_sum=""
+		for _pp in ${_all_produces}; do
+			if [ ! -f "${_pp}" ]; then continue; fi
+			dbg "checksum ${_pp}"
+			_sum="${_sum:+${_sum}${_nl}}$(md5 -q "${_pp}")"
+		done
+		if [ -n "${_sum}" ]; then
 			_sumfile="${deps_dir}/${_t}"
 			mkdir -p "$(dirname "${_sumfile}")"
-			md5 -q "${_p}" > "${_sumfile}"
+			printf '%s\n' "${_sum}" > "${_sumfile}"
 		fi
 	done
 }

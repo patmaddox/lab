@@ -858,6 +858,7 @@ produces_multiple_body() {
 ss: build hello -> bin/hello
 ss: built hello -> bin/hello
 ss: checksum bin/hello
+ss: checksum bin/hello.txt
 ss: checksum hello.c
 EOF
 	atf_check -s eq:0 -e file:expected.err ss -d
@@ -869,6 +870,20 @@ EOF
 	rm bin/hello.txt
 	atf_check -s eq:0 -e file:expected.err ss -d
 	test -f bin/hello.txt
+
+	# modifying secondary output triggers rebuild
+	echo "tampered" > bin/hello.txt
+	cat > expected_modify.err <<'EOF'
+ss: checksum bin/hello
+ss: checksum bin/hello.txt
+ss: build hello -> bin/hello
+ss: built hello -> bin/hello
+ss: checksum bin/hello
+ss: checksum bin/hello.txt
+ss: checksum hello.c
+EOF
+	atf_check -s eq:0 -e file:expected_modify.err ss -d
+	atf_check -s eq:0 -o inline:"built\n" cat bin/hello.txt
 
 	# clean removes all produced files
 	atf_check -s eq:0 ss clean
