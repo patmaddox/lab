@@ -142,7 +142,7 @@ cmd::build() {
 build_targets() {
 	local target
 	for target in ${targets}; do
-		maybe_build "${target}"
+		maybe_build_target "${target}"
 	done
 }
 
@@ -156,7 +156,40 @@ write_checksums() {
 	done
 }
 
-maybe_build() {
+exec_build_target() {
+	local deps _d
+	deps=""
+	for _d in ${exp_deps}; do
+		deps="${deps:+${deps} }$(resolve_path "${_d}")"
+	done
+	local outfile
+	outfile=$(resolve_path "${target}")
+	set_named_input_vars "${target}"
+	local _pp
+	for _pp in $(get_produces "${target}"); do
+		mkdir -p "$(dirname "${_pp}")"
+	done
+	dbg_target "build"
+	set +e
+	${build_fn}
+	local _rc=${?}
+	set -e
+	if [ "${_rc}" -ne 0 ]; then
+		err "${target}"
+		exit ${_rc}
+	fi
+	local _check_paths
+	_check_paths=$(get_check_produces "${target}")
+	for _pp in ${_check_paths}; do
+		if [ ! -f "${_pp}" ]; then
+			die "${target}: build did not produce ${_pp}"
+		fi
+	done
+	dbg_target "built"
+	built="${built:+${built} }${exp_deps} ${imp_deps} ${target}"
+}
+
+maybe_build_target() {
 	local target exp_deps imp_deps
 	target=${1}; shift
 
@@ -173,7 +206,7 @@ maybe_build() {
 
 	local d
 	for d in ${exp_deps} ${imp_deps}; do
-		maybe_build "${d}"
+		maybe_build_target "${d}"
 	done
 
 	local _d _dp
@@ -184,40 +217,11 @@ maybe_build() {
 		fi
 	done
 
-	local build_fn deps
+	local build_fn
 	build_fn=$(get_build_function "${target}")
 
 	if [ -n "${build_fn}" ] && { is_stamp "${target}" || any_is_ood "${target}" ${exp_deps} ${imp_deps}; }; then
-		local _d
-		deps=""
-		for _d in ${exp_deps}; do
-			deps="${deps:+${deps} }$(resolve_path "${_d}")"
-		done
-		local outfile
-		outfile=$(resolve_path "${target}")
-		set_named_input_vars "${target}"
-		local _pp
-		for _pp in $(get_produces "${target}"); do
-			mkdir -p "$(dirname "${_pp}")"
-		done
-		dbg_target "build"
-		set +e
-		${build_fn}
-		local _rc=${?}
-		set -e
-		if [ "${_rc}" -ne 0 ]; then
-			err "${target}"
-			exit ${_rc}
-		fi
-		local _check_paths
-		_check_paths=$(get_check_produces "${target}")
-		for _pp in ${_check_paths}; do
-			if [ ! -f "${_pp}" ]; then
-				die "${target}: build did not produce ${_pp}"
-			fi
-		done
-		dbg_target "built"
-		built="${built:+${built} }${exp_deps} ${imp_deps} ${target}"
+		exec_build_target
 	fi
 	clear_in_progress "${target}"
 }
