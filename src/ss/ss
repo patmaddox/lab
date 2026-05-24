@@ -80,9 +80,7 @@ cmd::clean() {
 	local _t _p
 	for _t in ${_clean_targets}; do
 		for _p in $(get_prop produces "${_t}"); do
-			if [ -f "${_p}" ]; then
-				rm "${_p}"
-			fi
+			rm -f "${_p}"
 		done
 	done
 }
