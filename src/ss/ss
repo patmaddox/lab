@@ -54,8 +54,16 @@ main() {
 cmd::build() {
 	load_targets "${@}"
 	if [ ${#} -gt 0 ]; then
-		set_requested_produces "${@}"
-		targets=$(resolve_targets "${@}") || exit ${?}
+		local _arg _rt _resolved
+		_resolved=""
+		for _arg in "${@}"; do
+			_rt=$(resolve_target "${_arg}") || die "unknown target: ${_arg}"
+			_resolved="${_resolved:+${_resolved} }${_rt}"
+			if [ "${_rt}" != "${_arg}" ]; then
+				append_prop req_produces "${_rt}" "${_arg}"
+			fi
+		done
+		targets="${_resolved}"
 	fi
 	trap write_checksums EXIT
 	build_targets ${targets}
@@ -208,16 +216,6 @@ resolve_targets() {
 		_resolved="${_resolved:+${_resolved} }${_rt}"
 	done
 	echo "${_resolved}"
-}
-
-set_requested_produces() {
-	local _arg _rt
-	for _arg in "${@}"; do
-		_rt=$(resolve_target "${_arg}") || continue
-		if [ "${_rt}" != "${_arg}" ]; then
-			append_prop req_produces "${_rt}" "${_arg}"
-		fi
-	done
 }
 
 # --- Execution ---
