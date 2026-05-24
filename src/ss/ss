@@ -36,7 +36,6 @@ main() {
 	deps_dir=${TMPDIR:-/tmp}/ss/$(pwd)
 	outdir=""
 	targets=""
-	visited=""
 
 	mkdir -p "${deps_dir}"
 
@@ -446,7 +445,6 @@ is_oot() {
 
 mark_visited() {
 	eval "__visited_$(sanitize_target "${1}")=1"
-	visited="${visited:+${visited} }${1}"
 }
 
 is_visited() {
