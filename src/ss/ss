@@ -24,7 +24,7 @@ usage() {
 Usage:
   ${PROGNAME} help
   ${PROGNAME} ls
-  ${PROGNAME} clean
+  ${PROGNAME} clean [target ...]
   ${PROGNAME} [-d] [-o outdir] [target ...]
 EOF
 }
@@ -51,8 +51,12 @@ main() {
 
 	local cmd="${1:-}"
 	case "${cmd}" in
-		help | ls | clean)
+		help | ls)
 			cmd::${cmd}
+			;;
+		clean)
+			shift
+			cmd::clean "${@}"
 			;;
 		"")
 			cmd::build
@@ -74,8 +78,15 @@ cmd::ls() {
 
 cmd::clean() {
 	. ./all.ss
+	local _clean_targets
+	if [ ${#} -gt 0 ]; then
+		validate_targets "${@}"
+		_clean_targets="${*}"
+	else
+		_clean_targets="${targets}"
+	fi
 	local _t _p
-	for _t in ${targets}; do
+	for _t in ${_clean_targets}; do
 		_p=$(resolve_path "${_t}")
 		if [ -f "${_p}" ]; then
 			rm "${_p}"
@@ -99,12 +110,7 @@ cmd::build() {
 		if ${_need_all}; then
 			. ./all.ss
 		fi
-		for _arg in "${@}"; do
-			case " ${targets} " in
-				*" ${_arg} "*) ;;
-				*) die "unknown target: ${_arg}" ;;
-			esac
-		done
+		validate_targets "${@}"
 		targets="${*}"
 	fi
 	trap write_checksums EXIT
@@ -237,6 +243,16 @@ resolve_path() {
 
 is_opt_outdir() {
 	[ -n "${outdir}" ]
+}
+
+validate_targets() {
+	local _arg
+	for _arg in "${@}"; do
+		case " ${targets} " in
+			*" ${_arg} "*) ;;
+			*) die "unknown target: ${_arg}" ;;
+		esac
+	done
 }
 
 target() {

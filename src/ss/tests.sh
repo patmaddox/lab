@@ -37,6 +37,8 @@ atf_init_test_cases() {
 	atf_add_test_case cycle
 	atf_add_test_case missing_output
 	atf_add_test_case clean
+	atf_add_test_case clean_selective
+	atf_add_test_case clean_unknown_target
 }
 
 atf_test_case hello_world
@@ -752,4 +754,32 @@ clean_body() {
 	test ! -f libhello.o
 	test -f hello.c
 	test -f libhello.c
+}
+
+atf_test_case clean_selective
+clean_selective_head() {
+	atf_set "descr" "Clean with targets removes only those targets"
+}
+clean_selective_body() {
+	cp -r "$(atf_get_srcdir)/examples/12_select_targets" work
+	cd work
+	atf_check -s eq:0 ss
+	test -f foo
+	test -f bar
+	test -f baz
+	atf_check -s eq:0 ss clean foo bar
+	test ! -f foo
+	test ! -f bar
+	test -f baz
+	atf_check -s eq:0 ss clean foo bar
+}
+
+atf_test_case clean_unknown_target
+clean_unknown_target_head() {
+	atf_set "descr" "Clean with unknown target prints error"
+}
+clean_unknown_target_body() {
+	cp -r "$(atf_get_srcdir)/examples/5_multiple_targets" work
+	cd work
+	atf_check -s eq:1 -e inline:"ss: E: unknown target: bogus\n" ss clean bogus
 }
