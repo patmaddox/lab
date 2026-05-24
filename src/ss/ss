@@ -78,8 +78,27 @@ cmd::help() {
 	usage
 }
 
+load_targets() {
+	if [ ${#} -eq 0 ]; then
+		. ./all.ss
+	else
+		local _need_all _arg
+		_need_all=false
+		for _arg in "${@}"; do
+			if [ -f "./${_arg}.ss" ]; then
+				. "./${_arg}.ss"
+			else
+				_need_all=true
+			fi
+		done
+		if ${_need_all}; then
+			. ./all.ss
+		fi
+	fi
+}
+
 cmd::ls() {
-	. ./all.ss
+	load_targets
 	local _t _produces _pp
 	for _t in ${targets}; do
 		echo "${_t}"
@@ -93,7 +112,7 @@ cmd::ls() {
 }
 
 cmd::clean() {
-	. ./all.ss
+	load_targets
 	local _clean_targets
 	if [ ${#} -gt 0 ]; then
 		_clean_targets=$(resolve_targets "${@}") || exit ${?}
@@ -111,21 +130,8 @@ cmd::clean() {
 }
 
 cmd::build() {
-	if [ ${#} -eq 0 ]; then
-		. ./all.ss
-	else
-		local _need_all _arg
-		_need_all=false
-		for _arg in "${@}"; do
-			if [ -f "./${_arg}.ss" ]; then
-				. "./${_arg}.ss"
-			else
-				_need_all=true
-			fi
-		done
-		if ${_need_all}; then
-			. ./all.ss
-		fi
+	load_targets "${@}"
+	if [ ${#} -gt 0 ]; then
 		set_requested_produces "${@}"
 		targets=$(resolve_targets "${@}") || exit ${?}
 	fi
