@@ -304,12 +304,21 @@ is_ood() {
 
 maybe_build_target() {
 	local target exp_deps imp_deps
-	target=${1}; shift
+	target=${1}
 
 	if is_in_progress "${target}"; then
 		die "cycle: ${target}"
 	fi
 	if is_visited "${target}"; then return 0; fi
+
+	local build_fn
+	build_fn=$(get_build_function "${target}")
+	if [ -z "${build_fn}" ]; then
+		if [ ! -f "${target}" ]; then
+			die "missing source: ${target}"
+		fi
+		return 0
+	fi
 
 	mark_in_progress "${target}"
 	mark_visited "${target}"
@@ -319,18 +328,7 @@ maybe_build_target() {
 
 	build_targets ${exp_deps} ${imp_deps}
 
-	local _d _dp
-	for _d in ${exp_deps} ${imp_deps}; do
-		_dp=$(resolve_path "${_d}")
-		if [ ! -f "${_dp}" ] && [ -z "$(get_build_function "${_d}")" ]; then
-			die "${target}: missing dep: ${_d}"
-		fi
-	done
-
-	local build_fn
-	build_fn=$(get_build_function "${target}")
-
-	if [ -n "${build_fn}" ] && { is_stamp "${target}" || any_is_ood "${target}" ${exp_deps} ${imp_deps}; }; then
+	if is_stamp "${target}" || any_is_ood "${target}" ${exp_deps} ${imp_deps}; then
 		exec_build_target
 	fi
 	clear_in_progress "${target}"

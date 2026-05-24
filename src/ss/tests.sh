@@ -716,7 +716,7 @@ missing_dep_body() {
 	cp -r "$(atf_get_srcdir)/examples/23_missing_dep" work
 	cd work
 	ss 2>err.out; test $? -ne 0
-	atf_check -o inline:"ss: E: hello: missing dep: missing.h\n" cat err.out
+	atf_check -o inline:"ss: E: missing source: missing.h\n" cat err.out
 	test ! -f hello
 }
 
