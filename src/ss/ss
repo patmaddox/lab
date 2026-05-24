@@ -2,80 +2,229 @@
 set -eu
 set -o pipefail
 
-built=""
-cur_target=""
-debug=false
-deps_dir=${TMPDIR:-/tmp}/ss/$(pwd)
-outdir=""
-targets=""
-visited=""
+readonly PROGNAME="${0##*/}"
 
-target() {
-	local t
-	t=${1}; shift
-	cur_target="${t}"
-	targets="${targets:+${targets} }${t}"
-	set_build_function ${t} ${1:-${t}}
+err() {
+	echo "${PROGNAME}: E: ${*}" >&2
 }
 
-stamp() {
-	target "${@}"
-	eval "__stamp_$(sanitize_target "${cur_target}")=1"
-}
-
-is_stamp() {
-	local val
-	eval "val=\${__stamp_$(sanitize_target "${1}"):-0}"
-	[ "${val}" = "1" ]
-}
-
-mark_visited() {
-	eval "__visited_$(sanitize_target ${1})=1"
-	visited="${visited:+${visited} }${1}"
-}
-
-is_visited() {
-	local val
-	eval "val=\${__visited_$(sanitize_target ${1}):-0}"
-	[ "${val}" = "1" ]
-}
-
-mark_in_progress() {
-	eval "__inprog_$(sanitize_target ${1})=1"
-}
-
-is_in_progress() {
-	local val
-	eval "val=\${__inprog_$(sanitize_target ${1}):-0}"
-	[ "${val}" = "1" ]
-}
-
-clear_in_progress() {
-	eval "__inprog_$(sanitize_target ${1})=0"
-}
-
-out-of-tree() {
-	eval "__oot_$(sanitize_target "${cur_target}")=1"
-}
-
-is_oot() {
-	local val
-	eval "val=\${__oot_$(sanitize_target "${1}"):-0}"
-	[ "${val}" = "1" ]
-}
-
-is_opt_outdir() {
-	[ -n "${outdir}" ]
+die() {
+	err "${@}"
+	exit 1
 }
 
 dbg() {
 	if ${debug}; then
-		echo "ss: ${@}" >&2
+		echo "${PROGNAME}: ${*}" >&2
 	fi
 }
 
-errmsg() {
-	echo "ss: E: ${@}" >&2
+usage() {
+	cat <<EOF
+Usage:
+  ${PROGNAME} help
+  ${PROGNAME} ls
+  ${PROGNAME} clean
+  ${PROGNAME} [-d] [-o outdir] [target ...]
+EOF
+}
+
+main() {
+	built=""
+	cur_target=""
+	debug=false
+	deps_dir=${TMPDIR:-/tmp}/ss/$(pwd)
+	outdir=""
+	targets=""
+	visited=""
+
+	mkdir -p "${deps_dir}"
+
+	while getopts ":do:" _opt; do
+		case "${_opt}" in
+			d) debug=true ;;
+			o) outdir="${OPTARG}" ;;
+			\?) die "unknown option: -${OPTARG}" ;;
+		esac
+	done
+	shift $((OPTIND - 1))
+
+	local cmd="${1:-}"
+	case "${cmd}" in
+		help | ls | clean)
+			cmd::${cmd}
+			;;
+		"")
+			cmd::build
+			;;
+		*)
+			cmd::build "${@}"
+			;;
+	esac
+}
+
+cmd::help() {
+	usage
+}
+
+cmd::ls() {
+	. ./all.ss
+	echo "${targets}" | tr ' ' '\n' | grep .
+}
+
+cmd::clean() {
+	. ./all.ss
+	local _t _p
+	for _t in ${targets}; do
+		_p=$(resolve_path "${_t}")
+		if [ -f "${_p}" ]; then
+			rm "${_p}"
+		fi
+	done
+}
+
+cmd::build() {
+	if [ ${#} -eq 0 ]; then
+		. ./all.ss
+	else
+		local _need_all _arg
+		_need_all=false
+		for _arg in "${@}"; do
+			if [ -f "./${_arg}.ss" ]; then
+				. "./${_arg}.ss"
+			else
+				_need_all=true
+			fi
+		done
+		if ${_need_all}; then
+			. ./all.ss
+		fi
+		for _arg in "${@}"; do
+			case " ${targets} " in
+				*" ${_arg} "*) ;;
+				*) die "unknown target: ${_arg}" ;;
+			esac
+		done
+		targets="${*}"
+	fi
+	trap write_checksums EXIT
+	build_targets
+}
+
+build_targets() {
+	local target
+	for target in ${targets}; do
+		maybe_build "${target}"
+	done
+}
+
+write_checksums() {
+	local _t _p
+	for _t in $(echo "${built}" | tr ' ' '\n' | sort -u); do
+		_p=$(resolve_path "${_t}")
+		if [ -f "${_p}" ]; then
+			write_depsum "${_p}" "${deps_dir}/${_t}"
+		fi
+	done
+}
+
+maybe_build() {
+	local target exp_deps imp_deps
+	target=${1}; shift
+
+	if is_in_progress "${target}"; then
+		die "cycle: ${target}"
+	fi
+	if is_visited "${target}"; then return 0; fi
+
+	mark_in_progress "${target}"
+	mark_visited "${target}"
+
+	exp_deps=$(get_deps exp "${target}")
+	imp_deps=$(get_deps imp "${target}")
+
+	if [ -n "${exp_deps}" ] || [ -n "${imp_deps}" ]; then
+		local d
+		for d in ${exp_deps} ${imp_deps}; do
+			maybe_build "${d}"
+		done
+	fi
+
+	local _d _dp
+	for _d in ${exp_deps} ${imp_deps}; do
+		_dp=$(resolve_path "${_d}")
+		if [ ! -f "${_dp}" ] && [ -z "$(get_build_function "${_d}")" ]; then
+			die "${target}: missing dep: ${_d}"
+		fi
+	done
+
+	local build_fn deps
+	build_fn=$(get_build_function "${target}")
+
+	if [ -n "${build_fn}" ] && { is_stamp "${target}" || any_is_ood "${target}" ${exp_deps} ${imp_deps}; }; then
+		local _d
+		deps=""
+		for _d in ${exp_deps}; do
+			deps="${deps:+${deps} }$(resolve_path "${_d}")"
+		done
+		local outfile
+		outfile=$(resolve_path "${target}")
+		mkdir -p "$(dirname "${outfile}")"
+		if [ "${outfile}" = "${target}" ]; then
+			dbg "build ${target}"
+		else
+			dbg "build ${target} -> ${outfile}"
+		fi
+		set +e
+		${build_fn}
+		local _rc=${?}
+		set -e
+		if [ "${_rc}" -ne 0 ]; then
+			err "${target}"
+			exit ${_rc}
+		fi
+		if [ ! -f "${outfile}" ]; then
+			die "${target}: build did not produce ${outfile}"
+		fi
+		if [ "${outfile}" = "${target}" ]; then
+			dbg "built ${target}"
+		else
+			dbg "built ${target} -> ${outfile}"
+		fi
+		built="${built:+${built} }${exp_deps} ${imp_deps} ${target}"
+	fi
+	clear_in_progress "${target}"
+}
+
+any_is_ood() {
+	local t
+	for t in "${@}"; do
+		if is_ood "${t}"; then return 0; fi
+	done
+	return 1
+}
+
+is_ood() {
+	local t p
+	t=${1}
+	p=$(resolve_path "${t}")
+	if [ ! -f "${p}" ]; then return 0; fi
+
+	local sum_file
+	sum_file=${deps_dir}/${t}
+	if [ ! -f "${sum_file}" ]; then return 0; fi
+
+	local cur_sum saved_sum
+	dbg "checksum ${p}"
+	cur_sum=$(md5 -q "${p}")
+	saved_sum=$(cat "${sum_file}")
+	[ "${cur_sum}" != "${saved_sum}" ]
+}
+
+write_depsum() {
+	dbg "checksum ${1}"
+	mkdir -p "$(dirname "${2}")"
+	md5 -q "${1}" > "${2}"
 }
 
 resolve_path() {
@@ -86,8 +235,29 @@ resolve_path() {
 	fi
 }
 
+is_opt_outdir() {
+	[ -n "${outdir}" ]
+}
+
+target() {
+	local t
+	t=${1}; shift
+	cur_target="${t}"
+	targets="${targets:+${targets} }${t}"
+	set_build_function "${t}" "${1:-${t}}"
+}
+
+stamp() {
+	target "${@}"
+	eval "__stamp_$(sanitize_target "${cur_target}")=1"
+}
+
 needs() {
 	add_deps "${cur_target}" "${@}"
+}
+
+out-of-tree() {
+	eval "__oot_$(sanitize_target "${cur_target}")=1"
 }
 
 add_deps() {
@@ -100,7 +270,7 @@ add_deps() {
 			which_deps="imp"
 			continue
 		fi
-		_existing=$(get_deps ${which_deps} ${t})
+		_existing=$(get_deps "${which_deps}" "${t}")
 		eval "__${which_deps}_deps_${t}=\"${_existing:+${_existing} }${d}\""
 	done
 }
@@ -114,198 +284,58 @@ get_deps() {
 	echo "${deps}"
 }
 
-sanitize_target() {
-	case "$1" in
-		*[.:/\-]*) echo "${1}" | sed -e "s/\./__DOT__/g" -e "s/:/__COLON__/g" -e "s|/|__SLASH__|g" -e "s/-/__DASH__/g" ;;
-		*) echo "$1" ;;
-	esac
-}
-
 set_build_function() {
-	eval "__build_$(sanitize_target ${1})=${2}"
+	eval "__build_$(sanitize_target "${1}")=${2}"
 }
 
 get_build_function() {
 	local _fn
-	eval "_fn=\${__build_$(sanitize_target ${1}):-}"
-	echo "$_fn"
+	eval "_fn=\${__build_$(sanitize_target "${1}"):-}"
+	echo "${_fn}"
 }
 
-write_depsum() {
-	dbg "checksum ${1}"
-	mkdir -p "$(dirname "${2}")"
-	md5 -q "${1}" > "${2}"
+is_stamp() {
+	local val
+	eval "val=\${__stamp_$(sanitize_target "${1}"):-0}"
+	[ "${val}" = "1" ]
 }
 
-any_is_ood() {
-	local t
-	for t in "${@}"; do
-		if is_ood ${t}; then return 0; fi
-	done
-	return 1
+is_oot() {
+	local val
+	eval "val=\${__oot_$(sanitize_target "${1}"):-0}"
+	[ "${val}" = "1" ]
 }
 
-is_ood() {
-	local t p
-	t=${1}
-	p=$(resolve_path ${t})
-	if [ ! -f ${p} ]; then return 0; fi
-
-	local sum_file
-	sum_file=${deps_dir}/${t}
-	if [ ! -f ${sum_file} ]; then return 0; fi
-
-	local cur_sum saved_sum
-	dbg "checksum ${p}"
-	cur_sum=$(md5 -q "${p}")
-	saved_sum=$(cat "${sum_file}")
-	[ "${cur_sum}" != "${saved_sum}" ]
+mark_visited() {
+	eval "__visited_$(sanitize_target "${1}")=1"
+	visited="${visited:+${visited} }${1}"
 }
 
-write_checksums() {
-	local _t _p
-	for _t in $(echo ${built} | tr ' ' '\n' | sort -u); do
-		_p=$(resolve_path ${_t})
-		if [ -f ${_p} ]; then
-			write_depsum ${_p} ${deps_dir}/${_t}
-		fi
-	done
+is_visited() {
+	local val
+	eval "val=\${__visited_$(sanitize_target "${1}"):-0}"
+	[ "${val}" = "1" ]
 }
 
-build_targets() {
-	local target
-	for target in ${targets}; do
-		maybe_build ${target}
-	done
+mark_in_progress() {
+	eval "__inprog_$(sanitize_target "${1}")=1"
 }
 
-maybe_build() {
-	local target exp_deps imp_deps
-	target=${1}; shift
-
-	if is_in_progress ${target}; then
-		errmsg "cycle: ${target}"
-		exit 1
-	fi
-	if is_visited ${target}; then return 0; fi
-
-	mark_in_progress ${target}
-	mark_visited ${target}
-
-	exp_deps=$(get_deps exp ${target})
-	imp_deps=$(get_deps imp ${target})
-
-	if [ -n "${exp_deps}" ] || [ -n "${imp_deps}" ]; then
-		local d
-		for d in ${exp_deps} ${imp_deps}; do
-			maybe_build ${d}
-		done
-	fi
-
-	local _d _dp
-	for _d in ${exp_deps} ${imp_deps}; do
-		_dp=$(resolve_path ${_d})
-		if [ ! -f ${_dp} ] && [ -z "$(get_build_function ${_d})" ]; then
-			errmsg "${target}: missing dep: ${_d}"
-			exit 1
-		fi
-	done
-
-	local build_fn deps
-	build_fn=$(get_build_function ${target})
-
-	if [ -n "${build_fn}" ] && { is_stamp ${target} || any_is_ood ${target} ${exp_deps} ${imp_deps}; }; then
-		local _d
-		deps=""
-		for _d in ${exp_deps}; do
-			deps="${deps:+${deps} }$(resolve_path ${_d})"
-		done
-		local outfile
-		outfile=$(resolve_path ${target})
-		mkdir -p "$(dirname "${outfile}")"
-		if [ "${outfile}" = "${target}" ]; then
-			dbg "build ${target}"
-		else
-			dbg "build ${target} -> ${outfile}"
-		fi
-		set +e
-		${build_fn}
-		local _rc=$?
-		set -e
-		if [ ${_rc} -ne 0 ]; then
-			errmsg "${target}"
-			exit ${_rc}
-		fi
-		if [ ! -f "${outfile}" ]; then
-			errmsg "${target}: build did not produce ${outfile}"
-			exit 1
-		fi
-		if [ "${outfile}" = "${target}" ]; then
-			dbg "built ${target}"
-		else
-			dbg "built ${target} -> ${outfile}"
-		fi
-		built="${built:+${built} }${exp_deps} ${imp_deps} ${target}"
-	fi
-	clear_in_progress ${target}
+is_in_progress() {
+	local val
+	eval "val=\${__inprog_$(sanitize_target "${1}"):-0}"
+	[ "${val}" = "1" ]
 }
 
-mkdir -p ${deps_dir}
+clear_in_progress() {
+	eval "__inprog_$(sanitize_target "${1}")=0"
+}
 
-while getopts ":do:" _opt; do
-	case ${_opt} in
-		d) debug=true ;;
-		o) outdir=${OPTARG} ;;
-		\?) errmsg "unknown option: -${OPTARG}"; exit 1 ;;
+sanitize_target() {
+	case "${1}" in
+		*[.:/\-]*) echo "${1}" | sed -e "s/\./__DOT__/g" -e "s/:/__COLON__/g" -e "s|/|__SLASH__|g" -e "s/-/__DASH__/g" ;;
+		*) echo "${1}" ;;
 	esac
-done
-shift $((OPTIND - 1))
+}
 
-if [ $# -gt 0 ] && [ "${1}" = "help" ]; then
-	echo "usage: ss ls"
-	echo "       ss clean"
-	echo "       ss [-d] [-o outdir] [target]"
-	exit 0
-fi
-
-if [ $# -gt 0 ] && [ "${1}" = "ls" ]; then
-	. ./all.ss
-	echo "${targets}" | tr ' ' '\n' | grep .
-	exit 0
-fi
-
-if [ $# -gt 0 ] && [ "${1}" = "clean" ]; then
-	. ./all.ss
-	for _t in ${targets}; do
-		_p=$(resolve_path ${_t})
-		if [ -f ${_p} ]; then
-			rm ${_p}
-		fi
-	done
-	exit 0
-fi
-
-if [ $# -eq 0 ]; then
-	. ./all.ss
-else
-	_need_all=false
-	for _arg in "${@}"; do
-		if [ -f "./${_arg}.ss" ]; then
-			. ./${_arg}.ss
-		else
-			_need_all=true
-		fi
-	done
-	if ${_need_all}; then
-		. ./all.ss
-	fi
-	for _arg in "${@}"; do
-		case " ${targets} " in
-			*" ${_arg} "*) ;;
-			*) errmsg "unknown target: ${_arg}"; exit 1 ;;
-		esac
-	done
-	targets="${@}"
-fi
-trap write_checksums EXIT
-build_targets
+main "${@}"
