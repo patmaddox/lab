@@ -160,6 +160,26 @@ target() {
 	produces "${_t}"
 }
 
+validate_no_conflicts() {
+	local _t _produces _pp _owner
+	for _t in ${targets}; do
+		_produces=$(get_prop produces "${_t}")
+		for _pp in ${_produces}; do
+			_owner=$(get_prop produces_owner "${_pp}")
+			if [ -n "${_owner}" ]; then
+				die "conflicting produces: ${_owner} and ${_t} both produce ${_pp}"
+			fi
+			set_prop produces_owner "${_pp}" "${_t}"
+		done
+	done
+	for _t in ${targets}; do
+		_owner=$(get_prop produces_owner "${_t}")
+		if [ -n "${_owner}" ] && [ "${_owner}" != "${_t}" ]; then
+			die "conflicting produces: ${_t} and ${_owner} both produce ${_t}"
+		fi
+	done
+}
+
 # --- Resolution ---
 
 load_targets() {
@@ -179,6 +199,7 @@ load_targets() {
 			. ./all.ss
 		fi
 	fi
+	validate_no_conflicts
 }
 
 resolve_path() {

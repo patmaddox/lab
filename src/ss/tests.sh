@@ -45,6 +45,12 @@ atf_init_test_cases() {
 	atf_add_test_case produces_multiple
 	atf_add_test_case produces_ls
 	atf_add_test_case produces_select
+	atf_add_test_case produces_conflict_dup
+	atf_add_test_case produces_conflict_explicit
+	atf_add_test_case produces_conflict_implicit
+	atf_add_test_case produces_conflict_multiple
+	atf_add_test_case produces_conflict_target_name
+	atf_add_test_case produces_checksum_consumer
 }
 
 atf_test_case hello_world
@@ -902,4 +908,116 @@ EOF
 	atf_check -s eq:0 -o inline:"hello\n" ./bin/hello
 	test ! -f bin/hello.txt
 	test ! -f bin/goodbye
+}
+
+atf_test_case produces_conflict_dup
+produces_conflict_dup_head() {
+	atf_set "descr" "Duplicate target detected as conflicting produces"
+}
+produces_conflict_dup_body() {
+	cp -r "$(atf_get_srcdir)/examples/30_produces_conflict_dup" work
+	cd work
+	atf_check -s eq:1 \
+		-e inline:"ss: E: conflicting produces: foo and foo both produce foo\n" \
+		ss
+}
+
+atf_test_case produces_conflict_explicit
+produces_conflict_explicit_head() {
+	atf_set "descr" "Two targets with same explicit produces path"
+}
+produces_conflict_explicit_body() {
+	cp -r "$(atf_get_srcdir)/examples/31_produces_conflict_explicit" work
+	cd work
+	atf_check -s eq:1 \
+		-e inline:"ss: E: conflicting produces: foo and bar both produce out.txt\n" \
+		ss
+}
+
+atf_test_case produces_conflict_implicit
+produces_conflict_implicit_head() {
+	atf_set "descr" "Explicit produces conflicts with implicit target output"
+}
+produces_conflict_implicit_body() {
+	cp -r "$(atf_get_srcdir)/examples/32_produces_conflict_implicit" work
+	cd work
+	atf_check -s eq:1 \
+		-e inline:"ss: E: conflicting produces: foo and bar both produce foo\n" \
+		ss
+}
+
+atf_test_case produces_conflict_multiple
+produces_conflict_multiple_head() {
+	atf_set "descr" "Multiple produces with one overlapping path"
+}
+produces_conflict_multiple_body() {
+	cp -r "$(atf_get_srcdir)/examples/33_produces_conflict_multiple" work
+	cd work
+	atf_check -s eq:1 \
+		-e inline:"ss: E: conflicting produces: foo and bar both produce a\n" \
+		ss
+}
+
+atf_test_case produces_conflict_target_name
+produces_conflict_target_name_head() {
+	atf_set "descr" "Produces path conflicts with another target name"
+}
+produces_conflict_target_name_body() {
+	cp -r "$(atf_get_srcdir)/examples/35_produces_conflict_target_name" work
+	cd work
+	atf_check -s eq:1 \
+		-e inline:"ss: E: conflicting produces: foo and bar both produce foo\n" \
+		ss
+}
+
+atf_test_case produces_checksum_consumer
+produces_checksum_consumer_head() {
+	atf_set "descr" "Modified produces triggers producer rebuild, consumer stays clean"
+}
+produces_checksum_consumer_body() {
+	cp -r "$(atf_get_srcdir)/examples/34_produces_checksum_consumer" work
+	cd work
+
+	# first build - both build
+	cat > expected_first.err <<'EOF'
+ss: build foo -> foo.txt
+ss: built foo -> foo.txt
+ss: build bar -> out.txt
+ss: built bar -> out.txt
+ss: checksum out.txt
+ss: checksum bar.txt
+ss: checksum foo.txt
+ss: checksum bar.txt
+ss: checksum foo.c
+EOF
+	atf_check -s eq:0 -e file:expected_first.err ss -d
+	atf_check -s eq:0 -o inline:"bar\n" cat out.txt
+
+	# no changes - neither builds
+	cat > expected_clean.err <<'EOF'
+ss: checksum foo.txt
+ss: checksum bar.txt
+ss: checksum foo.c
+ss: checksum out.txt
+ss: checksum bar.txt
+EOF
+	atf_check -s eq:0 -e file:expected_clean.err ss -d
+
+	# modify bar.txt externally - foo rebuilds to restore it,
+	# bar does not rebuild because bar.txt is restored
+	echo "new bar" > bar.txt
+	cat > expected_modified.err <<'EOF'
+ss: checksum foo.txt
+ss: checksum bar.txt
+ss: build foo -> foo.txt
+ss: built foo -> foo.txt
+ss: checksum out.txt
+ss: checksum bar.txt
+ss: checksum foo.txt
+ss: checksum bar.txt
+ss: checksum foo.c
+EOF
+
+	atf_check -s eq:0 -e file:expected_modified.err ss -d
+	atf_check -s eq:0 -o inline:"bar\n" cat out.txt
 }
