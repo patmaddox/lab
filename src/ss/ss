@@ -73,23 +73,38 @@ cmd::help() {
 
 cmd::ls() {
 	. ./all.ss
-	echo "${targets}" | tr ' ' '\n' | grep .
+	local _t _produces _pp
+	for _t in ${targets}; do
+		echo "${_t}"
+		_produces=$(get_produces "${_t}")
+		for _pp in ${_produces}; do
+			echo "  ${_pp}"
+		done
+	done
 }
 
 cmd::clean() {
 	. ./all.ss
 	local _clean_targets
 	if [ ${#} -gt 0 ]; then
-		validate_targets "${@}"
-		_clean_targets="${*}"
+		_clean_targets=$(resolve_targets "${@}") || exit ${?}
 	else
 		_clean_targets="${targets}"
 	fi
-	local _t _p
+	local _t _p _all_produces _pp
 	for _t in ${_clean_targets}; do
-		_p=$(resolve_path "${_t}")
-		if [ -f "${_p}" ]; then
-			rm "${_p}"
+		_all_produces=$(get_produces "${_t}")
+		if [ -n "${_all_produces}" ]; then
+			for _pp in ${_all_produces}; do
+				if [ -f "${_pp}" ]; then
+					rm "${_pp}"
+				fi
+			done
+		else
+			_p=$(resolve_path "${_t}")
+			if [ -f "${_p}" ]; then
+				rm "${_p}"
+			fi
 		fi
 	done
 }
@@ -110,8 +125,8 @@ cmd::build() {
 		if ${_need_all}; then
 			. ./all.ss
 		fi
-		validate_targets "${@}"
-		targets="${*}"
+		set_requested_produces "${@}"
+		targets=$(resolve_targets "${@}") || exit ${?}
 	fi
 	trap write_checksums EXIT
 	build_targets
@@ -176,7 +191,15 @@ maybe_build() {
 		local outfile
 		outfile=$(resolve_path "${target}")
 		set_named_input_vars "${target}"
-		mkdir -p "$(dirname "${outfile}")"
+		local _all_produces _pp
+		_all_produces=$(get_produces "${target}")
+		if [ -n "${_all_produces}" ]; then
+			for _pp in ${_all_produces}; do
+				mkdir -p "$(dirname "${_pp}")"
+			done
+		else
+			mkdir -p "$(dirname "${outfile}")"
+		fi
 		if [ "${outfile}" = "${target}" ]; then
 			dbg "build ${target}"
 		else
@@ -190,7 +213,15 @@ maybe_build() {
 			err "${target}"
 			exit ${_rc}
 		fi
-		if [ ! -f "${outfile}" ]; then
+		local _check_produces
+		_check_produces=$(get_check_produces "${target}")
+		if [ -n "${_check_produces}" ]; then
+			for _pp in ${_check_produces}; do
+				if [ ! -f "${_pp}" ]; then
+					die "${target}: build did not produce ${_pp}"
+				fi
+			done
+		elif [ ! -f "${outfile}" ]; then
 			die "${target}: build did not produce ${outfile}"
 		fi
 		if [ "${outfile}" = "${target}" ]; then
@@ -217,6 +248,12 @@ is_ood() {
 	p=$(resolve_path "${t}")
 	if [ ! -f "${p}" ]; then return 0; fi
 
+	local _check_produces _pp
+	_check_produces=$(get_check_produces "${t}")
+	for _pp in ${_check_produces}; do
+		if [ ! -f "${_pp}" ]; then return 0; fi
+	done
+
 	local sum_file
 	sum_file=${deps_dir}/${t}
 	if [ ! -f "${sum_file}" ]; then return 0; fi
@@ -235,10 +272,31 @@ write_depsum() {
 }
 
 resolve_path() {
-	if is_opt_outdir && is_oot "${1}"; then
+	local _produces
+	_produces=$(get_produces "${1}")
+	if [ -n "${_produces}" ]; then
+		echo "${_produces%% *}"
+	elif is_opt_outdir && is_oot "${1}"; then
 		echo "${outdir}/${1}"
 	else
 		echo "${1}"
+	fi
+}
+
+get_produces() {
+	local _p
+	eval "_p=\${__produces_$(sanitize_target "${1}"):-}"
+	echo "${_p}"
+}
+
+get_check_produces() {
+	local _t _req
+	_t=$(sanitize_target "${1}")
+	eval "_req=\${__req_produces_${_t}:-}"
+	if [ -n "${_req}" ]; then
+		echo "${_req}"
+	else
+		get_produces "${1}"
 	fi
 }
 
@@ -246,13 +304,43 @@ is_opt_outdir() {
 	[ -n "${outdir}" ]
 }
 
-validate_targets() {
-	local _arg
+resolve_target() {
+	local _arg _t _produces _pp
+	_arg=${1}
+	case " ${targets} " in
+		*" ${_arg} "*) echo "${_arg}"; return 0 ;;
+	esac
+	for _t in ${targets}; do
+		_produces=$(get_produces "${_t}")
+		for _pp in ${_produces}; do
+			if [ "${_pp}" = "${_arg}" ]; then
+				echo "${_t}"
+				return 0
+			fi
+		done
+	done
+	return 1
+}
+
+resolve_targets() {
+	local _arg _resolved _rt
+	_resolved=""
 	for _arg in "${@}"; do
-		case " ${targets} " in
-			*" ${_arg} "*) ;;
-			*) die "unknown target: ${_arg}" ;;
-		esac
+		_rt=$(resolve_target "${_arg}") || die "unknown target: ${_arg}"
+		_resolved="${_resolved:+${_resolved} }${_rt}"
+	done
+	echo "${_resolved}"
+}
+
+set_requested_produces() {
+	local _arg _rt _st _existing
+	for _arg in "${@}"; do
+		_rt=$(resolve_target "${_arg}") || continue
+		if [ "${_rt}" != "${_arg}" ]; then
+			_st=$(sanitize_target "${_rt}")
+			eval "_existing=\${__req_produces_${_st}:-}"
+			eval "__req_produces_${_st}=\"${_existing:+${_existing} }${_arg}\""
+		fi
 	done
 }
 
@@ -271,6 +359,10 @@ stamp() {
 
 needs() {
 	add_deps "${cur_target}" "${@}"
+}
+
+produces() {
+	eval "__produces_$(sanitize_target "${cur_target}")=\"${*}\""
 }
 
 out-of-tree() {

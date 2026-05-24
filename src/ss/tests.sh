@@ -40,6 +40,11 @@ atf_init_test_cases() {
 	atf_add_test_case clean_selective
 	atf_add_test_case clean_unknown_target
 	atf_add_test_case named_inputs
+	atf_add_test_case produces
+	atf_add_test_case produces_missing
+	atf_add_test_case produces_multiple
+	atf_add_test_case produces_ls
+	atf_add_test_case produces_select
 }
 
 atf_test_case hello_world
@@ -804,4 +809,97 @@ ss: checksum libhello.o
 EOF
 	atf_check -s eq:0 -e file:expected.err ss -d
 	atf_check -s eq:0 -o inline:"hello world\n" ./hello
+}
+
+atf_test_case produces
+produces_head() {
+	atf_set "descr" "Target produces output at a different path"
+}
+produces_body() {
+	cp -r "$(atf_get_srcdir)/examples/26_produces" work
+	cd work
+	cat > expected.err <<'EOF'
+ss: build hello -> bin/hello
+ss: built hello -> bin/hello
+ss: checksum bin/hello
+ss: checksum hello.c
+EOF
+	atf_check -s eq:0 -e file:expected.err ss -d
+	test ! -f hello
+	atf_check -s eq:0 -o inline:"hello world\n" ./bin/hello
+}
+
+atf_test_case produces_missing
+produces_missing_head() {
+	atf_set "descr" "Build that does not produce declared output fails"
+}
+produces_missing_body() {
+	cp -r "$(atf_get_srcdir)/examples/27_produces_missing" work
+	cd work
+	ss 2>err.out; test $? -ne 0
+	atf_check -o inline:"ss: E: hello: build did not produce bin/hello\n" cat err.out
+	test ! -f bin/hello
+}
+
+atf_test_case produces_multiple
+produces_multiple_head() {
+	atf_set "descr" "Single target with multiple produced outputs"
+}
+produces_multiple_body() {
+	cp -r "$(atf_get_srcdir)/examples/28_produces_multiple" work
+	cd work
+	cat > expected.err <<'EOF'
+ss: build hello -> bin/hello
+ss: built hello -> bin/hello
+ss: checksum bin/hello
+ss: checksum hello.c
+EOF
+	atf_check -s eq:0 -e file:expected.err ss -d
+	test ! -f hello
+	atf_check -s eq:0 -o inline:"hello world\n" ./bin/hello
+	atf_check -s eq:0 -o inline:"built\n" cat bin/hello.txt
+
+	# deleting secondary output triggers rebuild
+	rm bin/hello.txt
+	atf_check -s eq:0 -e file:expected.err ss -d
+	test -f bin/hello.txt
+
+	# clean removes all produced files
+	atf_check -s eq:0 ss clean
+	test ! -f bin/hello
+	test ! -f bin/hello.txt
+}
+
+atf_test_case produces_ls
+produces_ls_head() {
+	atf_set "descr" "Produces paths shown indented under target in ls"
+}
+produces_ls_body() {
+	cp -r "$(atf_get_srcdir)/examples/28_produces_multiple" work
+	cd work
+	cat > expected.out <<'EOF'
+hello
+  bin/hello
+  bin/hello.txt
+EOF
+	atf_check -s eq:0 -o file:expected.out ss ls
+}
+
+atf_test_case produces_select
+produces_select_head() {
+	atf_set "descr" "Select a target by its produces path"
+}
+produces_select_body() {
+	cp -r "$(atf_get_srcdir)/examples/29_produces_select" work
+	cd work
+	cat > expected.err <<'EOF'
+ss: build hello -> bin/hello
+ss: built hello -> bin/hello
+ss: checksum bin/hello
+ss: checksum hello.c
+EOF
+	atf_check -s eq:0 -e file:expected.err ss -d bin/hello
+	atf_check -s eq:0 -o inline:"hello\n" ./bin/hello
+	test ! -f bin/hello.txt
+	test ! -f bin/goodbye
 }
