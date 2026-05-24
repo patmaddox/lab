@@ -337,7 +337,7 @@ set_named_input_vars() {
 
 write_checksums() {
 	local _t _p _sumfile
-	for _t in $(echo "${built}" | tr ' ' '\n' | sort -u); do
+	for _t in $(printf '%s\n' ${built} | sort -u); do
 		_p=$(resolve_path "${_t}")
 		if [ -f "${_p}" ]; then
 			dbg "checksum ${_p}"
