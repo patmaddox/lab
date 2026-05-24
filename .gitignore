@@ -20,4 +20,4 @@ _build
 dotfiles/nvim/lazy
 ninja-out
 node_modules
-tmp/*
+tmp/
