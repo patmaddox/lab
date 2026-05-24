@@ -163,12 +163,10 @@ maybe_build() {
 	exp_deps=$(get_deps exp "${target}")
 	imp_deps=$(get_deps imp "${target}")
 
-	if [ -n "${exp_deps}" ] || [ -n "${imp_deps}" ]; then
-		local d
-		for d in ${exp_deps} ${imp_deps}; do
-			maybe_build "${d}"
-		done
-	fi
+	local d
+	for d in ${exp_deps} ${imp_deps}; do
+		maybe_build "${d}"
+	done
 
 	local _d _dp
 	for _d in ${exp_deps} ${imp_deps}; do
