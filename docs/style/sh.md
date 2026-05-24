@@ -24,6 +24,40 @@ main "${@}"
 Define helper functions above `main`. Extract functions when a
 block has a distinct purpose, not to reduce line count.
 
+## Function order
+
+Organize functions top-down, from most general to most specific.
+The code should tell a story - get to the point quickly and
+progressively add detail. Least important stuff at the bottom.
+
+1. General utilities (`err`, `die`, `dbg`, `usage`)
+2. `main`
+3. Functions `main` calls directly (e.g. `cmd::` dispatchers)
+4. Functions those call, grouped by layer
+5. Lowest-level helpers last
+
+For scripts with subcommands, namespace dispatch targets with
+`cmd::` and use a `case` statement in `main`:
+
+```sh
+main() {
+    local cmd="${1:-}"
+    case "${cmd}" in
+        help | ls | clean)
+            cmd::${cmd}
+            ;;
+        *)
+            cmd::build "${@}"
+            ;;
+    esac
+}
+
+cmd::help() { ... }
+cmd::ls() { ... }
+cmd::clean() { ... }
+cmd::build() { ... }
+```
+
 ## Strict mode
 
 Enable at file scope, right after the shebang:
