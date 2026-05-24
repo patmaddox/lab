@@ -400,10 +400,25 @@ mark_stamp()        { set_prop stamp "${1}"; }
 mark_visited()      { set_prop visited "${1}"; }
 
 sanitize_target() {
-	case "${1}" in
-		*[.:/\-]*) echo "${1}" | sed -e "s/\./__DOT__/g" -e "s/:/__COLON__/g" -e "s|/|__SLASH__|g" -e "s/-/__DASH__/g" ;;
-		*) echo "${1}" ;;
+	local _s _c _out
+	_s="${1}"
+	case "${_s}" in
+		*[.:/\-]*) ;;
+		*) echo "${_s}"; return ;;
 	esac
+	_out=""
+	while [ -n "${_s}" ]; do
+		_c="${_s%"${_s#?}"}"
+		_s="${_s#?}"
+		case "${_c}" in
+			.) _out="${_out}__DOT__" ;;
+			:) _out="${_out}__COLON__" ;;
+			/) _out="${_out}__SLASH__" ;;
+			-) _out="${_out}__DASH__" ;;
+			*) _out="${_out}${_c}" ;;
+		esac
+	done
+	echo "${_out}"
 }
 
 set_prop() {
