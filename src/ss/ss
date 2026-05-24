@@ -58,7 +58,7 @@ cmd::build() {
 		targets=$(resolve_targets "${@}") || exit ${?}
 	fi
 	trap write_checksums EXIT
-	build_targets
+	build_targets ${targets}
 }
 
 cmd::clean() {
@@ -241,7 +241,7 @@ any_is_ood() {
 
 build_targets() {
 	local target
-	for target in ${targets}; do
+	for target in "${@}"; do
 		maybe_build_target "${target}"
 	done
 }
@@ -317,10 +317,7 @@ maybe_build_target() {
 	exp_deps=$(get_deps exp "${target}")
 	imp_deps=$(get_deps imp "${target}")
 
-	local d
-	for d in ${exp_deps} ${imp_deps}; do
-		maybe_build_target "${d}"
-	done
+	build_targets ${exp_deps} ${imp_deps}
 
 	local _d _dp
 	for _d in ${exp_deps} ${imp_deps}; do
