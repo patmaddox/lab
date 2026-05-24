@@ -175,6 +175,7 @@ maybe_build() {
 		done
 		local outfile
 		outfile=$(resolve_path "${target}")
+		set_named_input_vars "${target}"
 		mkdir -p "$(dirname "${outfile}")"
 		if [ "${outfile}" = "${target}" ]; then
 			dbg "build ${target}"
@@ -286,8 +287,20 @@ add_deps() {
 			which_deps="imp"
 			continue
 		fi
+		local _name="" _dep="${d}"
+		case "${d}" in
+			*=*)
+				_name="${d%%=*}"
+				_dep="${d#*=}"
+				;;
+		esac
 		_existing=$(get_deps "${which_deps}" "${t}")
-		eval "__${which_deps}_deps_${t}=\"${_existing:+${_existing} }${d}\""
+		eval "__${which_deps}_deps_${t}=\"${_existing:+${_existing} }${_dep}\""
+		if [ -n "${_name}" ]; then
+			local _ni
+			eval "_ni=\${__named_inputs_${t}:-}"
+			eval "__named_inputs_${t}=\"${_ni:+${_ni} }${_name}=${_dep}\""
+		fi
 	done
 }
 
@@ -298,6 +311,23 @@ get_deps() {
 	t=$(sanitize_target "${t}")
 	eval "deps=\${__${which_deps}_deps_${t}:-}"
 	echo "${deps}"
+}
+
+get_named_inputs() {
+	local _t _ni
+	_t=$(sanitize_target "${1}")
+	eval "_ni=\${__named_inputs_${_t}:-}"
+	echo "${_ni}"
+}
+
+set_named_input_vars() {
+	local _ni _pair _n _v
+	_ni=$(get_named_inputs "${1}")
+	for _pair in ${_ni}; do
+		_n="${_pair%%=*}"
+		_v="${_pair#*=}"
+		eval "${_n}=\"$(resolve_path "${_v}")\""
+	done
 }
 
 set_build_function() {

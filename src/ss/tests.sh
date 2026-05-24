@@ -39,6 +39,7 @@ atf_init_test_cases() {
 	atf_add_test_case clean
 	atf_add_test_case clean_selective
 	atf_add_test_case clean_unknown_target
+	atf_add_test_case named_inputs
 }
 
 atf_test_case hello_world
@@ -782,4 +783,25 @@ clean_unknown_target_body() {
 	cp -r "$(atf_get_srcdir)/examples/5_multiple_targets" work
 	cd work
 	atf_check -s eq:1 -e inline:"ss: E: unknown target: bogus\n" ss clean bogus
+}
+
+atf_test_case named_inputs
+named_inputs_head() {
+	atf_set "descr" "Named inputs set shell variables for build function"
+}
+named_inputs_body() {
+	cp -r "$(atf_get_srcdir)/examples/25_named_inputs" work
+	cd work
+	cat > expected.err <<'EOF'
+ss: build libhello.o
+ss: built libhello.o
+ss: build hello
+ss: built hello
+ss: checksum hello
+ss: checksum hello.c
+ss: checksum libhello.c
+ss: checksum libhello.o
+EOF
+	atf_check -s eq:0 -e file:expected.err ss -d
+	atf_check -s eq:0 -o inline:"hello world\n" ./hello
 }
