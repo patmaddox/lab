@@ -71,7 +71,7 @@ cmd::clean() {
 	fi
 	local _t _p
 	for _t in ${_clean_targets}; do
-		for _p in $(get_produces "${_t}"); do
+		for _p in $(get_prop produces "${_t}"); do
 			if [ -f "${_p}" ]; then
 				rm "${_p}"
 			fi
@@ -88,7 +88,7 @@ cmd::ls() {
 	local _t _produces _pp
 	for _t in ${targets}; do
 		echo "${_t}"
-		_produces=$(get_produces "${_t}")
+		_produces=$(get_prop produces "${_t}")
 		for _pp in ${_produces}; do
 			if [ "${_pp}" != "${_t}" ]; then
 				echo "  ${_pp}"
@@ -100,28 +100,24 @@ cmd::ls() {
 # --- Registration ---
 
 add_deps() {
-	local t which_deps d _existing
-	t=${1}; shift
-	which_deps="exp"
-	t=$(sanitize_target "${t}")
-	for d in "${@}"; do
-		if [ "${d}" = ":" ]; then
-			which_deps="imp"
+	local _t _which _d
+	_t=${1}; shift
+	_which="exp"
+	for _d in "${@}"; do
+		if [ "${_d}" = ":" ]; then
+			_which="imp"
 			continue
 		fi
-		local _name="" _dep="${d}"
-		case "${d}" in
+		local _name="" _dep="${_d}"
+		case "${_d}" in
 			*=*)
-				_name="${d%%=*}"
-				_dep="${d#*=}"
+				_name="${_d%%=*}"
+				_dep="${_d#*=}"
 				;;
 		esac
-		_existing=$(get_deps "${which_deps}" "${t}")
-		eval "__${which_deps}_deps_${t}=\"${_existing:+${_existing} }${_dep}\""
+		append_prop "${_which}_deps" "${_t}" "${_dep}"
 		if [ -n "${_name}" ]; then
-			local _ni
-			eval "_ni=\${__named_inputs_${t}:-}"
-			eval "__named_inputs_${t}=\"${_ni:+${_ni} }${_name}=${_dep}\""
+			append_prop named_inputs "${_t}" "${_name}=${_dep}"
 		fi
 	done
 }
@@ -133,7 +129,7 @@ needs() {
 out-of-tree() {
 	if [ -n "${outdir}" ]; then
 		local _cur_produces
-		_cur_produces=$(get_produces "${cur_target}")
+		_cur_produces=$(get_prop produces "${cur_target}")
 		if [ "${_cur_produces}" = "${cur_target}" ]; then
 			produces "${outdir}/${cur_target}"
 		fi
@@ -141,7 +137,7 @@ out-of-tree() {
 }
 
 produces() {
-	eval "__produces_$(sanitize_target "${cur_target}")=\"${*}\""
+	set_prop produces "${cur_target}" "${*}"
 }
 
 stamp() {
@@ -150,12 +146,12 @@ stamp() {
 }
 
 target() {
-	local t
-	t=${1}; shift
-	cur_target="${t}"
-	targets="${targets:+${targets} }${t}"
-	set_build_function "${t}" "${1:-${t}}"
-	produces "${t}"
+	local _t
+	_t=${1}; shift
+	cur_target="${_t}"
+	targets="${targets:+${targets} }${_t}"
+	set_prop build "${_t}" "${1:-${_t}}"
+	produces "${_t}"
 }
 
 # --- Resolution ---
@@ -180,13 +176,10 @@ load_targets() {
 }
 
 resolve_path() {
-	local _produces
-	_produces=$(get_produces "${1}")
-	if [ -n "${_produces}" ]; then
-		echo "${_produces%% *}"
-	else
-		echo "${1}"
-	fi
+	local _p
+	_p=$(get_prop produces "${1}")
+	_p="${_p%% *}"
+	echo "${_p:-${1}}"
 }
 
 resolve_target() {
@@ -196,7 +189,7 @@ resolve_target() {
 		*" ${_arg} "*) echo "${_arg}"; return 0 ;;
 	esac
 	for _t in ${targets}; do
-		_produces=$(get_produces "${_t}")
+		_produces=$(get_prop produces "${_t}")
 		for _pp in ${_produces}; do
 			if [ "${_pp}" = "${_arg}" ]; then
 				echo "${_t}"
@@ -218,13 +211,11 @@ resolve_targets() {
 }
 
 set_requested_produces() {
-	local _arg _rt _st _existing
+	local _arg _rt
 	for _arg in "${@}"; do
 		_rt=$(resolve_target "${_arg}") || continue
 		if [ "${_rt}" != "${_arg}" ]; then
-			_st=$(sanitize_target "${_rt}")
-			eval "_existing=\${__req_produces_${_st}:-}"
-			eval "__req_produces_${_st}=\"${_existing:+${_existing} }${_arg}\""
+			append_prop req_produces "${_rt}" "${_arg}"
 		fi
 	done
 }
@@ -256,7 +247,7 @@ exec_build_target() {
 	outfile=$(resolve_path "${target}")
 	set_named_input_vars "${target}"
 	local _pp
-	for _pp in $(get_produces "${target}"); do
+	for _pp in $(get_prop produces "${target}"); do
 		mkdir -p "$(dirname "${_pp}")"
 	done
 	dbg_target "build"
@@ -268,8 +259,9 @@ exec_build_target() {
 		err "${target}"
 		exit ${_rc}
 	fi
-	local _check_paths
-	_check_paths=$(get_check_produces "${target}")
+	local _req _check_paths
+	_req=$(get_prop req_produces "${target}")
+	_check_paths="${_req:-$(get_prop produces "${target}")}"
 	for _pp in ${_check_paths}; do
 		if [ ! -f "${_pp}" ]; then
 			die "${target}: build did not produce ${_pp}"
@@ -285,8 +277,9 @@ is_ood() {
 	p=$(resolve_path "${t}")
 	if [ ! -f "${p}" ]; then return 0; fi
 
-	local _check_produces _pp
-	_check_produces=$(get_check_produces "${t}")
+	local _req _check_produces _pp
+	_req=$(get_prop req_produces "${t}")
+	_check_produces="${_req:-$(get_prop produces "${t}")}"
 	for _pp in ${_check_produces}; do
 		if [ ! -f "${_pp}" ]; then return 0; fi
 	done
@@ -312,7 +305,7 @@ maybe_build_target() {
 	if is_visited "${target}"; then return 0; fi
 
 	local build_fn
-	build_fn=$(get_build_function "${target}")
+	build_fn=$(get_prop build "${target}")
 	if [ -z "${build_fn}" ]; then
 		if [ ! -f "${target}" ]; then
 			die "missing source: ${target}"
@@ -323,8 +316,8 @@ maybe_build_target() {
 	mark_in_progress "${target}"
 	mark_visited "${target}"
 
-	exp_deps=$(get_deps exp "${target}")
-	imp_deps=$(get_deps imp "${target}")
+	exp_deps=$(get_prop exp_deps "${target}")
+	imp_deps=$(get_prop imp_deps "${target}")
 
 	build_targets ${exp_deps} ${imp_deps}
 
@@ -336,7 +329,7 @@ maybe_build_target() {
 
 set_named_input_vars() {
 	local _ni _pair _n _v
-	_ni=$(get_named_inputs "${1}")
+	_ni=$(get_prop named_inputs "${1}")
 	for _pair in ${_ni}; do
 		_n="${_pair%%=*}"
 		_v="${_pair#*=}"
@@ -385,43 +378,16 @@ err() {
 	echo "${PROGNAME}: E: ${*}" >&2
 }
 
-get_build_function() {
-	local _fn
-	eval "_fn=\${__build_$(sanitize_target "${1}"):-}"
-	echo "${_fn}"
+append_prop() {
+	local _cur
+	_cur=$(get_prop "${1}" "${2}")
+	set_prop "${1}" "${2}" "${_cur:+${_cur} }${3}"
 }
 
-get_check_produces() {
-	local _t _req
-	_t=$(sanitize_target "${1}")
-	eval "_req=\${__req_produces_${_t}:-}"
-	if [ -n "${_req}" ]; then
-		echo "${_req}"
-	else
-		get_produces "${1}"
-	fi
-}
-
-get_deps() {
-	local which_deps t deps
-	which_deps=${1}; shift
-	t=${1}; shift
-	t=$(sanitize_target "${t}")
-	eval "deps=\${__${which_deps}_deps_${t}:-}"
-	echo "${deps}"
-}
-
-get_named_inputs() {
-	local _t _ni
-	_t=$(sanitize_target "${1}")
-	eval "_ni=\${__named_inputs_${_t}:-}"
-	echo "${_ni}"
-}
-
-get_produces() {
-	local _p
-	eval "_p=\${__produces_$(sanitize_target "${1}"):-}"
-	echo "${_p}"
+get_prop() {
+	local _val
+	eval "_val=\${__${1}_$(sanitize_target "${2}"):-}"
+	echo "${_val}"
 }
 
 has_prop() {
@@ -445,12 +411,8 @@ sanitize_target() {
 	esac
 }
 
-set_build_function() {
-	eval "__build_$(sanitize_target "${1}")=${2}"
-}
-
 set_prop() {
-	eval "__${1}_$(sanitize_target "${2}")=${3:-1}"
+	eval "__${1}_$(sanitize_target "${2}")=\"${3:-1}\""
 }
 
 main "${@}"
