@@ -19,6 +19,14 @@ dbg() {
 	fi
 }
 
+dbg_target() {
+	if [ "${outfile}" = "${target}" ]; then
+		dbg "${1} ${target}"
+	else
+		dbg "${1} ${target} -> ${outfile}"
+	fi
+}
+
 usage() {
 	cat <<EOF
 Usage:
@@ -186,11 +194,7 @@ maybe_build() {
 		for _pp in $(get_produces "${target}"); do
 			mkdir -p "$(dirname "${_pp}")"
 		done
-		if [ "${outfile}" = "${target}" ]; then
-			dbg "build ${target}"
-		else
-			dbg "build ${target} -> ${outfile}"
-		fi
+		dbg_target "build"
 		set +e
 		${build_fn}
 		local _rc=${?}
@@ -206,11 +210,7 @@ maybe_build() {
 				die "${target}: build did not produce ${_pp}"
 			fi
 		done
-		if [ "${outfile}" = "${target}" ]; then
-			dbg "built ${target}"
-		else
-			dbg "built ${target} -> ${outfile}"
-		fi
+		dbg_target "built"
 		built="${built:+${built} }${exp_deps} ${imp_deps} ${target}"
 	fi
 	clear_in_progress "${target}"
