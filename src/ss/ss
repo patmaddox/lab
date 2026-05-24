@@ -331,7 +331,7 @@ target() {
 
 stamp() {
 	target "${@}"
-	eval "__stamp_$(sanitize_target "${cur_target}")=1"
+	mark_stamp "${cur_target}"
 }
 
 needs() {
@@ -415,35 +415,23 @@ get_build_function() {
 	echo "${_fn}"
 }
 
-is_stamp() {
-	local val
-	eval "val=\${__stamp_$(sanitize_target "${1}"):-0}"
-	[ "${val}" = "1" ]
+set_prop() {
+	eval "__${1}_$(sanitize_target "${2}")=${3:-1}"
 }
 
-mark_visited() {
-	eval "__visited_$(sanitize_target "${1}")=1"
+has_prop() {
+	local _val
+	eval "_val=\${__${1}_$(sanitize_target "${2}"):-0}"
+	[ "${_val}" = "1" ]
 }
 
-is_visited() {
-	local val
-	eval "val=\${__visited_$(sanitize_target "${1}"):-0}"
-	[ "${val}" = "1" ]
-}
-
-mark_in_progress() {
-	eval "__inprog_$(sanitize_target "${1}")=1"
-}
-
-is_in_progress() {
-	local val
-	eval "val=\${__inprog_$(sanitize_target "${1}"):-0}"
-	[ "${val}" = "1" ]
-}
-
-clear_in_progress() {
-	eval "__inprog_$(sanitize_target "${1}")=0"
-}
+is_stamp()          { has_prop stamp "${1}"; }
+is_visited()        { has_prop visited "${1}"; }
+is_in_progress()    { has_prop inprog "${1}"; }
+mark_stamp()        { set_prop stamp "${1}"; }
+mark_visited()      { set_prop visited "${1}"; }
+mark_in_progress()  { set_prop inprog "${1}"; }
+clear_in_progress() { set_prop inprog "${1}" 0; }
 
 sanitize_target() {
 	case "${1}" in
