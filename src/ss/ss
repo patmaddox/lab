@@ -77,7 +77,9 @@ cmd::ls() {
 		echo "${_t}"
 		_produces=$(get_produces "${_t}")
 		for _pp in ${_produces}; do
-			echo "  ${_pp}"
+			if [ "${_pp}" != "${_t}" ]; then
+				echo "  ${_pp}"
+			fi
 		done
 	done
 }
@@ -90,21 +92,13 @@ cmd::clean() {
 	else
 		_clean_targets="${targets}"
 	fi
-	local _t _p _all_produces _pp
+	local _t _p
 	for _t in ${_clean_targets}; do
-		_all_produces=$(get_produces "${_t}")
-		if [ -n "${_all_produces}" ]; then
-			for _pp in ${_all_produces}; do
-				if [ -f "${_pp}" ]; then
-					rm "${_pp}"
-				fi
-			done
-		else
-			_p=$(resolve_path "${_t}")
+		for _p in $(get_produces "${_t}"); do
 			if [ -f "${_p}" ]; then
 				rm "${_p}"
 			fi
-		fi
+		done
 	done
 }
 
@@ -188,15 +182,10 @@ maybe_build() {
 		local outfile
 		outfile=$(resolve_path "${target}")
 		set_named_input_vars "${target}"
-		local _all_produces _pp
-		_all_produces=$(get_produces "${target}")
-		if [ -n "${_all_produces}" ]; then
-			for _pp in ${_all_produces}; do
-				mkdir -p "$(dirname "${_pp}")"
-			done
-		else
-			mkdir -p "$(dirname "${outfile}")"
-		fi
+		local _pp
+		for _pp in $(get_produces "${target}"); do
+			mkdir -p "$(dirname "${_pp}")"
+		done
 		if [ "${outfile}" = "${target}" ]; then
 			dbg "build ${target}"
 		else
@@ -210,17 +199,13 @@ maybe_build() {
 			err "${target}"
 			exit ${_rc}
 		fi
-		local _check_produces
-		_check_produces=$(get_check_produces "${target}")
-		if [ -n "${_check_produces}" ]; then
-			for _pp in ${_check_produces}; do
-				if [ ! -f "${_pp}" ]; then
-					die "${target}: build did not produce ${_pp}"
-				fi
-			done
-		elif [ ! -f "${outfile}" ]; then
-			die "${target}: build did not produce ${outfile}"
-		fi
+		local _check_paths
+		_check_paths=$(get_check_produces "${target}")
+		for _pp in ${_check_paths}; do
+			if [ ! -f "${_pp}" ]; then
+				die "${target}: build did not produce ${_pp}"
+			fi
+		done
 		if [ "${outfile}" = "${target}" ]; then
 			dbg "built ${target}"
 		else
@@ -273,8 +258,6 @@ resolve_path() {
 	_produces=$(get_produces "${1}")
 	if [ -n "${_produces}" ]; then
 		echo "${_produces%% *}"
-	elif is_opt_outdir && is_oot "${1}"; then
-		echo "${outdir}/${1}"
 	else
 		echo "${1}"
 	fi
@@ -295,10 +278,6 @@ get_check_produces() {
 	else
 		get_produces "${1}"
 	fi
-}
-
-is_opt_outdir() {
-	[ -n "${outdir}" ]
 }
 
 resolve_target() {
@@ -347,6 +326,7 @@ target() {
 	cur_target="${t}"
 	targets="${targets:+${targets} }${t}"
 	set_build_function "${t}" "${1:-${t}}"
+	produces "${t}"
 }
 
 stamp() {
@@ -363,7 +343,13 @@ produces() {
 }
 
 out-of-tree() {
-	eval "__oot_$(sanitize_target "${cur_target}")=1"
+	if [ -n "${outdir}" ]; then
+		local _cur_produces
+		_cur_produces=$(get_produces "${cur_target}")
+		if [ "${_cur_produces}" = "${cur_target}" ]; then
+			produces "${outdir}/${cur_target}"
+		fi
+	fi
 }
 
 add_deps() {
@@ -432,12 +418,6 @@ get_build_function() {
 is_stamp() {
 	local val
 	eval "val=\${__stamp_$(sanitize_target "${1}"):-0}"
-	[ "${val}" = "1" ]
-}
-
-is_oot() {
-	local val
-	eval "val=\${__oot_$(sanitize_target "${1}"):-0}"
 	[ "${val}" = "1" ]
 }
 
