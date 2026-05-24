@@ -26,14 +26,16 @@ block has a distinct purpose, not to reduce line count.
 
 ## Strict mode
 
-Enable at the top of `main` (or at file scope, before `main`):
+Enable at file scope, right after the shebang:
 
 ```sh
 set -eu
+set -o pipefail
 ```
 
 `-e` exits on unexpected non-zero return. `-u` exits on undefined
-variable reference. Do not use `-o pipefail` - it is a bashism.
+variable reference. `-o pipefail` makes a pipeline return the
+rightmost non-zero exit status. FreeBSD /bin/sh supports it.
 
 Strict mode catches mistakes but is not a substitute for tests.
 Use `set -x` to debug unexpected exits.
