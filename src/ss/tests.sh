@@ -102,7 +102,7 @@ hello_world_rebuild_dirty_body() {
 	atf_check -s eq:0 -e ignore ss -d
 	atf_check -s eq:0 -o inline:"hello world\n" ./hello
 
-	sed -i -e 's/world/ss/' hello.c
+	sed -i '' 's/world/ss/' hello.c
 
 	cat > expected.err <<'EOF'
 ss: checksum hello
