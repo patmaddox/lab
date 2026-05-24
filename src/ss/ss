@@ -243,11 +243,11 @@ exec_build_target() {
 	for _d in ${exp_deps}; do
 		deps="${deps:+${deps} }$(resolve_path "${_d}")"
 	done
-	local outfile
-	outfile=$(resolve_path "${target}")
+	local _produces outfile _pp
+	_produces=$(get_prop produces "${target}")
+	outfile="${_produces%% *}"
 	set_named_input_vars "${target}"
-	local _pp
-	for _pp in $(get_prop produces "${target}"); do
+	for _pp in ${_produces}; do
 		mkdir -p "$(dirname "${_pp}")"
 	done
 	dbg_target "build"
@@ -261,7 +261,7 @@ exec_build_target() {
 	fi
 	local _req _check_paths
 	_req=$(get_prop req_produces "${target}")
-	_check_paths="${_req:-$(get_prop produces "${target}")}"
+	_check_paths="${_req:-${_produces}}"
 	for _pp in ${_check_paths}; do
 		if [ ! -f "${_pp}" ]; then
 			die "${target}: build did not produce ${_pp}"
@@ -272,27 +272,29 @@ exec_build_target() {
 }
 
 is_ood() {
-	local t p
-	t=${1}
-	p=$(resolve_path "${t}")
-	if [ ! -f "${p}" ]; then return 0; fi
+	local _t _produces _p
+	_t=${1}
+	_produces=$(get_prop produces "${_t}")
+	_p="${_produces%% *}"
+	_p="${_p:-${_t}}"
+	if [ ! -f "${_p}" ]; then return 0; fi
 
-	local _req _check_produces _pp
-	_req=$(get_prop req_produces "${t}")
-	_check_produces="${_req:-$(get_prop produces "${t}")}"
-	for _pp in ${_check_produces}; do
+	local _req _check _pp
+	_req=$(get_prop req_produces "${_t}")
+	_check="${_req:-${_produces}}"
+	for _pp in ${_check}; do
 		if [ ! -f "${_pp}" ]; then return 0; fi
 	done
 
-	local sum_file
-	sum_file=${deps_dir}/${t}
-	if [ ! -f "${sum_file}" ]; then return 0; fi
+	local _sum_file
+	_sum_file=${deps_dir}/${_t}
+	if [ ! -f "${_sum_file}" ]; then return 0; fi
 
-	local cur_sum saved_sum
-	dbg "checksum ${p}"
-	cur_sum=$(md5 -q "${p}")
-	saved_sum=$(cat "${sum_file}")
-	[ "${cur_sum}" != "${saved_sum}" ]
+	local _cur_sum _saved_sum
+	dbg "checksum ${_p}"
+	_cur_sum=$(md5 -q "${_p}")
+	_saved_sum=$(cat "${_sum_file}")
+	[ "${_cur_sum}" != "${_saved_sum}" ]
 }
 
 maybe_build_target() {
