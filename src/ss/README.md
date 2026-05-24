@@ -4,7 +4,7 @@ A couple differences from redo:
 
 - build files not tightly coupled to output files
 - stdout does not get captured by default - you always have to write
-  something to ${target}
+  something to ${outfile}
 
 ## hello world
 
@@ -24,7 +24,7 @@ target hello
 needs hello.c
 
 hello() {
-  cc -o ${target} ${deps}
+  cc -o ${outfile} ${deps}
 }
 ```
 
@@ -35,7 +35,7 @@ target hello.out build_hello
 needs hello.c
 
 build_hello() {
-  cc -o ${target} ${deps}
+  cc -o ${outfile} ${deps}
 }
 ```
 
@@ -46,7 +46,7 @@ target hello
 needs hello.c : hello.h
 
 hello() {
-  cc -o ${target} ${deps}
+  cc -o ${outfile} ${deps}
 }
 ```
 
@@ -59,11 +59,11 @@ target hello
 needs hello.c : build_date
 
 build_date() {
-  date +%Y-%m-%d > ${target}
+  date +%Y-%m-%d > ${outfile}
 }
 
 hello() {
-  cc -o ${target} ${deps}
+  cc -o ${outfile} ${deps}
 }
 ```
 
@@ -77,11 +77,11 @@ target libhello.o libhello
 needs libhello.c
 
 libhello() {
-  cc -c -o ${target} ${deps}
+  cc -c -o ${outfile} ${deps}
 }
 
 hello() {
-  cc -o ${target} ${deps}
+  cc -o ${outfile} ${deps}
 }
 ```
 
@@ -126,7 +126,7 @@ libhello() {
 }
 
 hello() {
-  cc -o ${target} ${src} ${libhello__lib}
+  cc -o ${outfile} ${src} ${libhello__lib}
 }
 ```
 
@@ -145,7 +145,7 @@ libhello() {
 }
 
 hello() {
-  cc -o ${target} ${deps}
+  cc -o ${outfile} ${deps}
 }
 ```
 
@@ -165,7 +165,7 @@ libhello() {
 
 hello() {
   needs : lib=lib${target}
-  cc -o ${target} ${deps} ${lib__so}
+  cc -o ${outfile} ${deps} ${lib__so}
 }
 ```
 
@@ -184,6 +184,6 @@ libhello() {
 }
 
 hello() {
-  cc -o ${target} ${deps} ${libhello__so}
+  cc -o ${outfile} ${deps} ${libhello__so}
 }
 ```
