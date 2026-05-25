@@ -1,0 +1,58 @@
+* jj and claude code workflow
+Make a new empty commit off of main. Describe the target. Run a script
+that makes a new workspace, and prompts claude in a jail to work on
+that specific workspace.
+
+Seems like this is actually better than keeping a todo.org file or
+something like that. The reason is because it can be fully
+parallelized. I don't have to worry about navigating back and forth
+between commits.
+
+Every branch is a possible future, and then I integrate them into my
+branch.
+
+Maybe what I do is an empty commit with the base name. Then to review,
+I leave comments in line on the file, and give it a /review suffix and
+push the branch.
+
+This way what we'd have is:
+
+- dev/feature-1
+- dev/feature-1/v1
+- dev/feature-1/v1/review
+- dev/feature-1/v2
+
+Then I can pretty much see all of the work in progress by just
+fetching the code and listing the branches. And I can leave over all
+review comments in the review commit.
+
+So probably I still keep my todo.org so I have a single place to track
+work that I want to do. But when it's time to do the work, I move the
+prompt into the new commit message itself.
+
+I especially like that for research... make a new commit that is my
+research prompt, make a new workspace for it, and let claude go to work on it.
+
+Here's what it looks like:
+
+1. make a new empty commit, set the commit message. Maybe give it a
+   bookmark?
+2. Make a new workspace for the bookmark.
+3. Open a claude code session for that dir. Prompt it to research
+   what's in the commit.
+
+I don't even really need bookmarks at that point, certainly don't need
+to push them out to github... can just have local bookmarks. Actually
+bookmarks are cool for being able to track the state. I know from
+looking at the bookmarks whether there's any development happening,
+whether I've reviewed it, etc. I can tag my review commits as [WIP] or
+whatever to know that I'm still working on the review.
+* github interdiff workflow
+I always just work on a single branch and force push. What if instead
+of that, I used a versioned branch workflow? So push pat/feature/v1
+and then if I need to rewrite it substantially, I can do
+pat/feature/v2 and link to the diff between the two of them. That
+would probably be better than force pushing to a branch that people
+have responded to.
+
+It's essentially the mailing list workflow, but in GitHub.
