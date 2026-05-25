@@ -3,16 +3,24 @@ name = "Pat Maddox"
 email = "pat@patmaddox.com"
 
 [revset-aliases]
-"gerrits" = "mine() & description('Change-Id: ') ~ empty()"
-"nogerrit" = "mine() ~ description('Change-Id: ') ~ ::trunk() ~ empty() ~ ::untracked_remote_bookmarks()"
-"diffs" = "gerrits ~ description('WIP') ~ ::trunk() ~ ::untracked_remote_bookmarks()"
-"wip" = "(tracked_remote_bookmarks():: ~ ::tracked_remote_bookmarks()) | tracked_remote_bookmarks()"
+"context()" = "context(@)"
+"context(r)" = "heads(::r & ::trunk())::r | r:: | trunk() | (::r & mutable())"
+"jj_default()" = "jj_default(@)"
+"jj_default(r)" = "present(r) | ancestors(immutable_heads().., 2) | trunk()"
+"tree()" = "context() | jj_default()"
+"wip()" = "(tracked_remote_bookmarks():: ~ ::tracked_remote_bookmarks()) | tracked_remote_bookmarks()"
 
 [aliases]
-l = ["log", "-r", "::@"]
-gud = ["gerrit", "upload", "-r", "diffs"]
-wip = ["log", "-r", "wip"]
 gp = ["git", "push", "--tracked"]
+l = ["log", "-r", "fork_point(::trunk() | ::@)::@", "--no-graph"]
+tree = ["log", "-r", "tree()"]
+wip = ["log", "-r", "wip()"]
+
+[revsets]
+log = "context()"
+
+[templates]
+git_push_bookmark = '"patmaddox/" ++ change_id.short()'
 
 [signing]
 backend = "ssh"
