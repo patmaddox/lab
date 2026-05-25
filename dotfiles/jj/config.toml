@@ -40,4 +40,4 @@ fetch = ["glob:*"]
 [[--scope]]
 --when.repositories = ["~/evirts"]
 [--scope.user]
-email = "pat@evirts.com"
+email = "pmaddox@strivepharmacy.com"
