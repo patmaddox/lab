@@ -13,12 +13,12 @@ allowed-tools: Read, Grep, Glob
 Before writing or modifying shell scripts or CLI tools, read the
 project style guides:
 
-1. **Shell style**: Read `docs/style/sh.md` at the repo root.
+1. **Shell style**: Read `doc/style/sh.md` at the repo root.
    Covers script structure (main function pattern), strict mode,
    parameter handling, local variables, quoting, conditionals,
    error handling, and output conventions.
 
-2. **CLI design**: Read `docs/style/cli.md` at the repo root.
+2. **CLI design**: Read `doc/style/cli.md` at the repo root.
    Covers architecture (presentation/logic separation), interface
    patterns (single-command vs subcommand), flag design, option
    parsing, help systems, error reporting, output formatting,
