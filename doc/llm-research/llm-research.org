@@ -1,0 +1,47 @@
+* patch review workflows
+* coding with LLMs
+- principles and techniques
+- tools as references, not necessarily recommendations
+
+One of the things that I would like to do is do more parallel work,
+especially with ralph loops. This means having a harness that can
+support parallel work. I typically work in a default.jj workspace, but
+I can't have multiple agents operating in that space at once, they'll
+step on each other's toes. I need some way of creating a distributed
+agent load, where I serve as the integrator.
+
+I am particulary interested in principles and techniques that I can
+apply using FreeBSD-specific functionality, e.g. zfs and jails.
+* emacs fuzzy finding
+local refs:
+
+- dotfiles/emacs
+
+I have some fuzzy finding set up already. When fuzzy finding buffers,
+it doesn't seem to take into account the dir name. I would like it
+to. So if I have foo/bar.md loaded, I want to be able to type foo and
+have it show up.
+* jj emacs integration
+magit is really nice for navigating repos. It actually works somewhat
+in a git colocated repo. However because jj always adds to the index,
+magit splits things up into staged and unstaged changes. It doesn't
+really follow quite the model that jj does.
+
+Research all available jj integrations with emacs.
+
+I don't care about it having full parity with magit. Main thing is
+that I want to be able to view the changes that I currently have.
+
+I would also like to be able to interactively split commits -
+selecting commits to send to a new commit. This is similar in practice
+to how magit can stage changes line by line. However, jj auto stages.
+
+Related to that - is it possible to configure jj to not auto-stage
+changes to git? Then I could actually use magit to stage my changes
+and commit. Then I'd be using magit for basic change management, and
+jj for dag manipulation.
+* claude code hooks
+I have a "notify me" skill that I would like to call at the end of any
+claude code turn / response that takes longer than 1 minute. Is that
+possible? Research info on how to find it.
+
