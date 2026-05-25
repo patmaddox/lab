@@ -149,12 +149,9 @@ When the user answers a question inline but leaves it in TODO
 state, it means they consider it an open loop. Respond with
 another level of nesting, continuing the conversation.
 
-The quoting depth increases with each exchange. Add attribution
-headers using `%` instead of `>` (e.g. `%% model wrote:`,
-`% user wrote:`) to clarify who said what at each level. The
-`%` prefix distinguishes headers from quoted content. The user
-will not insert these headers themselves - detect the reply
-structure and add them on output.
+The user replies by placing a CR block after the content they
+want to respond to. The user never types `>` directly - all
+`>` indentation and `%` headers are written by the model.
 
 See the research skill for full threading rules and examples.
 
@@ -164,13 +161,31 @@ The remaining top-level headings contain the plan itself.
 Structure with as many top-level headings and sub-headings as
 appropriate for the task. These are all rewritten on each run.
 
+## Inline replies (CR blocks)
+
+The user may reply inline to plan sections using CR blocks. A
+CR block is placed after the content the user wants to comment
+on:
+
+```org
+* Implementation approach
+Proceed in three phases: setup, migration, validation.
+#+BEGIN_CR
+Skip the migration phase, we're starting fresh.
+#+END_CR
+```
+
+CR blocks are valid only inside plan headings (everything after
+the title and questions headings) and `* questions for user`
+sub-headings.
+
+On re-run, the skill reads each CR block as feedback on the
+preceding content, incorporates it into the plan, and removes
+the block. CR blocks are not patch instructions - they are new
+information to integrate into the document. The plan headings
+are rewritten from scratch.
+
 ## No commit
 
 Do not commit when done. The plan file is written into the current
 working copy, which is already an in-progress commit.
-
-## Future enhancements
-
-- Support inline replies to plan sections (user quotes plan output
-  with `>` and comments; skill incorporates feedback on re-run,
-  similar to the research skill's inline reply mechanism)

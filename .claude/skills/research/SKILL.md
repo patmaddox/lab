@@ -99,20 +99,24 @@ your version would help narrow the findings.
 
 #### How the user replies
 
-The user quotes the entire previous output by prefixing every
-line with `>` (including `%` header lines), then writes their
-reply at depth 0.
+The user places a CR block after the content they want to
+reply to:
+
+```org
+#+BEGIN_CR
+their reply here
+#+END_CR
+```
+
+The user never types `>` directly - all `>` indentation and
+`%` headers are written by the model.
 
 #### Detection
 
-In any state of the document, the most recent text has no `>`
-prefix. The parity of who is at which depth alternates between
-input and output:
-
-- **In model output**: even depths (0, 2, 4...) = model,
-  odd depths (1, 3, 5...) = user
-- **In user input**: even depths (0, 2, 4...) = user,
-  odd depths (1, 3, 5...) = model
+A CR block under a question sub-heading signals a user reply.
+In the threaded history (content with `>` prefixes), parity
+is always model-output convention: even depths (0, 2, 4...) =
+model, odd depths (1, 3, 5...) = user.
 
 Depth counts only `>` characters, not `%`. Lines containing
 `model wrote:` or `user wrote:` with `%` prefixes are
@@ -120,18 +124,18 @@ attribution headers (metadata, not content).
 
 #### Transformation
 
-On re-run, the user has already shifted all previous content
-by +1 via blanket quoting. The skill increases by 1 more:
+On re-run, when a CR block is found under a question:
 
-1. Increase all `>` depths on content lines by 1
-2. Rewrite each `%` header line: set the `%` count to match
-   the `>` depth of the content block it precedes (drop any
-   `>` the user added)
-3. Add a `% user wrote:` header above the user's reply
-   (now at depth 1 after step 1)
-4. Add a `%% model wrote:` header above the model's
-   previous reply (now at depth 2 after step 1)
-5. Write new model follow-up at depth 0
+1. Extract the CR block content (the user's reply)
+2. Remove the CR block from the document
+3. Increase all `>` depths on content lines by 2
+4. Rewrite each `%` header line: set the `%` count to match
+   the `>` depth of the content block it precedes
+5. Add `% user wrote:` header above the user's reply and
+   insert it at depth 1
+6. Add `%% model wrote:` header above the model's previous
+   reply (now at depth 2 after step 3)
+7. Write new model follow-up at depth 0
 
 #### Example progression
 
@@ -144,13 +148,15 @@ The research covers several FreeBSD-specific areas. Knowing
 your version would help narrow the findings.
 ```
 
-User replies (blanket `>` on all lines, reply at depth 0):
+User replies with CR block:
 
 ```org
 ** TODO What version of FreeBSD are you targeting?
-> The research covers several FreeBSD-specific areas. Knowing
-> your version would help narrow the findings.
+The research covers several FreeBSD-specific areas. Knowing
+your version would help narrow the findings.
+#+BEGIN_CR
 14.2-RELEASE, but planning to upgrade soon.
+#+END_CR
 ```
 
 Second run output:
@@ -166,18 +172,20 @@ Would you like the research to cover both 14.2 and 15.0, or
 focus on one?
 ```
 
-User replies again (blanket `>` on all lines):
+User replies again with CR block:
 
 ```org
 ** TODO What version of FreeBSD are you targeting?
-> %% model wrote:
-> >> The research covers several FreeBSD-specific areas. Knowing
-> >> your version would help narrow the findings.
-> % user wrote:
-> > 14.2-RELEASE, but planning to upgrade soon.
-> Would you like the research to cover both 14.2 and 15.0, or
-> focus on one?
+%% model wrote:
+>> The research covers several FreeBSD-specific areas. Knowing
+>> your version would help narrow the findings.
+% user wrote:
+> 14.2-RELEASE, but planning to upgrade soon.
+Would you like the research to cover both 14.2 and 15.0, or
+focus on one?
+#+BEGIN_CR
 Cover both, note any differences.
+#+END_CR
 ```
 
 Third run output:
@@ -206,30 +214,32 @@ incorporate the full thread into the research.
 Each example satisfies these invariants:
 
 1. The most recent text is always at depth 0
-2. In model output: even depths = model, odd depths = user
-3. In user input: even depths = user, odd depths = model
+2. Even depths (0, 2, 4...) = model, odd depths (1, 3, 5...) = user
+3. User replies appear only in CR blocks (no depth shifting)
 4. `model wrote:` headers use `%` at even depths >= 2
 5. `user wrote:` headers use `%` at odd depths >= 1
 6. No two adjacent content blocks share the same depth
 
 Trace of second run transformation:
-- Input content depths: 1 (model), 0 (user)
-- Step 1 (+1): 2, 1
-- Step 2: no existing `%` headers
-- Steps 3-4: add `%% model wrote:` (depth 2),
+- Input: model text at depth 0, no headers
+- CR block extracted: user's reply
+- Step 3 (+2): depth 0 -> 2
+- Step 4: no existing `%` headers
+- Steps 5-6: add `%% model wrote:` (depth 2),
   `% user wrote:` (depth 1)
-- Step 5: new model at depth 0
+- Step 7: new model at depth 0
 - Output depths: 2(model), 1(user), 0(model)
 - Even=model ✓  Odd=user ✓
 
 Trace of third run transformation:
-- Input content depths: 3, 2, 1, 0
-- Step 1 (+1): 4, 3, 2, 1
-- Step 2: `> %% model wrote:` -> `%%%% model wrote:` (depth 4),
-  `> % user wrote:` -> `%%% user wrote:` (depth 3)
-- Steps 3-4: add `%% model wrote:` (depth 2),
+- Input content depths: 2, 1, 0 (plus `%%` and `%` headers)
+- CR block extracted: user's reply
+- Step 3 (+2): 4, 3, 2
+- Step 4: `%% model wrote:` -> `%%%% model wrote:` (depth 4),
+  `% user wrote:` -> `%%% user wrote:` (depth 3)
+- Steps 5-6: add `%% model wrote:` (depth 2),
   `% user wrote:` (depth 1)
-- Step 5: new model at depth 0
+- Step 7: new model at depth 0
 - Output depths: 4(model), 3(user), 2(model), 1(user), 0(model)
 - Even=model ✓  Odd=user ✓
 
@@ -245,44 +255,35 @@ with org sub-headings, lists, or prose as appropriate.
 This heading always comes **after** the questions heading (if
 present).
 
-## Inline replies
+## Inline replies (CR blocks)
 
 The user may reply inline to sections of the research output
-using mailing-list-style quoting. Lines prefixed with `>` are
-the skill's previous output quoted back; lines without `>` are
-the user's commentary.
-
-Example:
+using CR blocks. A CR block is placed after the content the
+user wants to comment on:
 
 ```org
 ** Some finding
-> The recommended approach is X because of Y.
-Actually I tried X and it failed due to Z.
-
-> There is also approach W.
-This looks promising, tell me more about W.
-
-> Some other detail.
+The recommended approach is X because of Y. There is also
+approach W which has different tradeoffs.
+#+BEGIN_CR
+I tried X and it failed due to Z. Tell me more about W.
+#+END_CR
 ```
 
-When a section contains `>` quoted lines:
+CR blocks are valid only inside skill-managed sections (the
+`* research` heading and `* questions for user` sub-headings).
 
-- Quoted lines (`>`) are the skill's previous text
-- Unquoted lines are the user's feedback
-- Sections with no `>` lines at all have no user feedback
-
-Inline replies are feedback, not patch instructions. Treat them
-the same as any other user input - read them, understand the
-user's perspective, and then write the best complete research
-response from scratch. The quoted exchange is removed when the
-research heading is rewritten.
+On re-run, the skill reads each CR block as feedback on the
+preceding content, incorporates it into the research, and
+removes the block. CR blocks are not patch instructions - they
+are new information to integrate into the document. The
+research section is rewritten from scratch.
 
 ### Output rule
 
 **Never start a line with `>`** in the research output. The `>`
-prefix is reserved for the user's quoting mechanism. Starting a
-line with `>` would be misinterpreted as quoted text on the next
-iteration.
+prefix is reserved for threading history in question
+sub-headings.
 
 ## Findings
 
@@ -300,7 +301,7 @@ Each run produces a fresh response that:
 - Incorporates any changes the user made to their content (before
   the skill headings)
 - Incorporates any answers the user wrote to previous questions
-- Incorporates any inline replies the user added to research
+- Incorporates any CR blocks the user added to research
   sections
 - Reflects the latest research (not cached from prior runs)
 - Removes questions that have been answered
