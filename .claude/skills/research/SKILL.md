@@ -19,7 +19,11 @@ back into the same file.
 
 ## Document format
 
-The document has two sections separated by an HTML comment marker:
+The format depends on the file type.
+
+### Markdown files (.md)
+
+Two sections separated by an HTML comment marker:
 
 ```
 (user's content - notes, questions, thinking)
@@ -39,17 +43,13 @@ This section gets completely rewritten on each run.
 If the marker does not exist yet, append it (with a blank line
 before it) and then write the response below.
 
-## Response structure
-
-The research response has two parts, in this order:
-
-### 1. Questions (optional)
+#### Questions (optional, markdown)
 
 If clarification would help refine the research, place questions
-at the very top in email blockquote format. Questions do not block
-the research - always provide the best possible response with what
-you know, and note any assumptions you made. The questions are
-there to help the user provide detail that improves the next run.
+at the very top of the research response in email blockquote
+format. Questions do not block the research - always provide the
+best possible response with what you know, and note any
+assumptions you made.
 
 ```
 > What version of FreeBSD are you targeting?
@@ -60,12 +60,57 @@ When the user answers (by writing responses under the quotes),
 incorporate their answers into the research on the next run,
 remove the answered questions, and refine any assumptions.
 
-### 2. Research findings
+#### Findings (markdown)
 
-Clear, concise findings organized for the topic at hand. This is
-not an append-only log - it should always represent the best
-current understanding. Structure it however best fits the topic
-(prose, sections, bullet points, comparison tables, etc.).
+Clear, concise findings below the questions. This is not an
+append-only log - it should always represent the best current
+understanding.
+
+### Org files (.org)
+
+The user's content is everything that exists before the
+skill-managed headings. **Never modify the user's content.**
+
+The skill appends two top-level headings at the bottom of the
+file. Both are completely rewritten on each run.
+
+#### Questions heading (optional, org)
+
+```org
+* TODO questions for user
+** TODO What version of FreeBSD are you targeting?
+** TODO Is this for a jail or the host system?
+```
+
+Each question is a separate `TODO` sub-heading under the
+`* TODO questions for user` heading. Questions do not block the
+research - always provide the best possible response with what
+you know.
+
+On each re-run, incorporate responses from all answered questions
+into the research. Only remove questions the user has marked
+DONE - these are fully resolved. Questions still marked TODO
+that have responses underneath should be kept in place so the
+user can continue refining them. If all questions are DONE,
+remove the entire questions heading.
+
+#### Research heading (org)
+
+```org
+* research
+```
+
+Research findings go under this heading. Structure the content
+with org sub-headings, lists, or prose as appropriate.
+
+This heading always comes **after** the questions heading (if
+present).
+
+### Common rules for both formats
+
+Findings should be clear and concise, organized for the topic at
+hand. Structure however best fits (prose, sections, bullet points,
+comparison tables, etc.).
 
 Cite sources when possible. Distinguish between what documentation
 says and what community experience suggests.
@@ -74,8 +119,8 @@ says and what community experience suggests.
 
 Each run produces a fresh response that:
 
-- Incorporates any changes the user made to their content above
-  the marker
+- Incorporates any changes the user made to their content (above
+  the marker in markdown, or before the skill headings in org)
 - Incorporates any answers the user wrote to previous questions
 - Reflects the latest research (not cached from prior runs)
 - Removes questions that have been answered
