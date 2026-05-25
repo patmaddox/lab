@@ -14,6 +14,18 @@ gud = ["gerrit", "upload", "-r", "diffs"]
 wip = ["log", "-r", "wip"]
 gp = ["git", "push", "--tracked"]
 
+[signing]
+backend = "ssh"
+behavior = "keep"
+key = "~/lab/default.jj/.pubkeys/patmaddox-beastie.pub"
+
+[signing.backends.ssh]
+allowed-signers = "~/lab/default.jj/.pubkeys/allowed_signers"
+program = "/usr/bin/ssh-keygen"
+
+[ui]
+show-cryptographic-signatures = true
+
 [git]
 fetch = ["glob:*"]
 
