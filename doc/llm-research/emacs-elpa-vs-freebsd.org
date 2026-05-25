@@ -1,0 +1,286 @@
+* emacs packages: elpa vs freebsd ports
+What are the tradeoffs of using elpa for emacs packages vs freebsd
+ports system? Assume that I am willing to do the work of porting.
+
+However, I also need a way to be able to quickly experiment with a
+package, preferably without doing the entire porting ecosystem thing.
+
+Would be good to develop a workflow of quickly experimenting with a
+package, and then porting it to FreeBSD, if it makes sense to do so.
+
+I'm particularly interested in discerning when it makes sense to port
+in FreeBSD vs when not to.
+
+* research
+
+** Your Emacs build
+
+The FreeBSD emacs port (editors/emacs, currently 30.2_3) is compiled
+with the features that matter most for modern package management:
+
+- NATIVECOMP: on - async native compilation works, .eln files go to
+  ~/.emacs.d/eln-cache/ for user packages and
+  /usr/local/lib/emacs/30.2/native-lisp/ for the base install
+- TREESITTER: on - linked against libtree-sitter.so.0.26
+- MODULES: on - dynamic modules (needed for vterm, etc.)
+- SQLITE3: on - needed by emacsql and org-roam
+
+** FreeBSD ports for Emacs packages
+
+*** What exists
+
+There are roughly 90-100 distinct Emacs Lisp packages available as
+FreeBSD ports (about 111 lines including flavor variants). They are
+NOT in a dedicated "editors/emacs-packages" category. Instead, each
+port goes into the category matching its function:
+
+- devel/magit, devel/git-modes, devel/transient
+- devel/dash.el, devel/rust-mode, devel/go-mode.el
+- editors/vertico.el, editors/orderless.el, editors/marginalia.el
+- editors/with-editor, editors/perspective.el, editors/web-mode
+- editors/slime, editors/sly
+- textproc/markdown-mode.el, textproc/yaml-mode.el
+- print/pdf-tools, print/auctex
+- databases/emacsql, databases/closql
+- misc/compat.el, misc/emacs-libvterm
+- comms/emacs-eat
+- mail/notmuch-emacs, mail/wanderlust
+- devel/emacs-lsp-booster (Rust binary, not elisp)
+- lang/php-mode.el, lang/haskell-mode.el, lang/clojure-mode.el
+- math/ess
+
+"elisp" is a virtual category - it is used as a secondary CATEGORIES
+value for tagging, but has no subdirectory in the ports tree.
+
+*** How ports install elisp
+
+Port-installed packages go to /usr/local/share/emacs/site-lisp/ (flat
+files or subdirectories like magit/, compat/). The subdirs.el file
+there calls normal-top-level-add-subdirs-to-load-path so subdirectories
+are automatically added to load-path.
+
+This means port-installed packages are available immediately without
+any (require 'package) or package-initialize call - they are on the
+load-path at startup, just like built-in packages.
+
+*** What is NOT ported
+
+The vast majority of the MELPA/ELPA ecosystem is not ported. MELPA has
+roughly 5,800+ packages; GNU ELPA has about 440. The FreeBSD ports
+tree has under 100. Notable absences include:
+
+- Completion frameworks beyond vertico/orderless/marginalia (no corfu,
+  consult, embark as ports)
+- LSP: no eglot port (built-in since Emacs 29), no lsp-mode port
+- Org ecosystem: no org-roam, org-noter, etc.
+- which-key, helpful, doom/spacemacs layers
+- Most tree-sitter grammar packages for Emacs
+
+*** Lag time
+
+Port updates depend on volunteer maintainers. Magit 4.5.0 is current
+in ports. Some ports show revision bumps (_1, _2) for dependency
+rebuilds. Ports for actively maintained packages (magit, transient)
+tend to stay reasonably current. Less popular ports can lag months or
+longer. The porting process for new submissions takes "a few days to a
+few months" according to the Porter's Handbook.
+
+*** Porting effort for a pure elisp package
+
+A pure elisp package port is quite small. The markdown-mode.el
+Makefile is representative:
+
+- ~20 lines of Makefile
+- USES=emacs,gmake
+- GH_ACCOUNT/GH_PROJECT/GH_TAGNAME for GitHub source
+- do-install target copies .el files to EMACS_SITE_LISPDIR
+- Optional DOCS handling
+- Plus distinfo and pkg-descr files
+
+The USES=emacs framework handles flavor variants automatically -
+your port gets built for full, nox, canna, wayland, devel_full,
+devel_nox flavors without extra work.
+
+*** Porting effort for packages with native code
+
+Packages like emacs-libvterm are more involved:
+
+- Needs CMake build, links against libvterm.so
+- Installs both .el and .so (vterm-module.so)
+- LIB_DEPENDS on devel/libvterm
+- Shell integration scripts to install
+
+pdf-tools and emacs-lsp-booster (Rust) are similar - real build
+systems, library dependencies, compiled artifacts. These are
+where porting adds the most value, because ELPA/MELPA cannot
+easily handle the native compilation and library linking that
+the ports framework does well.
+
+** ELPA/MELPA on FreeBSD
+
+*** How it works
+
+package.el works identically on FreeBSD as on Linux. Add archives
+to package-archives, call package-initialize, install with
+package-install or use-package with :ensure t. Packages install
+to ~/.emacs.d/elpa/ by default.
+
+use-package is built into Emacs 29+, so no bootstrapping needed.
+A minimal setup:
+
+  (require 'package)
+  (add-to-list 'package-archives
+               '("melpa" . "https://melpa.org/packages/") t)
+  (package-initialize)
+
+  (use-package some-package
+    :ensure t
+    :config ...)
+
+*** FreeBSD-specific issues
+
+There are no known FreeBSD-specific issues with package.el itself.
+Pure elisp packages from MELPA work without modification.
+
+Native compilation of ELPA packages works - when you install a
+package via package.el, Emacs asynchronously compiles the .el files
+to .eln and caches them in ~/.emacs.d/eln-cache/. This happens in
+the background and is transparent.
+
+The main area where trouble can arise is packages that compile C
+or Rust code as part of their install (vterm, pdf-tools,
+treesit-auto grammars). These may need FreeBSD-compatible build
+flags, and the MELPA install process may assume GNU/Linux tooling.
+
+** Mixing ports and ELPA
+
+*** Can you use both? Yes.
+
+The two systems use completely separate directories and mechanisms:
+
+- Ports: /usr/local/share/emacs/site-lisp/ (on load-path directly)
+- ELPA: ~/.emacs.d/elpa/ (activated by package-initialize)
+
+There is no conflict mechanism. Emacs searches load-path in order,
+so if the same package exists in both places, whichever appears
+first on load-path wins. In practice, site-lisp entries appear
+before ELPA entries, so a port-installed version would shadow an
+ELPA-installed version of the same package.
+
+*** package-directory-list
+
+Emacs also checks package-directory-list for system-wide ELPA-style
+packages. On this system it points to:
+
+  /usr/local/share/emacs/30.2/site-lisp/elpa
+  /usr/local/share/emacs/site-lisp/elpa
+
+Neither directory exists currently. This is a mechanism that could
+be used by ports to install packages in ELPA format, but no ports
+do this today.
+
+*** Practical approach
+
+Use ports for packages you have installed as ports already (magit,
+notmuch, etc.). Use ELPA/MELPA for everything else. The two
+coexist without issues as long as you don't install the same
+package both ways.
+
+** When porting makes sense vs not
+
+*** Port it when:
+
+1. The package has C/Rust native code or dynamic modules - vterm,
+   pdf-tools, emacs-lsp-booster. The ports framework handles
+   library dependencies, compiler flags, and cross-flavor builds
+   far better than MELPA's install-time compilation.
+
+2. The package needs system libraries - anything linking against
+   a .so that should be tracked by pkg. Ports express these
+   dependencies cleanly (LIB_DEPENDS, BUILD_DEPENDS).
+
+3. It is a core dependency of other ports - compat.el, dash.el,
+   transient, with-editor, emacsql. These form a dependency
+   graph that the ports system manages (automatic rebuilds when
+   a dependency updates).
+
+4. You want reproducible installs across machines managed by
+   pkg/poudriere - ports give you binary packages that install
+   identically everywhere.
+
+*** Do not port when:
+
+1. Pure elisp, no native code, no system library deps - the porting
+   overhead is small but the maintenance burden is real. You need to
+   bump the port for each upstream release, handle distinfo updates,
+   and if you are the maintainer, respond to build failures.
+
+2. Rapidly iterating on configuration - trying out completion
+   frameworks, themes, minor modes. ELPA lets you install/remove
+   in seconds. A port requires a Makefile, testing, submission.
+
+3. Personal preference packages - your color theme, your specific
+   keybinding package, your org-mode extensions. These change with
+   your taste and are not worth the ports overhead.
+
+4. The package is already well-served by ELPA - if there are no
+   native code issues and MELPA has a working version, the port
+   adds friction without adding value.
+
+*** Gray area:
+
+Packages like magit, vertico, markdown-mode - pure elisp but
+widely used. Having them as ports means they get binary packages
+via poudriere and pkg install. Whether this is worth the
+maintenance depends on whether you are managing multiple FreeBSD
+machines or building a curated package set.
+
+** Tree-sitter grammars
+
+Tree-sitter grammars are shared libraries (.so files). The FreeBSD
+ports tree has the core tree-sitter library (devel/tree-sitter,
+currently 0.26.9) but does NOT have individual grammar ports for
+Emacs use. The tree-sitter grammar ports that exist are Python
+bindings (py-tree-sitter-bash, etc.), not the raw .so grammars
+Emacs needs.
+
+For Emacs, you need to either:
+1. Build grammars yourself using treesit-install-language-grammar
+   (calls out to a C compiler, works on FreeBSD)
+2. Use a package like treesit-auto from MELPA to automate this
+3. Create FreeBSD ports for individual grammar .so files
+
+This is an area where ports could add value - grammar .so files
+are architecture-specific compiled artifacts that would benefit
+from proper packaging. But nobody has done the work yet.
+
+** Practical workflow: experiment then port
+
+1. Try via ELPA first:
+   - Add MELPA to package-archives
+   - (use-package foo :ensure t) in your init.el
+   - Evaluate immediately, live with it for a while
+
+2. Decide if it is worth porting:
+   - Does it have native code or system deps? Strong yes.
+   - Is it stable and you plan to keep it long-term? Maybe.
+   - Is it pure elisp and you're the only user? Probably not.
+
+3. Create the port:
+   - Start from an existing similar port (markdown-mode.el for
+     pure elisp, emacs-libvterm for native code)
+   - Makefile + distinfo + pkg-descr (+ pkg-plist if complex)
+   - USES=emacs handles flavor variants
+   - Test with poudriere or local make install
+   - Submit via Bugzilla, product "Ports & Packages"
+
+4. Transition:
+   - pkg install your-new-port
+   - Remove :ensure t from use-package declaration (or remove
+     the use-package form entirely if no config is needed)
+   - The port's files in site-lisp are on load-path automatically
+
+5. Ongoing:
+   - As port maintainer, you update distinfo and version when
+     upstream releases
+   - portlint, poudriere testport for QA
