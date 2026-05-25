@@ -5,7 +5,7 @@ description: >
   user's content.
   TRIGGER when the user says /research or asks to research a document.
 user-invocable: true
-argument-hint: "<file>"
+argument-hint: "<file> or jj:<revset>"
 allowed-tools: Read, Edit, Write, Bash, Grep, Glob, WebFetch, WebSearch, Agent
 ---
 
@@ -16,7 +16,32 @@ findings back into the same file.
 
 ## Input
 
-`$ARGUMENTS` is a path to an .org file. Read it first.
+`$ARGUMENTS` is either a path to an .org file, or a jj revset
+prefixed with `jj:`.
+
+### File mode
+
+When `$ARGUMENTS` is a path to an .org file, read it first and
+proceed to researching.
+
+### jj mode
+
+When `$ARGUMENTS` starts with `jj:`, the text after the prefix is
+a jj revset (e.g. `jj:@` or `jj:abc123`).
+
+1. Read the commit message from the revset:
+   ```
+   jj log -r <revset> --no-graph -T 'description'
+   ```
+2. The commit message is the user's research prompt.
+3. Create a new .org file at `doc/llm-research/<slug>.org` where
+   `<slug>` is derived from the commit message subject line
+   (lowercase, spaces to hyphens, stripped of the `<area>: ` prefix
+   and any non-alphanumeric characters besides hyphens).
+4. Write the commit message body (everything after the subject
+   line) as the user's content in the new file.
+5. Proceed with research as normal, writing findings into the new
+   file.
 
 ## Document structure
 
