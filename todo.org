@@ -36,3 +36,51 @@ short enough to scan in a minute.
 * TODO Create a skill to look up man pages
 Auto-trigger when unsure how to use a system tool. Read the man page
 and apply what it says rather than guessing at flags.
+* TODO emacs: majjic an interface for jj
+* TODO cron job to ntfy.sh when my home IP address changes
+This is because I need to configure my public IP for wireguard. Right
+now I have... something, not sure, but a cron job that posts something
+to some key value store. I think I have a note in my email about
+it. But it would be better to be notified proactively.
+* TODO docs: document workflow for todo -> use cases -> features
+todo list in my dev commit is my working memory. I keep it here so
+that I can edit it all in one place. It's not version controlled
+directly, but it doesn't need to be.
+
+Use cases I'm not sure if that's something I'll actually use. But for
+more detailed features it could come in useful. Can also link to them
+from git commit trailers:
+
+    Use-Case: docs/use-cases/example-use-case.org
+
+* TODO emacs: Figure out why clipboard disappears after exiting
+common workflow:
+
+jj describe foo
+(opens emacs)
+I copy some text, it's available to paste
+I exit, it's no longer available
+
+There's something about the emacs / clipboard configuration that is
+throwing away the clipboard contents after exiting, which I don't
+want.
+
+* TODO ss: Write .ss files in tests instead of copying example dirs
+All of the files are short and sweet and we probably want to make it
+visible as part of the test setup.
+
+One question would be, what to do about things like the .c files?
+Maybe I just have a specific set of files that we copy in? hello.c,
+hello-from-file.c, etc. Then the tests copy the relevant files, write
+their .ss file, and so the test always only ever focuses on the work
+to be done.
+
+Also, there's absolutely no reason why we actually need to compile C
+files. Build functions that write and/or copy should be enough.
+
+* TODO emacs: Set eat scrollback to less
+I have it set to infinity, and so I think emacs slows down over time -
+even in things like claude code sessions that are terminal UIs.
+
+Need to find a scrollback number that is a good balance of being able
+to go back as far as I need, with performance.
