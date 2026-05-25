@@ -54,13 +54,13 @@ file. Both are completely rewritten on each run.
 ### Questions heading (optional)
 
 ```org
-* TODO questions for user
+* questions for user
 ** TODO What version of FreeBSD are you targeting?
 ** TODO Is this for a jail or the host system?
 ```
 
 Each question is a separate `TODO` sub-heading under the
-`* TODO questions for user` heading. Questions do not block the
+`* questions for user` heading. Questions do not block the
 research - always provide the best possible response with what
 you know.
 
@@ -70,6 +70,168 @@ DONE - these are fully resolved. Questions still marked TODO
 that have responses underneath should be kept in place so the
 user can continue refining them. If all questions are DONE,
 remove the entire questions heading.
+
+### Threaded question replies
+
+When the user answers a question inline but leaves it in TODO
+state, it means they consider it an open loop - they have likely
+asked a follow-up question. Respond with another level of
+nesting, continuing the conversation.
+
+The quoting depth increases with each exchange. Add attribution
+headers using `%` instead of `>` (e.g. `%% model wrote:`,
+`% user wrote:`) to clarify who said what at each level. The
+`%` prefix distinguishes headers from quoted content. The user
+will not insert these headers themselves - detect the reply
+structure and add them on output.
+
+#### Initial output
+
+Write model text with no `>` prefix. The question sub-heading
+itself is not duplicated in the body.
+
+```org
+* questions for user
+** TODO What version of FreeBSD are you targeting?
+The research covers several FreeBSD-specific areas. Knowing
+your version would help narrow the findings.
+```
+
+#### How the user replies
+
+The user quotes the entire previous output by prefixing every
+line with `>` (including `%` header lines), then writes their
+reply at depth 0.
+
+#### Detection
+
+In any state of the document, the most recent text has no `>`
+prefix. The parity of who is at which depth alternates between
+input and output:
+
+- **In model output**: even depths (0, 2, 4...) = model,
+  odd depths (1, 3, 5...) = user
+- **In user input**: even depths (0, 2, 4...) = user,
+  odd depths (1, 3, 5...) = model
+
+Depth counts only `>` characters, not `%`. Lines containing
+`model wrote:` or `user wrote:` with `%` prefixes are
+attribution headers (metadata, not content).
+
+#### Transformation
+
+On re-run, the user has already shifted all previous content
+by +1 via blanket quoting. The skill increases by 1 more:
+
+1. Increase all `>` depths on content lines by 1
+2. Rewrite each `%` header line: set the `%` count to match
+   the `>` depth of the content block it precedes (drop any
+   `>` the user added)
+3. Add a `% user wrote:` header above the user's reply
+   (now at depth 1 after step 1)
+4. Add a `%% model wrote:` header above the model's
+   previous reply (now at depth 2 after step 1)
+5. Write new model follow-up at depth 0
+
+#### Example progression
+
+First run output:
+
+```org
+* questions for user
+** TODO What version of FreeBSD are you targeting?
+The research covers several FreeBSD-specific areas. Knowing
+your version would help narrow the findings.
+```
+
+User replies (blanket `>` on all lines, reply at depth 0):
+
+```org
+** TODO What version of FreeBSD are you targeting?
+> The research covers several FreeBSD-specific areas. Knowing
+> your version would help narrow the findings.
+14.2-RELEASE, but planning to upgrade soon.
+```
+
+Second run output:
+
+```org
+** TODO What version of FreeBSD are you targeting?
+%% model wrote:
+>> The research covers several FreeBSD-specific areas. Knowing
+>> your version would help narrow the findings.
+% user wrote:
+> 14.2-RELEASE, but planning to upgrade soon.
+Would you like the research to cover both 14.2 and 15.0, or
+focus on one?
+```
+
+User replies again (blanket `>` on all lines):
+
+```org
+** TODO What version of FreeBSD are you targeting?
+> %% model wrote:
+> >> The research covers several FreeBSD-specific areas. Knowing
+> >> your version would help narrow the findings.
+> % user wrote:
+> > 14.2-RELEASE, but planning to upgrade soon.
+> Would you like the research to cover both 14.2 and 15.0, or
+> focus on one?
+Cover both, note any differences.
+```
+
+Third run output:
+
+```org
+** TODO What version of FreeBSD are you targeting?
+%%%% model wrote:
+>>>> The research covers several FreeBSD-specific areas. Knowing
+>>>> your version would help narrow the findings.
+%%% user wrote:
+>>> 14.2-RELEASE, but planning to upgrade soon.
+%% model wrote:
+>> Would you like the research to cover both 14.2 and 15.0, or
+>> focus on one?
+% user wrote:
+> Cover both, note any differences.
+Got it. Research will cover both 14.2 and 15.0, noting any
+differences between versions.
+```
+
+When the user marks the question DONE, remove it entirely and
+incorporate the full thread into the research.
+
+#### Verification
+
+Each example satisfies these invariants:
+
+1. The most recent text is always at depth 0
+2. In model output: even depths = model, odd depths = user
+3. In user input: even depths = user, odd depths = model
+4. `model wrote:` headers use `%` at even depths >= 2
+5. `user wrote:` headers use `%` at odd depths >= 1
+6. No two adjacent content blocks share the same depth
+
+Trace of second run transformation:
+- Input content depths: 1 (model), 0 (user)
+- Step 1 (+1): 2, 1
+- Step 2: no existing `%` headers
+- Steps 3-4: add `%% model wrote:` (depth 2),
+  `% user wrote:` (depth 1)
+- Step 5: new model at depth 0
+- Output depths: 2(model), 1(user), 0(model)
+- Even=model ✓  Odd=user ✓
+
+Trace of third run transformation:
+- Input content depths: 3, 2, 1, 0
+- Step 1 (+1): 4, 3, 2, 1
+- Step 2: `> %% model wrote:` -> `%%%% model wrote:` (depth 4),
+  `> % user wrote:` -> `%%% user wrote:` (depth 3)
+- Steps 3-4: add `%% model wrote:` (depth 2),
+  `% user wrote:` (depth 1)
+- Step 5: new model at depth 0
+- Output depths: 4(model), 3(user), 2(model), 1(user), 0(model)
+- Even=model ✓  Odd=user ✓
 
 ### Research heading
 
