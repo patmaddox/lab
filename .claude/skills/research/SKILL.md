@@ -81,6 +81,16 @@ Each run produces a fresh response that:
 - Removes questions that have been answered
 - May restructure entirely if the user's content has evolved
 
+## Local references
+
+The user's document may reference local files in this repo (notes,
+config files, examples, etc.). These represent the user's current
+understanding. Read all referenced files before researching.
+
+Local refs are **not** a source of truth - they are claims to
+verify. The research goal is to find where the user's
+understanding is wrong, outdated, or incomplete.
+
 ## Research approach
 
 - Use web search and web fetch to find current, authoritative
@@ -91,3 +101,29 @@ Each run produces a fresh response that:
   source to trust and why
 - Be honest about confidence levels and gaps in available
   information
+
+### Validation focus
+
+The primary role of this skill is to expose flaws or gaps in the
+user's knowledge. For every claim or assumption found in the
+user's content and local refs:
+
+1. **Attempt to disprove it.** Search for counterexamples,
+   corrections, version-specific changes, or deprecations.
+2. **Identify gaps.** Note important aspects of the topic that
+   the user has not addressed at all.
+3. **Skip what's already correct.** Do not repeat information
+   that is clearly and accurately stated in the user's
+   references. The user already knows it.
+
+If all information in the user's content and references is
+accurate, current, and complete, the research response should
+simply state:
+
+```
+Information is accurate, current, and complete. Nothing to report.
+```
+
+The goal is a focused analysis the user can read, understand, and
+integrate into their own knowledge - not a comprehensive survey
+of the topic.
