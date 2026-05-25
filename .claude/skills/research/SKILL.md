@@ -1,7 +1,8 @@
 ---
 description: >
-  Research a topic based on the user's document. Reads the document,
-  researches thoroughly, and writes findings below a marker line.
+  Research a topic based on the user's org-mode document. Reads the
+  document, researches thoroughly, and writes findings below the
+  user's content.
   TRIGGER when the user says /research or asks to research a document.
 user-invocable: true
 argument-hint: "<file>"
@@ -10,71 +11,22 @@ allowed-tools: Read, Edit, Write, Bash, Grep, Glob, WebFetch, WebSearch, Agent
 
 # research
 
-Research the topic described in a user's document and write findings
-back into the same file.
+Research the topic described in a user's org-mode document and write
+findings back into the same file.
 
 ## Input
 
-`$ARGUMENTS` is a path to the document. Read it first.
+`$ARGUMENTS` is a path to an .org file. Read it first.
 
-## Document format
-
-The format depends on the file type.
-
-### Markdown files (.md)
-
-Two sections separated by an HTML comment marker:
-
-```
-(user's content - notes, questions, thinking)
-
-<!-- research -->
-
-(research response - written by this skill)
-```
-
-Everything **above** `<!-- research -->` is the user's content.
-**Never modify anything above the marker.** Not a word, not
-whitespace, not punctuation.
-
-Everything **below** `<!-- research -->` is the research response.
-This section gets completely rewritten on each run.
-
-If the marker does not exist yet, append it (with a blank line
-before it) and then write the response below.
-
-#### Questions (optional, markdown)
-
-If clarification would help refine the research, place questions
-at the very top of the research response in email blockquote
-format. Questions do not block the research - always provide the
-best possible response with what you know, and note any
-assumptions you made.
-
-```
-> What version of FreeBSD are you targeting?
-> Is this for a jail or the host system?
-```
-
-When the user answers (by writing responses under the quotes),
-incorporate their answers into the research on the next run,
-remove the answered questions, and refine any assumptions.
-
-#### Findings (markdown)
-
-Clear, concise findings below the questions. This is not an
-append-only log - it should always represent the best current
-understanding.
-
-### Org files (.org)
+## Document structure
 
 The user's content is everything that exists before the
 skill-managed headings. **Never modify the user's content.**
 
-The skill appends two top-level headings at the bottom of the
+The skill manages two top-level headings at the bottom of the
 file. Both are completely rewritten on each run.
 
-#### Questions heading (optional, org)
+### Questions heading (optional)
 
 ```org
 * TODO questions for user
@@ -94,7 +46,7 @@ that have responses underneath should be kept in place so the
 user can continue refining them. If all questions are DONE,
 remove the entire questions heading.
 
-#### Research heading (org)
+### Research heading
 
 ```org
 * research
@@ -106,7 +58,46 @@ with org sub-headings, lists, or prose as appropriate.
 This heading always comes **after** the questions heading (if
 present).
 
-### Common rules for both formats
+## Inline replies
+
+The user may reply inline to sections of the research output
+using mailing-list-style quoting. Lines prefixed with `>` are
+the skill's previous output quoted back; lines without `>` are
+the user's commentary.
+
+Example:
+
+```org
+** Some finding
+> The recommended approach is X because of Y.
+Actually I tried X and it failed due to Z.
+
+> There is also approach W.
+This looks promising, tell me more about W.
+
+> Some other detail.
+```
+
+When a section contains `>` quoted lines:
+
+- Quoted lines (`>`) are the skill's previous text
+- Unquoted lines are the user's feedback
+- Sections with no `>` lines at all have no user feedback
+
+Inline replies are feedback, not patch instructions. Treat them
+the same as any other user input - read them, understand the
+user's perspective, and then write the best complete research
+response from scratch. The quoted exchange is removed when the
+research heading is rewritten.
+
+### Output rule
+
+**Never start a line with `>`** in the research output. The `>`
+prefix is reserved for the user's quoting mechanism. Starting a
+line with `>` would be misinterpreted as quoted text on the next
+iteration.
+
+## Findings
 
 Findings should be clear and concise, organized for the topic at
 hand. Structure however best fits (prose, sections, bullet points,
@@ -119,9 +110,11 @@ says and what community experience suggests.
 
 Each run produces a fresh response that:
 
-- Incorporates any changes the user made to their content (above
-  the marker in markdown, or before the skill headings in org)
+- Incorporates any changes the user made to their content (before
+  the skill headings)
 - Incorporates any answers the user wrote to previous questions
+- Incorporates any inline replies the user added to research
+  sections
 - Reflects the latest research (not cached from prior runs)
 - Removes questions that have been answered
 - May restructure entirely if the user's content has evolved
