@@ -5,7 +5,7 @@ description: >
   user's content.
   TRIGGER when the user says /research or asks to research a document.
 user-invocable: true
-argument-hint: "<file> or jj:<revset>"
+argument-hint: "[file.org] [revset]"
 allowed-tools: Read, Edit, Write, Bash, Grep, Glob, WebFetch, WebSearch, Agent
 ---
 
@@ -16,32 +16,99 @@ findings back into the same file.
 
 ## Input
 
-`$ARGUMENTS` is either a path to an .org file, or a jj revset
-prefixed with `jj:`.
+`$ARGUMENTS` may contain a filename and a revset in any order.
+The skill classifies each argument:
 
-### File mode
+- An argument with a file extension (e.g. `foo.org`) is the
+  **filename**
+- Everything else is a **revset**
 
-When `$ARGUMENTS` is a path to an .org file, read it first and
-proceed to researching.
+If no revset is given, default to `@`. The revset must resolve to
+a single commit.
 
-### jj mode
+## File resolution
 
-When `$ARGUMENTS` starts with `jj:`, the text after the prefix is
-a jj revset (e.g. `jj:@` or `jj:abc123`).
+The skill resolves which .org file to operate on:
 
-1. Read the commit message from the revset:
+### Explicit file given
+
+Read it directly and proceed to researching.
+
+### No file given
+
+The skill considers candidates holistically, not as an ordered
+preference:
+
+- **Existing mutable files**: check what files have been modified
+  in `mutable() & ::<revset>` commits:
+  ```
+  jj diff -r 'mutable() & ::<revset>' --no-pager --git -s
+  ```
+  Any `doc/llm-research/*.org` file is a strong candidate.
+- **Commit subject slug**: derive a slug from the commit message
+  subject line (lowercase, spaces to hyphens, strip the
+  `<area>: ` prefix and non-alphanumeric characters besides
+  hyphens). Use this to generate a candidate path like
+  `doc/llm-research/<slug>.org`.
+
+If an existing mutable file is found whose name relates to the
+commit subject, use it. Otherwise create the slug-derived path
+as a new research document.
+
+## New file creation
+
+When creating a new research file:
+
+1. Read the commit message:
    ```
    jj log -r <revset> --no-graph -T 'description'
    ```
-2. The commit message is the user's research prompt.
-3. Create a new .org file at `doc/llm-research/<slug>.org` where
-   `<slug>` is derived from the commit message subject line
-   (lowercase, spaces to hyphens, stripped of the `<area>: ` prefix
-   and any non-alphanumeric characters besides hyphens).
-4. Write the commit message body (everything after the subject
-   line) as the user's content in the new file.
-5. Proceed with research as normal, writing findings into the new
-   file.
+2. Extract the body (everything after the subject line). If a
+   `--- model ---` separator exists, only take the user-authored
+   text above it - discard the model block.
+3. Write the body as user content at the top of the new .org file,
+   formatted the same as any research document's user section
+   (the subject line becomes the first org heading, stripping the
+   `llm-research: ` area prefix if present).
+4. Delete the body from the commit message using `jj describe`,
+   leaving only the subject line.
+5. Proceed with research against the newly created document.
+
+## Commit message conventions
+
+The skill uses the `--- model ---` separator for any commit message
+text it writes. Everything above the separator is user-authored and
+untouchable. Everything below can be freely rewritten on subsequent
+runs.
+
+After completing research, write a concise summary of the key
+findings into the commit message as a model block using
+`jj describe`:
+
+```
+user's original subject
+
+--- model ---
+Key findings summary here.
+```
+
+If the user wrote a body, preserve it above the separator:
+
+```
+user's original subject
+
+user's original body
+
+--- model ---
+Key findings summary here.
+```
+
+Never modify or lose any text the user wrote above the separator.
+
+## No commit
+
+Do not commit when done. The research file is written into the
+current working copy, which is already an in-progress commit.
 
 ## Document structure
 
@@ -306,6 +373,7 @@ Each run produces a fresh response that:
 - Reflects the latest research (not cached from prior runs)
 - Removes questions that have been answered
 - May restructure entirely if the user's content has evolved
+- Rewrites the `--- model ---` block in the commit message
 
 ## Local references
 
