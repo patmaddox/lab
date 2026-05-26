@@ -1,11 +1,10 @@
 ---
 description: >
   Turn commit messages into a plan. Reads a jj revset, treats the
-  commit messages as a prompt, and writes an org-mode plan to
-  doc/plans/<branch-name>.org.
+  commit messages as a prompt, and writes an org-mode plan.
   TRIGGER when the user says /iterate.
 user-invocable: true
-argument-hint: "<revset>"
+argument-hint: "[revset] [file.org]"
 allowed-tools: Read, Edit, Write, Bash, Grep, Glob, WebFetch, WebSearch, Agent
 ---
 
@@ -15,56 +14,73 @@ Read commit messages from a jj revset and produce an org-mode plan.
 
 ## Input
 
-`$ARGUMENTS` is a jj revset (e.g. `@`, `claude/iterate-skill`,
-`abc123..xyz456`). If `$ARGUMENTS` is empty, default to `@`.
+`$ARGUMENTS` may contain revsets and filenames in any order. The
+skill classifies each argument:
 
-## Validation
+- Arguments with a file extension (e.g. `foo.org`, `notes.md`) are
+  treated as **filenames**
+- Everything else is treated as a **revset**
 
-1. Check that the head revision is not trunk:
-   ```
-   jj log -r 'heads($ARGUMENTS) & trunk()' --no-graph -T 'change_id'
-   ```
-   If this produces output, **stop with an error**:
-   ```
-   Error: refusing to iterate on the trunk commit.
-   ```
+If no revset argument is found, default to `@`. Multiple revset
+arguments are joined as a single revset expression.
 
-2. Verify the revset has exactly one head:
-   ```
-   jj log -r 'heads($ARGUMENTS)' --no-graph -T 'change_id ++ "\n"'
-   ```
-   If this produces more than one line, **stop with an error**:
-   ```
-   Error: revset has multiple heads. The iterate skill requires
-   a revset with exactly one head revision.
-   ```
+File arguments become candidates for the output filename. The
+extension heuristic is a first pass - if a file argument does not
+exist on disk when the skill tries to read or write it, that
+naturally surfaces the misclassification.
 
-3. Read the bookmark name from the head revision:
-   ```
-   jj log -r 'heads($ARGUMENTS)' --no-graph -T 'bookmarks'
-   ```
-   - If no output, **stop with an error**:
-     ```
-     Error: head of revset has no bookmark. The iterate skill
-     requires exactly one bookmark on the head revision.
-     ```
-   - If multiple bookmarks (space-separated), **stop with an error**:
-     ```
-     Error: head revision has multiple bookmarks. The iterate
-     skill requires exactly one bookmark on the head revision.
-     ```
+## Filename derivation
 
-4. Derive the output filename from the bookmark by replacing `/`
-   with `--`. Example: `claude/iterate-skill` becomes
-   `claude--iterate-skill.org`.
+The skill considers three sources of candidates for the output
+file and picks the best one holistically - not as an ordered
+preference.
+
+### Explicit file arguments
+
+Any filenames passed in `$ARGUMENTS` are candidates. These are a
+strong signal of user intent.
+
+### Existing mutable files
+
+Check what files have been modified in `mutable() & ::<revset>`
+commits - this represents the work in progress on the branch:
+
+```
+jj diff -r 'mutable() & ::<revset>' --no-pager --git -s
+```
+
+Any file type counts, though `.org` files in `doc/plans/` are the
+strongest candidates since that is where the skill writes output.
+Other modified files (`.md`, etc.) are weaker but still relevant
+signals.
+
+### Commit subject slug
+
+Derive a slug from the commit message subject line of the head
+revision: lowercase, spaces to hyphens, strip the `<area>: `
+prefix and non-alphanumeric characters besides hyphens. Use this
+to generate a candidate path like `doc/plans/<slug>.org`.
+
+### Selection logic
+
+Evaluate all candidates together and pick the best one. Factors
+to weigh:
+
+- An explicitly passed filename is a strong signal of intent
+- A mutable `doc/plans/` file whose name relates to the commit
+  subject is a strong signal of continuity
+- A generated slug is the fallback when nothing better exists
+- If multiple signals converge on the same file, that reinforces
+  the choice
 
 ## Reading commit messages
 
-Read all commit messages in the revset, ordered chronologically
-(oldest first):
+Read all commit messages in `mutable() & ::<revset>`, ordered
+chronologically (oldest first). This captures the full branch
+context, not just the given revset:
 
 ```
-jj log -r "$ARGUMENTS" --no-graph -T 'description ++ "\n---\n"' --reversed
+jj log -r 'mutable() & ::<revset>' --no-graph -T 'description ++ "\n---\n"' --reversed
 ```
 
 Treat the messages as a sequential prompt. Later commits may refine
@@ -89,8 +105,8 @@ Everything below it can be freely rewritten on subsequent runs.
 
 ## Output
 
-Write the plan to `$(jj root)/doc/plans/<filename>.org`, creating
-the `doc/plans/` directory if it does not exist.
+Write the plan to the file selected by the filename derivation
+logic, creating the `doc/plans/` directory if it does not exist.
 
 The plan structure is fully adaptive - organize however best fits
 the task described in the commit messages. Use org-mode headings,
