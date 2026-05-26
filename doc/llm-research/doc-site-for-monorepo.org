@@ -1,0 +1,214 @@
+* doc site for monorepo
+I want to put together a doc site for my monorepo. It is modeled
+somewhat after the FreeBSD docs in that it will have articles, guides,
+handbooks, man pages. I also want GNU info pages for emacs packages.
+
+I want a single unified site with different sections. Prefer tools
+with minimal dependencies.
+
+Many of my docs are in org format, so I'll need a toolchain that can
+render them somehow. Essentially I have a combination of org,
+markdown, man pages, info pages.
+
+* research
+
+** The core problem: four input formats, one site
+
+You need a single static site that renders org-mode, markdown,
+man pages (mdoc), and Emacs info (texinfo) content into a unified
+presentation. No single static site generator handles all four
+natively. Every viable approach requires a conversion step for at
+least some formats.
+
+** Hugo as the foundation
+
+Hugo is the strongest candidate for the site generator itself:
+
+- Single static binary, no runtime dependencies (Go, not Ruby/Node)
+- Natively renders both markdown and org-mode content in the same
+  site, mixing formats freely per-file
+- FreeBSD's own documentation portal (docs.freebsd.org) runs on
+  Hugo with Asciidoctor, so the model you want to emulate already
+  uses it
+- Section-based content organization maps directly to your
+  articles/guides/handbooks/man-pages structure
+- Documentation themes (Book, Docsy, Doks) provide ready-made
+  navigation, search, and multi-section layouts
+
+The Hugo Book theme is a natural fit: it renders content/docs as
+a tree-structured sidebar menu, supports multiple sections, and
+has minimal configuration requirements.
+
+** Org-mode rendering: Emacs export is the right path
+
+Hugo's built-in go-org library handles basic org prose (headings,
+lists, emphasis, tables, inline code blocks) but has a critical
+gap for your needs: its =#+INCLUDE= implementation does not
+support =:lines= ranges. The go-org source code confirms this -
+the parser regex only accepts =#+INCLUDE: "file" src language=
+and reads the entire file. There is no logic for =:lines=,
+=:only-contents=, or section targeting.
+
+Since embedding source files with line ranges is a key
+requirement, you need Emacs in the build pipeline. Two approaches:
+
+*** ox-hugo per-file mode (recommended)
+
+ox-hugo has a per-file mode that fits your repo structure. Each
+.org file with a =#+title= keyword exports independently to its
+own Hugo markdown file. This is separate from the monolithic
+"subtree" mode you may have heard about.
+
+The build step is an Emacs batch command:
+
+#+begin_example
+emacs --batch -l ox-hugo \
+  --eval '(org-hugo-export-wim-to-md :all-subtrees nil nil t)'
+#+end_example
+
+This gives full org-mode export: =#+INCLUDE= with =:lines=
+ranges, babel code blocks, cross-references, and everything else
+the org exporter supports. The output is Hugo-compatible markdown
+with TOML front matter.
+
+*** Emacs org-publish as pre-processor
+
+Alternatively, use Emacs batch mode to export org files directly
+to HTML, then feed the HTML into Hugo's content tree. This gives
+complete org fidelity without the markdown intermediary. More
+control but more scripting to wire up.
+
+** Embedding source files in documents
+
+Org-mode's =#+INCLUDE= directive handles this natively:
+
+#+begin_example
+#+INCLUDE: "./scripts/demo.sh" src sh
+#+INCLUDE: "./scripts/demo.sh" src sh :lines "10-25"
+#+INCLUDE: "./scripts/demo.sh::*setup" :only-contents t
+#+end_example
+
+The =:lines "10-25"= syntax includes lines 10 through 24 (end
+is excluded). You can also target named org headings or custom
+IDs with =:only-contents t= to extract just the body.
+
+This works through Emacs org-export (and therefore ox-hugo). For
+markdown files in the same site, Hugo custom shortcodes can
+provide equivalent functionality:
+
+#+begin_example
+{{< includecode file="scripts/demo.sh" lang="sh" lines="10-25" >}}
+#+end_example
+
+Several community shortcode implementations exist for this.
+
+** Man pages: mdoc format, mandoc to HTML
+
+FreeBSD uses mdoc(7) for all new man pages - this is a semantic
+markup language where you mark up what things are (command names,
+flags, file paths) rather than how they look. The FreeBSD
+Documentation Project requires mdoc for all new manual pages.
+
+mandoc (already on FreeBSD) converts mdoc to HTML5:
+
+#+begin_example
+mandoc -Thtml -Ostyle=style.css foo.1 > foo.1.html
+#+end_example
+
+A build step renders each man page source to HTML and places it
+into Hugo's content tree with front matter added by a wrapper
+script.
+
+FreeBSD style guidelines for mdoc: upper case the first letter of
+macros, start each new sentence on a new line.
+
+** Emacs package documentation: texinfo
+
+Texinfo is the standard format for Emacs package documentation.
+You author .texi source files using @-commands (semantic markup,
+similar in spirit to mdoc). From the same source you produce:
+
+- Info files (what Emacs reads natively via =C-h i=)
+- HTML (for the doc site)
+- PDF (via TeX)
+
+The conversion tool is texi2any (the modern name for makeinfo,
+same binary):
+
+#+begin_example
+texi2any --html --no-split foo.texi -o foo.html
+texi2any --info foo.texi -o foo.info
+#+end_example
+
+Emacs has a Texinfo mode with shortcuts for authoring and
+previewing (=C-c C-m C-b= to build the buffer to Info). MELPA's
+build system automatically converts .texi to .info when
+distributing packages, so your package users get the Info manual
+automatically.
+
+** How FreeBSD does it
+
+FreeBSD's documentation site uses:
+- Hugo as the static site generator
+- Asciidoctor (Ruby) for rendering AsciiDoc markup
+- make(1) (Berkeley Make) as the build orchestrator
+- Separate Makefiles for docs vs website, plus a top-level
+  coordinator
+- Books as multi-file .adoc collections, articles as single
+  .adoc files
+
+Their build targets: make (default HTML), make run (dev server),
+make pdf, make html (offline), make epub (experimental).
+
+This is heavier than what you need - Asciidoctor pulls in Ruby,
+and FreeBSD has 14 languages to manage. But the architectural
+pattern (Hugo + pre-rendering pipeline + Make) is directly
+applicable to your setup.
+
+** Recommended architecture
+
+#+begin_example
+Makefile
+  |
+  +-- org files -----> Emacs/ox-hugo -------> Hugo content/ (.md)
+  |
+  +-- markdown ------> Hugo (native)
+  |
+  +-- man pages -----> mandoc -Thtml -------> Hugo content/man/
+  |
+  +-- texinfo -------> texi2any --html -----> Hugo content/info/
+  |                    texi2any --info -----> pkg .info files
+  |
+  +-- Hugo build ----> public/
+#+end_example
+
+Dependencies: Hugo (single binary), Emacs (for org export with
+=#+INCLUDE= support), mandoc (already on FreeBSD), texinfo (pkg
+install texinfo). All are available as FreeBSD packages.
+
+** Suggested first steps
+
+1. Install Hugo, create a skeleton site with the Book theme, drop
+   a few existing .md files into content/docs/ to verify the
+   basic site structure works
+2. Set up ox-hugo per-file mode: add =#+title= and
+   =#+hugo_base_dir= to an org file, export it, confirm Hugo
+   renders the result
+3. Test =#+INCLUDE= with =:lines= in an org file exported through
+   ox-hugo to confirm file embedding works end-to-end
+4. Write a Makefile with targets for each format conversion and a
+   top-level target that chains them into a Hugo build
+
+** Alternatives considered
+
+- Hugo + go-org alone: would work for basic prose but cannot
+  handle =#+INCLUDE: :lines= for source file embedding
+- Sphinx: powerful for API docs, but native format is
+  reStructuredText, no org support, Python dependency
+- Antora: designed for multi-repo AsciiDoc documentation, Node.js
+  dependency, no org support
+- Emacs org-publish alone: renders org natively with full fidelity,
+  but cannot handle markdown/man/texinfo without Emacs scripting
+- MkDocs: markdown-only, Python dependency
+- Pandoc pipeline: known org-mode divergences (headline levels,
+  emphasis rules), large Haskell binary
