@@ -1,0 +1,555 @@
+* LLM coding - requirements, specs, plans, tasks
+
+I come across those terms (requirements, specs, plans, tasks) when
+reading about coding with LLM. I'm not quite sure how they all fit
+together, and how best to organize and apply them in a project (if at
+all).
+
+Find me good reliable information on how people are using them. Also
+suggest ways to incorporate them into my work. The suggestions should
+be based on reliable principles, informed by experience, not just
+parroting what some AI hype dork says.
+
+PRDs and spec-driven development are related ideas to consider.
+
+* research
+
+** The terms and how they relate to agile/XP
+
+These four words have established meanings in software engineering
+that predate LLM coding by decades. The LLM world has blurred
+them, but the distinctions matter.
+
+- *Requirements* state the problem - what the system should do and
+  why. This is the /what/ and /why/.
+- *Specifications* state the solution - how the requirements will
+  be met in concrete technical terms. This is the /how/.
+- *Plans* sequence the work - which pieces get built in what
+  order, with what dependencies.
+- *Tasks* are individual units of work extracted from a plan -
+  small enough to execute without further decomposition.
+
+In traditional SE, these are separate documents maintained by
+different roles. In LLM-assisted coding, they collapse into
+fewer artifacts. The distinction that matters most is whether
+you have clearly separated /what/ from /how/ from /in what
+order/.
+
+*** XP/agile parallels
+
+The mapping to XP concepts is close but not exact:
+
+| LLM-era term  | XP equivalent          | Key difference               |
+|----------------+------------------------+------------------------------|
+| Requirements   | User stories / use     | Stories emphasize negotiation |
+|                | cases                  | and conversation; LLM specs  |
+|                |                        | need more precision upfront  |
+| Specification  | CRC cards / acceptance | XP encodes specs as tests    |
+|                | tests                  | and design cards, not docs   |
+| Plan           | Release/iteration plan | XP plans are short-horizon;  |
+|                |                        | LLM plans can be longer      |
+| Tasks          | Engineering tasks      | Very similar in both         |
+
+The deepest overlap is in values: both XP and effective LLM
+coding emphasize small increments, rapid feedback, working
+software over documentation, and deferring decisions until the
+last responsible moment.
+
+The key difference: XP's "conversation" metaphor for requirements
+(the story card is a promise to have a conversation) does not
+translate directly. An LLM cannot have a back-and-forth
+negotiation about intent the way a pair of developers can. You
+have to front-load more precision into the written artifact.
+This is why specs for LLMs look more formal than XP user stories
+- not because formality is inherently better, but because the
+consumer (an LLM) needs less ambiguity than a human pair partner.
+
+*** Cockburn's use cases as a model for LLM specs
+
+Cockburn's /Writing Effective Use Cases/ solves a problem that
+maps directly onto LLM spec writing: how do you capture
+behavioral requirements at exactly the right level of detail?
+Too vague and the implementer (human or LLM) fills in the
+blanks wrong. Too detailed and you are writing the code in
+English.
+
+His key structural ideas:
+
+- *Goal levels*: summary, user-goal, and subfunction. A
+  summary use case ("manage user accounts") decomposes into
+  user-goal use cases ("register new user," "reset password"),
+  which decompose into subfunctions ("validate email format").
+  This maps directly onto LLM task decomposition - summary is
+  too coarse for an LLM task, user-goal is often the right
+  granularity, subfunction is what you get when you break tasks
+  down further.
+- *Main success scenario + extensions*: the happy path first,
+  then numbered branches for everything that can go wrong.
+  This is exactly the structure that produces good LLM output -
+  practitioners independently converge on "behavior description
+  with explicit error handling" as the most effective spec
+  format.
+- *Actors and stakeholders*: who initiates the action, who
+  cares about the outcome. For LLM specs this translates to
+  being explicit about the caller and the context - which
+  system or user triggers the behavior, what other components
+  depend on the result.
+- *Scope and level discipline*: Cockburn insists you label
+  every use case with its scope (system, subsystem, component)
+  and goal level. This prevents the common failure where a spec
+  mixes high-level intent with low-level implementation detail
+  in the same paragraph, confusing both humans and LLMs.
+
+The "fully dressed" use case template (with preconditions,
+postconditions, trigger, main scenario, extensions, and
+stakeholder interests) is heavier than most LLM specs need.
+But the "casual" format - a paragraph or short list describing
+the main success scenario and key alternatives - maps almost
+perfectly to what practitioners describe as effective LLM
+prompts.
+
+If you already think in use cases, you have most of the skill
+needed to write good LLM specs. The main adaptation is being
+more explicit about interfaces (data formats, function
+signatures) than use cases typically require, because an LLM
+needs to know the shape of the code, not just the behavior.
+
+*** CRC cards and interface-first design
+
+CRC (Class-Responsibility-Collaborator) cards were invented by
+Ward Cunningham and Kent Beck as a design exploration tool.
+Each index card represents a component with three sections:
+
+- *Class name*: the component being designed
+- *Responsibilities*: what it knows and what it does
+- *Collaborators*: which other components it talks to
+
+The technique is deliberately low-fidelity. You sit with cards
+on a table, physically move them around, role-play scenarios
+("ok, this card receives a request, it needs to ask that card
+for data..."). The constraint of the index card forces you to
+keep each component's responsibilities focused.
+
+CRC cards map remarkably well to LLM interface specs. When
+practitioners say "define inputs, outputs, function signatures,
+and dependencies," they are describing a CRC card in slightly
+different language:
+
+| CRC card         | LLM interface spec            |
+|------------------+-------------------------------|
+| Class name       | Module/function name          |
+| Responsibilities | What it accepts and returns   |
+| Collaborators    | Dependencies and side effects |
+
+The advantage of thinking in CRC terms when writing LLM specs:
+it keeps you at the right abstraction level. You describe what
+each piece is responsible for and who it talks to, without
+prescribing the implementation. This is exactly the level of
+detail where LLM output quality is highest - enough structure
+to constrain the design, enough freedom for the LLM to fill
+in implementation details.
+
+A Substack piece from Learn Agile Practices argues that "the
+biggest productivity boost many teams are seeing isn't from AI -
+it's from rediscovering XP fundamentals." Their claim: prompting
+inside a test-first workflow is "radically more reliable than
+dumping an open-ended spec and hoping it gets it right." This
+aligns with XP's core insight that tests are the real spec.
+
+*** Where they diverge
+
+XP practices form an interlocking system. Research on partial
+agile adoption shows that "introducing practices piecemeal and
+in the wrong order may lead to undesirable results" because
+technical practices support each other in subtle ways. The same
+likely applies to LLM-era practices - you cannot just bolt a
+spec document onto a chaotic workflow and expect improvement.
+
+However, the feedback cycle speed is fundamentally different. XP
+iteration cycles are days to weeks. LLM spec-to-code cycles are
+minutes. This changes the cost calculus: in XP, upfront planning
+is expensive relative to iteration cost, so you minimize it. With
+LLMs, planning is cheap (the LLM helps you write it) and
+iteration is also cheap, so the tradeoff shifts toward doing
+more of both.
+
+** What people are actually doing
+
+*** Spec-driven development (SDD)
+
+The most discussed approach. The workflow is: write a
+specification document, feed it to an LLM agent, review
+generated code against the spec. Thoughtworks and Martin
+Fowler's team have published substantive analysis identifying
+three levels:
+
+1. *Spec-first*: write a spec to guide initial development,
+   then discard it. The spec is a prompt, not a maintained
+   artifact.
+2. *Spec-anchored*: the spec persists and evolves with the
+   code. Used for ongoing feature development and maintenance.
+3. *Spec-as-source*: the spec /is/ the source of truth. Humans
+   edit only specs, never code. Code is regenerated from specs.
+
+Most practitioners operate at level 1. Level 3 is experimental
+and has serious unresolved problems (see criticisms below).
+
+Tools like GitHub's spec-kit, AWS's Kiro, and Tessl each
+implement different points on this spectrum.
+
+**** Where requirements, plans, and tasks fit in SDD
+
+SDD as described in the literature focuses on specifications -
+the /how/. Requirements (the /what/ and /why/) are typically
+handled in one of two ways:
+
+- *Folded into the spec*. Most practitioners write a single
+  document that opens with a problem statement (requirements)
+  and transitions into technical detail (spec). The Osmani
+  workflow and JustSteveKing both do this.
+- *Assumed to exist elsewhere*. Haberlah's PRD approach treats
+  requirements as a separate upstream input to the spec phase.
+
+Plans and tasks are also handled variously:
+
+- *Generated from the spec*. Osmani and Kiro both generate an
+  implementation plan as a second step after the spec is
+  written. Tasks are extracted from the plan.
+- *Embedded in the spec*. Haberlah's phased PRD approach puts
+  sequencing directly into the requirements document.
+- *Left implicit*. Many practitioners just work through the
+  spec top-to-bottom without a separate plan.
+
+The landscape is genuinely fragmented. There is no consensus
+on which artifacts to produce or how they should relate. What
+works depends on project scale, team size, and how much context
+the LLM needs.
+
+**** Piecemeal vs. fully integrated adoption
+
+The evidence suggests a spectrum of useful configurations:
+
+- *Spec only* (most common): a single document combining
+  problem statement, interfaces, and constraints. No separate
+  plan or task list. Works well for features that fit in one
+  session. The risk is losing track of sequencing on larger
+  work.
+- *Spec + tasks*: a spec document plus a task list extracted
+  from it. The plan is implicit in the task ordering. This is
+  what Osmani does. Works well for multi-session work.
+- *Requirements + spec + plan + tasks* (full pipeline): each
+  artifact feeds the next. The Haberlah and Kiro approaches
+  aim for this. Works for team coordination but adds overhead
+  that solo developers rarely need.
+
+The Fowler team's review of tooling found that elaborate
+pipelines create overhead without proportional benefit for
+individual work. Their observation: "I'd rather review code
+than all these markdown files."
+
+The XP parallel applies here: practices support each other, so
+partial adoption has risks. But the cost of each practice is
+low (minutes of writing, not weeks), so experimenting piecemeal
+is cheap. Start with a single spec document. Add task lists
+when you lose track of sequencing. Add a separate requirements
+document when you find yourself confusing /what/ with /how/.
+
+*** The Osmani workflow
+
+Addy Osmani's widely-cited workflow consolidates the four
+activities into two phases:
+
+1. *Spec phase*: brainstorm requirements interactively with the
+   LLM, then produce a =spec.md= capturing requirements,
+   architecture, data models, and testing strategy. This merges
+   /requirements/ and /specification/ into a single artifact.
+2. *Plan phase*: generate an implementation plan with sequenced
+   tasks, then execute one at a time. This merges /plan/ and
+   /tasks/ into a single workflow.
+
+So yes - he consolidates requirements+specs into one document,
+and plans+tasks into one workflow. He describes it as "waterfall
+in 15 minutes" - rapid structured planning before coding.
+
+*** PRDs (Product Requirements Documents)
+
+PRDs are a product management artifact that describes /what/ to
+build and /why/. In LLM coding, they have been repurposed as
+structured prompts. The recommended structure for AI agents:
+
+- Objective (one sentence)
+- Requirements (numbered, specific, actionable)
+- Technical constraints (schemas, APIs, dependencies)
+- Boundaries (what not to change)
+- Acceptance criteria (machine-verifiable, not subjective)
+
+The Haberlah approach recommends breaking PRDs into phases of
+5-15 minutes of agent work each, where every phase ends in a
+testable state.
+
+There is no PRD-specific book with the rigor of Cockburn's
+/Writing Effective Use Cases/. The closest equivalents:
+
+- Karl Wiegers & Joy Beatty, /Software Requirements/ (3rd ed.,
+  2013). The definitive requirements engineering book. Covers
+  the full lifecycle from elicitation through management. Best
+  match for Cockburn-level depth on the requirements side.
+- Suzanne & James Robertson, /Mastering the Requirements
+  Process/ (3rd ed., 2012). More structured, with the Volere
+  template. Good for a repeatable framework.
+- Cockburn's own book remains relevant. Use cases and PRDs
+  share the core problem of capturing behavioral requirements
+  at the right level of detail. The techniques transfer.
+
+The PRD-specific literature is mostly blog posts and templates
+from product management culture (Marty Cagan's /Inspired/
+covers the PM perspective but lacks technical rigor). The "PRD
+for AI agents" material is thinner still - Haberlah and Osmani
+are the best available, but they are blog posts, not books.
+
+** What actually matters (and what doesn't)
+
+*** Interface definitions matter most
+
+Multiple practitioners independently report that explicitly
+defining inputs, outputs, function signatures, error behavior,
+and dependencies produces the biggest improvement in LLM output
+quality. This is consistent with decades of SE experience - if
+you get the interfaces right, the implementation follows.
+
+This connects to a documentation-first approach: writing
+lightweight usage documentation (man pages, API docs, module-
+level docs) as the spec, describing how you would /use/ the
+thing rather than how to /build/ it. Tom Preston-Werner
+described README Driven Development in 2010: write the README
+before any code, because "until you've written about your
+software, you have no idea what you'll be coding."
+Documentation-Driven Development extends this to full user-
+facing docs reviewed by stakeholders before implementation.
+
+Using an LLM to identify gaps between current code and ideal
+documentation is a natural extension. The pieces are well-
+established: interface-first specs produce the best LLM output,
+and LLMs are good at comparing a desired state against an
+actual state. The risk is the same as any documentation-first
+approach: predicting the API correctly is hard for exploratory
+work. It works best when you already know roughly what shape
+the code should take.
+
+*** Granularity is the hard problem
+
+Task decomposition research shows that the right level of
+granularity depends on the executor's capability. The heuristic
+from practitioners: each task should require no sub-decisions
+that ought to be in the plan. If the LLM has to make
+architectural choices to complete a task, the decomposition is
+too coarse.
+
+*** Vague input produces confidently wrong output
+
+The most consistent finding across all sources. LLMs produce
+plausible output regardless of input quality. A vague spec
+produces code that looks right but connects incorrectly to
+surrounding systems. The relationship between input quality and
+output quality is more direct than most people expect.
+
+*** Best info on describing spec elements
+
+The JustSteveKing article gives the most actionable structure
+for what a spec should contain:
+
+- Context (2-3 sentences on where the component fits)
+- Interface definition (inputs, outputs, dependencies)
+- Behavior description (normal cases broken into sub-cases)
+- Error handling (explicit edge cases and failure modes)
+- Constraints (performance, security, library versions,
+  conventions)
+- Testing expectations (what tests should exist)
+
+Osmani's spec guide adds a "three-tier boundary system":
+things to always do, things to ask about first, and things to
+never do. This helps with LLM compliance, since agents tend to
+"improve" things unpredictably without clear boundaries.
+
+*** Single file vs. many small files
+
+Whether to keep specs in one file or split them is both a
+current limitation and a first principle. The NoLiMa benchmark
+(LMU Munich / Adobe, ICML 2025) found that 11 of 13 LLMs
+dropped below 50% baseline accuracy at 32K tokens when they
+could not rely on surface-level pattern matching. GPT-4o fell
+from 99.3% to 69.7%. Stanford/Berkeley research showed
+information retrieval follows a U-shaped curve across the
+context window - items at the start and end are retrieved
+well, items in the middle are lost.
+
+Context windows keep growing and models keep improving at
+using them. A well-tuned RAG pipeline with 5-10 retrieved
+chunks currently outperforms naive "stuff everything in" for
+large document sets. But for single-document analysis
+requiring complete coverage, long context wins over chunking.
+
+For a document under ~30K tokens, a single file works fine.
+Above that, splitting into focused documents with a summary
+index is a workaround that also has a structural benefit: it
+forces you to decide what context is relevant to each task.
+Osmani and JustSteveKing both recommend feeding "only relevant
+sections" per task, suggesting selective context outperforms
+complete context even when the window allows it.
+
+** Criticisms and failure modes
+
+*** Over-formalization (the waterfall parallel)
+
+Thoughtworks notes the risk that over-formalized specs can slow
+feedback cycles. The Fowler team found Kiro transformed a
+simple bug fix into four user stories with sixteen acceptance
+criteria.
+
+That said, the waterfall analogy is imprecise. Waterfall's
+problem was months of documentation before any code, with
+formal change control processes and committee reviews. LLM
+specs take minutes to write and are easy to revise. The real
+risk is not waterfall-style paralysis but LLM-style expansion -
+the agent inflating simple work into elaborate structures
+because it has no sense of proportionality. The fix is human
+judgment on scope, not abandoning specs.
+
+*** Non-determinism
+
+Regenerating code from an identical spec produces different
+results each time. An empirical study by Ouyang et al. ("An
+Empirical Study of the Non-determinism of ChatGPT in Code
+Generation," ACM TOSEM, 2024) found:
+
+- 75.76% of coding tasks produced zero equivalent test output
+  across repeated requests on the CodeContests benchmark
+- Even at temperature=0, 43.64% of problems showed zero output
+  equivalence
+- Maximum test pass rate differences reached 1.0 (complete
+  divergence) affecting 39.63% of HumanEval problems
+- Longer problem descriptions correlated with more
+  non-determinism
+
+This makes spec-as-source (level 3) fragile. If you regenerate
+code from the same spec tomorrow, you get different code. Spec
+levels 1 and 2 avoid this by treating generated code as the
+artifact you maintain.
+
+The root causes are both algorithmic (sampling methods) and
+hardware-level (floating-point non-associativity in GPU
+kernels). Setting temperature to 0 helps but does not solve it.
+
+*** Agent compliance is unreliable
+
+The Fowler team's testing found that AI agents frequently
+ignored spec instructions, missed nuances, or over-eagerly
+followed guidelines in unintended ways.
+
+*** Spec maintenance and the MDD parallel
+
+Nobody has a convincing answer for how to keep specs in sync
+with code over time. This echoes Model-Driven Development
+(MDD), which promised similar things in the 2000s.
+
+MDD's core idea: raise the abstraction level, define systems in
+models (UML diagrams, DSLs), and generate code automatically.
+The parallels to spec-as-source SDD are direct:
+
+| MDD                        | Spec-as-source SDD          |
+|----------------------------+-----------------------------|
+| Models are source of truth | Specs are source of truth   |
+| Code is generated artifact | Code is generated artifact  |
+| Edit models, not code      | Edit specs, not code        |
+| Platform-independent model | Natural language spec       |
+| Code gen via transformers  | Code gen via LLMs           |
+
+MDD failed for several documented reasons (Johan Den Haan,
+InfoQ, 2009):
+
+1. *Rigidity*: models only flexible where flexibility was
+   designed in. Real codebases need flexibility everywhere.
+2. *Round-trip problems*: when you must edit generated code
+   (and you always must), keeping model and code in sync
+   becomes the dominant cost.
+3. *Tool lock-in*: models were tied to specific vendors and
+   platforms.
+4. *Version control*: model formats were often binary or
+   opaque, making diffing and merging painful.
+
+LLM-based SDD avoids some of these (specs are plain text, no
+vendor lock-in, version control works fine). But the core
+failure mode - the round-trip problem - remains. When you need
+to edit generated code (and you will), the spec drifts out of
+sync. The Fowler team explicitly flags this as an open risk:
+spec-as-source may combine "inflexibility /and/
+non-determinism."
+
+Spec-first (level 1) sidesteps this entirely by treating specs
+as disposable. The code is the source of truth once written.
+
+** Suggestions for your work
+
+*** Commit-message-as-spec workflow
+
+Your idea of including the spec (or a summary) in the commit
+message has merit. It gives you a record of /what/ (the code),
+/why/ (the commit message body), and /how it was planned/ (the
+spec). The spec lives on disk as PLAN.md or similar during
+development, gets reviewed via jj squash workflow, and gets
+folded into the commit when done. This avoids the spec
+maintenance problem entirely - the spec is an ephemeral
+development artifact, not a maintained document.
+
+This aligns with spec-first (level 1) and avoids the naming
+question - call it whatever you want during development; it
+becomes part of the commit history when done.
+
+*** Use specs for significant work, skip them for small tasks
+
+A bug fix or small change does not need a spec. A new feature
+or substantial refactor benefits from writing down the problem,
+interfaces, and constraints before coding. The threshold is
+roughly: if you would sketch it on paper before coding it
+yourself, write a spec for the LLM.
+
+*** Focus on interfaces and constraints
+
+Tell the LLM what functions should exist, what they accept and
+return, what errors they handle, and what they must not touch.
+Do not describe the implementation algorithm unless you have a
+specific reason to constrain it.
+
+*** Treat specs as disposable (level 1)
+
+Write it, use it, fold it into the commit message, let the
+on-disk version go. The code and its tests are the source of
+truth.
+
+*** Decompose tasks to the "no sub-decisions" threshold
+
+Each task should be completable without the LLM making
+architectural choices. If it has to decide between approaches,
+the task is too big - split it and make the decision yourself.
+
+*** Do not adopt elaborate tooling prematurely
+
+spec-kit, Kiro, and similar tools solve problems at scales most
+individual developers do not have. A markdown file and your
+existing workflow tools already provide the structure you need.
+
+** Sources
+
+- [[https://addyosmani.com/blog/ai-coding-workflow/][Addy Osmani - My LLM coding workflow going into 2026]]
+- [[https://addyosmani.com/blog/good-spec/][Addy Osmani - How to write a good spec for AI agents]]
+- [[https://www.thoughtworks.com/en-us/insights/blog/agile-engineering-practices/spec-driven-development-unpacking-2025-new-engineering-practices][Thoughtworks - Spec-driven development (2025)]]
+- [[https://martinfowler.com/articles/exploring-gen-ai/sdd-3-tools.html][Martin Fowler - Understanding SDD: Kiro, spec-kit, and Tessl]]
+- [[https://www.juststeveking.com/articles/spec-driven-development-with-llms/][JustSteveKing - Spec Driven Development With LLMs]]
+- [[https://medium.com/@haberlah/how-to-write-prds-for-ai-coding-agents-d60d72efb797][David Haberlah - How to write PRDs for AI Coding Agents]]
+- [[https://arxiv.org/html/2308.02828v2][Ouyang et al. - Non-determinism of ChatGPT in Code Generation (ACM TOSEM)]]
+- [[https://learnagilepractices.substack.com/p/xp-practices-not-ai-drive-the-real][Learn Agile Practices - XP Practices, Not AI, Drive the Real Gains]]
+- [[https://medium.com/@antonvoronko/extreme-programming-revised-with-generative-ai-agents-5ccacf5269e4][Voronko - Extreme Programming Revised with Generative AI Agents]]
+- [[https://tom.preston-werner.com/2010/08/23/readme-driven-development.html][Tom Preston-Werner - Readme Driven Development (2010)]]
+- [[http://www.theenterprisearchitect.eu/blog/2009/06/25/8-reasons-why-model-driven-development-is-dangerous/][Den Haan - 8 reasons why MDD is dangerous (2009)]]
+- [[https://www.infoq.com/articles/8-reasons-why-MDE-fails/][InfoQ - 8 Reasons Why Model-Driven Approaches Fail]]
+- [[https://arxiv.org/html/2410.18489v2][LLM as a Code Generator in Agile Model Driven Development]]
