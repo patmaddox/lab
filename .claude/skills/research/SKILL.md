@@ -26,34 +26,49 @@ The skill classifies each argument:
 If no revset is given, default to `@`. The revset must resolve to
 a single commit.
 
-## File resolution
+## Filename derivation
 
-The skill resolves which .org file to operate on:
+The skill considers three sources of candidates for the output
+file and picks the best one holistically - not as an ordered
+preference.
 
-### Explicit file given
+### Explicit file arguments
 
-Read it directly and proceed to researching.
+Any filenames passed in `$ARGUMENTS` are candidates. These are a
+strong signal of user intent.
 
-### No file given
+### Existing mutable files
 
-The skill considers candidates holistically, not as an ordered
-preference:
+Check what files have been modified in `mutable() & ::<revset>`
+commits - this represents the work in progress on the branch:
 
-- **Existing mutable files**: check what files have been modified
-  in `mutable() & ::<revset>` commits:
-  ```
-  jj diff -r 'mutable() & ::<revset>' --no-pager --git -s
-  ```
-  Any `doc/llm-research/*.org` file is a strong candidate.
-- **Commit subject slug**: derive a slug from the commit message
-  subject line (lowercase, spaces to hyphens, strip the
-  `<area>: ` prefix and non-alphanumeric characters besides
-  hyphens). Use this to generate a candidate path like
-  `doc/llm-research/<slug>.org`.
+```
+jj diff -r 'mutable() & ::<revset>' --no-pager --git -s
+```
 
-If an existing mutable file is found whose name relates to the
-commit subject, use it. Otherwise create the slug-derived path
-as a new research document.
+Any file type counts, though `.org` files are the strongest
+candidates. Files whose name relates to the commit subject are
+stronger signals than unrelated files. Other modified files
+(`.md`, etc.) are weaker but still relevant signals.
+
+### Commit subject slug
+
+Derive a slug from the commit message subject line of the head
+revision: lowercase, spaces to hyphens, strip the `<area>: `
+prefix and non-alphanumeric characters besides hyphens. Use this
+to generate a candidate path like `<slug>.org` at the repo root.
+
+### Selection logic
+
+Evaluate all candidates together and pick the best one. Factors
+to weigh:
+
+- An explicitly passed filename is a strong signal of intent
+- A mutable file whose name relates to the commit subject is a
+  strong signal of continuity
+- A generated slug is the fallback when nothing better exists
+- If multiple signals converge on the same file, that reinforces
+  the choice
 
 ## New file creation
 
@@ -69,7 +84,7 @@ When creating a new research file:
 3. Write the body as user content at the top of the new .org file,
    formatted the same as any research document's user section
    (the subject line becomes the first org heading, stripping the
-   `llm-research: ` area prefix if present).
+   `<area>: ` prefix if present).
 4. Delete the body from the commit message using `jj describe`,
    leaving only the subject line.
 5. Proceed with research against the newly created document.

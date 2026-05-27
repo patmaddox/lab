@@ -49,17 +49,17 @@ commits - this represents the work in progress on the branch:
 jj diff -r 'mutable() & ::<revset>' --no-pager --git -s
 ```
 
-Any file type counts, though `.org` files in `doc/plans/` are the
-strongest candidates since that is where the skill writes output.
-Other modified files (`.md`, etc.) are weaker but still relevant
-signals.
+Any file type counts, though `.org` files are the strongest
+candidates. Files whose name relates to the commit subject are
+stronger signals than unrelated files. Other modified files
+(`.md`, etc.) are weaker but still relevant signals.
 
 ### Commit subject slug
 
 Derive a slug from the commit message subject line of the head
 revision: lowercase, spaces to hyphens, strip the `<area>: `
 prefix and non-alphanumeric characters besides hyphens. Use this
-to generate a candidate path like `doc/plans/<slug>.org`.
+to generate a candidate path like `<slug>.org` at the repo root.
 
 ### Selection logic
 
@@ -67,8 +67,8 @@ Evaluate all candidates together and pick the best one. Factors
 to weigh:
 
 - An explicitly passed filename is a strong signal of intent
-- A mutable `doc/plans/` file whose name relates to the commit
-  subject is a strong signal of continuity
+- A mutable file whose name relates to the commit subject is a
+  strong signal of continuity
 - A generated slug is the fallback when nothing better exists
 - If multiple signals converge on the same file, that reinforces
   the choice
@@ -106,7 +106,7 @@ Everything below it can be freely rewritten on subsequent runs.
 ## Output
 
 Write the plan to the file selected by the filename derivation
-logic, creating the `doc/plans/` directory if it does not exist.
+logic, creating parent directories as needed.
 
 The plan structure is fully adaptive - organize however best fits
 the task described in the commit messages. Use org-mode headings,
