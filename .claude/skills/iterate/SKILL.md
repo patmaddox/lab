@@ -40,8 +40,7 @@ still going through iterate as the entry point.
 
 ## Without a skill hint
 
-When no skill hint is given, assess the work and pick the best
-skill:
+When no skill hint is given, perform gap analysis and then route:
 
 1. **Read commit messages** from `mutable() & ::@` (or
    `mutable() & ::<revset>` if a revset argument was given),
@@ -56,23 +55,34 @@ skill:
    jj diff -r 'mutable() & ::<revset>' --no-pager --git -s
    ```
 
-3. **Decide which skill best advances the work.** Use the skill
-   descriptions already loaded in context as the routing table.
-   Consider:
-   - What the commit messages are asking for
-   - What state the working copy is in (new files, existing
-     documents, code changes)
-   - Which skill's description best matches the current need
+3. **Call the gap-analysis skill** via the Skill tool, passing
+   revset and filename arguments. The skill writes an org document
+   describing the gap between commit messages and current state.
 
-4. **Invoke the chosen skill** via the Skill tool, passing through
-   the revset and filename arguments.
+4. **Read the gap analysis document** and determine routing. Use
+   the skill descriptions already loaded in context as the routing
+   table. Consider:
+   - What the gap analysis says is missing or different
+   - Which skill's description best matches closing those gaps
+   - Whether the gap analysis includes a `* Questions for user`
+     section indicating severe ambiguity
+
+   If iterate cannot determine which skill to dispatch (the gap
+   analysis has questions that make routing a coin flip), stop and
+   tell the user to review the gap analysis document. Do not
+   dispatch.
+
+5. **Invoke the chosen skill** via the Skill tool, passing through
+   the revset and filename arguments along with the gap analysis
+   as additional context.
 
 ## Single-turn contract
 
-Iterate dispatches to exactly one skill per invocation and then
-returns. It never chains, loops, or sequences multiple skills.
-The caller - whether a user at the keyboard or an automation
-script - owns the loop and decides when to call iterate again.
+Iterate runs gap analysis and then dispatches to exactly one
+routing skill per invocation, then returns. It never loops or
+sequences multiple routing skills. The caller - whether a user
+at the keyboard or an automation script - owns the loop and
+decides when to call iterate again.
 
 ## Routing guidance
 
