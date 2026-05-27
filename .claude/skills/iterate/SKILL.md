@@ -67,6 +67,13 @@ skill:
 4. **Invoke the chosen skill** via the Skill tool, passing through
    the revset and filename arguments.
 
+## Single-turn contract
+
+Iterate dispatches to exactly one skill per invocation and then
+returns. It never chains, loops, or sequences multiple skills.
+The caller - whether a user at the keyboard or an automation
+script - owns the loop and decides when to call iterate again.
+
 ## Routing guidance
 
 The dispatch decision is a judgment call, not a lookup table. Some
@@ -82,6 +89,18 @@ signals to weigh:
   research needs updating
 - The presence or absence of code changes, org files, and other
   artifacts all inform the decision
+
+The state of existing artifacts is often a stronger signal than
+commit message content alone. A commit describing a feature to
+build means different things depending on what exists:
+
+- No plan document exists yet: plan first
+- A plan exists with CR blocks: the plan needs updating
+- A plan exists and is stable: the next skill depends on what
+  the plan calls for
+- Research document with CR blocks: research needs updating
+- Code exists but tests fail or style issues present:
+  the relevant fix skill
 
 Do not enumerate every possible skill or maintain a hardcoded
 routing table. The skill descriptions in context are the routing
