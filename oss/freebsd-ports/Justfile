@@ -5,6 +5,13 @@ help:
 list-ports:
   sh scripts/list-ports.sh
 
+[no-cd]
+lint:
+  #!/bin/sh
+  portclippy Makefile
+  portfmt -i Makefile
+  PORTSDIR=$(git rev-parse --show-toplevel) portlint -A
+
 # run poudriere testport on all unmerged commits
 test-pending:
   sh scripts/test-pending.sh $(realpath ../../repos/freebsd-ports.jj)
