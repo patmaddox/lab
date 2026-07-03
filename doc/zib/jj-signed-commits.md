@@ -1,4 +1,6 @@
-# jj signed commits
+---
+title: jj signed commits
+---
 
 jj supports signed commits
 

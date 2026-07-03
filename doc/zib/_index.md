@@ -1,1 +1,3 @@
-# zibaldone
+---
+title: zibaldone
+---

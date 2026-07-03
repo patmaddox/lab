@@ -1,4 +1,6 @@
-# ccache across multiple source trees
+---
+title: ccache across multiple source trees
+---
 
 ## Problem
 

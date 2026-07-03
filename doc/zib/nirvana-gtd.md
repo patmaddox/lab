@@ -1,4 +1,6 @@
-# nirvana gtd
+---
+title: nirvana gtd
+---
 
 - **Focus**: now / today
 - **Next**: this week

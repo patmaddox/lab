@@ -1,4 +1,6 @@
-# claude in jail
+---
+title: claude in jail
+---
 
 Run Claude in a jail so it doesn't have access to certain things -
 keys, secret files, etc.

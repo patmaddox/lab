@@ -1,4 +1,6 @@
-# iterating with LLM
+---
+title: iterating with LLM
+---
 
 LLM is a programmable system, like Unix. Similar principles apply. Set
 a goal, develop a process, refine it.
