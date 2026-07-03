@@ -7,6 +7,12 @@ disablePathToLower = true
 [module]
 [[module.imports]]
   path = 'github.com/alex-shpak/hugo-book'
+[[module.mounts]]
+  source = 'content'
+  target = 'content'
+[[module.mounts]]
+  source = '../../doc/zib'
+  target = 'content/zib'
 
 [markup.tableOfContents]
   startLevel = 1
