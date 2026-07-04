@@ -5,6 +5,10 @@ help:
 list-ports:
   sh scripts/list-ports.sh
 
+# run `make index` on default.jj
+index:
+  PORTSDIR=$(realpath default.jj) make -C default.jj index
+
 [no-cd]
 lint:
   #!/bin/sh
