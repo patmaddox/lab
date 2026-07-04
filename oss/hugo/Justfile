@@ -1,0 +1,12 @@
+help:
+  just -l
+
+[no-cd]
+clean:
+  rm -f ~/bin/hugo
+  go126 clean -cache
+
+[no-cd]
+build:
+  go126 mod tidy
+  CGO_ENABLED=1 go126 build -tags extended -o ~/bin/hugo -buildvcs=false
