@@ -1,6 +1,6 @@
 #+TITLE: jj and claude code workflow
 
-* jj and claude code workflow
+* jj and claude code workflow :ignore:
 Make a new empty commit off of main. Describe the target. Run a script
 that makes a new workspace, and prompts claude in a jail to work on
 that specific workspace.
