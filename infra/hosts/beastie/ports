@@ -38,7 +38,7 @@ devel/uclcmd
 devel/valgrind-devel
 dns/bind-tools
 editors/consult.el
-editors/emacs
+editors/emacs@full
 editors/libreoffice
 editors/marginalia.el
 editors/neovim
@@ -61,6 +61,7 @@ lang/erlang-runtime28
 lang/gcc
 lang/gleam
 lang/go
+lang/go126
 lang/python
 lang/python310
 lang/rust
@@ -120,6 +121,7 @@ textproc/markdown-mode.el
 textproc/p5-ack
 textproc/ripgrep
 textproc/tree-sitter-grammars
+www/apache24
 www/chromium
 www/darkhttpd
 www/deno
