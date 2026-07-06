@@ -473,8 +473,11 @@ Items are identified as indented lines (starting with whitespace)."
 (setq claude-code-program
       (expand-file-name "lisp/claude-code/claude-jail.sh" user-emacs-directory))
 
-;; Hide Emacs cursor in claude-code so the TUI cursor is visible.
-;; In read-only mode (C-c C-e), show a box cursor for navigation.
+;; Show a box cursor in claude-code buffers.  The Claude TUI hides the
+;; terminal cursor (invisible state) rather than drawing its own
+;; glyph, so eat honors eat-invisible-cursor-type; blanking it left no
+;; cursor at all.  In read-only mode (C-c C-e), show a box cursor for
+;; navigation.
 (define-minor-mode claude-code-cursor-mode
   "Toggle cursor type for claude-code eat buffers."
   :lighter nil
@@ -486,11 +489,11 @@ Items are identified as indented lines (starting with whitespace)."
             (define-key map (kbd "C-c C-j")
                         (lambda () (interactive)
                           (eat-semi-char-mode)
-                          (setq-local cursor-type nil)))
+                          (setq-local cursor-type 'box)))
             map)
   (when claude-code-cursor-mode
-    (setq-local eat-default-cursor-type '(nil nil nil))
-    (setq-local eat-invisible-cursor-type '(nil nil nil))))
+    (setq-local eat-default-cursor-type '(box nil nil))
+    (setq-local eat-invisible-cursor-type '(box nil nil))))
 
 ;; Restore C-g to normal Emacs behavior (upstream binds it to send ESC)
 (add-hook 'claude-code-start-hook
