@@ -50,7 +50,7 @@ emulators/linux_base-rl9
 filesystems/ntfs
 ftp/wget
 games/gtypist
-graphics/drm-61-kmod
+graphics/drm-kmod
 graphics/gpu-firmware-amd-kmod@dimgrey_cavefish
 graphics/maim
 graphics/mesa-demos
