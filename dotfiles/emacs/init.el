@@ -63,6 +63,7 @@
 (setq read-file-name-completion-ignore-case t)
 (setq warning-minimum-level :error)
 (setq load-prefer-newer t)
+(setq scroll-error-top-bottom t)
 
 ;; Enable disabled commands
 (put 'downcase-region 'disabled nil)
