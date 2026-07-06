@@ -5,7 +5,7 @@
 # the jail.  This works around doas/jexec dropping the caller's
 # environment.
 
-_env_fwd=""
+_env_fwd=" CLAUDE_CODE_DISABLE_ALTERNATE_SCREEN=1"
 _nl='
 '
 _oldifs="$IFS"
