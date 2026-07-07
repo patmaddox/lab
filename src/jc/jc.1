@@ -12,8 +12,8 @@ reads a UCL-formatted configuration file and provisions a local
 dev workspace managed by
 .Xr jj 1 .
 It initializes a colocated jj repository, registers the configured git
-remotes, fetches from them, and creates one jj workspace per
-configured workspace.
+remotes, fetches from them, tracks the configured bookmarks, and
+creates one jj workspace per configured workspace.
 .Pp
 .Nm
 is run in the dev workspace: the directory that holds
@@ -30,8 +30,11 @@ work directly in it; linked workspaces are managed by jj alone.
 .Nm
 is idempotent.
 Running it again against an already-provisioned dev workspace
-reconciles it with the config: missing remotes and workspaces are
-added and fetched, and existing ones are left untouched.
+reconciles it with the config: missing remotes, bookmarks, and
+workspaces are added, tracked, and fetched, and existing ones are left
+untouched.
+Working copies are positioned only when a workspace is first created;
+reconciling never moves them.
 It never discards local work.
 .Sh CONFIGURATION
 The configuration file is UCL.
@@ -56,6 +59,25 @@ Each element is an object with the keys:
 The jj workspace name.
 The workspace is created in the subdirectory
 .Ar name Ns .jj .
+.It Cm bookmark
+Optional.
+The bookmark the workspace is based on.
+.It Cm remote
+Optional.
+The remote the bookmark is tracked from.
+When
+.Cm bookmark
+and
+.Cm remote
+are given, the bookmark is tracked and the workspace working copy is
+placed on a new change atop the tracked remote bookmark.
+The working copy is never placed on an immutable commit directly.
+When
+.Cm bookmark
+is omitted and a bookmark matching the workspace name exists, the
+workspace is based on that bookmark; otherwise it is created with
+.Xr jj 1 Ns 's
+default base for new workspaces.
 .El
 .El
 .Sh FILES
@@ -74,7 +96,7 @@ remotes = [
 ]
 
 workspaces = [
-  {name: "default"},
+  {name: "default", bookmark: "master", remote: "upstream"},
   {name: "man-page"}
 ]
 .Ed
@@ -83,12 +105,15 @@ running
 .Nm
 in the directory holding it produces:
 .Bd -literal -offset indent
-\&./default.jj/     colocated jj repository and initial workspace
-\&./man-page.jj/    linked jj workspace
+\&./default.jj/     workspace on a new change atop master@upstream
+\&./man-page.jj/    workspace on jj's default base
 .Ed
 .Pp
 with the
 .Va upstream
-remote registered and fetched.
+remote registered and fetched, and the
+.Va master
+bookmark tracking
+.Va master@upstream .
 .Sh SEE ALSO
 .Xr jj 1

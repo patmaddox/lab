@@ -17,25 +17,27 @@ die() {
 }
 
 main() {
+	local fresh=0
+
 	[ -f "${CONF}" ] || die "cannot read ${CONF}: No such file or directory"
 	require_default_workspace
+	if [ ! -d "${REPO}/.jj" ]; then
+		fresh=1
+	fi
 	ensure_repo
 	ensure_remotes
 	fetch_remotes
+	track_bookmarks
+	if [ "${fresh}" -eq 1 ]; then
+		position_default_workspace
+	fi
 	ensure_workspaces
 }
 
 require_default_workspace() {
-	local n i
-	n="$(cfg ".workspaces|length")"
-	i=0
-	while [ "${i}" -lt "${n}" ]; do
-		if [ "$(cfg ".workspaces.${i}.name")" = "default" ]; then
-			return 0
-		fi
-		i=$((i + 1))
-	done
-	die "no workspace named \"default\" in ${CONF}"
+	if [ -z "$(workspace_index default)" ]; then
+		die "no workspace named \"default\" in ${CONF}"
+	fi
 }
 
 ensure_repo() {
@@ -64,6 +66,32 @@ fetch_remotes() {
 	fi
 }
 
+track_bookmarks() {
+	local n i bookmark remote
+	n="$(cfg ".workspaces|length")"
+	i=0
+	while [ "${i}" -lt "${n}" ]; do
+		bookmark="$(ws_field "${i}" bookmark)"
+		remote="$(ws_field "${i}" remote)"
+		if [ -n "${bookmark}" ] && [ -n "${remote}" ] \
+		    && ! bookmark_tracked "${bookmark}" "${remote}"; then
+			jj -R "${REPO}" bookmark track "${bookmark}@${remote}"
+		fi
+		i=$((i + 1))
+	done
+}
+
+# On first provision, move the default workspace off jj's initial
+# empty change onto a new change atop its configured base.
+position_default_workspace() {
+	local i base
+	i="$(workspace_index default)"
+	base="$(workspace_base "${i}" default)"
+	if [ -n "${base}" ]; then
+		jj -R "${REPO}" new "${base}"
+	fi
+}
+
 ensure_workspaces() {
 	local n i name
 	n="$(cfg ".workspaces|length")"
@@ -71,10 +99,68 @@ ensure_workspaces() {
 	while [ "${i}" -lt "${n}" ]; do
 		name="$(cfg ".workspaces.${i}.name")"
 		if [ "${name}" != "default" ] && ! workspace_exists "${name}"; then
-			jj -R "${REPO}" workspace add --name "${name}" "${name}.jj"
+			add_workspace "${i}" "${name}"
 		fi
 		i=$((i + 1))
 	done
+}
+
+add_workspace() {
+	local i="${1}"; shift
+	local name="${1}"; shift
+	local base
+
+	base="$(workspace_base "${i}" "${name}")"
+	if [ -n "${base}" ]; then
+		jj -R "${REPO}" workspace add --name "${name}" \
+		    -r "${base}" "${name}.jj"
+	else
+		jj -R "${REPO}" workspace add --name "${name}" "${name}.jj"
+	fi
+}
+
+# The revset a workspace's working copy is created atop: its
+# configured bookmark, else a local bookmark matching its name,
+# else empty for jj's default.
+workspace_base() {
+	local i="${1}"; shift
+	local name="${1}"; shift
+	local bookmark remote
+
+	bookmark="$(ws_field "${i}" bookmark)"
+	remote="$(ws_field "${i}" remote)"
+	if [ -n "${bookmark}" ] && [ -n "${remote}" ]; then
+		echo "${bookmark}@${remote}"
+	elif [ -n "${bookmark}" ]; then
+		echo "${bookmark}"
+	elif bookmark_exists "${name}"; then
+		echo "${name}"
+	fi
+}
+
+workspace_index() {
+	local name="${1}"; shift
+	local n i
+	n="$(cfg ".workspaces|length")"
+	i=0
+	while [ "${i}" -lt "${n}" ]; do
+		if [ "$(cfg ".workspaces.${i}.name")" = "${name}" ]; then
+			echo "${i}"
+			return 0
+		fi
+		i=$((i + 1))
+	done
+}
+
+ws_field() {
+	local i="${1}"; shift
+	local key="${1}"; shift
+	local val
+
+	val="$(cfg ".workspaces.${i}.${key}")"
+	if [ "${val}" != "null" ]; then
+		echo "${val}"
+	fi
 }
 
 remote_exists() {
@@ -89,6 +175,22 @@ workspace_exists() {
 
 	jj -R "${REPO}" workspace list -T 'name ++ "\n"' \
 	    | grep -Fx "${name}" >/dev/null
+}
+
+bookmark_exists() {
+	local name="${1}"; shift
+
+	jj -R "${REPO}" bookmark list -T 'name ++ "\n"' \
+	    | grep -Fx "${name}" >/dev/null
+}
+
+bookmark_tracked() {
+	local bookmark="${1}"; shift
+	local remote="${1}"; shift
+
+	jj -R "${REPO}" bookmark list --all-remotes \
+	    -T 'if(remote, if(tracked, name ++ "@" ++ remote ++ "\n"))' \
+	    | grep -Fx "${bookmark}@${remote}" >/dev/null
 }
 
 cfg() {

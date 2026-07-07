@@ -10,6 +10,11 @@ atf_init_test_cases() {
 	atf_add_test_case registers_remotes
 	atf_add_test_case fetches_remotes
 	atf_add_test_case reconcile_adds_new_remote
+	atf_add_test_case tracks_bookmarks
+	atf_add_test_case default_workspace_atop_bookmark
+	atf_add_test_case workspace_atop_remote_bookmark
+	atf_add_test_case workspace_matching_bookmark
+	atf_add_test_case rerun_does_not_move_working_copy
 }
 
 setup() {
@@ -23,6 +28,8 @@ setup() {
 }
 
 # Create a bare git repo at ${1}.git with one commit on branch main.
+# Any further arguments name extra branches, each with one unique
+# commit atop main so branch histories are distinguishable.
 mk_remote() {
 	local name="${1}"; shift
 
@@ -33,7 +40,29 @@ mk_remote() {
 	git -C "${name}-seed" -c user.name=t -c user.email=t@t \
 	    commit -qm "${name} init"
 	git -C "${name}-seed" push -q origin main
+	for branch in "${@}"; do
+		git -C "${name}-seed" checkout -q -b "${branch}" main
+		echo "${branch}" > "${name}-seed/${branch}.txt"
+		git -C "${name}-seed" add "${branch}.txt"
+		git -C "${name}-seed" -c user.name=t -c user.email=t@t \
+		    commit -qm "${name} ${branch}"
+		git -C "${name}-seed" push -q origin "${branch}"
+	done
 	rm -rf "${name}-seed"
+}
+
+# Assert the exact history of a workspace's working copy: one line
+# per commit in ::@, newest first, showing the commit message and
+# any local bookmarks. The expected history is read from stdin.
+assert_history() {
+	local repo="${1}"; shift
+
+	cat > expected_history
+	atf_check -o file:expected_history -e ignore \
+	    jj -R "${repo}" log --no-graph -r '::@' -T 'separate(" ",
+	        coalesce(description.first_line(), if(root, "(root)"),
+	            if(empty, "(empty)")),
+	        surround("[", "]", bookmarks)) ++ "\n"'
 }
 
 atf_test_case no_config
@@ -177,4 +206,128 @@ reconcile_adds_new_remote_body() {
 	atf_check -s exit:0 -e ignore "${JC}"
 	atf_check -o match:"main@gh-pm" -e ignore \
 	    jj -R default.jj bookmark list --all-remotes
+}
+
+atf_test_case tracks_bookmarks
+tracks_bookmarks_head() {
+	atf_set "descr" "jc tracks each configured bookmark@remote"
+}
+tracks_bookmarks_body() {
+	setup
+	mk_remote upstream
+	cat > jc.conf <<-EOF
+	remotes = [ {name: "upstream", src: "${PWD}/upstream.git"} ]
+	workspaces = [
+	  {name: "default", bookmark: "main", remote: "upstream"}
+	]
+	EOF
+	atf_check -s exit:0 -e ignore "${JC}"
+	atf_check -o match:"^main@upstream$" -e ignore \
+	    jj -R default.jj bookmark list --all-remotes \
+	    -T 'if(remote, if(tracked, name ++ "@" ++ remote ++ "\n"))'
+}
+
+atf_test_case default_workspace_atop_bookmark
+default_workspace_atop_bookmark_head() {
+	atf_set "descr" "default workspace starts on a new change atop its bookmark"
+}
+default_workspace_atop_bookmark_body() {
+	setup
+	mk_remote upstream
+	cat > jc.conf <<-EOF
+	remotes = [ {name: "upstream", src: "${PWD}/upstream.git"} ]
+	workspaces = [
+	  {name: "default", bookmark: "main", remote: "upstream"}
+	]
+	EOF
+	atf_check -s exit:0 -e ignore "${JC}"
+	atf_check test -f default.jj/file.txt
+	assert_history default.jj <<-EOF
+	(empty)
+	upstream init [main]
+	(root)
+	EOF
+}
+
+atf_test_case workspace_atop_remote_bookmark
+workspace_atop_remote_bookmark_head() {
+	atf_set "descr" "a workspace with bookmark and remote is based on it"
+}
+workspace_atop_remote_bookmark_body() {
+	setup
+	mk_remote upstream docs
+	cat > jc.conf <<-EOF
+	remotes = [ {name: "upstream", src: "${PWD}/upstream.git"} ]
+	workspaces = [
+	  {name: "default", bookmark: "main", remote: "upstream"},
+	  {name: "docs", bookmark: "docs", remote: "upstream"}
+	]
+	EOF
+	atf_check -s exit:0 -e ignore "${JC}"
+	atf_check test -f docs.jj/file.txt
+	atf_check test -f docs.jj/docs.txt
+	assert_history docs.jj <<-EOF
+	(empty)
+	upstream docs [docs]
+	upstream init [main]
+	(root)
+	EOF
+	assert_history default.jj <<-EOF
+	(empty)
+	upstream init [main]
+	(root)
+	EOF
+}
+
+atf_test_case workspace_matching_bookmark
+workspace_matching_bookmark_head() {
+	atf_set "descr" "a bookmark-less workspace is based on a bookmark matching its name"
+}
+workspace_matching_bookmark_body() {
+	setup
+	mk_remote upstream
+	cat > jc.conf <<-EOF
+	remotes = [ {name: "upstream", src: "${PWD}/upstream.git"} ]
+	workspaces = [
+	  {name: "default", bookmark: "main", remote: "upstream"}
+	]
+	EOF
+	atf_check -s exit:0 -e ignore "${JC}"
+	atf_check -e ignore jj -R default.jj new main --no-edit -m "docs base"
+	atf_check -e ignore jj -R default.jj bookmark create docs \
+	    -r 'description(substring:"docs base")'
+	cat > jc.conf <<-EOF
+	remotes = [ {name: "upstream", src: "${PWD}/upstream.git"} ]
+	workspaces = [
+	  {name: "default", bookmark: "main", remote: "upstream"},
+	  {name: "docs"}
+	]
+	EOF
+	atf_check -s exit:0 -e ignore "${JC}"
+	assert_history docs.jj <<-EOF
+	(empty)
+	docs base [docs]
+	upstream init [main]
+	(root)
+	EOF
+}
+
+atf_test_case rerun_does_not_move_working_copy
+rerun_does_not_move_working_copy_head() {
+	atf_set "descr" "reconciling never repositions an existing working copy"
+}
+rerun_does_not_move_working_copy_body() {
+	setup
+	mk_remote upstream
+	cat > jc.conf <<-EOF
+	remotes = [ {name: "upstream", src: "${PWD}/upstream.git"} ]
+	workspaces = [
+	  {name: "default", bookmark: "main", remote: "upstream"}
+	]
+	EOF
+	atf_check -s exit:0 -e ignore "${JC}"
+	jj -R default.jj log --no-graph -r @ -T 'change_id' > before.txt
+	atf_check -s exit:0 -e ignore "${JC}"
+	jj -R default.jj log --no-graph -r @ -T 'change_id' > after.txt
+	atf_check cmp -s before.txt after.txt
 }
