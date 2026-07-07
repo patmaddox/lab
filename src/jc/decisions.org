@@ -1,0 +1,51 @@
+#+TITLE: jc decisions
+
+* track bookmarks with the exact =name@remote= symbol
+Not deprecated in jj 0.43, and unlike =bookmark track NAME --remote
+REMOTE= - where both names are glob patterns by default - the
+=name@remote= symbol resolves exactly. jc passes exact names from
+=jc.conf=, so exact resolution is the right semantics.
+* history tests assert the exact log
+History-showing tests assert a workspace's full =::@= log: one line
+per commit, newest first, showing the commit message and local
+bookmarks. Every bookmark under test points at a unique commit.
+Single-line =match:= checks (or matching =empty= against "true") did
+not communicate which history a workspace shares; an exact transcript
+makes the workspace's base unambiguous.
+* test remotes use =main= as their default branch
+* =atf_init_test_cases= goes at the top of the test file
+* test helpers do not =cd=; use =git -C=
+Not even in a subshell.
+* the dev workspace
+The directory holding =jc.conf= and the workspace directories is
+called the "dev workspace".
+* no subcommands for now
+Bare =jc= does all provisioning and reconciling. Subcommands
+(e.g. =jc fetch=) may come later.
+* a workspace named "default" is required
+=jc= errors without one. It tracks the upstream default bookmark
+(main, master, dev, etc.).
+* push_repo sets the default push remote
+push_repo must name a remote from =remotes=; jc sets it as the
+repo-level default push remote via jj config.
+* never place a working copy on an immutable commit
+Always start a working copy on a new change atop its base.
+* reconcile on rerun
+Re-running =jc= adds missing remotes, workspaces, and config.
+Existing state is untouched and local work is never discarded.
+Adding remotes/workspaces to the config after init and re-running
+configures them.
+* bookmark-less workspaces base on a matching bookmark
+If a bookmark matching the workspace name exists, base the workspace
+on it; otherwise use jj's default base for =workspace add=.
+* only the default workspace is colocated jj+git
+The default workspace gets =jj git init --colocate=; linked
+workspaces are jj-only because =jj workspace add= has no colocation
+support.
+* workspace directories are siblings named =<name>.jj=
+e.g. =default.jj=, =man-page.jj=, under the dev workspace.
+* the "default" workspace holds the repo store
+The workspace configured with =name=default= (not "the first") is
+jj's initial workspace.
+* =jc= runs in the dev workspace directory
+It reads =./jc.conf=; no =-f= flag for now.
