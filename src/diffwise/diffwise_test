@@ -1,0 +1,127 @@
+#!/usr/bin/env atf-sh
+
+init_repo() {
+	DIFFWISE="$(atf_get_srcdir)/diffwise"
+	export JJ_USER="Test User"
+	export JJ_EMAIL="test@example.com"
+	atf_check -o ignore -e ignore jj git init repo
+	cd repo
+}
+
+commit_file() {
+	local name="${1}"; shift
+
+	echo "content of ${name}" > "${name}"
+	atf_check -o ignore -e ignore jj commit "${@}"
+}
+
+atf_test_case single_commit
+single_commit_head() {
+	atf_set "descr" "One commit yields one patch file in format-patch layout"
+}
+single_commit_body() {
+	init_repo
+	commit_file f.txt -m "Add foo file"
+
+	atf_check -o inline:"0001-Add-foo-file.patch\n" \
+	    "${DIFFWISE}" '@-'
+	atf_check \
+	    -o match:"^From [0-9a-f]{40} Mon Sep 17 00:00:00 2001$" \
+	    -o match:"^From: Test User <test@example\.com>$" \
+	    -o match:"^Date: [A-Z][a-z]{2}, [0-9]{2} [A-Z][a-z]{2} [0-9]{4} [0-9:]{8} [-+][0-9]{4}$" \
+	    -o match:"^Subject: \[PATCH\] Add foo file$" \
+	    -o match:"^---$" \
+	    -o match:"^diff --git a/f\.txt b/f\.txt$" \
+	    cat 0001-Add-foo-file.patch
+}
+
+atf_test_case series_numbering
+series_numbering_head() {
+	atf_set "descr" "Multiple commits are numbered oldest first as [PATCH n/m]"
+}
+series_numbering_body() {
+	init_repo
+	commit_file first.txt -m "Add first file"
+	commit_file second.txt -m "Add second file"
+
+	atf_check \
+	    -o inline:"0001-Add-first-file.patch\n0002-Add-second-file.patch\n" \
+	    "${DIFFWISE}" '@-- | @-'
+	atf_check -o match:"^Subject: \[PATCH 1/2\] Add first file$" \
+	    cat 0001-Add-first-file.patch
+	atf_check -o match:"^Subject: \[PATCH 2/2\] Add second file$" \
+	    cat 0002-Add-second-file.patch
+}
+
+atf_test_case description_body
+description_body_head() {
+	atf_set "descr" "The commit description body appears between subject and diff"
+}
+description_body_body() {
+	init_repo
+	commit_file f.txt -m "Add foo file" -m "Greetings matter to reviewers."
+
+	atf_check -o ignore "${DIFFWISE}" '@-'
+	atf_check \
+	    -o match:"^Greetings matter to reviewers\.$" \
+	    cat 0001-Add-foo-file.patch
+}
+
+atf_test_case no_description
+no_description_head() {
+	atf_set "descr" "A commit without a description gets an empty subject"
+}
+no_description_body() {
+	init_repo
+	echo "content" > f.txt
+	atf_check -o ignore -e ignore jj new
+
+	atf_check -o inline:"0001-patch.patch\n" "${DIFFWISE}" '@-'
+	atf_check -o match:"^Subject: \[PATCH\]$" cat 0001-patch.patch
+}
+
+atf_test_case empty_revset
+empty_revset_head() {
+	atf_set "descr" "A revset selecting no commits produces no files"
+}
+empty_revset_body() {
+	init_repo
+
+	atf_check -o empty "${DIFFWISE}" 'none()'
+	atf_check -o inline:"none\n" sh -c \
+	    'ls ./*.patch 2>/dev/null || echo none'
+}
+
+atf_test_case invalid_revset
+invalid_revset_head() {
+	atf_set "descr" "An invalid revset fails with a diagnostic"
+}
+invalid_revset_body() {
+	init_repo
+
+	atf_check -s exit:1 -e match:"cannot list commits for revset" \
+	    "${DIFFWISE}" 'bogus('
+}
+
+atf_test_case missing_argument
+missing_argument_head() {
+	atf_set "descr" "Invoking without a revset is a usage error"
+}
+missing_argument_body() {
+	init_repo
+
+	atf_check -s exit:1 \
+	    -e match:"expected one revset argument" \
+	    -e match:"^usage: diffwise" \
+	    "${DIFFWISE}"
+}
+
+atf_init_test_cases() {
+	atf_add_test_case single_commit
+	atf_add_test_case series_numbering
+	atf_add_test_case description_body
+	atf_add_test_case no_description
+	atf_add_test_case empty_revset
+	atf_add_test_case invalid_revset
+	atf_add_test_case missing_argument
+}

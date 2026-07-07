@@ -1,0 +1,99 @@
+#!/bin/sh
+
+set -eu
+set -o pipefail
+
+readonly PROGNAME="${0##*/}"
+readonly HEADER_TEMPLATE='"From " ++ commit_id ++ " Mon Sep 17 00:00:00 2001\nFrom: " ++ author.name() ++ " <" ++ author.email() ++ ">\nDate: " ++ author.timestamp().format("%a, %d %b %Y %H:%M:%S %z") ++ "\n"'
+
+err() {
+	echo "${PROGNAME}: ${*}" >&2
+}
+
+die() {
+	err "${@}"
+	exit 1
+}
+
+usage() {
+	echo "usage: ${PROGNAME} revset" >&2
+	exit 1
+}
+
+main() {
+	if [ ${#} -ne 1 ]; then
+		err "expected one revset argument"
+		usage
+	fi
+	local revset="${1}"; shift
+
+	local commits
+	commits="$(list_commits "${revset}")" ||
+	    die "cannot list commits for revset '${revset}'"
+
+	local total=0
+	local commit
+	for commit in ${commits}; do
+		total=$((total + 1))
+	done
+
+	local num=0
+	for commit in ${commits}; do
+		num=$((num + 1))
+		write_patch "${commit}" "${num}" "${total}"
+	done
+}
+
+list_commits() {
+	local revset="${1}"; shift
+
+	jj log --no-graph --reversed -r "${revset}" -T 'commit_id ++ "\n"'
+}
+
+write_patch() {
+	local commit="${1}"; shift
+	local num="${1}"; shift
+	local total="${1}"; shift
+
+	local subject
+	subject="$(jj log --no-graph -r "${commit}" \
+	    -T 'description.first_line()')"
+	local body
+	body="$(jj log --no-graph -r "${commit}" -T 'description' |
+	    sed -e '1d' -e '/./,$!d')"
+	local tag="PATCH"
+	if [ "${total}" -gt 1 ]; then
+		tag="PATCH ${num}/${total}"
+	fi
+	local fname
+	fname="$(printf '%04d' "${num}")-$(slugify "${subject}").patch"
+
+	{
+		jj log --no-graph -r "${commit}" -T "${HEADER_TEMPLATE}"
+		if [ -n "${subject}" ]; then
+			printf 'Subject: [%s] %s\n\n' "${tag}" "${subject}"
+		else
+			printf 'Subject: [%s]\n\n' "${tag}"
+		fi
+		if [ -n "${body}" ]; then
+			printf '%s\n' "${body}"
+		fi
+		printf '%s\n' '---'
+		jj diff -r "${commit}" --git
+	} > "${fname}"
+	printf '%s\n' "${fname}"
+}
+
+slugify() {
+	local subject="${1}"; shift
+
+	local slug
+	slug="$(printf '%s' "${subject}" | tr -cs '[:alnum:]' '-' |
+	    sed -e 's/^-*//' | cut -c 1-52 | sed -e 's/-*$//')"
+	if [ -z "${slug}" ]; then
+		slug="patch"
+	fi
+	printf '%s\n' "${slug}"
+}
+
+main "${@}"

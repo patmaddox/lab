@@ -1,0 +1,55 @@
+.Dd July 7, 2026
+.Dt DIFFWISE 1
+.Os
+.Sh NAME
+.Nm diffwise
+.Nd export jj commits as patch files for code review
+.Sh SYNOPSIS
+.Nm
+.Ar revset
+.Sh DESCRIPTION
+.Nm
+exports a series of
+.Xr jj 1
+commits as patch files, one file per commit, for mailing-list style
+code review: the reviewer opens a patch file and replies inline.
+.Pp
+The commits selected by
+.Ar revset
+are written oldest first into the current directory.
+Each patch file contains an mbox-style
+.Ql From
+line carrying the commit id, followed by
+.Ql From ,
+.Ql Date ,
+and
+.Ql Subject
+headers taken from the commit author and description, the remainder
+of the commit description if any, and a
+.Ql ---
+separator line followed by the commit's changes in git diff format.
+When more than one commit is selected, subjects are numbered
+.Ql [PATCH n/m] .
+.Pp
+Files are named
+.Pa NNNN-subject.patch ,
+where
+.Pa NNNN
+is the position of the commit in the series counting from 0001 and
+.Pa subject
+is the first line of the commit description with runs of characters
+other than letters and digits replaced by a single hyphen.
+A commit with no description produces a patch with an empty subject
+and a file named
+.Pa NNNN-patch.patch .
+A revset that selects no commits produces no files.
+The path of each file is printed to standard output as it is
+written.
+.Sh EXIT STATUS
+.Ex -std
+.Sh EXAMPLES
+Export the current stack of mutable commits, one patch file per
+commit, into the current directory:
+.Dl % diffwise 'mutable()'
+.Sh SEE ALSO
+.Xr jj 1
