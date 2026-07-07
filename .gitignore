@@ -16,6 +16,7 @@
 .plzconfig.local
 .pnpm-store
 **/.redo/
+**/.state/
 /lib
 _build
 dotfiles/nvim/lazy
