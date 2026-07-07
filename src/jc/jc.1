@@ -11,9 +11,10 @@
 reads a UCL-formatted configuration file and provisions a local
 dev workspace managed by
 .Xr jj 1 .
-It initializes a colocated jj repository, registers the configured git
-remotes, fetches from them, tracks the configured bookmarks, and
-creates one jj workspace per configured workspace.
+From a single config file it initializes a colocated jj repository,
+registers the configured git remotes, fetches from them, tracks the
+configured bookmarks, creates one jj workspace per configured
+workspace, and applies repository-local jj configuration.
 .Pp
 .Nm
 is run in the dev workspace: the directory that holds
@@ -30,31 +31,30 @@ work directly in it; linked workspaces are managed by jj alone.
 .Nm
 is idempotent.
 Running it again against an already-provisioned dev workspace
-reconciles it with the config: missing remotes, bookmarks, and
-workspaces are added, tracked, and fetched, and existing ones are left
-untouched.
+reconciles it with the config: missing remotes, workspaces, and
+configuration are added, and existing ones are left untouched.
 Working copies are positioned only when a workspace is first created;
 reconciling never moves them.
 It never discards local work.
 .Sh CONFIGURATION
 The configuration file is UCL.
 It recognizes the following top-level keys.
-.Bl -tag -width workspaces
+.Bl -tag -width push_repo
 .It Cm remotes
 An array of git remotes to register on the repository.
 Each element is an object with the keys:
-.Bl -tag -width name
+.Bl -tag -width bookmark
 .It Cm name
 The local name of the remote.
 .It Cm src
-The git URL fetched from.
+The git URL fetched from and, unless overridden, pushed to.
 .El
 .It Cm workspaces
 An array of workspaces to create.
 One workspace must be named
 .Dq default .
 Each element is an object with the keys:
-.Bl -tag -width name
+.Bl -tag -width bookmark
 .It Cm name
 The jj workspace name.
 The workspace is created in the subdirectory
@@ -79,6 +79,13 @@ workspace is based on that bookmark; otherwise it is created with
 .Xr jj 1 Ns 's
 default base for new workspaces.
 .El
+.It Cm push_repo
+Optional.
+The
+.Cm name
+of the remote that bookmarks are pushed to by default.
+It must name a remote from
+.Cm remotes .
 .El
 .Sh FILES
 .Bl -tag -width jc.conf
@@ -92,13 +99,16 @@ Given
 .Pa jc.conf :
 .Bd -literal -offset indent
 remotes = [
-  {name: "upstream", src: "https://github.com/allanjude/uclcmd.git"}
+  {name: "upstream", src: "https://github.com/allanjude/uclcmd.git"},
+  {name: "gh-pm", src: "git@github.com:patmaddox/uclcmd.git"}
 ]
 
 workspaces = [
   {name: "default", bookmark: "master", remote: "upstream"},
   {name: "man-page"}
 ]
+
+push_repo = "gh-pm"
 .Ed
 .Pp
 running
@@ -111,9 +121,14 @@ in the directory holding it produces:
 .Pp
 with the
 .Va upstream
-remote registered and fetched, and the
+and
+.Va gh-pm
+remotes registered and fetched, the
 .Va master
 bookmark tracking
-.Va master@upstream .
+.Va master@upstream ,
+and bookmarks pushed to
+.Va gh-pm
+by default.
 .Sh SEE ALSO
 .Xr jj 1

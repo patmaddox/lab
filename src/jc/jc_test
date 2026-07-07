@@ -10,6 +10,8 @@ atf_init_test_cases() {
 	atf_add_test_case registers_remotes
 	atf_add_test_case fetches_remotes
 	atf_add_test_case reconcile_adds_new_remote
+	atf_add_test_case sets_push_repo
+	atf_add_test_case push_repo_must_name_a_remote
 	atf_add_test_case tracks_bookmarks
 	atf_add_test_case default_workspace_atop_bookmark
 	atf_add_test_case workspace_atop_remote_bookmark
@@ -206,6 +208,40 @@ reconcile_adds_new_remote_body() {
 	atf_check -s exit:0 -e ignore "${JC}"
 	atf_check -o match:"main@gh-pm" -e ignore \
 	    jj -R default.jj bookmark list --all-remotes
+}
+
+atf_test_case sets_push_repo
+sets_push_repo_head() {
+	atf_set "descr" "push_repo becomes the repo's default push remote"
+}
+sets_push_repo_body() {
+	setup
+	mk_remote upstream
+	mk_remote gh-pm
+	cat > jc.conf <<-EOF
+	remotes = [
+	  {name: "upstream", src: "${PWD}/upstream.git"},
+	  {name: "gh-pm", src: "${PWD}/gh-pm.git"}
+	]
+	workspaces = [ {name: "default"} ]
+	push_repo = "gh-pm"
+	EOF
+	atf_check -s exit:0 -e ignore "${JC}"
+	atf_check -o match:"gh-pm" -e ignore \
+	    jj -R default.jj config get git.push
+}
+
+atf_test_case push_repo_must_name_a_remote
+push_repo_must_name_a_remote_head() {
+	atf_set "descr" "jc fails when push_repo names no configured remote"
+}
+push_repo_must_name_a_remote_body() {
+	setup
+	cat > jc.conf <<-EOF
+	workspaces = [ {name: "default"} ]
+	push_repo = "gh-pm"
+	EOF
+	atf_check -s exit:1 -e match:"push_repo" "${JC}"
 }
 
 atf_test_case tracks_bookmarks

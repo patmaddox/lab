@@ -32,6 +32,7 @@ main() {
 		position_default_workspace
 	fi
 	ensure_workspaces
+	ensure_push_repo
 }
 
 require_default_workspace() {
@@ -117,6 +118,18 @@ add_workspace() {
 	else
 		jj -R "${REPO}" workspace add --name "${name}" "${name}.jj"
 	fi
+}
+
+ensure_push_repo() {
+	local push
+	push="$(cfg ".push_repo")"
+	if [ "${push}" = "null" ]; then
+		return 0
+	fi
+	if ! remote_exists "${push}"; then
+		die "push_repo \"${push}\" is not a configured remote"
+	fi
+	jj -R "${REPO}" config set --repo git.push "${push}"
 }
 
 # The revset a workspace's working copy is created atop: its
