@@ -1,0 +1,100 @@
+#!/usr/bin/env atf-sh
+
+atf_init_test_cases() {
+	atf_add_test_case no_config
+	atf_add_test_case no_default_workspace
+	atf_add_test_case creates_default_workspace
+	atf_add_test_case creates_linked_workspaces
+	atf_add_test_case rerun_is_idempotent
+	atf_add_test_case reconcile_adds_new_workspace
+}
+
+setup() {
+	cat > jjconfig.toml <<-EOF
+	[user]
+	name = "Test"
+	email = "test@example.com"
+	EOF
+	export JJ_CONFIG="${PWD}/jjconfig.toml"
+	JC="$(atf_get_srcdir)/jc"
+}
+
+atf_test_case no_config
+no_config_head() {
+	atf_set "descr" "jc fails when jc.conf is missing"
+}
+no_config_body() {
+	setup
+	atf_check -s exit:1 -e match:"jc.conf" "${JC}"
+}
+
+atf_test_case no_default_workspace
+no_default_workspace_head() {
+	atf_set "descr" "jc fails when no workspace is named default"
+}
+no_default_workspace_body() {
+	setup
+	cat > jc.conf <<-EOF
+	workspaces = [ {name: "man-page"} ]
+	EOF
+	atf_check -s exit:1 -e match:"default" "${JC}"
+}
+
+atf_test_case creates_default_workspace
+creates_default_workspace_head() {
+	atf_set "descr" "jc creates a colocated jj repo in default.jj"
+}
+creates_default_workspace_body() {
+	setup
+	cat > jc.conf <<-EOF
+	workspaces = [ {name: "default"} ]
+	EOF
+	atf_check -s exit:0 -e ignore "${JC}"
+	atf_check test -d default.jj/.jj
+	atf_check test -d default.jj/.git
+}
+
+atf_test_case creates_linked_workspaces
+creates_linked_workspaces_head() {
+	atf_set "descr" "jc creates a linked jj workspace per config entry"
+}
+creates_linked_workspaces_body() {
+	setup
+	cat > jc.conf <<-EOF
+	workspaces = [ {name: "default"}, {name: "man-page"} ]
+	EOF
+	atf_check -s exit:0 -e ignore "${JC}"
+	atf_check test -d man-page.jj/.jj
+	atf_check -o match:"^man-page:" -e ignore \
+	    jj -R default.jj workspace list
+}
+
+atf_test_case rerun_is_idempotent
+rerun_is_idempotent_head() {
+	atf_set "descr" "running jc again over a provisioned dir succeeds"
+}
+rerun_is_idempotent_body() {
+	setup
+	cat > jc.conf <<-EOF
+	workspaces = [ {name: "default"}, {name: "man-page"} ]
+	EOF
+	atf_check -s exit:0 -e ignore "${JC}"
+	atf_check -s exit:0 -e ignore "${JC}"
+}
+
+atf_test_case reconcile_adds_new_workspace
+reconcile_adds_new_workspace_head() {
+	atf_set "descr" "workspaces added to config appear on rerun"
+}
+reconcile_adds_new_workspace_body() {
+	setup
+	cat > jc.conf <<-EOF
+	workspaces = [ {name: "default"} ]
+	EOF
+	atf_check -s exit:0 -e ignore "${JC}"
+	cat > jc.conf <<-EOF
+	workspaces = [ {name: "default"}, {name: "man-page"} ]
+	EOF
+	atf_check -s exit:0 -e ignore "${JC}"
+	atf_check test -d man-page.jj/.jj
+}

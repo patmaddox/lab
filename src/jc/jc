@@ -1,0 +1,71 @@
+#!/bin/sh
+
+set -eu
+set -o pipefail
+
+readonly PROGNAME="${0##*/}"
+readonly CONF="jc.conf"
+readonly REPO="default.jj"
+
+err() {
+	echo "${PROGNAME}: E: ${*}" >&2
+}
+
+die() {
+	err "${@}"
+	exit 1
+}
+
+main() {
+	[ -f "${CONF}" ] || die "cannot read ${CONF}: No such file or directory"
+	require_default_workspace
+	ensure_repo
+	ensure_workspaces
+}
+
+require_default_workspace() {
+	local n i
+	n="$(cfg ".workspaces|length")"
+	i=0
+	while [ "${i}" -lt "${n}" ]; do
+		if [ "$(cfg ".workspaces.${i}.name")" = "default" ]; then
+			return 0
+		fi
+		i=$((i + 1))
+	done
+	die "no workspace named \"default\" in ${CONF}"
+}
+
+ensure_repo() {
+	if [ ! -d "${REPO}/.jj" ]; then
+		jj git init --colocate "${REPO}"
+	fi
+}
+
+ensure_workspaces() {
+	local n i name
+	n="$(cfg ".workspaces|length")"
+	i=0
+	while [ "${i}" -lt "${n}" ]; do
+		name="$(cfg ".workspaces.${i}.name")"
+		if [ "${name}" != "default" ] && ! workspace_exists "${name}"; then
+			jj -R "${REPO}" workspace add --name "${name}" "${name}.jj"
+		fi
+		i=$((i + 1))
+	done
+}
+
+workspace_exists() {
+	local name="${1}"; shift
+
+	jj -R "${REPO}" workspace list -T 'name ++ "\n"' \
+	    | grep -Fx "${name}" >/dev/null
+}
+
+cfg() {
+	local key="${1}"; shift
+
+	uclcmd get -q -f "${CONF}" "${key}"
+}
+
+main "${@}"

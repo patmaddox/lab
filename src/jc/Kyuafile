@@ -1,0 +1,5 @@
+syntax(2)
+
+test_suite('jc')
+
+atf_test_program{name='jc_test'}

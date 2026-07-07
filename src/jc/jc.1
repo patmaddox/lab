@@ -1,0 +1,76 @@
+.Dd July 7, 2026
+.Dt JC 1
+.Os
+.Sh NAME
+.Nm jc
+.Nd provision a jj repository and its workspaces from a config file
+.Sh SYNOPSIS
+.Nm
+.Sh DESCRIPTION
+.Nm
+reads a UCL-formatted configuration file and provisions a local
+dev workspace managed by
+.Xr jj 1 .
+It initializes a colocated jj repository and creates one jj workspace
+per configured workspace.
+.Pp
+.Nm
+is run in the dev workspace: the directory that holds
+.Pa jc.conf .
+Each configured workspace is created as a subdirectory of it named
+.Ar name Ns .jj .
+The workspace named
+.Dq default
+is jj's initial workspace and holds the repository store; each
+additional workspace is a linked jj workspace sharing that repository.
+The default workspace is colocated with git, so standard git tools
+work directly in it; linked workspaces are managed by jj alone.
+.Pp
+.Nm
+is idempotent.
+Running it again against an already-provisioned dev workspace
+reconciles it with the config: missing workspaces are added, and
+existing ones are left untouched.
+It never discards local work.
+.Sh CONFIGURATION
+The configuration file is UCL.
+It recognizes the following top-level keys.
+.Bl -tag -width workspaces
+.It Cm workspaces
+An array of workspaces to create.
+One workspace must be named
+.Dq default .
+Each element is an object with the keys:
+.Bl -tag -width name
+.It Cm name
+The jj workspace name.
+The workspace is created in the subdirectory
+.Ar name Ns .jj .
+.El
+.El
+.Sh FILES
+.Bl -tag -width jc.conf
+.It Pa jc.conf
+Configuration file, read from the current directory.
+.El
+.Sh EXIT STATUS
+.Ex -std
+.Sh EXAMPLES
+Given
+.Pa jc.conf :
+.Bd -literal -offset indent
+workspaces = [
+  {name: "default"},
+  {name: "man-page"}
+]
+.Ed
+.Pp
+running
+.Nm
+in the directory holding it produces:
+.Bd -literal -offset indent
+\&./default.jj/     colocated jj repository and initial workspace
+\&./man-page.jj/    linked jj workspace
+.Ed
+.Sh SEE ALSO
+.Xr jj 1
