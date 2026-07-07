@@ -20,6 +20,8 @@ main() {
 	[ -f "${CONF}" ] || die "cannot read ${CONF}: No such file or directory"
 	require_default_workspace
 	ensure_repo
+	ensure_remotes
+	fetch_remotes
 	ensure_workspaces
 }
 
@@ -42,6 +44,26 @@ ensure_repo() {
 	fi
 }
 
+ensure_remotes() {
+	local n i name src
+	n="$(cfg ".remotes|length")"
+	i=0
+	while [ "${i}" -lt "${n}" ]; do
+		name="$(cfg ".remotes.${i}.name")"
+		src="$(cfg ".remotes.${i}.src")"
+		if ! remote_exists "${name}"; then
+			jj -R "${REPO}" git remote add "${name}" "${src}"
+		fi
+		i=$((i + 1))
+	done
+}
+
+fetch_remotes() {
+	if [ "$(cfg ".remotes|length")" -gt 0 ]; then
+		jj -R "${REPO}" git fetch --all-remotes
+	fi
+}
+
 ensure_workspaces() {
 	local n i name
 	n="$(cfg ".workspaces|length")"
@@ -53,6 +75,13 @@ ensure_workspaces() {
 		fi
 		i=$((i + 1))
 	done
+}
+
+remote_exists() {
+	local name="${1}"; shift
+
+	jj -R "${REPO}" git remote list | awk '{print $1}' \
+	    | grep -Fx "${name}" >/dev/null
 }
 
 workspace_exists() {

@@ -7,6 +7,9 @@ atf_init_test_cases() {
 	atf_add_test_case creates_linked_workspaces
 	atf_add_test_case rerun_is_idempotent
 	atf_add_test_case reconcile_adds_new_workspace
+	atf_add_test_case registers_remotes
+	atf_add_test_case fetches_remotes
+	atf_add_test_case reconcile_adds_new_remote
 }
 
 setup() {
@@ -17,6 +20,20 @@ setup() {
 	EOF
 	export JJ_CONFIG="${PWD}/jjconfig.toml"
 	JC="$(atf_get_srcdir)/jc"
+}
+
+# Create a bare git repo at ${1}.git with one commit on branch main.
+mk_remote() {
+	local name="${1}"; shift
+
+	git init -q --bare -b main "${name}.git"
+	git clone -q "${name}.git" "${name}-seed" 2>/dev/null
+	echo "${name}" > "${name}-seed/file.txt"
+	git -C "${name}-seed" add file.txt
+	git -C "${name}-seed" -c user.name=t -c user.email=t@t \
+	    commit -qm "${name} init"
+	git -C "${name}-seed" push -q origin main
+	rm -rf "${name}-seed"
 }
 
 atf_test_case no_config
@@ -97,4 +114,67 @@ reconcile_adds_new_workspace_body() {
 	EOF
 	atf_check -s exit:0 -e ignore "${JC}"
 	atf_check test -d man-page.jj/.jj
+}
+
+atf_test_case registers_remotes
+registers_remotes_head() {
+	atf_set "descr" "jc registers each configured git remote"
+}
+registers_remotes_body() {
+	setup
+	mk_remote upstream
+	mk_remote gh-pm
+	cat > jc.conf <<-EOF
+	remotes = [
+	  {name: "upstream", src: "${PWD}/upstream.git"},
+	  {name: "gh-pm", src: "${PWD}/gh-pm.git"}
+	]
+	workspaces = [ {name: "default"} ]
+	EOF
+	atf_check -s exit:0 -e ignore "${JC}"
+	atf_check -o match:"^upstream " -e ignore \
+	    jj -R default.jj git remote list
+	atf_check -o match:"^gh-pm " -e ignore \
+	    jj -R default.jj git remote list
+}
+
+atf_test_case fetches_remotes
+fetches_remotes_head() {
+	atf_set "descr" "jc fetches so remote bookmarks are visible"
+}
+fetches_remotes_body() {
+	setup
+	mk_remote upstream
+	cat > jc.conf <<-EOF
+	remotes = [ {name: "upstream", src: "${PWD}/upstream.git"} ]
+	workspaces = [ {name: "default"} ]
+	EOF
+	atf_check -s exit:0 -e ignore "${JC}"
+	atf_check -o match:"main@upstream" -e ignore \
+	    jj -R default.jj bookmark list --all-remotes
+}
+
+atf_test_case reconcile_adds_new_remote
+reconcile_adds_new_remote_head() {
+	atf_set "descr" "remotes added to config are registered and fetched on rerun"
+}
+reconcile_adds_new_remote_body() {
+	setup
+	mk_remote upstream
+	mk_remote gh-pm
+	cat > jc.conf <<-EOF
+	remotes = [ {name: "upstream", src: "${PWD}/upstream.git"} ]
+	workspaces = [ {name: "default"} ]
+	EOF
+	atf_check -s exit:0 -e ignore "${JC}"
+	cat > jc.conf <<-EOF
+	remotes = [
+	  {name: "upstream", src: "${PWD}/upstream.git"},
+	  {name: "gh-pm", src: "${PWD}/gh-pm.git"}
+	]
+	workspaces = [ {name: "default"} ]
+	EOF
+	atf_check -s exit:0 -e ignore "${JC}"
+	atf_check -o match:"main@gh-pm" -e ignore \
+	    jj -R default.jj bookmark list --all-remotes
 }

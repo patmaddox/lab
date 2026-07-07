@@ -11,8 +11,9 @@
 reads a UCL-formatted configuration file and provisions a local
 dev workspace managed by
 .Xr jj 1 .
-It initializes a colocated jj repository and creates one jj workspace
-per configured workspace.
+It initializes a colocated jj repository, registers the configured git
+remotes, fetches from them, and creates one jj workspace per
+configured workspace.
 .Pp
 .Nm
 is run in the dev workspace: the directory that holds
@@ -29,13 +30,22 @@ work directly in it; linked workspaces are managed by jj alone.
 .Nm
 is idempotent.
 Running it again against an already-provisioned dev workspace
-reconciles it with the config: missing workspaces are added, and
-existing ones are left untouched.
+reconciles it with the config: missing remotes and workspaces are
+added and fetched, and existing ones are left untouched.
 It never discards local work.
 .Sh CONFIGURATION
 The configuration file is UCL.
 It recognizes the following top-level keys.
 .Bl -tag -width workspaces
+.It Cm remotes
+An array of git remotes to register on the repository.
+Each element is an object with the keys:
+.Bl -tag -width name
+.It Cm name
+The local name of the remote.
+.It Cm src
+The git URL fetched from.
+.El
 .It Cm workspaces
 An array of workspaces to create.
 One workspace must be named
@@ -59,6 +69,10 @@ Configuration file, read from the current directory.
 Given
 .Pa jc.conf :
 .Bd -literal -offset indent
+remotes = [
+  {name: "upstream", src: "https://github.com/allanjude/uclcmd.git"}
+]
+
 workspaces = [
   {name: "default"},
   {name: "man-page"}
@@ -72,5 +86,9 @@ in the directory holding it produces:
 \&./default.jj/     colocated jj repository and initial workspace
 \&./man-page.jj/    linked jj workspace
 .Ed
+.Pp
+with the
+.Va upstream
+remote registered and fetched.
 .Sh SEE ALSO
 .Xr jj 1
