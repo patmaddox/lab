@@ -131,10 +131,38 @@ default_revset_body() {
 	init_repo
 	commit_file f.txt -m "Add foo file"
 
-	atf_check -o inline:"0001-Add-foo-file.patch\n0002-patch.patch\n" \
+	atf_check -o inline:"0001-Add-foo-file.patch\n" \
 	    "${DIFFWISE}"
-	atf_check -o match:"^Subject: \[PATCH 1/2\] Add foo file$" \
+	atf_check -o match:"^Subject: \[PATCH\] Add foo file$" \
 	    cat 0001-Add-foo-file.patch
+}
+
+atf_test_case skip_empty_undescribed
+skip_empty_undescribed_head() {
+	atf_set "descr" "A commit with no changes and no description is skipped"
+}
+skip_empty_undescribed_body() {
+	init_repo
+	commit_file f.txt -m "Add foo file"
+
+	atf_check -o empty "${DIFFWISE}" -r '@'
+	atf_check -o inline:"none\n" sh -c \
+	    'ls ./*.patch 2>/dev/null || echo none'
+}
+
+atf_test_case empty_with_description
+empty_with_description_head() {
+	atf_set "descr" "A described commit with no changes is exported"
+}
+empty_with_description_body() {
+	init_repo
+	commit_file f.txt -m "Add foo file"
+	atf_check -o ignore -e ignore jj describe -m "Empty milestone"
+
+	atf_check -o inline:"0001-Empty-milestone.patch\n" \
+	    "${DIFFWISE}" -r '@'
+	atf_check -o match:"^Subject: \[PATCH\] Empty milestone$" \
+	    cat 0001-Empty-milestone.patch
 }
 
 atf_test_case unexpected_argument
@@ -198,6 +226,8 @@ atf_init_test_cases() {
 	atf_add_test_case single_commit
 	atf_add_test_case committer_differs
 	atf_add_test_case default_revset
+	atf_add_test_case skip_empty_undescribed
+	atf_add_test_case empty_with_description
 	atf_add_test_case series_numbering
 	atf_add_test_case description_body
 	atf_add_test_case no_description

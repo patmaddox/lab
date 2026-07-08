@@ -78,7 +78,8 @@ main() {
 list_commits() {
 	local revset="${1}"; shift
 
-	jj log --no-graph --reversed -r "${revset}" -T 'commit_id ++ "\n"'
+	jj log --no-graph --reversed -r "${revset}" \
+	    -T 'if(empty && !description, "", commit_id ++ "\n")'
 }
 
 write_patch() {

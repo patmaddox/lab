@@ -55,9 +55,14 @@ is the position of the commit in the series counting from 0001 and
 .Pa subject
 is the first line of the commit description with runs of characters
 other than letters and digits replaced by a single hyphen.
-A commit with no description produces a patch with an empty subject
-and a file named
-.Pa NNNN-patch.patch .
+Commits that have neither changes nor a description - such as an
+empty working-copy commit - are skipped and do not count toward the
+series numbering.
+A commit with no description but with changes produces a patch with
+an empty subject and a file named
+.Pa NNNN-patch.patch ;
+a commit with a description but no changes produces a patch with an
+empty diff.
 A revset that selects no commits produces no files.
 The path of each file is printed to standard output as it is
 written.
