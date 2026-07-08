@@ -21,5 +21,13 @@ if [ -n "${_env_fwd}" ]; then
 	_env_fwd="env${_env_fwd}"
 fi
 
-exec doas jexec -l -d "$(pwd)" -U "$(whoami)" claude \
+# Pick the jail by working directory. Sessions started under ~/evirts
+# run in the evirts-claude jail; everything else uses the default
+# claude jail.
+_jail=claude
+case "$(pwd)" in
+"${HOME}"/evirts | "${HOME}"/evirts/*) _jail=evirts-claude ;;
+esac
+
+exec doas jexec -l -d "$(pwd)" -U "$(whoami)" "${_jail}" \
     ${_env_fwd} /usr/local/bin/claude "$@"
