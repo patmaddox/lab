@@ -18,7 +18,25 @@ die() {
 
 usage() {
 	echo "usage: ${PROGNAME} init <src>" >&2
+	echo "       ${PROGNAME} new <name>" >&2
 	exit 64
+}
+
+# Walk up from the current directory to the nearest ancestor holding a
+# .cell directory. Its hidden, distinctive name means a plain
+# containment check suffices, so cell can run from anywhere below the
+# directory that holds .cell.
+find_cell_dir() {
+	local d
+	d="$(pwd -P)"
+	while :; do
+		if [ -d "${d}/${CELL}" ]; then
+			echo "${d}/${CELL}"
+			return 0
+		fi
+		[ "${d}" = "/" ] && return 1
+		d="$(dirname "${d}")"
+	done
 }
 
 # Bare-clone <src> into the shared .cell default.git as a standalone
@@ -36,11 +54,28 @@ cmd_init() {
 	git -C "${dst}" remote remove origin
 }
 
+# Clone the shared .cell default.git into a sibling colocated jj+git
+# checkout named <name>.jj, with origin pointing back at default.git.
+cmd_new() {
+	[ "${#}" -eq 1 ] || usage
+	local name="${1}"
+	local cells bare dest
+
+	cells="$(find_cell_dir)" \
+	    || die "no ${CELL} directory found from $(pwd -P)"
+	bare="${cells}/${BARE}"
+	[ -d "${bare}" ] || die "${cells} has no ${BARE}"
+	dest="${cells}/${name}.jj"
+	[ ! -e "${dest}" ] || die "cell \"${name}\" already exists: ${dest}"
+	jj git clone --colocate "${bare}" "${dest}"
+}
+
 main() {
 	[ "${#}" -ge 1 ] || usage
 	local cmd="${1}"; shift
 	case "${cmd}" in
 	init)	cmd_init "${@}" ;;
+	new)	cmd_new "${@}" ;;
 	*)	usage ;;
 	esac
 }

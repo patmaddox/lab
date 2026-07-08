@@ -8,6 +8,16 @@ atf_init_test_cases() {
 	atf_add_test_case init_clones_default
 	atf_add_test_case init_removes_origin
 	atf_add_test_case init_dst_exists
+	atf_add_test_case new_no_args
+	atf_add_test_case new_too_many_args
+	atf_add_test_case new_no_cells_dir
+	atf_add_test_case new_missing_bare
+	atf_add_test_case new_creates_cell
+	atf_add_test_case new_runs_from_subdir
+	atf_add_test_case new_sets_origin_remote
+	atf_add_test_case new_checks_out_bare_content
+	atf_add_test_case new_duplicate_fails
+	atf_add_test_case workflow
 }
 
 setup() {
@@ -27,6 +37,19 @@ mk_src() {
 	echo "hello" > src/file.txt
 	git -C src add file.txt
 	git -C src -c user.name=t -c user.email=t@t commit -qm init
+}
+
+# Create a .cell directory at ${PWD}/.cell holding a default.git
+# bare repo with one commit on branch main.
+mk_cells() {
+	mkdir .cell
+	git init -q --bare -b main .cell/default.git
+	git clone -q .cell/default.git seed 2>/dev/null
+	echo "hello" > seed/file.txt
+	git -C seed add file.txt
+	git -C seed -c user.name=t -c user.email=t@t commit -qm init
+	git -C seed push -q origin main
+	rm -rf seed
 }
 
 atf_test_case no_args
@@ -98,4 +121,112 @@ init_dst_exists_body() {
 	mk_src
 	mkdir -p .cell/default.git
 	atf_check -s exit:1 -e match:"already exists" "${CELL}" init src/.git
+}
+
+atf_test_case new_no_args
+new_no_args_head() {
+	atf_set "descr" "cell new with no name prints usage and exits 64"
+}
+new_no_args_body() {
+	setup
+	atf_check -s exit:64 -e match:"usage" "${CELL}" new
+}
+
+atf_test_case new_too_many_args
+new_too_many_args_head() {
+	atf_set "descr" "cell new with extra arguments prints usage and exits 64"
+}
+new_too_many_args_body() {
+	setup
+	atf_check -s exit:64 -e match:"usage" "${CELL}" new a b
+}
+
+atf_test_case new_no_cells_dir
+new_no_cells_dir_head() {
+	atf_set "descr" "cell new fails when no .cell directory is found"
+}
+new_no_cells_dir_body() {
+	setup
+	atf_check -s exit:1 -e match:".cell directory" "${CELL}" new q1
+}
+
+atf_test_case new_missing_bare
+new_missing_bare_head() {
+	atf_set "descr" "cell new fails when .cell holds no default.git"
+}
+new_missing_bare_body() {
+	setup
+	mkdir .cell
+	atf_check -s exit:1 -e match:"default.git" "${CELL}" new q1
+}
+
+atf_test_case new_creates_cell
+new_creates_cell_head() {
+	atf_set "descr" "cell new clones default.git into a colocated jj repo"
+}
+new_creates_cell_body() {
+	setup
+	mk_cells
+	atf_check -s exit:0 -e ignore "${CELL}" new q1
+	atf_check test -d .cell/q1.jj/.jj
+	atf_check test -d .cell/q1.jj/.git
+}
+
+atf_test_case new_runs_from_subdir
+new_runs_from_subdir_head() {
+	atf_set "descr" "cell new finds .cell from a nested subdirectory"
+}
+new_runs_from_subdir_body() {
+	setup
+	mk_cells
+	mkdir -p default.jj/src
+	atf_check -s exit:0 -e ignore \
+	    sh -c 'cd default.jj/src && "$1" new q1' _ "${CELL}"
+	atf_check test -d .cell/q1.jj/.jj
+}
+
+atf_test_case new_sets_origin_remote
+new_sets_origin_remote_head() {
+	atf_set "descr" "the cell origin points at the .cell default.git"
+}
+new_sets_origin_remote_body() {
+	setup
+	mk_cells
+	atf_check -s exit:0 -e ignore "${CELL}" new q1
+	atf_check -o match:"^origin ${PWD}/.cell/default.git" -e ignore \
+	    jj -R .cell/q1.jj git remote list
+}
+
+atf_test_case new_checks_out_bare_content
+new_checks_out_bare_content_head() {
+	atf_set "descr" "the cell working copy holds the bare repo content"
+}
+new_checks_out_bare_content_body() {
+	setup
+	mk_cells
+	atf_check -s exit:0 -e ignore "${CELL}" new q1
+	atf_check -o inline:"hello\n" cat .cell/q1.jj/file.txt
+}
+
+atf_test_case new_duplicate_fails
+new_duplicate_fails_head() {
+	atf_set "descr" "cell new fails when the cell already exists"
+}
+new_duplicate_fails_body() {
+	setup
+	mk_cells
+	atf_check -s exit:0 -e ignore "${CELL}" new q1
+	atf_check -s exit:1 -e match:"already exists" "${CELL}" new q1
+}
+
+atf_test_case workflow
+workflow_head() {
+	atf_set "descr" "init then new yields a cell holding the source content"
+}
+workflow_body() {
+	setup
+	mk_src
+	atf_check -s exit:0 -e ignore "${CELL}" init src/.git
+	atf_check -s exit:0 -e ignore "${CELL}" new foo
+	atf_check -o inline:"hello\n" cat .cell/foo.jj/file.txt
 }

@@ -3,11 +3,14 @@
 .Os
 .Sh NAME
 .Nm cell
-.Nd seed a shared .cell bare repo
+.Nd manage a shared .cell bare repo and its jj checkouts
 .Sh SYNOPSIS
 .Nm
 .Cm init
 .Ar src
+.Nm
+.Cm new
+.Ar name
 .Sh DESCRIPTION
 .Nm
 encodes a simple convention: a
@@ -30,6 +33,28 @@ was seeded from.
 fails if
 .Pa .cell/default.git
 already exists.
+.Ss cell new
+.Nm
+.Cm new
+walks up from the current directory to the nearest ancestor that
+holds a
+.Pa .cell
+directory, then clones
+.Pa default.git
+into a sibling colocated jj checkout at
+.Ar name Ns .jj ,
+wired to
+.Pa default.git
+as its
+.Va origin .
+.Nm
+fails if no
+.Pa .cell
+directory is found, if the one found holds no
+.Pa default.git ,
+or if
+.Ar name Ns .jj
+already exists.
 .Sh EXIT STATUS
 .Ex -std
 .Nm
@@ -37,9 +62,11 @@ exits 64 on usage errors.
 .Sh EXAMPLES
 Seed a
 .Pa .cell
-in the current directory from an existing checkout:
+in the current directory from an existing checkout, then start a
+cell:
 .Bd -literal -offset indent
 cell init path/to/default.jj/.git
+cell new foo
 .Ed
 .Sh SEE ALSO
 .Xr jj 1
