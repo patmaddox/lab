@@ -1,0 +1,6 @@
+help:
+  just -l
+
+# fetch source code, setup workspaces, etc
+setup:
+  ../../src/jc/jc
