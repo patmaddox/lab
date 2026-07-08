@@ -1,0 +1,11 @@
+#+TITLE: hello agent instructions
+
+Print "hello world" in exactly five languages, one per line, each
+formatted as "Language: greeting" - for example "English: hello world".
+
+Rules:
+- The first line is always English, so the reader has an anchor.
+- Choose the other four languages at random and vary them from run to
+  run. Do not repeat a language within a run.
+- Output only the five lines: no preamble, no trailing commentary, no
+  code fences.

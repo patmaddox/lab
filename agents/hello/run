@@ -1,0 +1,42 @@
+#!/bin/sh
+#
+# run: the hello harness. It feeds this agent's instructions
+# (agent.org) to a model and prints the model's response. The harness
+# is deterministic - it owns the input, the output contract, and the
+# exit status; only the inference in the middle is not.
+
+set -eu
+
+readonly PROGNAME="${0##*/}"
+readonly AGENTDIR="${0%/*}"
+
+# The model command. Override CLAUDE to stub inference in tests. Left
+# unquoted at the call site on purpose, so "claude --model x" splits.
+: "${CLAUDE:=claude}"
+
+err() {
+	echo "${PROGNAME}: ${*}" >&2
+}
+
+die() {
+	err "${@}"
+	exit 1
+}
+
+main() {
+	local prompt response
+
+	[ -f "${AGENTDIR}/agent.org" ] \
+	    || die "no agent.org beside ${PROGNAME}"
+	prompt="$(cat "${AGENTDIR}/agent.org")"
+
+	# hello consumes no input, so close stdin. Agents that take
+	# input (e.g. a spec) will feed it here instead.
+	response="$(${CLAUDE} -p "${prompt}" </dev/null)" \
+	    || die "inference failed"
+	[ -n "${response}" ] || die "model produced no output"
+
+	printf '%s\n' "${response}"
+}
+
+main "${@}"

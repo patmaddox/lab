@@ -1,0 +1,11 @@
+#+TITLE: hello agent
+
+A proof-of-concept agent for the =agents/= convention. Running it
+prints "hello world" in five languages, one per line. English comes
+first every time so I can follow along; the other four are chosen at
+random on each run.
+
+The greetings come from a model, not a hard-coded list. Its purpose is
+to demonstrate the directory shape of an agent, not to be useful: it
+is the smallest example of the harness pattern - a =run= that wraps a
+single model inference driven by =agent.org=.
