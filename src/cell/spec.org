@@ -1,0 +1,50 @@
+#+TITLE: cell
+
+I have a jj repo where I use workspaces. I have a "cells" dir, and I
+want to be the only person to manipulate the default workspace.
+
+I want to be able to run a single command that sets up a new dev
+workspace suitable for interacting with claude code.
+
+It will be run from my host machine, whereas claude is in a jail. They
+share files via null mount.
+
+I would like for claude to not even be able to manipulate my repo at
+all. Here's what I have in mind.
+
+- Keep git bare repos in ~/.agent-repos
+- (separately) I configure a jail with specific repos, e.g. subdirs of
+  ~/.agent-repos/
+- cell CLI tool creates a dir for that cell, that it null mounts to
+  the jail. or maybe it's a git worktree in / alongside the bare repo?
+  That would probably keep things simpler. So there's like
+  ~/.agent-repos/lab/default.git is the bare repo, and the tool makes
+  a worktree parallel to it e.g. ~/.agent-repos/lab/cell-1.git
+- I kind of like the idea of them being jj repos and workspaces
+  though, so that I can reference jj changesets in my instructions to
+  LLM.
+- Maybe there's a cells dir alongside my workspaces instead? So
+  ~/lab/cells/repo.jj and ~/lab/cells/cell-1.jj. It would still be
+  separate from the repo that I access from emacs. Or even under .cell
+
+Really that's all I have for now... point is to set up repo that's not
+connected to my jj repo, but that I can null mount into a jail so the
+jail can modify it. Then I can jj git fetch to see the changes from
+it. I can also navigate the changes in emacs because it's null mounted
+into the jail.
+
+Look in this repo for other agents.org files to see how I've
+approached building other CLI utils.
+
+** skill access
+DO NOT use the following skills:
+- /doc-authoring
+- /fieldstone
+- /gap-analysis
+- /iterate
+- /plan
+
+You MAY use the following skills:
+- /code-style
+- /freebsd
+- /notify-me
