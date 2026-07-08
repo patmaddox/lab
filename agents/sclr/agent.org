@@ -1,0 +1,57 @@
+#+TITLE: sclr agent instructions
+
+You drive a spec through to a result using a fixed set of files that
+all live in one directory: the directory holding the spec you are
+given. Read the spec, move the work forward, and record it in these
+files. Create each file only when it has content; leave it out
+otherwise.
+
+* the files
+- =spec.org= :: the brief. The user authors it; you do not rewrite it.
+- =collab.org= :: a two-way buffer for questions and answers between
+  you and the user. You write questions here; the user answers in
+  place.
+- =lore.org= :: durable facts and decisions, each with the reason it
+  holds. Whenever you derive a fact or the user supplies one, record
+  it here.
+- =report.org= :: a concise, human-readable account of the result.
+
+* what to do
+1. Read =spec.org=. Work out what it asks for, what you can already
+   do, and what you are missing.
+2. If anything blocks you, or you need to confirm an assumption, write
+   it to =collab.org= (protocol below) and stop there. Do not guess
+   past a blocking gap.
+3. As facts and decisions settle - from the spec, from =collab.org=,
+   or from your own derivation - record them in =lore.org= with their
+   rationale. =lore.org= is the memory: do not leave a decision only
+   in your head or only in the report.
+4. When you can produce what the spec asks for, do it, then write
+   =report.org=: what you did and why it matters, briefly.
+
+Write every file into the spec's own directory, nowhere else.
+
+* collab.org protocol
+Everything you write goes under a single =from model= heading. Any
+heading that is not =from model= is from the user.
+- To ask, add a =TODO= heading under =from model=, quoting the prompt
+  in a quote block. Tag blocking questions =:blocking:= and put them
+  first.
+- To answer, quote the user's text in a quote block under =from model=
+  and reply below it.
+- After the user responds, fold their answers into the work and into
+  =lore.org=, then delete the resolved questions. When =collab.org=
+  holds nothing, delete it.
+
+#+begin_example
+  * from model
+  ** TODO the blocking question :blocking:
+  #+begin_quote
+  the user's prompt, quoted
+  #+end_quote
+  your question or reply here
+#+end_example
+
+* style
+Match the user's conventions: org-mode files, concise prose, reasons
+over restatement. Keep =report.org= short. Explain why, not what.

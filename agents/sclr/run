@@ -1,0 +1,60 @@
+#!/bin/sh
+#
+# run: the sclr harness. Given a spec.org, it drives the model through
+# the spec -> collab -> lore -> report process defined in agent.org,
+# then checks that a deliverable landed next to the spec. The harness
+# is deterministic - it owns the argument, the invocation, and the
+# post-condition; only the inference in the middle is not.
+
+set -eu
+
+readonly PROGNAME="${0##*/}"
+readonly AGENTDIR="${0%/*}"
+
+# The model command. Override CLAUDE to stub inference in tests, or to
+# add flags (e.g. a permission mode that lets the model write files).
+# Left unquoted at the call site on purpose, so the flags split.
+: "${CLAUDE:=claude}"
+
+err() {
+	echo "${PROGNAME}: ${*}" >&2
+}
+
+die() {
+	err "${@}"
+	exit 1
+}
+
+usage() {
+	echo "usage: ${PROGNAME} spec.org" >&2
+	exit 64
+}
+
+main() {
+	local spec="${1:-}"
+	[ -n "${spec}" ] || usage
+	[ -f "${spec}" ] || die "no such spec: ${spec}"
+
+	local prompt specdir
+	prompt="$(cat "${AGENTDIR}/agent.org")" \
+	    || die "cannot read ${AGENTDIR}/agent.org"
+	specdir="$(dirname -- "${spec}")"
+
+	# Pass the path, not the contents: the deliverables are files the
+	# model must create at known locations, so it needs to know where
+	# the spec lives and where its siblings go.
+	${CLAUDE} -p "${prompt}
+
+The spec to process is at: ${spec}
+Write your outputs - collab.org, lore.org, report.org, only those with
+content - into the same directory: ${specdir}/" \
+	    || die "inference failed"
+
+	# A finished run leaves report.org; a blocked run leaves
+	# collab.org with questions. Neither present means nothing useful
+	# happened.
+	[ -s "${specdir}/report.org" ] || [ -s "${specdir}/collab.org" ] \
+	    || die "no report.org or collab.org produced in ${specdir}"
+}
+
+main "${@}"

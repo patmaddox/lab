@@ -1,0 +1,36 @@
+#+TITLE: sclr report
+
+* what it is
+=agents/sclr= turns the repo-agents process into an agent. Given a
+spec, =agents/sclr/run path/to/spec.org= drives the model through
+spec -> collab -> lore -> report, writing the outputs next to the
+spec.
+
+* the pieces
+- =agent.org= :: the process - read the spec, exchange in
+  =collab.org=, record =lore.org=, produce =report.org=, each file
+  present only when it has content.
+- =run= :: the harness. It validates the spec argument, feeds
+  =agent.org= plus the spec path to =claude -p=, then checks a
+  deliverable landed next to the spec.
+
+* input is a path, output is files
+=run= passes the spec *path* to the model, not its contents, because
+the deliverables are files the model must create at known locations -
+and a named file is a sharper contract than stdout, which tends to
+carry extra prose. So the model reads =spec.org= and writes
+=collab.org=/=lore.org=/=report.org= in the same directory; =run='s
+post-condition is that =report.org= or =collab.org= exists there and
+is non-empty.
+
+* running it
+=CLAUDE= overrides the model command. Because the model has to write
+files, invoke it with a permission mode that allows edits, e.g.:
+
+: CLAUDE="claude --permission-mode acceptEdits" agents/sclr/run path/to/spec.org
+
+* status
+First cut. The process in =agent.org= mirrors the by-hand development
+of these agents. The deterministic parts - argument handling and the
+post-condition - are tested with a stubbed model; it has not yet been
+exercised end-to-end against a live model.

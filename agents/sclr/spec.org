@@ -1,0 +1,12 @@
+#+TITLE: sclr agent
+
+sclr codifies the repo-agents pattern. Give it a spec.org and it
+drives that spec through the same four-file process I run by hand:
+exchange in collab.org, record facts and decisions in lore.org, and
+write a concise report.org - all in the spec's own directory.
+
+  agents/sclr/run path/to/spec.org
+
+It is the harness pattern applied to the pattern itself: run is the
+deterministic wrapper, agent.org is the process it feeds to the model,
+and the spec's siblings are the deliverables the model constructs.
