@@ -1,0 +1,45 @@
+.Dd July 8, 2026
+.Dt CELL 1
+.Os
+.Sh NAME
+.Nm cell
+.Nd seed a shared .cell bare repo
+.Sh SYNOPSIS
+.Nm
+.Cm init
+.Ar src
+.Sh DESCRIPTION
+.Nm
+encodes a simple convention: a
+.Pa .cell
+directory holds one shared bare git repository,
+.Pa default.git ,
+and each cell is its own colocated
+.Xr jj 1
+checkout of it.
+.Ss cell init
+.Nm
+.Cm init
+bare-clones
+.Ar src
+into
+.Pa .cell/default.git .
+The result is a standalone bare repo, disconnected from the repo it
+was seeded from.
+.Nm
+fails if
+.Pa .cell/default.git
+already exists.
+.Sh EXIT STATUS
+.Ex -std
+.Nm
+exits 64 on usage errors.
+.Sh EXAMPLES
+Seed a
+.Pa .cell
+in the current directory from an existing checkout:
+.Bd -literal -offset indent
+cell init path/to/default.jj/.git
+.Ed
+.Sh SEE ALSO
+.Xr jj 1

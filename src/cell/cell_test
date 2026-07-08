@@ -1,0 +1,101 @@
+#!/usr/bin/env atf-sh
+
+atf_init_test_cases() {
+	atf_add_test_case no_args
+	atf_add_test_case unknown_command
+	atf_add_test_case init_no_args
+	atf_add_test_case init_too_many_args
+	atf_add_test_case init_clones_default
+	atf_add_test_case init_removes_origin
+	atf_add_test_case init_dst_exists
+}
+
+setup() {
+	cat > jjconfig.toml <<-EOF
+	[user]
+	name = "Test"
+	email = "test@example.com"
+	EOF
+	export JJ_CONFIG="${PWD}/jjconfig.toml"
+	CELL="$(atf_get_srcdir)/cell"
+}
+
+# Create a plain git repo at ${PWD}/src with one commit on branch main,
+# to stand in for the repo a cell is seeded from via its .git.
+mk_src() {
+	git init -q -b main src
+	echo "hello" > src/file.txt
+	git -C src add file.txt
+	git -C src -c user.name=t -c user.email=t@t commit -qm init
+}
+
+atf_test_case no_args
+no_args_head() {
+	atf_set "descr" "cell with no arguments prints usage and exits 64"
+}
+no_args_body() {
+	setup
+	atf_check -s exit:64 -e match:"usage" "${CELL}"
+}
+
+atf_test_case unknown_command
+unknown_command_head() {
+	atf_set "descr" "cell with an unknown subcommand prints usage and exits 64"
+}
+unknown_command_body() {
+	setup
+	atf_check -s exit:64 -e match:"usage" "${CELL}" bogus
+}
+
+atf_test_case init_no_args
+init_no_args_head() {
+	atf_set "descr" "cell init with no source prints usage and exits 64"
+}
+init_no_args_body() {
+	setup
+	atf_check -s exit:64 -e match:"usage" "${CELL}" init
+}
+
+atf_test_case init_too_many_args
+init_too_many_args_head() {
+	atf_set "descr" "cell init with extra arguments prints usage and exits 64"
+}
+init_too_many_args_body() {
+	setup
+	atf_check -s exit:64 -e match:"usage" "${CELL}" init a b
+}
+
+atf_test_case init_clones_default
+init_clones_default_head() {
+	atf_set "descr" "cell init bare-clones the source into .cell/default.git"
+}
+init_clones_default_body() {
+	setup
+	mk_src
+	atf_check -s exit:0 -e ignore "${CELL}" init src/.git
+	atf_check test -d .cell/default.git
+	atf_check -o inline:"true\n" \
+	    git -C .cell/default.git rev-parse --is-bare-repository
+}
+
+atf_test_case init_removes_origin
+init_removes_origin_head() {
+	atf_set "descr" "cell init leaves the clone with no origin remote"
+}
+init_removes_origin_body() {
+	setup
+	mk_src
+	atf_check -s exit:0 -e ignore "${CELL}" init src/.git
+	atf_check -o empty git -C .cell/default.git remote
+}
+
+atf_test_case init_dst_exists
+init_dst_exists_head() {
+	atf_set "descr" "cell init fails when the destination already exists"
+}
+init_dst_exists_body() {
+	setup
+	mk_src
+	mkdir -p .cell/default.git
+	atf_check -s exit:1 -e match:"already exists" "${CELL}" init src/.git
+}

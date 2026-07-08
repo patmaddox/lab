@@ -1,0 +1,48 @@
+#!/bin/sh
+
+set -eu
+set -o pipefail
+
+readonly PROGNAME="${0##*/}"
+readonly CELL=".cell"
+readonly BARE="default.git"
+
+err() {
+	echo "${PROGNAME}: E: ${*}" >&2
+}
+
+die() {
+	err "${@}"
+	exit 1
+}
+
+usage() {
+	echo "usage: ${PROGNAME} init <src>" >&2
+	exit 64
+}
+
+# Bare-clone <src> into the shared .cell default.git as a standalone
+# repo with no relationship to its source: the clone records src as
+# origin, so we drop it. The result is the bare repo that cells push
+# to and fetch from, wholly disconnected from the repo it was seeded
+# from.
+cmd_init() {
+	[ "${#}" -eq 1 ] || usage
+	local src="${1}"
+	local dst="${CELL}/${BARE}"
+
+	[ ! -e "${dst}" ] || die "destination already exists: ${dst}"
+	git clone --bare "${src}" "${dst}"
+	git -C "${dst}" remote remove origin
+}
+
+main() {
+	[ "${#}" -ge 1 ] || usage
+	local cmd="${1}"; shift
+	case "${cmd}" in
+	init)	cmd_init "${@}" ;;
+	*)	usage ;;
+	esac
+}
+
+main "${@}"
