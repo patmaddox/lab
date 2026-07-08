@@ -1,0 +1,115 @@
+* skip commits that are both empty and undescribed
+An empty commit with no description (typically the working-copy
+placeholder) exports as a blank patch the reviewer must ignore, so
+it is skipped and does not count toward =[PATCH n/m]= numbering.
+Kept: empty commits WITH a description (the message carries
+intent), and undescribed commits WITH changes (the diff is
+reviewable). Implemented as a template filter in the commit
+listing, leaving the operator's revset untouched.
+
+* project lives in src/diffwise; commits prefixed diffwise:
+The project moved from =wip/= to =src/diffwise/=, and history was
+rewritten so every commit adds files there from the start. Commit
+subjects use the =diffwise:= area prefix. Commits are ordered by
+sense rather than strict creation time: doc commits stay separate
+from the diffwise series, which is contiguous - spec first, then
+the tool slices in dependency order.
+
+* -n is a dry run
+Print the patch file names that would be written without writing
+them or creating the output directory. Lets the operator check a
+revset before littering the directory with wrong guesses.
+
+* no help subcommand: usage on error, man page for the rest
+Supersedes the earlier --help -> help decision. Single-command base
+utilities have no help command; pkg has one because it is a
+subcommand suite. On a usage error diffwise prints the error and
+the usage synopsis to stderr (the style(9) usage() convention),
+which surfaces the synopsis at exactly the moment it is needed. The
+man page is the standalone reference. The style guide now says
+this; help subcommands are reserved for subcommand suites.
+
+* feedback features get their own commits
+User: work was collapsing into one giant commit despite the
+incremental process. "Rewrite as though the feedback had been there
+all along" applies to corrections (naming, style, fixing how a
+slice should have been built) - new behaviors are new thin vertical
+slices with their own commits. History restructured accordingly:
+base tool, default revset with -r, committer headers, -o flag,
+-n dry run - each with its tests and man page delta.
+
+* no --help: long options are not FreeBSD style
+User: =--help= violated the CLI rules - long options are a GNU
+convention. The =--help= handling had also required a special case
+before =getopts=, since =getopts= cannot parse long options - a
+smell that pointed at the mistake. Briefly replaced with a help
+subcommand, later dropped entirely (see newer entry).
+
+* patches always show Committer / Committer-Date headers
+Committer can differ from author (applying a patch on someone
+else's behalf), so every patch carries =Committer:= and
+=Committer-Date:= headers after =From:=/=Date:=. Always shown, not
+only when different, per user's lean plus:
+- deterministic layout is easier for future tooling (review agent,
+  emacs) to parse
+- in jj the committer timestamp changes on every rewrite, so "only
+  when different" would either fire nearly always (dates counted)
+  or need a fuzzy same-person rule (dates ignored)
+The author/committer distinction is standard git; what is
+nonstandard is carrying committer info in a patch file. git
+format-patch never emits it because whoever applies the patch
+becomes the committer, so =git mailinfo= only knows
+From/Date/Subject and skips other headers. Consequently the
+=Committer:=/=Committer-Date:= lines are informational for the
+reviewer; a =git am= round-trip still applies cleanly (verified)
+with the applier as committer, which is the correct git semantic.
+
+* default revset is '::@ & mutable()', overridden with -r
+The revset is no longer a positional argument. With no arguments
+=diffwise= exports the working copy and its mutable ancestors;
+=-r revset= selects something else. Positional arguments are now a
+usage error. Spec'd by user in =agents.org=; history rewritten so
+the interface was always flag-based.
+
+* man page follows pkg-family idioms
+User found phrasing like "The options are as follows" weird and
+pointed at the pkg-related man pages as the style reference.
+Adopted from them:
+- a dedicated =OPTIONS= section opening with "The following options
+  are supported by .Nm:", instead of an options list inside
+  =DESCRIPTION=
+- behavior described as prose paragraphs in =DESCRIPTION= (the
+  bullet list of patch-file parts became a sentence)
+- examples as =.Dl % command= with a =%= prompt
+- meaningful =.Bl -tag= widths (e.g. =-width "-o directory"=)
+Kept =EXIT STATUS= (=.Ex -std=) even though pkg pages lack it - it
+is standard mdoc and the operator needs it.
+
+* tool is named diffwise
+Initially committed under the placeholder name =review=; user renamed
+it =diffrev=, then settled on =diffwise= before the rename landed.
+History was rewritten so the tool is =diffwise= from the start
+(files =diffwise=, =diffwise.1=, =diffwise_test=; kyua suite
+=diffwise=).
+
+* end-state scope stays minimal; future work lives in agents.org
+No cover letter, diffstat, or reroll numbering for now. Planned
+items are tracked under =* future work= in =agents.org= (currently:
+cover letter, interdiff) and will define the next end-state man page
+gap when picked up. The separate end-state man page file
+(=review.1.goal=) was a model invention to materialize the
+doc-driven-development gap; it was deleted since it had become
+identical to the committed man page. An end-state draft will be
+reintroduced only when a real gap exists.
+
+* planning artifacts are not committed
+=model-comm.org=, =decisions.org=, and any end-state man page draft
+remain uncommitted pending changes; delivered commits contain only
+the tool, its tests, and its man page.
+
+* patch format is generated purely with jj, no git
+Headers come from =jj log= templates (mbox =From= line with commit
+id, =From:=/=Date:=/=Subject:=), the body from the =description=
+template, the diff from =jj diff --git=. The layout mirrors git
+format-patch closely enough that =git am= applies the output with
+author, subject, body, and content intact (verified).

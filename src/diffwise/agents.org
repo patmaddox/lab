@@ -1,0 +1,236 @@
+#+TITLE: diff-based code review tool
+
+Develop a CLI tool that assists in performing a human-driven code
+review that loosely models mailing-list style workflow. Given a series
+of jj commits, it should output patch files. User will open the files
+and respond inline, as though responding on a mailing list. Tool
+doesn't have to do anything at this point other than produce the
+commits. At some point there may be a model agent / skill developed,
+and/or emacs config to assist with using the tool etc.
+
+Default revset is '::@ & mutable()' and can be overriden with -r
+
+* scope
+** this dir only
+DO NOT refer to files in any other directories for additional
+context. This is a fully self-contained project - everything we need
+to implement this tool is here. It is a Unix CLI utility.
+
+When looking at jj commits, ONLY look at the commits that modify files
+in this dir.
+
+Scope all jj commands to this dir with path arguments
+(e.g. =jj diff -r @ -- .=) - the shared working copy contains
+unrelated changes. If files outside this dir appear in command output
+anyway, treat them as nonexistent: do not read, reason about, or
+mention them.
+
+** current files only
+DO NOT refer to backup files (=some_file~=) for additional context.
+
+** reachable commits, and commits produced this session only
+DO NOT refer to unreachable / abandoned commits that you did not
+produce during this session for additional context. You MAY refer to
+the reflog of any commits that you produce in this session.
+
+** skill access
+DO NOT use the following skills:
+- /doc-authoring
+- /fieldstone
+- /gap-analysis
+- /iterate
+- /plan
+
+You MAY use the following skills:
+- /code-style
+- /freebsd
+- /notify-me
+** pending changes
+"pending changes" refers to any on-disk changes in the project
+directory in mutable commits
+* user-model interaction
+** communication from model to user and back
+Read and write =model-comm.org= for two-way communication with
+user. This is intended as a buffer for you to ask questions and get
+responses from the user, or for user to ask questions and get
+responses from you.
+
+All communication from model to user will go under a heading called
+=from model=. Any headings not =from model= come from user.
+** model info
+Any information you wish to share with user should be a normal
+(non-TODO) heading under =from model=.
+
+Any replies to user should remove the original user comment and
+heading, move it to =from model=, and quote the user content.
+
+=model-comm.org= (user turn):
+#+BEGIN_EXAMPLE
+  * why would you do such a thing?
+  I saw what you did and I don't like it.
+#+END_EXAMPLE
+
+=model-comm.org= (model turn):
+#+BEGIN_EXAMPLE
+  * from model
+  ** why would you do such a thing?
+  #+BEGIN_QUOTE
+  I saw what you did and I don't like it.
+  #+END_QUOTE
+  <response from model>
+#+END_EXAMPLE
+
+** model questions
+If at any point you have blocking questions that prevent you from
+making progress, write your questions to =model-comm.org=
+
+If you have non-blocking questions and are still able to make
+progress, and need to verify your assumptions, write the questions to
+=model-comm.org= alongside your work.
+
+Questions are written as org-mode TODO headings so I can clearly see
+which ones need to be answered. Write your questions in quote
+blocks. My responses will be below them in normal text.
+
+After processing my responses, integrate the information into the
+work. If questions are now resolved to your satisfaction, delete them
+from =model-comm.org=. If there are no more unresolved questions,
+delete the file.
+
+Tag blocking questions as =:blocking:=. Blocking questions go at the top
+
+#+begin_example
+  * from model
+  ** TODO the first question :blocking:
+  #+begin_quote
+  What is the average airspeed velocity of an unladen swallow?
+  #+end_quote
+  
+  ** TODO the second question
+  #+begin_quote
+  What is your quest?
+  #+end_quote
+#+end_example
+
+** user info and questions
+User may include arbitrary feedback in the =model-comm.org=. When
+processing users responses, treat this feedback the same as answers to
+questions: incorporate it into the work, remove from questions doc if
+resolved, ask followup questions if needed.
+
+** inline code feedback
+Review pending changes for code comments beginning with =CR:= (for
+code review). Integrate the feedback and remove comments once
+resolved. CR comments should never be retained in commits.
+
+When it will make future more work clear, record CR comments to
+=decisions.org= per instructions below.
+** record decisions to =decisions.org=
+When processing answers / feedback, record a very concise entry of the
+decision to =decisions.org=, newest decision first. Where applicable,
+include rationale, tradeoffs considered, and alternatives rejected.
+
+Record each decision into a unique heading. The content should be
+concise but thorough, using prose and lists to make the information
+clear.
+
+#+BEGIN_EXAMPLE
+  * another good decision
+  This is the most recent decision. It changes =some-file- these ways:
+  - part 1
+  - part 2
+  * some small decision needing no explanation
+  * we made a very good decision
+  This is the first decision we ever made.
+#+END_EXAMPLE
+
+Recording decisions includes decisions made at the interactive claude
+prompt, i.e. if I instruct you regarding the tool's behavior,
+incorporate that into the code, docs, tests, as well as decision
+record.
+* artifacts
+We may discover new artifacts during development process.
+
+- =decisions.org= a concise list of decisions made via the
+  question/answer/feedback process described above. Refer to this for
+  additional context when you have implementation questions, to see if
+  we've already addressed it.
+
+** man page
+The man page should stand alone as a reference for a skilled
+operator. That is, an operator ought to be able to read the man page,
+and understand how to use the tool to accomplish their desired result.
+
+The man page must include all of the information that the operator
+needs to use the tool, and only that information. It describes the
+interface and usage. It is not a spec with implementation details.
+
+* development process
+** iterative, incremental, thin vertical slices
+Each commit will be a fully working, consistent, coherent, thin
+vertical slice of the tool's functionality.
+
+Each commit has:
+- kyua tests
+- man page
+
+The tests and man page changes reflect only the behavior introduced by
+the implementation change - they never describe behavior that hasn't
+been implemented yet.
+
+** doc-driven development
+Start by writing an end state man page. We'll continue to iterate on
+it to understand the interface of this tool.
+
+The diff between end state man page, and committed man page,
+represents the gap in functionality of what needs to be implemented.
+
+When committing the man page, make sure it accurately describes the
+current behavior. Rewrite it as needed to ensure that it's clear,
+consistent, coherent at all times. It will not match the goal man page
+until the final implementation is done, so it should evolve as needed
+during development.
+** jj squash to older commit procedure
+Always edit the working copy and squash changes to a relevant commit
+(you may need to create a new commit).
+*** Squash backward, do not commit forward
+DO:
+#+begin_example
+jj new -B @ --no-edit -m <tool>: New functionality'
+jj squash
+#+end_example
+
+DO NOT:
+#+begin_example
+jj commit -m '<tool>: New functionality'
+#+end_example
+
+*** commit points
+Commit only at natural commit points - e.g. where a thin vertical
+slice is added; when artifacts have been produced with no blocking
+questions. DO NOT mindlessly commit after every turn. Each commit
+should have a clear purpose and be production-ready.
+
+*** partial commits
+Squash only the files / lines that are relevant to the commit. You may
+need to use interactive squash to accomplish this.
+
+** rewrite mutable commits for a clean history
+When incorporating user feedback, you should rewrite mutable commits
+as needed to produce a clean history, as though the feedback had been
+there from the beginning all along.
+
+This is not limited to rewriting commits in place: split, combine,
+reorder, or remove commits to produce the best possible history.
+** final review
+When completing the implementation, do a final review to ensure that
+the code, tests, and documentation all align and all requirements are
+met. Ensure that the commit history is the cleanest, clearest possible
+history where each commit introduces a vertical slice of behavior,
+along with its tests and documentation.
+
+
+* future work
+** cover letter
+** interdiff
+
