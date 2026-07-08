@@ -5,7 +5,26 @@
 # the jail.  This works around doas/jexec dropping the caller's
 # environment.
 
-_env_fwd=" CLAUDE_CODE_DISABLE_ALTERNATE_SCREEN=1 CLAUDE_CODE_DISABLE_AGENT_VIEW=1 CLAUDE_AX_SCREEN_READER=1"
+# Screen reader / view tweaks for the emacs terminal.
+_env_fwd=" CLAUDE_CODE_DISABLE_ALTERNATE_SCREEN=1"
+_env_fwd="${_env_fwd} CLAUDE_CODE_DISABLE_AGENT_VIEW=1"
+_env_fwd="${_env_fwd} CLAUDE_AX_SCREEN_READER=1"
+
+# Disable background/nonessential behavior and telemetry.
+_env_fwd="${_env_fwd} CLAUDE_CODE_DISABLE_AUTO_MEMORY=1"
+_env_fwd="${_env_fwd} CLAUDE_CODE_DISABLE_BG_EXIT_HANDOFF=1"
+_env_fwd="${_env_fwd} CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1"
+_env_fwd="${_env_fwd} DO_NOT_TRACK=1"
+_env_fwd="${_env_fwd} DISABLE_UPDATES=1"
+_env_fwd="${_env_fwd} DISABLE_EXTRA_USAGE_COMMAND=1"
+
+# Terminal/UX tweaks.
+_env_fwd="${_env_fwd} CLAUDE_CODE_DISABLE_MOUSE=1"
+_env_fwd="${_env_fwd} CLAUDE_CODE_DISABLE_TERMINAL_TITLE=1"
+_env_fwd="${_env_fwd} CLAUDE_CODE_DISABLE_VIRTUAL_SCROLL=1"
+_env_fwd="${_env_fwd} CLAUDE_CODE_ENABLE_PROMPT_SUGGESTION=false"
+_env_fwd="${_env_fwd} CLAUDE_CODE_NATIVE_CURSOR=1"
+_env_fwd="${_env_fwd} USE_BUILTIN_RIPGREP=0"
 _nl='
 '
 _oldifs="$IFS"
