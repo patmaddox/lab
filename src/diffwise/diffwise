@@ -17,16 +17,20 @@ die() {
 }
 
 usage() {
-	echo "usage: ${PROGNAME} [-o directory] [-r revset]" >&2
+	echo "usage: ${PROGNAME} [-n] [-o directory] [-r revset]" >&2
 	exit 1
 }
 
 main() {
+	local dryrun=""
 	local outdir="."
 	local revset="${DEFAULT_REVSET}"
 	local opt
-	while getopts :o:r: opt; do
+	while getopts :no:r: opt; do
 		case "${opt}" in
+		n)
+			dryrun="yes"
+			;;
 		o)
 			outdir="${OPTARG}"
 			;;
@@ -49,7 +53,9 @@ main() {
 		usage
 	fi
 
-	mkdir -p "${outdir}" || die "cannot create directory '${outdir}'"
+	if [ -z "${dryrun}" ]; then
+		mkdir -p "${outdir}" || die "cannot create directory '${outdir}'"
+	fi
 
 	local commits
 	commits="$(list_commits "${revset}")" ||
@@ -64,7 +70,8 @@ main() {
 	local num=0
 	for commit in ${commits}; do
 		num=$((num + 1))
-		write_patch "${commit}" "${num}" "${total}" "${outdir}"
+		write_patch "${commit}" "${num}" "${total}" "${outdir}" \
+		    "${dryrun}"
 	done
 }
 
@@ -79,21 +86,27 @@ write_patch() {
 	local num="${1}"; shift
 	local total="${1}"; shift
 	local outdir="${1}"; shift
+	local dryrun="${1}"; shift
 
 	local subject
 	subject="$(jj log --no-graph -r "${commit}" \
 	    -T 'description.first_line()')"
+	local fname
+	fname="$(printf '%04d' "${num}")-$(slugify "${subject}").patch"
+	if [ "${outdir}" != "." ]; then
+		fname="${outdir}/${fname}"
+	fi
+	if [ -n "${dryrun}" ]; then
+		printf '%s\n' "${fname}"
+		return 0
+	fi
+
 	local body
 	body="$(jj log --no-graph -r "${commit}" -T 'description' |
 	    sed -e '1d' -e '/./,$!d')"
 	local tag="PATCH"
 	if [ "${total}" -gt 1 ]; then
 		tag="PATCH ${num}/${total}"
-	fi
-	local fname
-	fname="$(printf '%04d' "${num}")-$(slugify "${subject}").patch"
-	if [ "${outdir}" != "." ]; then
-		fname="${outdir}/${fname}"
 	fi
 
 	{

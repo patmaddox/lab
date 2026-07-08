@@ -177,6 +177,23 @@ output_directory_body() {
 	    cat patches/0001-Add-foo-file.patch
 }
 
+atf_test_case dry_run
+dry_run_head() {
+	atf_set "descr" "-n prints file names without writing anything"
+}
+dry_run_body() {
+	init_repo
+	commit_file f.txt -m "Add foo file"
+
+	atf_check -o inline:"0001-Add-foo-file.patch\n" \
+	    "${DIFFWISE}" -n -r '@-'
+	atf_check -o inline:"none\n" sh -c \
+	    'ls ./*.patch 2>/dev/null || echo none'
+	atf_check -o inline:"patches/0001-Add-foo-file.patch\n" \
+	    "${DIFFWISE}" -n -o patches -r '@-'
+	atf_check -s exit:1 test -d patches
+}
+
 atf_init_test_cases() {
 	atf_add_test_case single_commit
 	atf_add_test_case committer_differs
@@ -189,4 +206,5 @@ atf_init_test_cases() {
 	atf_add_test_case unexpected_argument
 	atf_add_test_case unknown_option
 	atf_add_test_case output_directory
+	atf_add_test_case dry_run
 }

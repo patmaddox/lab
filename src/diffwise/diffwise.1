@@ -6,6 +6,7 @@
 .Nd export jj commits as patch files for code review
 .Sh SYNOPSIS
 .Nm
+.Op Fl n
 .Op Fl o Ar directory
 .Op Fl r Ar revset
 .Sh DESCRIPTION
@@ -64,6 +65,10 @@ written.
 The following options are supported by
 .Nm :
 .Bl -tag -width "-o directory"
+.It Fl n
+Dry run.
+Print the patch file names that would be written, without writing
+them or creating the output directory.
 .It Fl o Ar directory
 Write patch files into
 .Ar directory ,
