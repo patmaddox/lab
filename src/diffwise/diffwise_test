@@ -29,6 +29,8 @@ single_commit_body() {
 	    -o match:"^From [0-9a-f]{40} Mon Sep 17 00:00:00 2001$" \
 	    -o match:"^From: Test User <test@example\.com>$" \
 	    -o match:"^Date: [A-Z][a-z]{2}, [0-9]{2} [A-Z][a-z]{2} [0-9]{4} [0-9:]{8} [-+][0-9]{4}$" \
+	    -o match:"^Committer: Test User <test@example\.com>$" \
+	    -o match:"^Committer-Date: [A-Z][a-z]{2}, [0-9]{2} [A-Z][a-z]{2} [0-9]{4} [0-9:]{8} [-+][0-9]{4}$" \
 	    -o match:"^Subject: \[PATCH\] Add foo file$" \
 	    -o match:"^---$" \
 	    -o match:"^diff --git a/f\.txt b/f\.txt$" \
@@ -103,6 +105,24 @@ invalid_revset_body() {
 	    "${DIFFWISE}" -r 'bogus('
 }
 
+atf_test_case committer_differs
+committer_differs_head() {
+	atf_set "descr" "Author and committer are both shown when they differ"
+}
+committer_differs_body() {
+	init_repo
+	commit_file f.txt -m "Add foo file"
+	atf_check -o ignore -e ignore env \
+	    JJ_USER="Other Committer" JJ_EMAIL="other@example.com" \
+	    jj describe -r '@-' -m "Add foo file" -m "Applied for a friend."
+
+	atf_check -o ignore "${DIFFWISE}" -r '@-'
+	atf_check \
+	    -o match:"^From: Test User <test@example\.com>$" \
+	    -o match:"^Committer: Other Committer <other@example\.com>$" \
+	    cat 0001-Add-foo-file.patch
+}
+
 atf_test_case default_revset
 default_revset_head() {
 	atf_set "descr" "Without -r the working copy and mutable ancestors are exported"
@@ -145,6 +165,7 @@ unknown_option_body() {
 
 atf_init_test_cases() {
 	atf_add_test_case single_commit
+	atf_add_test_case committer_differs
 	atf_add_test_case default_revset
 	atf_add_test_case series_numbering
 	atf_add_test_case description_body

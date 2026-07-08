@@ -5,7 +5,7 @@ set -o pipefail
 
 readonly PROGNAME="${0##*/}"
 readonly DEFAULT_REVSET='::@ & mutable()'
-readonly HEADER_TEMPLATE='"From " ++ commit_id ++ " Mon Sep 17 00:00:00 2001\nFrom: " ++ author.name() ++ " <" ++ author.email() ++ ">\nDate: " ++ author.timestamp().format("%a, %d %b %Y %H:%M:%S %z") ++ "\n"'
+readonly HEADER_TEMPLATE='"From " ++ commit_id ++ " Mon Sep 17 00:00:00 2001\nFrom: " ++ author.name() ++ " <" ++ author.email() ++ ">\nDate: " ++ author.timestamp().format("%a, %d %b %Y %H:%M:%S %z") ++ "\nCommitter: " ++ committer.name() ++ " <" ++ committer.email() ++ ">\nCommitter-Date: " ++ committer.timestamp().format("%a, %d %b %Y %H:%M:%S %z") ++ "\n"'
 
 err() {
 	echo "${PROGNAME}: ${*}" >&2

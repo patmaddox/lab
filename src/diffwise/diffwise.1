@@ -30,7 +30,13 @@ line carrying the commit id, followed by
 .Ql Date ,
 and
 .Ql Subject
-headers taken from the commit author and description, the remainder
+headers taken from the commit author and description,
+.Ql Committer
+and
+.Ql Committer-Date
+headers identifying who committed the change - which differs from
+the author when a change is committed on someone else's behalf -
+the remainder
 of the commit description if any, and a
 .Ql ---
 separator line followed by the commit's changes in git diff format.
