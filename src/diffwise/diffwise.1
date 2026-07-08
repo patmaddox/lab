@@ -6,7 +6,7 @@
 .Nd export jj commits as patch files for code review
 .Sh SYNOPSIS
 .Nm
-.Ar revset
+.Op Fl r Ar revset
 .Sh DESCRIPTION
 .Nm
 exports a series of
@@ -14,9 +14,15 @@ exports a series of
 commits as patch files, one file per commit, for mailing-list style
 code review: the reviewer opens a patch file and replies inline.
 .Pp
-The commits selected by
-.Ar revset
-are written oldest first into the current directory.
+By default
+.Nm
+exports the commits selected by the revset
+.Ql ::@ & mutable() ,
+the working copy and its mutable ancestors.
+A different revset can be given with
+.Fl r .
+.Pp
+Commits are written oldest first into the current directory.
 Each patch file contains an mbox-style
 .Ql From
 line carrying the commit id, followed by
@@ -45,11 +51,24 @@ and a file named
 A revset that selects no commits produces no files.
 The path of each file is printed to standard output as it is
 written.
+.Sh OPTIONS
+The following options are supported by
+.Nm :
+.Bl -tag -width "-r revset"
+.It Fl r Ar revset
+Export the commits selected by
+.Ar revset
+instead of the default
+.Ql ::@ & mutable() .
+.El
 .Sh EXIT STATUS
 .Ex -std
 .Sh EXAMPLES
-Export the current stack of mutable commits, one patch file per
-commit, into the current directory:
-.Dl % diffwise 'mutable()'
+Export the working copy and its mutable ancestors, one patch file
+per commit, into the current directory:
+.Dl % diffwise
+.Pp
+Export two specific commits:
+.Dl % diffwise -r 'wqnwkozp | tmzuqxpv'
 .Sh SEE ALSO
 .Xr jj 1

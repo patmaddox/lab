@@ -4,6 +4,7 @@ set -eu
 set -o pipefail
 
 readonly PROGNAME="${0##*/}"
+readonly DEFAULT_REVSET='::@ & mutable()'
 readonly HEADER_TEMPLATE='"From " ++ commit_id ++ " Mon Sep 17 00:00:00 2001\nFrom: " ++ author.name() ++ " <" ++ author.email() ++ ">\nDate: " ++ author.timestamp().format("%a, %d %b %Y %H:%M:%S %z") ++ "\n"'
 
 err() {
@@ -16,16 +17,33 @@ die() {
 }
 
 usage() {
-	echo "usage: ${PROGNAME} revset" >&2
+	echo "usage: ${PROGNAME} [-r revset]" >&2
 	exit 1
 }
 
 main() {
-	if [ ${#} -ne 1 ]; then
-		err "expected one revset argument"
+	local revset="${DEFAULT_REVSET}"
+	local opt
+	while getopts :r: opt; do
+		case "${opt}" in
+		r)
+			revset="${OPTARG}"
+			;;
+		:)
+			err "option -${OPTARG} requires an argument"
+			usage
+			;;
+		*)
+			err "unknown option -${OPTARG}"
+			usage
+			;;
+		esac
+	done
+	shift $((OPTIND - 1))
+	if [ ${#} -ne 0 ]; then
+		err "unexpected argument '${1}'"
 		usage
 	fi
-	local revset="${1}"; shift
 
 	local commits
 	commits="$(list_commits "${revset}")" ||

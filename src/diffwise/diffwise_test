@@ -24,7 +24,7 @@ single_commit_body() {
 	commit_file f.txt -m "Add foo file"
 
 	atf_check -o inline:"0001-Add-foo-file.patch\n" \
-	    "${DIFFWISE}" '@-'
+	    "${DIFFWISE}" -r '@-'
 	atf_check \
 	    -o match:"^From [0-9a-f]{40} Mon Sep 17 00:00:00 2001$" \
 	    -o match:"^From: Test User <test@example\.com>$" \
@@ -46,7 +46,7 @@ series_numbering_body() {
 
 	atf_check \
 	    -o inline:"0001-Add-first-file.patch\n0002-Add-second-file.patch\n" \
-	    "${DIFFWISE}" '@-- | @-'
+	    "${DIFFWISE}" -r '@-- | @-'
 	atf_check -o match:"^Subject: \[PATCH 1/2\] Add first file$" \
 	    cat 0001-Add-first-file.patch
 	atf_check -o match:"^Subject: \[PATCH 2/2\] Add second file$" \
@@ -61,7 +61,7 @@ description_body_body() {
 	init_repo
 	commit_file f.txt -m "Add foo file" -m "Greetings matter to reviewers."
 
-	atf_check -o ignore "${DIFFWISE}" '@-'
+	atf_check -o ignore "${DIFFWISE}" -r '@-'
 	atf_check \
 	    -o match:"^Greetings matter to reviewers\.$" \
 	    cat 0001-Add-foo-file.patch
@@ -76,7 +76,7 @@ no_description_body() {
 	echo "content" > f.txt
 	atf_check -o ignore -e ignore jj new
 
-	atf_check -o inline:"0001-patch.patch\n" "${DIFFWISE}" '@-'
+	atf_check -o inline:"0001-patch.patch\n" "${DIFFWISE}" -r '@-'
 	atf_check -o match:"^Subject: \[PATCH\]$" cat 0001-patch.patch
 }
 
@@ -87,7 +87,7 @@ empty_revset_head() {
 empty_revset_body() {
 	init_repo
 
-	atf_check -o empty "${DIFFWISE}" 'none()'
+	atf_check -o empty "${DIFFWISE}" -r 'none()'
 	atf_check -o inline:"none\n" sh -c \
 	    'ls ./*.patch 2>/dev/null || echo none'
 }
@@ -100,28 +100,57 @@ invalid_revset_body() {
 	init_repo
 
 	atf_check -s exit:1 -e match:"cannot list commits for revset" \
-	    "${DIFFWISE}" 'bogus('
+	    "${DIFFWISE}" -r 'bogus('
 }
 
-atf_test_case missing_argument
-missing_argument_head() {
-	atf_set "descr" "Invoking without a revset is a usage error"
+atf_test_case default_revset
+default_revset_head() {
+	atf_set "descr" "Without -r the working copy and mutable ancestors are exported"
 }
-missing_argument_body() {
+default_revset_body() {
+	init_repo
+	commit_file f.txt -m "Add foo file"
+
+	atf_check -o inline:"0001-Add-foo-file.patch\n0002-patch.patch\n" \
+	    "${DIFFWISE}"
+	atf_check -o match:"^Subject: \[PATCH 1/2\] Add foo file$" \
+	    cat 0001-Add-foo-file.patch
+}
+
+atf_test_case unexpected_argument
+unexpected_argument_head() {
+	atf_set "descr" "A positional argument is a usage error"
+}
+unexpected_argument_body() {
 	init_repo
 
 	atf_check -s exit:1 \
-	    -e match:"expected one revset argument" \
+	    -e match:"unexpected argument" \
 	    -e match:"^usage: diffwise" \
-	    "${DIFFWISE}"
+	    "${DIFFWISE}" '@-'
+}
+
+atf_test_case unknown_option
+unknown_option_head() {
+	atf_set "descr" "An unknown option is a usage error"
+}
+unknown_option_body() {
+	init_repo
+
+	atf_check -s exit:1 \
+	    -e match:"unknown option -x" \
+	    -e match:"^usage: diffwise" \
+	    "${DIFFWISE}" -x
 }
 
 atf_init_test_cases() {
 	atf_add_test_case single_commit
+	atf_add_test_case default_revset
 	atf_add_test_case series_numbering
 	atf_add_test_case description_body
 	atf_add_test_case no_description
 	atf_add_test_case empty_revset
 	atf_add_test_case invalid_revset
-	atf_add_test_case missing_argument
+	atf_add_test_case unexpected_argument
+	atf_add_test_case unknown_option
 }
