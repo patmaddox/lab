@@ -47,14 +47,21 @@ wired to
 .Pa default.git
 as its
 .Va origin .
+A cell pushes its work to a branch named for the cell, so
+.Ar name
+must not collide with a branch already in
+.Pa default.git .
 .Nm
 fails if no
 .Pa .cell
 directory is found, if the one found holds no
 .Pa default.git ,
-or if
+if
 .Ar name Ns .jj
-already exists.
+already exists, or if
+.Pa default.git
+already has a branch
+.Ar name .
 .Sh EXIT STATUS
 .Ex -std
 .Nm

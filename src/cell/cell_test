@@ -17,6 +17,7 @@ atf_init_test_cases() {
 	atf_add_test_case new_sets_origin_remote
 	atf_add_test_case new_checks_out_bare_content
 	atf_add_test_case new_duplicate_fails
+	atf_add_test_case new_branch_exists
 	atf_add_test_case workflow
 }
 
@@ -217,6 +218,19 @@ new_duplicate_fails_body() {
 	mk_cells
 	atf_check -s exit:0 -e ignore "${CELL}" new q1
 	atf_check -s exit:1 -e match:"already exists" "${CELL}" new q1
+}
+
+atf_test_case new_branch_exists
+new_branch_exists_head() {
+	atf_set "descr" "cell new fails when default.git already has the <name> branch"
+}
+new_branch_exists_body() {
+	setup
+	mk_cells
+	# A pushed cell q1 would leave a q1 branch behind.
+	git -C .cell/default.git branch q1 main
+	atf_check -s exit:1 -e match:'branch "q1" already exists' \
+	    "${CELL}" new q1
 }
 
 atf_test_case workflow

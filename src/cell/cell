@@ -56,6 +56,10 @@ cmd_init() {
 
 # Clone the shared .cell default.git into a sibling colocated jj+git
 # checkout named <name>.jj, with origin pointing back at default.git.
+# A cell pushes its work to a branch named for the cell, so <name>
+# must not collide with a branch already in default.git: a cell can be
+# pushed and its checkout removed, leaving the branch behind, so the
+# on-disk <name>.jj check alone would let the name be reused.
 cmd_new() {
 	[ "${#}" -eq 1 ] || usage
 	local name="${1}"
@@ -67,6 +71,8 @@ cmd_new() {
 	[ -d "${bare}" ] || die "${cells} has no ${BARE}"
 	dest="${cells}/${name}.jj"
 	[ ! -e "${dest}" ] || die "cell \"${name}\" already exists: ${dest}"
+	! git -C "${bare}" show-ref --quiet --verify "refs/heads/${name}" \
+	    || die "branch \"${name}\" already exists in ${BARE}"
 	jj git clone --colocate "${bare}" "${dest}"
 }
 
