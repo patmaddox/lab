@@ -34,6 +34,21 @@ When multiple subcommands need a similar flag, duplicate it per
 command rather than promoting it to a general option that some
 commands ignore.
 
+## FreeBSD vs GNU style
+
+Tools in this repository are FreeBSD-native unless stated otherwise.
+
+- Single-letter flags only, parsed with `getopts`. Long options
+  (`--force`, `--help`) are a GNU/Linux convention: `getopts`
+  cannot parse them and FreeBSD base utilities do not accept them.
+- Needing a long option is a sign the interface is drifting from
+  BSD style. Prefer another letter or a subcommand. Special-casing
+  an argument before `getopts` to fake a long option is the telltale
+  smell.
+- No `--help`, and no help command in single-command tools. The man
+  page is the reference; usage errors print the usage synopsis (see
+  Help below).
+
 ## Flags
 
 Flags express optionality. Never require them.
@@ -68,14 +83,34 @@ Send help output to stdout - it is not an error.
 Keep help accurate. Couple flag definitions with their
 descriptions so they stay in sync.
 
-### Single-command tools
+### FreeBSD-native tools
 
-Use `--help` following GNU convention. Accept that this is a
-pragmatic exception to the "flags are optional" rule.
+Do not implement `--help`; long options are a GNU convention (see
+FreeBSD vs GNU style above). The man page is the primary reference.
 
-### Subcommand tools
+Single-command tools have no help command at all. A usage error
+prints the error and the usage synopsis to stderr, following the
+base system's `usage()` convention:
 
-Implement `help` as a subcommand:
+```
+tool: unknown option -x
+usage: tool [-ab] [-f file] arg
+```
+
+Subcommand suites (like pkg) implement `help` as a subcommand:
+
+```
+tool help
+tool help <command>
+```
+
+### GNU/Linux-targeted tools
+
+Single-command tools use `--help` following GNU convention. Accept
+that this is a pragmatic exception to the "flags are optional"
+rule.
+
+Subcommand tools implement `help` as a subcommand:
 
 ```
 tool help
