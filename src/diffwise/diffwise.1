@@ -6,6 +6,7 @@
 .Nd export jj commits as patch files for code review
 .Sh SYNOPSIS
 .Nm
+.Op Fl o Ar directory
 .Op Fl r Ar revset
 .Sh DESCRIPTION
 .Nm
@@ -22,7 +23,9 @@ the working copy and its mutable ancestors.
 A different revset can be given with
 .Fl r .
 .Pp
-Commits are written oldest first into the current directory.
+Commits are written oldest first into the current directory, or
+into the directory given with
+.Fl o .
 Each patch file contains an mbox-style
 .Ql From
 line carrying the commit id, followed by
@@ -60,7 +63,12 @@ written.
 .Sh OPTIONS
 The following options are supported by
 .Nm :
-.Bl -tag -width "-r revset"
+.Bl -tag -width "-o directory"
+.It Fl o Ar directory
+Write patch files into
+.Ar directory ,
+creating it if it does not exist.
+The default is the current directory.
 .It Fl r Ar revset
 Export the commits selected by
 .Ar revset
@@ -74,7 +82,7 @@ Export the working copy and its mutable ancestors, one patch file
 per commit, into the current directory:
 .Dl % diffwise
 .Pp
-Export two specific commits:
-.Dl % diffwise -r 'wqnwkozp | tmzuqxpv'
+Export two specific commits into a separate directory:
+.Dl % diffwise -o ~/review/inbox -r 'wqnwkozp | tmzuqxpv'
 .Sh SEE ALSO
 .Xr jj 1

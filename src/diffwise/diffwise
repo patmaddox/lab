@@ -17,15 +17,19 @@ die() {
 }
 
 usage() {
-	echo "usage: ${PROGNAME} [-r revset]" >&2
+	echo "usage: ${PROGNAME} [-o directory] [-r revset]" >&2
 	exit 1
 }
 
 main() {
+	local outdir="."
 	local revset="${DEFAULT_REVSET}"
 	local opt
-	while getopts :r: opt; do
+	while getopts :o:r: opt; do
 		case "${opt}" in
+		o)
+			outdir="${OPTARG}"
+			;;
 		r)
 			revset="${OPTARG}"
 			;;
@@ -45,6 +49,8 @@ main() {
 		usage
 	fi
 
+	mkdir -p "${outdir}" || die "cannot create directory '${outdir}'"
+
 	local commits
 	commits="$(list_commits "${revset}")" ||
 	    die "cannot list commits for revset '${revset}'"
@@ -58,7 +64,7 @@ main() {
 	local num=0
 	for commit in ${commits}; do
 		num=$((num + 1))
-		write_patch "${commit}" "${num}" "${total}"
+		write_patch "${commit}" "${num}" "${total}" "${outdir}"
 	done
 }
 
@@ -72,6 +78,7 @@ write_patch() {
 	local commit="${1}"; shift
 	local num="${1}"; shift
 	local total="${1}"; shift
+	local outdir="${1}"; shift
 
 	local subject
 	subject="$(jj log --no-graph -r "${commit}" \
@@ -85,6 +92,9 @@ write_patch() {
 	fi
 	local fname
 	fname="$(printf '%04d' "${num}")-$(slugify "${subject}").patch"
+	if [ "${outdir}" != "." ]; then
+		fname="${outdir}/${fname}"
+	fi
 
 	{
 		jj log --no-graph -r "${commit}" -T "${HEADER_TEMPLATE}"

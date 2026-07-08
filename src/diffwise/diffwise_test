@@ -163,6 +163,20 @@ unknown_option_body() {
 	    "${DIFFWISE}" -x
 }
 
+atf_test_case output_directory
+output_directory_head() {
+	atf_set "descr" "-o writes patches into the directory, creating it"
+}
+output_directory_body() {
+	init_repo
+	commit_file f.txt -m "Add foo file"
+
+	atf_check -o inline:"patches/0001-Add-foo-file.patch\n" \
+	    "${DIFFWISE}" -o patches -r '@-'
+	atf_check -o match:"^Subject: \[PATCH\] Add foo file$" \
+	    cat patches/0001-Add-foo-file.patch
+}
+
 atf_init_test_cases() {
 	atf_add_test_case single_commit
 	atf_add_test_case committer_differs
@@ -174,4 +188,5 @@ atf_init_test_cases() {
 	atf_add_test_case invalid_revset
 	atf_add_test_case unexpected_argument
 	atf_add_test_case unknown_option
+	atf_add_test_case output_directory
 }
