@@ -1,0 +1,5 @@
+syntax(2)
+
+test_suite('hello-model')
+
+atf_test_program{name='hello-model_test'}

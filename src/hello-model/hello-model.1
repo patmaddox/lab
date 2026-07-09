@@ -1,0 +1,55 @@
+.Dd July 9, 2026
+.Dt HELLO-MODEL 1
+.Os
+.Sh NAME
+.Nm hello-model
+.Nd print five greetings from a model, English first
+.Sh SYNOPSIS
+.Nm
+.Sh DESCRIPTION
+.Nm
+is the smallest example of the harness pattern: a deterministic
+program wrapped around a single model inference.
+It takes no arguments, feeds the instructions in
+.Pa agent.org
+to a model, and prints the model's response to standard output.
+.Pp
+The instructions ask for
+.Dq hello world
+in five languages, one per line, each formatted as
+.Ql Language: greeting ,
+with English first and four more languages chosen at random.
+Changing the behavior means editing
+.Pa agent.org ,
+not the harness.
+.Pp
+.Nm
+owns the output contract so the model cannot surprise the caller.
+The response is captured from the model's standard output, an empty
+response is an error, and a failed model invocation is an error.
+.Sh ENVIRONMENT
+.Bl -tag -width CLAUDE
+.It Ev CLAUDE
+The model command, defaulting to
+.Ql claude .
+It is left unquoted at the call site, so additional words split into
+separate arguments, as in
+.Ql claude --model x .
+.El
+.Sh EXIT STATUS
+.Ex -std
+It exits 1 when
+.Pa agent.org
+is missing, the model invocation fails, or the model returns an empty
+response.
+.Sh EXAMPLES
+.Bd -literal -offset indent
+$ hello-model
+English: hello world
+French: bonjour le monde
+Dutch: hallo wereld
+Norwegian: hei verden
+Finnish: hei maailma
+.Ed
+.Sh SEE ALSO
+.Xr sclr 1

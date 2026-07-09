@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# run: the hello harness. It feeds this agent's instructions
+# hello-model: the harness. It feeds this agent's instructions
 # (agent.org) to a model and prints the model's response. The harness
 # is deterministic - it owns the input, the output contract, and the
 # exit status; only the inference in the middle is not.

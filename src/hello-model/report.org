@@ -1,12 +1,12 @@
 #+TITLE: hello report
 
 * what it is
-=src/hello-claude= is the smallest example of the harness pattern:
+=src/hello-model= is the smallest example of the harness pattern:
 a deterministic program wrapped around a single model inference. Run
 it and it prints five greetings, one per line, formatted =Language:
 greeting=, English first and four more the model picks at random.
 
-: $ src/hello-claude/run
+: $ src/hello-model/hello-model
 : English: hello world
 : French: bonjour le monde
 : Dutch: hallo wereld
@@ -17,18 +17,19 @@ greeting=, English first and four more the model picks at random.
 - =agent.org= :: the instructions - the prompt. It says "five
   languages, English first, four at random, one per line, nothing
   else." Changing the behavior means editing this file, not the code.
-- =run= :: the harness. It reads =agent.org=, calls =claude -p= with
-  it, and enforces a contract on the result. The harness is fixed;
-  only the inference varies.
+- =hello-model= :: the harness. It reads =agent.org=, calls
+  =claude -p= with it, and enforces a contract on the result. The
+  harness is fixed; only the inference varies.
 
 * the contract the harness enforces
-=run= owns the I/O so the model cannot surprise the caller:
+=hello-model= owns the I/O so the model cannot surprise the caller:
 - output is captured from the model's stdout, not from a file the
   model is trusted to write;
 - an empty response is an error (=model produced no output=);
 - a failed model invocation is an error (=inference failed=);
 - a missing =agent.org= is an error.
-Each failure exits non-zero with a =run:=-prefixed message on stderr.
+Each failure exits non-zero with a =hello-model:=-prefixed message on
+stderr.
 
 * testing without spending inference
 The model command is =${CLAUDE}=, defaulting to =claude= but
@@ -39,5 +40,5 @@ model call.
 * why it changed from a shell one-liner
 The first cut computed the greetings itself in =awk=. That made it a
 program that did the work, not an agent. Now the work is the model's;
-=run= only harnesses it. hello-claude exists to demonstrate that shape
+=hello-model= only harnesses it. It exists to demonstrate that shape
 before =sclr= relies on it.

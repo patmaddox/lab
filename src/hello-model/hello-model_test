@@ -1,0 +1,98 @@
+#!/usr/bin/env atf-sh
+
+atf_init_test_cases() {
+	atf_add_test_case prints_response
+	atf_add_test_case empty_output
+	atf_add_test_case inference_fails
+	atf_add_test_case missing_agent
+	atf_add_test_case passes_prompt
+	atf_add_test_case claude_flags_split
+}
+
+setup() {
+	HELLO="$(atf_get_srcdir)/hello-model"
+	mk_claude
+	export CLAUDE="${PWD}/claude-stub"
+}
+
+# Write a fake claude in the current directory. It records its argv to
+# claude.argv, then stands in for the model by printing canned lines on
+# standard output. Two env vars shape the run under test:
+#
+#   STUB_EMPTY  when 1, print nothing (a model that produced no output)
+#   STUB_FAIL   when 1, exit non-zero (a failed invocation)
+mk_claude() {
+	cat > claude-stub <<-'EOF'
+	#!/bin/sh
+	: > claude.argv
+	for a in "$@"; do printf '%s\n' "$a" >> claude.argv; done
+	[ "${STUB_FAIL:-0}" = 1 ] && exit 1
+	[ "${STUB_EMPTY:-0}" = 1 ] && exit 0
+	printf 'English: hello world\nFrench: bonjour le monde\n'
+	EOF
+	chmod +x claude-stub
+}
+
+atf_test_case prints_response
+prints_response_head() {
+	atf_set "descr" "the model's output is passed through to stdout"
+}
+prints_response_body() {
+	setup
+	atf_check -s exit:0 \
+	    -o inline:"English: hello world\nFrench: bonjour le monde\n" \
+	    "${HELLO}"
+}
+
+atf_test_case empty_output
+empty_output_head() {
+	atf_set "descr" "an empty model response is an error"
+}
+empty_output_body() {
+	setup
+	export STUB_EMPTY=1
+	atf_check -s exit:1 -e match:"model produced no output" "${HELLO}"
+}
+
+atf_test_case inference_fails
+inference_fails_head() {
+	atf_set "descr" "a failed model invocation is reported and fatal"
+}
+inference_fails_body() {
+	setup
+	export STUB_FAIL=1
+	atf_check -s exit:1 -e match:"inference failed" "${HELLO}"
+}
+
+atf_test_case missing_agent
+missing_agent_head() {
+	atf_set "descr" "hello-model fails when no agent.org sits beside it"
+}
+missing_agent_body() {
+	setup
+	mkdir bare
+	cp "${HELLO}" bare/hello-model
+	atf_check -s exit:1 -e match:"no agent.org" ./bare/hello-model
+}
+
+atf_test_case passes_prompt
+passes_prompt_head() {
+	atf_set "descr" "the agent.org instructions are handed to the model"
+}
+passes_prompt_body() {
+	setup
+	atf_check -s exit:0 -o ignore "${HELLO}"
+	atf_check -o match:"^-p$" cat claude.argv
+	atf_check grep -qF "hello agent instructions" claude.argv
+}
+
+atf_test_case claude_flags_split
+claude_flags_split_head() {
+	atf_set "descr" "extra words in CLAUDE split into separate arguments"
+}
+claude_flags_split_body() {
+	setup
+	export CLAUDE="${PWD}/claude-stub --model x"
+	atf_check -s exit:0 -o ignore "${HELLO}"
+	atf_check -o match:"^--model$" -o match:"^x$" cat claude.argv
+}

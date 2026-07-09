@@ -7,5 +7,5 @@ random on each run.
 
 The greetings come from a model, not a hard-coded list. Its purpose is
 to demonstrate the directory shape of an agent, not to be useful: it
-is the smallest example of the harness pattern - a =run= that wraps a
-single model inference driven by =agent.org=.
+is the smallest example of the harness pattern - a =hello-model= that
+wraps a single model inference driven by =agent.org=.
