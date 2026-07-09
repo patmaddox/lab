@@ -1,0 +1,63 @@
+#+TITLE: portia lore
+
+* portia is a harness, not a porter
+The spec describes a tool that *drives MODEL* to do the porting; portia
+itself does no porting. So the deliverable is a deterministic CLI - it
+owns the command, the target directory, the prompt, and the
+post-condition - plus the prompts MODEL is handed. This mirrors sclr:
+the harness is deterministic, inference is not. (Confirmed by the user
+in collab: the spec is a description of the tool to build, prompts
+included, not a task for me to perform by hand.)
+
+* the model is stubbed for tests
+portia's own logic - argument handling, prompt assembly, the
+port-shape check - is deterministic and tested with a stubbed MODEL,
+exactly as sclr does. No ports tree is needed to develop or test it.
+
+* one origin argument: category/port
+Every command takes a single =category/port= origin. portia validates
+it has exactly one slash with non-empty halves, because the origin
+becomes a path (=PORTSDIR/category/port=) and a malformed one would
+escape the tree.
+
+* PORTSDIR locates the tree, default is cwd
+A port lands at =PORTSDIR/category/port=, mirroring a real ports tree.
+Defaulting to =.= keeps the tool usable from inside a checkout without
+configuration. portia creates the directory before invoking MODEL so
+the model has a known place to write.
+
+* MODEL matches sclr's contract
+=MODEL= (default =claude=) is left unquoted at the call site so extra
+words split into flags, letting tests substitute a stub and real use
+add a permission mode. Same rationale as sclr.
+
+* prompts are files portia reads, one per command
+Each command has a prompt under =prompts/=. Keeping them as files (not
+inline heredocs) mirrors sclr feeding =agent.org= to the model, and
+lets the prompts - the real porting knowledge - evolve without touching
+the harness.
+
+* =new= creates the whole port; there is no separate bootstrap
+An earlier design split creation in two: =new= laid down a skeleton
+(=Makefile=, =pkg-descr=) and a separate =bootstrap= fetched the
+distfile, derived the build system, and produced =distinfo=. The split
+bought =new= a fixed, distfile-independent post-condition, but the user
+judged that not worth a mandatory two-step dance: =new= should research
+the distfile and produce a complete port in one pass (confirmed in
+collab). So there is one creation command. Its post-condition is a
+complete port, =distinfo= included, which does assume a fetchable
+distfile - a port with nothing fetchable yet, pre-release or private,
+is out of scope by that choice, the price of the simpler surface.
+
+* the post-condition is the port's shape
+The spec's second goal is checking MODEL's output. portia's check is
+that the expected port files exist and are non-empty in the port dir.
+Both commands produce a complete port - =Makefile=, =distinfo=,
+=pkg-descr=. =new= fetches the distfile to derive =distinfo=; =update=
+regenerates it for the bumped version.
+
+* =new= reads detail from stdin
+=portia new= reads free-form detail (version, home page, author, git
+repo) from stdin and passes it into the prompt as context. stdin is a
+sharp, testable channel for optional free-form input; the other
+commands take none.
