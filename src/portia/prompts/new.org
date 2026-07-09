@@ -44,3 +44,14 @@ complete port:
   block, MAINTAINER/COMMENT, LICENSE, USES/dependency block).
 - Do not invent checksums; derive =distinfo= from the actual distfile.
 - Account for every installed file; a plist mismatch fails the build.
+
+* the commit message
+Write the commit message to the path given below the prompt. This is a
+port's first commit, so follow the conventions of other ports' initial
+commits:
+- Subject =category/port: <summary>=, imperative mood, ~50 characters,
+  naming what the software is (e.g. =www/foo: Add new port=).
+- Body wrapped at 72 columns explaining what the software does, the
+  build system and dependencies you settled on, and why the port
+  exists - not what lines you wrote. Cite the upstream home page if one
+  was supplied.

@@ -2,10 +2,11 @@
 #
 # portia: an AI-driven porter's assistant. It is a deterministic
 # harness around MODEL: portia owns the command, the target port
-# directory, the prompt it hands the model, and the check that a
-# port-shaped result landed. Only the porting work in the middle -
-# reading the distfile, matching dependencies, writing the Makefile -
-# is left to the model.
+# directory, the prompt it hands the model, the check that a port-shaped
+# result landed, and the commit into the ports tree. Only the porting
+# work in the middle - reading the distfile, matching dependencies,
+# writing the Makefile, wording the commit message - is left to the
+# model.
 
 set -eu
 
@@ -23,6 +24,11 @@ export CLAUDE_CODE_GLOB_NO_IGNORE=false
 # mirroring a FreeBSD ports tree. Default to the current directory so
 # the tool works inside a checkout without configuration.
 : "${PORTSDIR:=.}"
+
+# Scratch file for the model's commit message. Global so the EXIT trap
+# that removes it can see it under set -u even after drive() returns.
+msgfile=""
+trap 'rm -f "${msgfile}"' EXIT
 
 err() {
 	echo "${PROGNAME}: ${*}" >&2
@@ -51,11 +57,26 @@ check_origin() {
 
 # drive ORIGIN PROMPT CONTEXT REQUIRED...
 # Hand the model the command's prompt plus the origin, the target
-# directory, and any extra context, then require the named files to
-# land non-empty in the port directory.
+# directory, a path for the commit message, and any extra context.
+# Require the named files to land non-empty in the port directory, then
+# commit the port with the message the model wrote.
 drive() {
 	local origin="${1}" prompt="${2}" context="${3}"
 	shift 3
+
+	# The ports tree is under version control and the last thing portia
+	# does is commit into it. Refuse up front, before spending a model
+	# turn, if there is nowhere to commit. Prefer jj: a jj change id
+	# names the commit stably where a git sha is opaque to the model, and
+	# a jj workspace has no .git of its own, so git alone would miss it.
+	local vcs
+	if [ -d "${PORTSDIR}/.jj" ]; then
+		vcs=jj
+	elif [ -d "${PORTSDIR}/.git" ]; then
+		vcs=git
+	else
+		die "${PORTSDIR} is neither a jj nor a git repository"
+	fi
 
 	local base portdir
 	base="$(cat "${LIBDIR}/prompts/${prompt}")" \
@@ -63,10 +84,18 @@ drive() {
 	portdir="${PORTSDIR}/${origin}"
 	mkdir -p "${portdir}" || die "cannot create ${portdir}"
 
+	# The model writes its commit message to a scratch file whose path
+	# it is told; the harness reads it back and commits with it. This
+	# keeps the message - which follows FreeBSD conventions and cites
+	# changelogs, both judgement calls - with the model, and the commit
+	# itself, a deterministic edge, with the harness.
+	msgfile="$(mktemp -t portia)" || die "cannot create temp file"
+
 	${MODEL} -p "${base}
 
 Port origin: ${origin}
 Write the port into: ${portdir}
+Write the commit message to: ${msgfile}
 ${context}" \
 	    || die "inference failed"
 
@@ -75,6 +104,25 @@ ${context}" \
 		[ -s "${portdir}/${f}" ] \
 		    || die "model produced no ${f} in ${portdir}"
 	done
+
+	[ -s "${msgfile}" ] || die "model produced no commit message"
+
+	# Commit only the port's own path, leaving unrelated working-copy
+	# changes in the tree. jj snapshots the working copy and commits the
+	# path in one step; git must stage first. Each takes the model's
+	# message - jj through -m, git through -F.
+	case "${vcs}" in
+	jj)
+		jj --quiet -R "${PORTSDIR}" commit -m "$(cat "${msgfile}")" \
+		    -- "${origin}" || die "commit failed"
+		;;
+	git)
+		git -C "${PORTSDIR}" add -- "${origin}" \
+		    || die "cannot stage ${origin}"
+		git -C "${PORTSDIR}" commit -q -F "${msgfile}" -- "${origin}" \
+		    || die "commit failed"
+		;;
+	esac
 }
 
 cmd_new() {

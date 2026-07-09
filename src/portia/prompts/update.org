@@ -31,3 +31,17 @@ Leave the target directory holding the updated port:
 - Do not invent checksums; regenerate =distinfo= from the new distfile.
 - Keep the change minimal and reviewable - touch only what the new
   version requires.
+
+* the commit message
+Write the commit message to the path given below the prompt, matching
+the shape of this port's previous update commits:
+- Subject =category/port: Update to <new version>=, ~50 characters.
+- Body wrapped at 72 columns. Reference the changelog for *every*
+  intermediate version between the old and the new release, not just
+  the newest - a reviewer follows these to audit the jump. Find them
+  in:
+  - this port's previous commit messages, which show where past
+    updates linked their changelogs;
+  - the upstream home page or release pages.
+  Call out any dependency, option, or plist change the update forced,
+  and why.

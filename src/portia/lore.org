@@ -56,6 +56,40 @@ Both commands produce a complete port - =Makefile=, =distinfo=,
 =pkg-descr=. =new= fetches the distfile to derive =distinfo=; =update=
 regenerates it for the bumped version.
 
+* portia commits the port, the model writes the message
+The spec's third goal is committing at natural stopping points,
+following FreeBSD conventions, with changelog references. The commit is
+split the same way as everything else in portia: the harness owns the
+deterministic edge (=git add= + =git commit=), the model owns the
+judgement (the message - subject convention, body, and the changelog
+links the spec asks for). The message is carried on a scratch file
+whose path the prompt hands the model, then read back and used with
+=git commit -F=; keeping it off the port directory avoids leaving a
+stray file in the tree.
+
+The changelog-reference requirement lives in the prompts, not the
+harness: =update.org= tells the model to cite the changelog for every
+intermediate version and where to find them (this port's previous
+commits, the upstream home page), exactly as the spec lists.
+
+* PORTSDIR must be a jj or git repository, checked first
+A port is committed into the ports tree, so =PORTSDIR= must be under
+version control. portia accepts either jj or git, detected by =.jj/= or
+=.git/= at the tree root, and checks this before invoking the model so
+a misconfigured run fails fast instead of burning a model turn only to
+have nowhere to commit. A tree under neither is a hard error, in keeping
+with the harness's fail-loud stance.
+
+jj is preferred when both are present - a colocated repo has both. The
+spec asks for it: a jj change id names the commit stably, where a git
+sha is opaque to the model, and a jj workspace has no =.git/= of its
+own, so relying on git alone would miss those trees. Committing differs
+by backend but the split is the same - jj snapshots the working copy and
+commits the port path in one step, git stages then commits - and each
+carries the model's message: jj through =-m= with the file's contents,
+git through =-F=. Only the port's own path is committed, leaving any
+unrelated working-copy changes in the tree.
+
 * =new= reads detail from stdin
 =portia new= reads free-form detail (version, home page, author, git
 repo) from stdin and passes it into the prompt as context. stdin is a

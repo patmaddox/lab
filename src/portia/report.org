@@ -4,9 +4,10 @@
 =src/portia= is a deterministic harness that drives a language model
 through the mechanical parts of porting software to FreeBSD. portia
 does no porting itself; it owns the edges - the command, the target
-directory, the prompt handed to the model, and the check that a
-port-shaped result landed - and leaves the porting judgement to MODEL.
-It is sclr's pattern aimed at a concrete domain.
+directory, the prompt handed to the model, the check that a port-shaped
+result landed, and the commit into the ports tree - and leaves the
+porting judgement, including the commit message, to MODEL. It is sclr's
+pattern aimed at a concrete domain.
 
 * the commands
 Each takes one =category/port= origin and writes to
@@ -19,12 +20,16 @@ Each takes one =category/port= origin and writes to
   Requires =Makefile=, =distinfo=, =pkg-descr=.
 
 They are the two mechanical phases of a port's life: create and
-maintain.
+maintain. Each ends by committing the port into the tree, with a
+message the model writes to FreeBSD convention - for =update=, citing
+the changelog of every intermediate version.
 
 * the pieces
-- =portia= :: the harness. Validates the origin, assembles the prompt,
-  creates the port directory, invokes MODEL, then checks the required
-  files landed non-empty.
+- =portia= :: the harness. Validates the origin, requires =PORTSDIR= to
+  be a jj or git repository (preferring jj), assembles the prompt,
+  creates the port directory, invokes MODEL, checks the required files
+  landed non-empty, then commits the port with the message the model
+  wrote.
 - =prompts/{new,update}.org= :: the porting knowledge. Kept
   as files, so the prompts - the part that actually knows FreeBSD
   porting - evolve without touching the harness.
@@ -33,13 +38,13 @@ maintain.
 * why a harness, not a porter
 Porting is mechanical but the model's output cannot be trusted blind.
 Splitting the work this way lets the deterministic edges be tested with
-a stubbed MODEL - argument handling, prompt assembly, and the
-port-shape post-condition - so a bad run fails loudly instead of
+a stubbed MODEL - argument handling, prompt assembly, the port-shape
+post-condition, and the commit - so a bad run fails loudly instead of
 leaving a half-built port. The prompts carry the domain knowledge and
 are the natural place to improve results.
 
 * status
 Complete against the spec: both commands, each a vertical slice
-with tests and man page. Exercised only with a stubbed model; the
-prompts have not yet been run against a live model or checked against a
-real ports tree.
+with tests and man page, driving the model and committing its result.
+Exercised only with a stubbed model; the prompts have not yet been run
+against a live model or checked against a real ports tree.

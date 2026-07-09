@@ -15,6 +15,12 @@ atf_init_test_cases() {
 	atf_add_test_case new_passes_stdin_detail
 	atf_add_test_case new_writes_into_portsdir
 	atf_add_test_case new_model_flags_split
+	atf_add_test_case new_needs_repo
+	atf_add_test_case new_commits_port
+	atf_add_test_case new_commit_message
+	atf_add_test_case new_commits_port_jj
+	atf_add_test_case new_prefers_jj
+	atf_add_test_case new_missing_commit_message
 	atf_add_test_case update_no_origin
 	atf_add_test_case update_invalid_origin
 	atf_add_test_case update_produces_port
@@ -30,12 +36,15 @@ setup() {
 
 # Write a fake model command in the current directory. It records its
 # argv to model.argv, then stands in for the model: it derives the port
-# directory from the prompt - as the real model would from the same
-# line - and obeys three env vars that shape the run under test.
+# directory and the commit-message path from the prompt - as the real
+# model would from the same lines - and obeys the env vars that shape
+# the run under test.
 #
-#   STUB_WRITE  space-separated files to create with content
-#   STUB_TOUCH  space-separated files to create empty
-#   STUB_FAIL   when 1, exit non-zero without producing anything
+#   STUB_WRITE   space-separated files to create with content
+#   STUB_TOUCH   space-separated files to create empty
+#   STUB_FAIL    when 1, exit non-zero without producing anything
+#   STUB_MSG     the commit message to write (default a plausible one)
+#   STUB_NOMSG   when 1, write no commit message
 mk_model() {
 	cat > model-stub <<-'EOF'
 	#!/bin/sh
@@ -49,11 +58,52 @@ mk_model() {
 	done
 	dir=$(printf '%s\n' "$prompt" \
 	    | sed -n 's/^Write the port into: //p')
+	msg=$(printf '%s\n' "$prompt" \
+	    | sed -n 's/^Write the commit message to: //p')
 	for f in ${STUB_WRITE:-}; do printf 'content\n' > "$dir/$f"; done
 	for f in ${STUB_TOUCH:-}; do : > "$dir/$f"; done
+	if [ -n "$msg" ] && [ "${STUB_NOMSG:-0}" != 1 ]; then
+		printf '%s\n' "${STUB_MSG:-www/foo: Add new port}" > "$msg"
+	fi
 	exit 0
 	EOF
 	chmod +x model-stub
+}
+
+# Make a directory (default the current one) the ports tree: a git
+# repository with an identity to commit under. A successful portia run
+# commits the port, so every success case needs one.
+mk_repo() {
+	local dir="${1:-.}"
+	mkdir -p "${dir}"
+	git init -q "${dir}"
+	git -C "${dir}" config user.email portia@example.com
+	git -C "${dir}" config user.name "portia test"
+}
+
+# Make a directory (default the current one) a jj-managed ports tree.
+# Tests that call this skip when the jj binary is unavailable, so the
+# suite still runs on a host without jj installed.
+mk_jj_repo() {
+	local dir="${1:-.}"
+	command -v jj >/dev/null 2>&1 || atf_skip "jj is not installed"
+	mkdir -p "${dir}"
+	jj git init "${dir}" >/dev/null 2>&1 || atf_skip "jj init failed"
+	jj -R "${dir}" config set --repo user.email portia@example.com
+	jj -R "${dir}" config set --repo user.name "portia test"
+}
+
+# Make the current directory a colocated tree: a git repository that jj
+# also manages. The two identities are given distinct emails so a commit
+# reveals which tool made it.
+mk_colocated_repo() {
+	command -v jj >/dev/null 2>&1 || atf_skip "jj is not installed"
+	git init -q .
+	git config user.email git@example.com
+	git config user.name "git identity"
+	jj git init --colocate . >/dev/null 2>&1 || atf_skip "jj colocate failed"
+	jj config set --repo user.email jj@example.com
+	jj config set --repo user.name "jj identity"
 }
 
 atf_test_case no_command
@@ -109,6 +159,7 @@ new_produces_port_head() {
 }
 new_produces_port_body() {
 	setup
+	mk_repo
 	export STUB_WRITE="Makefile distinfo pkg-descr"
 	atf_check -s exit:0 -x "'${PORTIA}' new www/foo </dev/null"
 	atf_check test -s www/foo/Makefile
@@ -122,6 +173,7 @@ new_missing_makefile_head() {
 }
 new_missing_makefile_body() {
 	setup
+	mk_repo
 	export STUB_WRITE="distinfo pkg-descr"
 	atf_check -s exit:1 -e match:"no Makefile" \
 	    -x "'${PORTIA}' new www/foo </dev/null"
@@ -133,6 +185,7 @@ new_missing_distinfo_head() {
 }
 new_missing_distinfo_body() {
 	setup
+	mk_repo
 	export STUB_WRITE="Makefile pkg-descr"
 	atf_check -s exit:1 -e match:"no distinfo" \
 	    -x "'${PORTIA}' new www/foo </dev/null"
@@ -144,7 +197,8 @@ new_empty_file_fails_head() {
 }
 new_empty_file_fails_body() {
 	setup
-	export STUB_WRITE="pkg-descr"
+	mk_repo
+	export STUB_WRITE="distinfo pkg-descr"
 	export STUB_TOUCH="Makefile"
 	atf_check -s exit:1 -e match:"no Makefile" \
 	    -x "'${PORTIA}' new www/foo </dev/null"
@@ -156,6 +210,7 @@ new_inference_fails_head() {
 }
 new_inference_fails_body() {
 	setup
+	mk_repo
 	export STUB_FAIL=1
 	atf_check -s exit:1 -e match:"inference failed" \
 	    -x "'${PORTIA}' new www/foo </dev/null"
@@ -167,6 +222,7 @@ new_passes_origin_and_target_head() {
 }
 new_passes_origin_and_target_body() {
 	setup
+	mk_repo
 	export STUB_WRITE="Makefile distinfo pkg-descr"
 	atf_check -s exit:0 -x "'${PORTIA}' new www/foo </dev/null"
 	atf_check grep -qF "Port origin: www/foo" model.argv
@@ -179,6 +235,7 @@ new_passes_stdin_detail_head() {
 }
 new_passes_stdin_detail_body() {
 	setup
+	mk_repo
 	export STUB_WRITE="Makefile distinfo pkg-descr"
 	atf_check -s exit:0 \
 	    -x "printf 'version 1.2.3\n' | '${PORTIA}' new www/foo"
@@ -191,6 +248,7 @@ new_writes_into_portsdir_head() {
 }
 new_writes_into_portsdir_body() {
 	setup
+	mk_repo tree
 	export PORTSDIR="tree"
 	export STUB_WRITE="Makefile distinfo pkg-descr"
 	atf_check -s exit:0 -x "'${PORTIA}' new www/foo </dev/null"
@@ -204,10 +262,95 @@ new_model_flags_split_head() {
 }
 new_model_flags_split_body() {
 	setup
+	mk_repo
 	export MODEL="${PWD}/model-stub --model x"
 	export STUB_WRITE="Makefile distinfo pkg-descr"
 	atf_check -s exit:0 -x "'${PORTIA}' new www/foo </dev/null"
 	atf_check -o match:"^--model$" -o match:"^x$" cat model.argv
+}
+
+atf_test_case new_needs_repo
+new_needs_repo_head() {
+	atf_set "descr" "portia refuses when PORTSDIR is under no VCS"
+}
+new_needs_repo_body() {
+	setup
+	export STUB_WRITE="Makefile distinfo pkg-descr"
+	atf_check -s exit:1 -e match:"neither a jj nor a git repository" \
+	    -x "'${PORTIA}' new www/foo </dev/null"
+}
+
+atf_test_case new_commits_port
+new_commits_port_head() {
+	atf_set "descr" "a successful run commits the port into the tree"
+}
+new_commits_port_body() {
+	setup
+	mk_repo
+	export STUB_WRITE="Makefile distinfo pkg-descr"
+	atf_check -s exit:0 -x "'${PORTIA}' new www/foo </dev/null"
+	# The port files are tracked and a commit exists.
+	atf_check -o match:"www/foo/Makefile" git ls-files
+	atf_check -o not-empty git log --oneline
+}
+
+atf_test_case new_commit_message
+new_commit_message_head() {
+	atf_set "descr" "the model's message becomes the commit message"
+}
+new_commit_message_body() {
+	setup
+	mk_repo
+	export STUB_WRITE="Makefile distinfo pkg-descr"
+	export STUB_MSG="www/foo: Add new port"
+	atf_check -s exit:0 -x "'${PORTIA}' new www/foo </dev/null"
+	atf_check -o match:"www/foo: Add new port" git log -1 --format=%s
+}
+
+atf_test_case new_commits_port_jj
+new_commits_port_jj_head() {
+	atf_set "descr" "portia commits into a jj tree with the model's message"
+}
+new_commits_port_jj_body() {
+	setup
+	mk_jj_repo
+	export STUB_WRITE="Makefile distinfo pkg-descr"
+	export STUB_MSG="www/foo: Add new port"
+	atf_check -s exit:0 -x "'${PORTIA}' new www/foo </dev/null"
+	# The port path was committed and the model's message is the
+	# description of the resulting change (now the parent of the
+	# working copy).
+	atf_check -o match:"www/foo/Makefile" jj -R . diff -r '@-' --name-only
+	atf_check -o match:"www/foo: Add new port" \
+	    jj -R . log --no-graph -r '@-' -T "description.first_line()"
+}
+
+atf_test_case new_prefers_jj
+new_prefers_jj_head() {
+	atf_set "descr" "with both jj and git present, portia commits with jj"
+}
+new_prefers_jj_body() {
+	setup
+	mk_colocated_repo
+	export STUB_WRITE="Makefile distinfo pkg-descr"
+	atf_check -s exit:0 -x "'${PORTIA}' new www/foo </dev/null"
+	# jj made the commit, so its author bears the jj identity, not the
+	# git one the git path would have used.
+	atf_check -o match:"jj@example.com" \
+	    jj -R . log --no-graph -r '@-' -T "author.email()"
+}
+
+atf_test_case new_missing_commit_message
+new_missing_commit_message_head() {
+	atf_set "descr" "a run that produces no commit message fails"
+}
+new_missing_commit_message_body() {
+	setup
+	mk_repo
+	export STUB_WRITE="Makefile distinfo pkg-descr"
+	export STUB_NOMSG=1
+	atf_check -s exit:1 -e match:"no commit message" \
+	    -x "'${PORTIA}' new www/foo </dev/null"
 }
 
 atf_test_case update_no_origin
@@ -234,6 +377,7 @@ update_produces_port_head() {
 }
 update_produces_port_body() {
 	setup
+	mk_repo
 	export STUB_WRITE="Makefile distinfo pkg-descr"
 	atf_check -s exit:0 "${PORTIA}" update www/foo
 	atf_check test -s www/foo/distinfo
@@ -245,6 +389,7 @@ update_missing_distinfo_head() {
 }
 update_missing_distinfo_body() {
 	setup
+	mk_repo
 	export STUB_WRITE="Makefile pkg-descr"
 	atf_check -s exit:1 -e match:"no distinfo" "${PORTIA}" update www/foo
 }
@@ -255,6 +400,7 @@ update_passes_origin_and_target_head() {
 }
 update_passes_origin_and_target_body() {
 	setup
+	mk_repo
 	export STUB_WRITE="Makefile distinfo pkg-descr"
 	atf_check -s exit:0 "${PORTIA}" update www/foo
 	atf_check grep -qF "Port origin: www/foo" model.argv

@@ -33,6 +33,26 @@ beneath
 creates that directory, hands the model the command's prompt together
 with the origin and the target path, and then verifies the expected
 port files landed there non-empty.
+.Pp
+.Ev PORTSDIR
+must be a repository \(em the ports tree \(em managed by jj or git.
+.Nm
+prefers jj when both are present, so the commit can be named by a stable
+jj change id rather than a git sha, and because a jj workspace has no
+git directory of its own.
+Once the expected files are present,
+.Nm
+commits the port with a message the model writes to a scratch file it
+is handed.
+The message follows the commit conventions of the surrounding tree and,
+for an
+.Cm update ,
+cites the upstream changelog for every intermediate version.
+The commit is the natural stopping point;
+.Nm
+refuses to run at all when
+.Ev PORTSDIR
+is under neither jj nor git.
 .Sh COMMANDS
 .Bl -tag -width troubleshoot
 .It Cm new Ar category/port
@@ -68,8 +88,10 @@ permission mode that permits edits:
 .Dl MODEL="claude --permission-mode acceptEdits" portia new www/foo
 .It Ev PORTSDIR
 The root of the ports tree, defaulting to the current directory.
-A port is written to
-.Pa PORTSDIR/category/port .
+It must be a jj or git repository; the port is written to
+.Pa PORTSDIR/category/port
+and committed there once verified.
+When the tree is managed by both, the commit is made with jj.
 .El
 .Sh FILES
 Relative to the port directory
@@ -88,10 +110,13 @@ A prose description of the software.
 .Sh EXIT STATUS
 .Nm
 exits 0 when the model leaves every expected file non-empty in the port
-directory.
+directory and the port is committed.
 It exits 64 when invoked with no command or no origin, and 1 when the
-origin is malformed, a prompt cannot be read, the model invocation
-fails, or the model returns without producing an expected file.
+origin is malformed, a prompt cannot be read,
+.Ev PORTSDIR
+is under neither jj nor git, the model invocation fails, the model
+returns without producing an expected file or a commit message, or the
+commit fails.
 .Sh EXAMPLES
 Create a new port, feeding it detail on standard input:
 .Bd -literal -offset indent
@@ -104,6 +129,8 @@ MODEL="claude --permission-mode acceptEdits" \e
 EOF
 .Ed
 .Sh SEE ALSO
+.Xr git 1 ,
+.Xr jj 1 ,
 .Xr sclr 1
 .Sh CAVEATS
 The porting work is performed by the model and is not guaranteed
