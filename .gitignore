@@ -2,6 +2,7 @@
 *.core
 *.elc
 *.img
+*.git
 *.jar
 *.jj
 *.log
