@@ -26,6 +26,14 @@ work. Essentially =spec.org= and =lore.org= represent the most
 informed position at any point in the process, and should be made
 available as early as possible.
 
+A change to =spec.org= is always its own commit and always precedes the
+implementation that realizes it. Never commit a spec change together
+with the code, tests, or docs that fulfill it: the spec states intent,
+the implementation follows in later commits. This holds for a
+mid-project spec revision as much as the initial spec - land the spec
+change first, on its own, then close the gap it opens in the commits
+that follow.
+
 =collab.org= is a buffer and should not be committed. It may survive
 intermediate commits, but at the end of the work it should not appear
 in any of the commits.
