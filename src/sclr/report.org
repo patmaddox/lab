@@ -11,7 +11,7 @@ spec.
   =collab.org=, record =lore.org=, produce =report.org=, each file
   present only when it has content.
 - =sclr= :: the harness. It validates the spec argument, feeds
-  =agent.org= plus the spec path to =claude -p=, then checks a
+  =agent.org= plus the spec path to the model, then checks a
   deliverable landed next to the spec.
 
 * input is a path, output is files
@@ -24,10 +24,10 @@ post-condition is that =report.org= or =collab.org= exists there and
 is non-empty.
 
 * running it
-=CLAUDE= overrides the model command. Because the model has to write
+=MODEL= overrides the model command. Because the model has to write
 files, invoke it with a permission mode that allows edits, e.g.:
 
-: CLAUDE="claude --permission-mode acceptEdits" src/sclr/sclr path/to/spec.org
+: MODEL="claude --permission-mode acceptEdits" src/sclr/sclr path/to/spec.org
 
 * status
 First cut. The process in =agent.org= mirrors the by-hand development

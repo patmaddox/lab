@@ -45,8 +45,8 @@ If neither is present when the model returns,
 .Nm
 reports that nothing useful was produced and fails.
 .Sh ENVIRONMENT
-.Bl -tag -width CLAUDE
-.It Ev CLAUDE
+.Bl -tag -width MODEL
+.It Ev MODEL
 The model command, defaulting to
 .Ql claude .
 It is left unquoted at the call site, so additional words split into
@@ -54,7 +54,7 @@ separate arguments.
 Because the model must be allowed to write files, invoke it with a
 permission mode that permits edits:
 .Pp
-.Dl CLAUDE="claude --permission-mode acceptEdits" sclr spec.org
+.Dl MODEL="claude --permission-mode acceptEdits" sclr spec.org
 .El
 .Sh FILES
 Relative to the directory holding the
@@ -87,7 +87,7 @@ fails, or the model returns without producing a deliverable.
 Drive a spec to a result, allowing the model to write its
 deliverables:
 .Bd -literal -offset indent
-CLAUDE="claude --permission-mode acceptEdits" sclr path/to/spec.org
+MODEL="claude --permission-mode acceptEdits" sclr path/to/spec.org
 .Ed
 .Sh SEE ALSO
 .Xr hello-model 1

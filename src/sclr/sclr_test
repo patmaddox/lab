@@ -10,28 +10,28 @@ atf_init_test_cases() {
 	atf_add_test_case inference_fails
 	atf_add_test_case passes_spec_path
 	atf_add_test_case writes_next_to_spec
-	atf_add_test_case claude_flags_split
+	atf_add_test_case model_flags_split
 }
 
 setup() {
 	SCLR="$(atf_get_srcdir)/sclr"
-	mk_claude
-	export CLAUDE="${PWD}/claude-stub"
+	mk_model
+	export MODEL="${PWD}/model-stub"
 }
 
-# Write a fake claude in the current directory. It records its argv to
-# claude.argv, then stands in for the model: it derives the spec's
-# directory from the prompt - exactly as the real model would - and
-# obeys three env vars that shape the run under test.
+# Write a fake model command in the current directory. It records its
+# argv to model.argv, then stands in for the model: it derives the
+# spec's directory from the prompt - exactly as the real model would -
+# and obeys three env vars that shape the run under test.
 #
 #   STUB_WRITE  space-separated files to create with content
 #   STUB_TOUCH  space-separated files to create empty
 #   STUB_FAIL   when 1, exit non-zero without producing anything
-mk_claude() {
-	cat > claude-stub <<-'EOF'
+mk_model() {
+	cat > model-stub <<-'EOF'
 	#!/bin/sh
-	: > claude.argv
-	for a in "$@"; do printf '%s\n' "$a" >> claude.argv; done
+	: > model.argv
+	for a in "$@"; do printf '%s\n' "$a" >> model.argv; done
 	[ "${STUB_FAIL:-0}" = 1 ] && exit 1
 	prompt=; next=
 	for a in "$@"; do
@@ -45,7 +45,7 @@ mk_claude() {
 	for f in ${STUB_TOUCH:-}; do : > "$dir/$f"; done
 	exit 0
 	EOF
-	chmod +x claude-stub
+	chmod +x model-stub
 }
 
 # Create a spec at the given path (default specdir/spec.org).
@@ -141,8 +141,8 @@ passes_spec_path_body() {
 	export STUB_WRITE="report.org"
 	atf_check -s exit:0 "${SCLR}" specdir/spec.org
 	atf_check grep -qF "The spec to process is at: specdir/spec.org" \
-	    claude.argv
-	atf_check grep -qF "into the same directory: specdir/" claude.argv
+	    model.argv
+	atf_check grep -qF "into the same directory: specdir/" model.argv
 }
 
 atf_test_case writes_next_to_spec
@@ -158,15 +158,15 @@ writes_next_to_spec_body() {
 	atf_check test ! -e report.org
 }
 
-atf_test_case claude_flags_split
-claude_flags_split_head() {
-	atf_set "descr" "extra words in CLAUDE split into separate arguments"
+atf_test_case model_flags_split
+model_flags_split_head() {
+	atf_set "descr" "extra words in MODEL split into separate arguments"
 }
-claude_flags_split_body() {
+model_flags_split_body() {
 	setup
 	mk_spec
-	export CLAUDE="${PWD}/claude-stub --model x"
+	export MODEL="${PWD}/model-stub --model x"
 	export STUB_WRITE="report.org"
 	atf_check -s exit:0 "${SCLR}" specdir/spec.org
-	atf_check -o match:"^--model$" -o match:"^x$" cat claude.argv
+	atf_check -o match:"^--model$" -o match:"^x$" cat model.argv
 }

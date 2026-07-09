@@ -11,10 +11,10 @@ set -eu
 readonly PROGNAME="${0##*/}"
 readonly AGENTDIR="${0%/*}"
 
-# The model command. Override CLAUDE to stub inference in tests, or to
+# The model command. Override MODEL to stub inference in tests, or to
 # add flags (e.g. a permission mode that lets the model write files).
 # Left unquoted at the call site on purpose, so the flags split.
-: "${CLAUDE:=claude}"
+: "${MODEL:=claude}"
 
 err() {
 	echo "${PROGNAME}: ${*}" >&2
@@ -43,7 +43,7 @@ main() {
 	# Pass the path, not the contents: the deliverables are files the
 	# model must create at known locations, so it needs to know where
 	# the spec lives and where its siblings go.
-	${CLAUDE} -p "${prompt}
+	${MODEL} -p "${prompt}
 
 The spec to process is at: ${spec}
 Write your outputs - collab.org, lore.org, report.org, only those with
