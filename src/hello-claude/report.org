@@ -1,12 +1,12 @@
 #+TITLE: hello report
 
 * what it is
-=agents/hello= is the smallest example of the harness pattern:
+=src/hello-claude= is the smallest example of the harness pattern:
 a deterministic program wrapped around a single model inference. Run
 it and it prints five greetings, one per line, formatted =Language:
 greeting=, English first and four more the model picks at random.
 
-: $ agents/hello/run
+: $ src/hello-claude/run
 : English: hello world
 : French: bonjour le monde
 : Dutch: hallo wereld
@@ -39,5 +39,5 @@ model call.
 * why it changed from a shell one-liner
 The first cut computed the greetings itself in =awk=. That made it a
 program that did the work, not an agent. Now the work is the model's;
-=run= only harnesses it. hello exists to demonstrate that shape
+=run= only harnesses it. hello-claude exists to demonstrate that shape
 before =sclr= relies on it.
