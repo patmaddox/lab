@@ -6,31 +6,31 @@ atf_init_test_cases() {
 	atf_add_test_case inference_fails
 	atf_add_test_case missing_agent
 	atf_add_test_case passes_prompt
-	atf_add_test_case claude_flags_split
+	atf_add_test_case model_flags_split
 }
 
 setup() {
 	HELLO="$(atf_get_srcdir)/hello-model"
-	mk_claude
-	export CLAUDE="${PWD}/claude-stub"
+	mk_model
+	export MODEL="${PWD}/model-stub"
 }
 
-# Write a fake claude in the current directory. It records its argv to
-# claude.argv, then stands in for the model by printing canned lines on
-# standard output. Two env vars shape the run under test:
+# Write a fake model command in the current directory. It records its
+# argv to model.argv, then stands in for the model by printing canned
+# lines on standard output. Two env vars shape the run under test:
 #
 #   STUB_EMPTY  when 1, print nothing (a model that produced no output)
 #   STUB_FAIL   when 1, exit non-zero (a failed invocation)
-mk_claude() {
-	cat > claude-stub <<-'EOF'
+mk_model() {
+	cat > model-stub <<-'EOF'
 	#!/bin/sh
-	: > claude.argv
-	for a in "$@"; do printf '%s\n' "$a" >> claude.argv; done
+	: > model.argv
+	for a in "$@"; do printf '%s\n' "$a" >> model.argv; done
 	[ "${STUB_FAIL:-0}" = 1 ] && exit 1
 	[ "${STUB_EMPTY:-0}" = 1 ] && exit 0
 	printf 'English: hello world\nFrench: bonjour le monde\n'
 	EOF
-	chmod +x claude-stub
+	chmod +x model-stub
 }
 
 atf_test_case prints_response
@@ -82,17 +82,17 @@ passes_prompt_head() {
 passes_prompt_body() {
 	setup
 	atf_check -s exit:0 -o ignore "${HELLO}"
-	atf_check -o match:"^-p$" cat claude.argv
-	atf_check grep -qF "hello agent instructions" claude.argv
+	atf_check -o match:"^-p$" cat model.argv
+	atf_check grep -qF "hello agent instructions" model.argv
 }
 
-atf_test_case claude_flags_split
-claude_flags_split_head() {
-	atf_set "descr" "extra words in CLAUDE split into separate arguments"
+atf_test_case model_flags_split
+model_flags_split_head() {
+	atf_set "descr" "extra words in MODEL split into separate arguments"
 }
-claude_flags_split_body() {
+model_flags_split_body() {
 	setup
-	export CLAUDE="${PWD}/claude-stub --model x"
+	export MODEL="${PWD}/model-stub --model x"
 	atf_check -s exit:0 -o ignore "${HELLO}"
-	atf_check -o match:"^--model$" -o match:"^x$" cat claude.argv
+	atf_check -o match:"^--model$" -o match:"^x$" cat model.argv
 }

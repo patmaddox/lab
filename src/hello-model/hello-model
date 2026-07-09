@@ -10,9 +10,9 @@ set -eu
 readonly PROGNAME="${0##*/}"
 readonly AGENTDIR="${0%/*}"
 
-# The model command. Override CLAUDE to stub inference in tests. Left
-# unquoted at the call site on purpose, so "claude --model x" splits.
-: "${CLAUDE:=claude}"
+# The model command. Override MODEL to stub inference in tests. Left
+# unquoted at the call site on purpose, so the flags split.
+: "${MODEL:=claude}"
 
 err() {
 	echo "${PROGNAME}: ${*}" >&2
@@ -32,7 +32,7 @@ main() {
 
 	# hello consumes no input, so close stdin. Agents that take
 	# input (e.g. a spec) will feed it here instead.
-	response="$(${CLAUDE} -p "${prompt}" </dev/null)" \
+	response="$(${MODEL} -p "${prompt}" </dev/null)" \
 	    || die "inference failed"
 	[ -n "${response}" ] || die "model produced no output"
 

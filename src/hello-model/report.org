@@ -17,8 +17,8 @@ greeting=, English first and four more the model picks at random.
 - =agent.org= :: the instructions - the prompt. It says "five
   languages, English first, four at random, one per line, nothing
   else." Changing the behavior means editing this file, not the code.
-- =hello-model= :: the harness. It reads =agent.org=, calls
-  =claude -p= with it, and enforces a contract on the result. The
+- =hello-model= :: the harness. It reads =agent.org=, calls the
+  model with =-p=, and enforces a contract on the result. The
   harness is fixed; only the inference varies.
 
 * the contract the harness enforces
@@ -32,8 +32,8 @@ Each failure exits non-zero with a =hello-model:=-prefixed message on
 stderr.
 
 * testing without spending inference
-The model command is =${CLAUDE}=, defaulting to =claude= but
-overridable. Tests set =CLAUDE= to a stub that prints canned lines, so
+The model command is =${MODEL}=, defaulting to =claude= but
+overridable. Tests set =MODEL= to a stub that prints canned lines, so
 the harness's success and failure paths are exercised without a real
 model call.
 

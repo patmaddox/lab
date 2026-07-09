@@ -28,8 +28,8 @@ owns the output contract so the model cannot surprise the caller.
 The response is captured from the model's standard output, an empty
 response is an error, and a failed model invocation is an error.
 .Sh ENVIRONMENT
-.Bl -tag -width CLAUDE
-.It Ev CLAUDE
+.Bl -tag -width MODEL
+.It Ev MODEL
 The model command, defaulting to
 .Ql claude .
 It is left unquoted at the call site, so additional words split into
