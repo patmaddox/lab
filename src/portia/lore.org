@@ -90,14 +90,52 @@ split the same way as everything else in portia: the harness owns the
 deterministic edge (=git add= + =git commit=), the model owns the
 judgement (the message - subject convention, body, and the changelog
 links the spec asks for). The message is carried on a scratch file
-whose path the prompt hands the model, then read back and used with
-=git commit -F=; keeping it off the port directory avoids leaving a
-stray file in the tree.
+whose path the prompt hands the model, then read back and committed
+with =-m=.
+
+The scratch file lives *inside the port directory*, not in =/tmp=. The
+model's file access is scoped to the tree it works in - the same scope a
+permission mode like =acceptEdits= grants - so a path outside that tree
+is one the model reports writing but cannot actually write. An earlier
+design put the file in =/tmp= to avoid leaving a stray file in the tree;
+the result was the confirmed failure where the model narrated writing
+the message to its handed =/tmp= path while the write never landed, and
+portia then died with "no commit message" on a port that was otherwise
+complete. Putting the file where the model already writes the port fixes
+the writability; the stray-file worry is met instead by removing the
+file after reading it and before the change check, so it never counts as
+uncommitted work nor lands in the commit. The stub model in the tests
+has no such scope, so it masked the bug - a test now pins the handed
+path inside the port directory to keep it fixed.
 
 The changelog-reference requirement lives in the prompts, not the
 harness: =update.org= tells the model to cite the changelog for every
 intermediate version and where to find them (this port's previous
 commits, the upstream home page), exactly as the spec lists.
+
+* the commit is keyed on the port path, not on the turn
+The spec asks portia to commit when the desired state is reached, and to
+pick up changes an interrupted run left on disk. So the trigger is
+deterministic and lives in the harness: after the shape check, portia
+asks the version control whether the port path has uncommitted changes
+(=jj diff -s=, =git status --porcelain= scoped to the origin). Changes
+present means commit; a clean port path means the desired state is
+already committed - nothing to do, exit 0. This is the half the earlier
+design got wrong: it keyed on "did this turn produce a message", so a
+run that found the port already complete on disk (from an interrupted
+predecessor) but wrote no message died with "no commit message" instead
+of committing the stranded work.
+
+Because the harness decides whether to commit, the model must not: its
+job is to *always* write a message describing the port's resulting
+state, even when the files already look finished on disk. The prompts
+say so, and call out the update case by name, so the model never mistakes
+"already on disk" for "nothing to do" - the mistake the confirmed
+failure turned on. The message describes the commit's content, not the
+session's activity; keeping it that way is what lets a port be driven to
+completion over several interrupted runs and still read as one coherent
+commit. A message is only required once changes exist: with a clean port
+path portia exits 0 whether or not one was written.
 
 * the ports tree must be a jj or git repository, checked first
 A port is committed into the ports tree, so the tree - =PORTSDIR= for an

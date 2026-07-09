@@ -46,9 +46,15 @@ complete port:
 - Account for every installed file; a plist mismatch fails the build.
 
 * the commit message
-Write the commit message to the path given below the prompt. This is a
-port's first commit, so follow the conventions of other ports' initial
-commits:
+Write the commit message to the path given below the prompt. Always
+write it, describing the port that results - not what you changed this
+session. Even when the files already appear finished on disk, which
+happens when an earlier run was interrupted before committing, still
+write the message for that state; whether to commit is portia's
+decision, keyed on uncommitted changes, not yours.
+
+This is a port's first commit, so follow the conventions of other
+ports' initial commits:
 - Subject =category/port: <summary>=, imperative mood, ~50 characters,
   naming what the software is (e.g. =www/foo: Add new port=).
 - Body wrapped at 72 columns explaining what the software does, the

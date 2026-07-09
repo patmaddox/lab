@@ -60,13 +60,18 @@ jj change id rather than a git sha, and because a jj workspace has no
 git directory of its own.
 Once the expected files are present,
 .Nm
-commits the port with a message the model writes to a scratch file it
-is handed.
+commits the port when the port directory has uncommitted changes, using
+a message the model writes to a scratch file it is handed.
 The message follows the commit conventions of the surrounding tree and,
 for an
 .Cm update ,
 cites the upstream changelog for every intermediate version.
-The commit is the natural stopping point;
+Committing is keyed on the port directory, not on the run: uncommitted
+changes
+\(em including a complete port left on disk by an interrupted earlier
+run
+\(em are committed, while a port already at its desired state, with
+nothing uncommitted, is a success that leaves the tree untouched.
 .Nm
 refuses to run at all when the ports tree is under neither jj nor git.
 .Sh COMMANDS
@@ -129,14 +134,16 @@ A prose description of the software.
 .El
 .Sh EXIT STATUS
 .Nm
-exits 0 when the model leaves every expected file non-empty in the port
-directory and the port is committed.
+exits 0 when every expected file is present non-empty in the port
+directory and the port is either committed or already at its desired
+state with nothing to commit.
 It exits 64 when invoked with no command or no
 .Ar port
 argument, and 1 when the argument is neither an origin nor a port path,
 a prompt cannot be read, the ports tree is under neither jj nor git, the
 model invocation fails, the model returns without producing an expected
-file or a commit message, or the commit fails.
+file, the port directory has uncommitted changes but no commit message
+was written, or the commit fails.
 .Sh EXAMPLES
 Create a new port, feeding it detail on standard input:
 .Bd -literal -offset indent

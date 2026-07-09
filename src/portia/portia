@@ -93,7 +93,8 @@ resolve_port() {
 # Hand the model the command's prompt plus the resolved origin, the
 # target directory, a path for the commit message, and any extra
 # context. Require the named files to land non-empty in the port
-# directory, then commit the port with the message the model wrote.
+# directory, then commit the port - with the message the model wrote -
+# when the port directory has uncommitted changes.
 # origin, treeroot, and portdir come from resolve_port.
 drive() {
 	local prompt="${1}" context="${2}"
@@ -118,12 +119,18 @@ drive() {
 	    || die "cannot read ${LIBDIR}/prompts/${prompt}"
 	mkdir -p "${portdir}" || die "cannot create ${portdir}"
 
-	# The model writes its commit message to a scratch file whose path
-	# it is told; the harness reads it back and commits with it. This
-	# keeps the message - which follows FreeBSD conventions and cites
-	# changelogs, both judgement calls - with the model, and the commit
-	# itself, a deterministic edge, with the harness.
-	msgfile="$(mktemp -t portia)" || die "cannot create temp file"
+	# The model writes its commit message to a scratch file whose path it
+	# is told; the harness reads it back and commits with it. This keeps
+	# the message - which follows FreeBSD conventions and cites changelogs,
+	# both judgement calls - with the model, and the commit itself, a
+	# deterministic edge, with the harness. The file lives inside the port
+	# directory because the model's file access is scoped to the tree it
+	# works in: a scratch file outside that tree - a /tmp path - is one the
+	# model reports writing but cannot, so the message never arrives.
+	# portia reads it back and removes it before committing, so it never
+	# lands in the port.
+	msgfile="${portdir}/.portia-commit-msg"
+	rm -f "${msgfile}"
 
 	${MODEL} -p "${base}
 
@@ -139,7 +146,37 @@ ${context}" \
 		    || die "model produced no ${f} in ${portdir}"
 	done
 
-	[ -s "${msgfile}" ] || die "model produced no commit message"
+	# Read the message and remove the scratch file before anything
+	# inspects the port for changes, so the file portia placed there is
+	# not itself mistaken for uncommitted work to commit.
+	local message=""
+	if [ -f "${msgfile}" ]; then
+		message="$(cat "${msgfile}")"
+	fi
+	rm -f "${msgfile}"
+
+	# Whether to commit is decided by the port path, not by whether this
+	# turn wrote a message. Uncommitted changes there - including a
+	# complete port left on disk by an interrupted earlier run - are what
+	# need committing. A clean port path means the desired state is
+	# already committed: there is nothing to do, a success rather than a
+	# failure.
+	local changes
+	case "${vcs}" in
+	jj)
+		changes="$(jj --quiet -R "${treeroot}" diff -s -- "root:${origin}")"
+		;;
+	git)
+		changes="$(git -C "${treeroot}" status --porcelain -- "${origin}")"
+		;;
+	esac
+	if [ -z "${changes}" ]; then
+		echo "${PROGNAME}: ${origin} already committed; nothing to do" >&2
+		return 0
+	fi
+
+	# There are changes to commit, so a message is now required.
+	[ -n "${message}" ] || die "model produced no commit message"
 
 	# Commit only the port's own path, leaving unrelated working-copy
 	# changes in the tree. The origin is relative to the tree, and the two
@@ -148,16 +185,17 @@ ${context}" \
 	# changing directory, so the origin is passed as a root: fileset -
 	# resolved against the tree root rather than portia's own directory.
 	# jj snapshots the working copy and commits the path in one step; git
-	# must stage first. Each takes the model's message - jj -m, git -F.
+	# must stage first. Both take the model's message with -m, the scratch
+	# file it came from already removed.
 	case "${vcs}" in
 	jj)
-		jj --quiet -R "${treeroot}" commit -m "$(cat "${msgfile}")" \
+		jj --quiet -R "${treeroot}" commit -m "${message}" \
 		    -- "root:${origin}" || die "commit failed"
 		;;
 	git)
 		git -C "${treeroot}" add -- "${origin}" \
 		    || die "cannot stage ${origin}"
-		git -C "${treeroot}" commit -q -F "${msgfile}" -- "${origin}" \
+		git -C "${treeroot}" commit -q -m "${message}" -- "${origin}" \
 		    || die "commit failed"
 		;;
 	esac

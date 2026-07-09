@@ -24,14 +24,18 @@ the ports tree, and the port directory:
 They are the two mechanical phases of a port's life: create and
 maintain. Each ends by committing the port into the tree, with a
 message the model writes to FreeBSD convention - for =update=, citing
-the changelog of every intermediate version.
+the changelog of every intermediate version. The commit is keyed on the
+port directory having uncommitted changes, so work an interrupted run
+left on disk is picked up and committed, while a port already at its
+desired state is a clean success that leaves the tree untouched.
 
 * the pieces
 - =portia= :: the harness. Resolves the port argument (origin or path),
   requires the ports tree to be a jj or git repository (preferring jj),
   assembles the prompt, creates the port directory, invokes MODEL,
-  checks the required files landed non-empty, then commits the port with
-  the message the model wrote.
+  checks the required files landed non-empty, then - when the port
+  directory has uncommitted changes - commits the port with the message
+  the model wrote.
 - =prompts/{new,update}.org= :: the porting knowledge. Kept
   as files, so the prompts - the part that actually knows FreeBSD
   porting - evolve without touching the harness.
@@ -47,6 +51,8 @@ are the natural place to improve results.
 
 * status
 Complete against the spec: both commands, each a vertical slice
-with tests and man page, driving the model and committing its result.
-Exercised only with a stubbed model; the prompts have not yet been run
-against a live model or checked against a real ports tree.
+with tests and man page, driving the model and committing its result -
+including work an interrupted run stranded on disk, and exiting cleanly
+when a port is already at its desired state. Exercised only with a
+stubbed model; the prompts have not yet been run against a live model or
+checked against a real ports tree.

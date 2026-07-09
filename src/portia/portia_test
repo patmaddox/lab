@@ -24,6 +24,10 @@ atf_init_test_cases() {
 	atf_add_test_case new_commits_port_jj
 	atf_add_test_case new_prefers_jj
 	atf_add_test_case new_missing_commit_message
+	atf_add_test_case new_clean_tree_no_commit
+	atf_add_test_case new_commits_found_work
+	atf_add_test_case new_message_path_in_tree
+	atf_add_test_case new_scratch_file_not_committed
 	atf_add_test_case update_no_origin
 	atf_add_test_case update_invalid_origin
 	atf_add_test_case update_produces_port
@@ -419,6 +423,75 @@ new_missing_commit_message_body() {
 	export STUB_NOMSG=1
 	atf_check -s exit:1 -e match:"no commit message" \
 	    -x "'${PORTIA}' new www/foo </dev/null"
+}
+
+atf_test_case new_clean_tree_no_commit
+new_clean_tree_no_commit_head() {
+	atf_set "descr" "a port already at its desired state is not re-committed"
+}
+new_clean_tree_no_commit_body() {
+	setup
+	mk_repo
+	export STUB_WRITE="Makefile distinfo pkg-descr"
+	# The first run writes the port and commits it.
+	atf_check -s exit:0 -x "'${PORTIA}' new www/foo </dev/null"
+	# A second identical run leaves the port dir clean. There is nothing
+	# to commit, which is a success, not the "no commit message" failure.
+	atf_check -s exit:0 -e match:"nothing to do" \
+	    -x "'${PORTIA}' new www/foo </dev/null"
+	# No second commit was made.
+	atf_check -o match:"^1$" git rev-list --count HEAD
+}
+
+atf_test_case new_commits_found_work
+new_commits_found_work_head() {
+	atf_set "descr" "portia commits uncommitted work it finds on disk"
+}
+new_commits_found_work_body() {
+	setup
+	mk_repo
+	# A complete port is already on disk, uncommitted - as an interrupted
+	# earlier run would leave it. This turn's model writes nothing new,
+	# only the message; portia must still commit the found work.
+	mkdir -p www/foo
+	printf 'content\n' > www/foo/Makefile
+	printf 'content\n' > www/foo/distinfo
+	printf 'content\n' > www/foo/pkg-descr
+	export STUB_MSG="www/foo: Add new port"
+	atf_check -s exit:0 -x "'${PORTIA}' new www/foo </dev/null"
+	atf_check -o match:"www/foo/Makefile" git ls-files
+	atf_check -o match:"www/foo: Add new port" git log -1 --format=%s
+}
+
+atf_test_case new_message_path_in_tree
+new_message_path_in_tree_head() {
+	atf_set "descr" "the commit-message path sits inside the port directory"
+}
+new_message_path_in_tree_body() {
+	setup
+	mk_repo
+	export STUB_WRITE="Makefile distinfo pkg-descr"
+	atf_check -s exit:0 -x "'${PORTIA}' new www/foo </dev/null"
+	# The model's file access is scoped to the tree it works in, so the
+	# message path it is handed must be under the port directory - not a
+	# /tmp scratch file it would report writing but could not.
+	atf_check grep -qF "Write the commit message to: ./www/foo/" model.argv
+}
+
+atf_test_case new_scratch_file_not_committed
+new_scratch_file_not_committed_head() {
+	atf_set "descr" "the message scratch file is removed, not committed"
+}
+new_scratch_file_not_committed_body() {
+	setup
+	mk_repo
+	export STUB_WRITE="Makefile distinfo pkg-descr"
+	atf_check -s exit:0 -x "'${PORTIA}' new www/foo </dev/null"
+	# The scratch file lives in the port dir so the model can write it, but
+	# it is a harness detail: portia removes it before committing, so it is
+	# neither left on disk nor tracked alongside the port.
+	atf_check test ! -e www/foo/.portia-commit-msg
+	atf_check -o not-match:"portia-commit-msg" git ls-files
 }
 
 atf_test_case update_no_origin
