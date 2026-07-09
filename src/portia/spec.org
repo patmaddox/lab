@@ -55,6 +55,10 @@ The ports tree represents a tremendous body of working examples of how
 to port software to FreeBSD. If you have questions of how to proceed,
 research the ports tree to uncover patterns and find useful
 information to provide guidance as much as possible.
+*** commit when desired state is reached
+It's possible that a run is interrupted, resulting in changed files on
+disk that have not been committed. Proceed as usual, and commit at the
+end if the work is complete.
 ** PORTSDIR and path handling
 portia ultimately writes to =${PORTSDIR}/category/port=. This path may
 be determined one of two ways:
