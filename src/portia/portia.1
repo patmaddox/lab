@@ -1,0 +1,100 @@
+.Dd July 9, 2026
+.Dt PORTIA 1
+.Os
+.Sh NAME
+.Nm portia
+.Nd AI-driven FreeBSD porter's assistant
+.Sh SYNOPSIS
+.Nm
+.Cm new
+.Ar category/port
+.Sh DESCRIPTION
+.Nm
+is a deterministic harness around a language model that automates the
+mechanical parts of porting software to FreeBSD.
+It does no porting itself: it owns the command, the target directory,
+the prompt handed to the model, and the check that a port-shaped result
+landed.
+Only the porting work in the middle
+\(em reading the distfile, matching dependencies, writing the Makefile
+\(em is left to the model.
+.Pp
+Each command takes a single
+.Ar category/port
+origin, which must contain exactly one slash with non-empty halves.
+The port is written to
+.Pa category/port
+beneath
+.Ev PORTSDIR .
+.Nm
+creates that directory, hands the model the command's prompt together
+with the origin and the target path, and then verifies the expected
+port files landed there non-empty.
+.Sh COMMANDS
+.Bl -tag -width troubleshoot
+.It Cm new Ar category/port
+Create a new, complete port.
+Free-form detail
+.Pq version, home page, author, git repository
+is read from standard input and passed to the model as context.
+From it the model finds the distfile, determines the build system and
+dependencies, mines the ports tree for prior art, and produces a
+.Pa Makefile ,
+a
+.Pa distinfo ,
+and a
+.Pa pkg-descr .
+.El
+.Sh ENVIRONMENT
+.Bl -tag -width PORTSDIR
+.It Ev MODEL
+The model command, defaulting to
+.Ql claude .
+It is left unquoted at the call site, so additional words split into
+separate arguments.
+Because the model must be allowed to write files, invoke it with a
+permission mode that permits edits:
+.Pp
+.Dl MODEL="claude --permission-mode acceptEdits" portia new www/foo
+.It Ev PORTSDIR
+The root of the ports tree, defaulting to the current directory.
+A port is written to
+.Pa PORTSDIR/category/port .
+.El
+.Sh FILES
+Relative to the port directory
+.Pa PORTSDIR/category/port :
+.Bl -tag -width pkg-descr
+.It Pa Makefile
+The port Makefile.
+.It Pa distinfo
+Distfile checksums and sizes.
+.It Pa pkg-descr
+A prose description of the software.
+.El
+.Sh EXIT STATUS
+.Nm
+exits 0 when the model leaves every expected file non-empty in the port
+directory.
+It exits 64 when invoked with no command or no origin, and 1 when the
+origin is malformed, a prompt cannot be read, the model invocation
+fails, or the model returns without producing an expected file.
+.Sh EXAMPLES
+Create a new port, feeding it detail on standard input:
+.Bd -literal -offset indent
+MODEL="claude --permission-mode acceptEdits" \e
+    portia new www/foo <<-EOF
+	version 1.2.3
+	home page https://example.org/foo
+	author A. Hacker
+	git https://github.com/example/foo
+EOF
+.Ed
+.Sh SEE ALSO
+.Xr sclr 1
+.Sh CAVEATS
+The porting work is performed by the model and is not guaranteed
+correct.
+.Nm
+verifies only that the expected files were produced, not that the port
+builds.

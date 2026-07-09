@@ -1,0 +1,105 @@
+#!/bin/sh
+#
+# portia: an AI-driven porter's assistant. It is a deterministic
+# harness around MODEL: portia owns the command, the target port
+# directory, the prompt it hands the model, and the check that a
+# port-shaped result landed. Only the porting work in the middle -
+# reading the distfile, matching dependencies, writing the Makefile -
+# is left to the model.
+
+set -eu
+
+readonly PROGNAME="${0##*/}"
+readonly LIBDIR="${0%/*}"
+
+export CLAUDE_CODE_GLOB_NO_IGNORE=false
+
+# The model command. Override MODEL to stub inference in tests, or to
+# add flags (e.g. a permission mode that lets the model write files).
+# Left unquoted at the call site on purpose, so the flags split.
+: "${MODEL:=claude}"
+
+# Where ports are written. A port lands at PORTSDIR/category/port,
+# mirroring a FreeBSD ports tree. Default to the current directory so
+# the tool works inside a checkout without configuration.
+: "${PORTSDIR:=.}"
+
+err() {
+	echo "${PROGNAME}: ${*}" >&2
+}
+
+die() {
+	err "${@}"
+	exit 1
+}
+
+usage() {
+	echo "usage: ${PROGNAME} new category/port" >&2
+	exit 64
+}
+
+# Validate a category/port origin: exactly one slash, both halves
+# non-empty. The origin becomes a path, so a malformed one would place
+# the port outside the tree.
+check_origin() {
+	case "${1}" in
+	*/*/*) return 1 ;;
+	*/*) [ -n "${1%/*}" ] && [ -n "${1#*/}" ] ;;
+	*) return 1 ;;
+	esac
+}
+
+# drive ORIGIN PROMPT CONTEXT REQUIRED...
+# Hand the model the command's prompt plus the origin, the target
+# directory, and any extra context, then require the named files to
+# land non-empty in the port directory.
+drive() {
+	local origin="${1}" prompt="${2}" context="${3}"
+	shift 3
+
+	local base portdir
+	base="$(cat "${LIBDIR}/prompts/${prompt}")" \
+	    || die "cannot read ${LIBDIR}/prompts/${prompt}"
+	portdir="${PORTSDIR}/${origin}"
+	mkdir -p "${portdir}" || die "cannot create ${portdir}"
+
+	${MODEL} -p "${base}
+
+Port origin: ${origin}
+Write the port into: ${portdir}
+${context}" \
+	    || die "inference failed"
+
+	local f
+	for f in "${@}"; do
+		[ -s "${portdir}/${f}" ] \
+		    || die "model produced no ${f} in ${portdir}"
+	done
+}
+
+cmd_new() {
+	local origin="${1:-}"
+	[ -n "${origin}" ] || usage
+	check_origin "${origin}" || die "invalid origin: ${origin}"
+
+	# Read free-form detail (version, home page, author, git repo)
+	# from stdin and pass it into the prompt as context.
+	local detail
+	detail="$(cat)"
+
+	drive "${origin}" new.org "Additional detail supplied by the user:
+${detail}" Makefile distinfo pkg-descr
+}
+
+main() {
+	local command="${1:-}"
+	[ -n "${command}" ] || usage
+	shift
+
+	case "${command}" in
+	new) cmd_new "${@}" ;;
+	*) usage ;;
+	esac
+}
+
+main "${@}"

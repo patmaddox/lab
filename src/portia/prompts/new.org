@@ -1,0 +1,46 @@
+#+TITLE: portia new - create a complete FreeBSD port
+
+You are creating a new, complete, buildable FreeBSD port. The user
+supplies free-form detail below - version, home page, author, git
+repository. Research from there to find the distfile and work out how
+to build it.
+
+* what to produce
+Write these files into the target directory given below, leaving it a
+complete port:
+- =Makefile= :: correct and complete. Set =PORTNAME= and =DISTVERSION=
+  from the origin and the supplied detail, =CATEGORIES= from the
+  category half of the origin, =MAINTAINER= and =COMMENT= from the
+  detail, and a =WWW= line when a home page is known. Choose the fetch
+  mechanism from the detail and the upstream - =MASTER_SITES= for a
+  release tarball, =USE_GITHUB= / =USE_GITLAB= for a git repository.
+  Determine the build system from the distfile and set the right =USES=
+  (e.g. =cmake=, =gmake=, =cargo=, =python=, =go=). Declare
+  =LIB_DEPENDS=, =BUILD_DEPENDS=, and =RUN_DEPENDS= for every dependency
+  the build and the installed program actually need. Set =LICENSE= (and
+  =LICENSE_FILE= when the distfile ships one). Add a =pkg-plist= or
+  =PLIST_FILES=, or set =plist= via the framework, so every installed
+  file is accounted for.
+- =distinfo= :: checksums and sizes for the distfile(s), in the format
+  =make makesum= produces.
+- =pkg-descr= :: a prose description of the software, ending with a
+  =WWW:= line if a home page is known.
+
+* how to work
+1. Fetch and extract the distfile and inspect it by static analysis:
+   its build system, its bundled documentation, and its declared
+   dependencies. Derive =distinfo= from the distfile you fetched.
+2. Research prior art. The FreeBSD ports tree has thousands of ports;
+   find one built with the same mechanism and follow its shape.
+   - Porter's Handbook:
+     https://docs.freebsd.org/en/books/porters-handbook/
+   - Ports tree: https://github.com/freebsd/freebsd-ports
+3. Prefer the framework's idioms (USES knobs, helper variables) over
+   hand-rolled rules. A port that leans on the framework is the one a
+   committer will accept.
+
+* conventions
+- Keep the Makefile ordered as the handbook prescribes (PORTNAME
+  block, MAINTAINER/COMMENT, LICENSE, USES/dependency block).
+- Do not invent checksums; derive =distinfo= from the actual distfile.
+- Account for every installed file; a plist mismatch fails the build.
