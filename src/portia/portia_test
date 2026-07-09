@@ -5,7 +5,10 @@ atf_init_test_cases() {
 	atf_add_test_case unknown_command
 	atf_add_test_case new_no_origin
 	atf_add_test_case new_origin_no_slash
-	atf_add_test_case new_origin_extra_slash
+	atf_add_test_case new_accepts_path
+	atf_add_test_case new_accepts_path_jj
+	atf_add_test_case new_path_trailing_slash
+	atf_add_test_case new_path_needs_repo
 	atf_add_test_case new_produces_port
 	atf_add_test_case new_missing_makefile
 	atf_add_test_case new_missing_distinfo
@@ -135,22 +138,87 @@ new_no_origin_body() {
 
 atf_test_case new_origin_no_slash
 new_origin_no_slash_head() {
-	atf_set "descr" "an origin without a slash is rejected"
+	atf_set "descr" "an argument with no category/port tail is rejected"
 }
 new_origin_no_slash_body() {
 	setup
-	atf_check -s exit:1 -e match:"invalid origin" \
+	atf_check -s exit:1 -e match:"not a port origin or path" \
 	    -x "'${PORTIA}' new foo </dev/null"
 }
 
-atf_test_case new_origin_extra_slash
-new_origin_extra_slash_head() {
-	atf_set "descr" "an origin with more than one slash is rejected"
+atf_test_case new_accepts_path
+new_accepts_path_head() {
+	atf_set "descr" "a path names the port dir; origin is its last two parts"
 }
-new_origin_extra_slash_body() {
+new_accepts_path_body() {
 	setup
-	atf_check -s exit:1 -e match:"invalid origin" \
-	    -x "'${PORTIA}' new a/b/c </dev/null"
+	# The tree is embedded in the path, so PORTSDIR (the default cwd) is
+	# not consulted - the cwd is deliberately not a repository.
+	mk_repo ports
+	export STUB_WRITE="Makefile distinfo pkg-descr"
+	atf_check -s exit:0 -x "'${PORTIA}' new ports/www/foo </dev/null"
+	# The port lands at the path, and the model is told the tail as the
+	# origin and the full path as the target.
+	atf_check test -s ports/www/foo/Makefile
+	atf_check grep -qF "Port origin: www/foo" model.argv
+	atf_check grep -qF "Write the port into: ports/www/foo" model.argv
+	# The commit is made in the embedded tree, not the cwd.
+	atf_check -o match:"www/foo/Makefile" git -C ports ls-files
+}
+
+atf_test_case new_accepts_path_jj
+new_accepts_path_jj_head() {
+	atf_set "descr" "a path into a jj tree commits from an outside cwd"
+}
+new_accepts_path_jj_body() {
+	setup
+	# The embedded tree is a jj repo below the cwd, so portia's directory
+	# is not the tree. The origin is relative to the tree, and jj resolves
+	# file arguments against the cwd, not its -R repo - so committing must
+	# address the port relative to the tree root, or jj rejects the origin
+	# as escaping the repo.
+	mk_jj_repo ports
+	export STUB_WRITE="Makefile distinfo pkg-descr"
+	export STUB_MSG="www/foo: Add new port"
+	atf_check -s exit:0 -x "'${PORTIA}' new ports/www/foo </dev/null"
+	atf_check test -s ports/www/foo/Makefile
+	# The commit landed in the embedded tree with the model's message.
+	atf_check -o match:"www/foo/Makefile" \
+	    jj -R ports diff -r '@-' --name-only
+	atf_check -o match:"www/foo: Add new port" \
+	    jj -R ports log --no-graph -r '@-' -T "description.first_line()"
+}
+
+atf_test_case new_path_trailing_slash
+new_path_trailing_slash_head() {
+	atf_set "descr" "a trailing slash on a path resolves like a bare path"
+}
+new_path_trailing_slash_body() {
+	setup
+	# Tab completion appends a trailing slash; it must not shift the
+	# tree and origin components. The tree is the path above the origin,
+	# not the origin's category.
+	mk_repo ports
+	export STUB_WRITE="Makefile distinfo pkg-descr"
+	atf_check -s exit:0 -x "'${PORTIA}' new ports/www/foo/ </dev/null"
+	atf_check test -s ports/www/foo/Makefile
+	atf_check grep -qF "Port origin: www/foo" model.argv
+	atf_check grep -qF "Write the port into: ports/www/foo" model.argv
+	atf_check -o match:"www/foo/Makefile" git -C ports ls-files
+}
+
+atf_test_case new_path_needs_repo
+new_path_needs_repo_head() {
+	atf_set "descr" "a path's embedded tree, not PORTSDIR, must be a repo"
+}
+new_path_needs_repo_body() {
+	setup
+	# The tree above the port is not under version control; the cwd is
+	# irrelevant even were it a repo.
+	mkdir -p ports
+	export STUB_WRITE="Makefile distinfo pkg-descr"
+	atf_check -s exit:1 -e match:"neither a jj nor a git repository" \
+	    -x "'${PORTIA}' new ports/www/foo </dev/null"
 }
 
 atf_test_case new_produces_port
@@ -364,11 +432,12 @@ update_no_origin_body() {
 
 atf_test_case update_invalid_origin
 update_invalid_origin_head() {
-	atf_set "descr" "update rejects a malformed origin"
+	atf_set "descr" "update rejects an argument that is neither form"
 }
 update_invalid_origin_body() {
 	setup
-	atf_check -s exit:1 -e match:"invalid origin" "${PORTIA}" update foo
+	atf_check -s exit:1 -e match:"not a port origin or path" \
+	    "${PORTIA}" update foo
 }
 
 atf_test_case update_produces_port

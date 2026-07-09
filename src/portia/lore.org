@@ -14,17 +14,44 @@ portia's own logic - argument handling, prompt assembly, the
 port-shape check - is deterministic and tested with a stubbed MODEL,
 exactly as sclr does. No ports tree is needed to develop or test it.
 
-* one origin argument: category/port
-Every command takes a single =category/port= origin. portia validates
-it has exactly one slash with non-empty halves, because the origin
-becomes a path (=PORTSDIR/category/port=) and a malformed one would
-escape the tree.
+* a port is named by an origin or a path, resolved before MODEL
+Every command takes one argument naming the port, in one of two forms:
+- an origin =category/port= (one slash), taken relative to =PORTSDIR=;
+  the ports tree is =PORTSDIR=.
+- a path =.../category/port= (more than one slash) to a port dir inside
+  a tree; the origin is its last two components and the tree is the
+  path above them.
+An argument with no =category/port= tail is neither form and is a hard
+error.
 
-* PORTSDIR locates the tree, default is cwd
-A port lands at =PORTSDIR/category/port=, mirroring a real ports tree.
-Defaulting to =.= keeps the tool usable from inside a checkout without
-configuration. portia creates the directory before invoking MODEL so
-the model has a known place to write.
+Trailing slashes are stripped before the form is decided: a shell's tab
+completion appends one to a directory, and the path form splits on
+slashes, so an unstripped trailing slash reads the empty tail as a
+component. Every part then shifts up - the tree is taken one level too
+deep and the origin comes out malformed. Stripping first makes
+=.../devel/lua-lunitx/= resolve exactly as =.../devel/lua-lunitx=.
+
+portia resolves this itself, deterministically, *before* calling MODEL
+(confirmed by the user in collab). The alternative - handing the raw
+argument to the model to interpret - was rejected because the harness
+owns the concrete port directory: it verifies the port's shape and
+commits the result, both of which need that directory known up front. A
+model that only reports the directory back afterwards would push the
+shape check and the commit past the point portia can guarantee them.
+
+Resolution yields three values - the origin (told to the model and
+committed), the ports tree, and the port directory (=tree/origin=,
+created before the model runs). Unifying both forms to the same three
+values is the point: everything downstream works the same whichever way
+the port was named.
+
+* the ports tree locates version control; for an origin it is PORTSDIR
+A port lands at =tree/category/port=, mirroring a real ports tree. For
+an origin the tree is =PORTSDIR=, defaulting to =.= so the tool works
+from inside a checkout without configuration; for a path the tree is
+embedded in the argument, so =PORTSDIR= is not consulted. portia
+creates the port directory before invoking MODEL so the model has a
+known place to write.
 
 * MODEL matches sclr's contract
 =MODEL= (default =claude=) is left unquoted at the call site so extra
@@ -72,13 +99,16 @@ harness: =update.org= tells the model to cite the changelog for every
 intermediate version and where to find them (this port's previous
 commits, the upstream home page), exactly as the spec lists.
 
-* PORTSDIR must be a jj or git repository, checked first
-A port is committed into the ports tree, so =PORTSDIR= must be under
-version control. portia accepts either jj or git, detected by =.jj/= or
-=.git/= at the tree root, and checks this before invoking the model so
-a misconfigured run fails fast instead of burning a model turn only to
+* the ports tree must be a jj or git repository, checked first
+A port is committed into the ports tree, so the tree - =PORTSDIR= for an
+origin, the path's embedded ports dir for a path - must be under version
+control. portia accepts either jj or git, detected by =.jj/= or =.git/=
+at the tree root, and checks this before invoking the model so a
+misconfigured run fails fast instead of burning a model turn only to
 have nowhere to commit. A tree under neither is a hard error, in keeping
-with the harness's fail-loud stance.
+with the harness's fail-loud stance. Because the tree is resolved from
+the argument, a path whose embedded tree is not a repository fails the
+same way an origin under a non-repo =PORTSDIR= does.
 
 jj is preferred when both are present - a colocated repo has both. The
 spec asks for it: a jj change id names the commit stably, where a git
@@ -89,6 +119,16 @@ commits the port path in one step, git stages then commits - and each
 carries the model's message: jj through =-m= with the file's contents,
 git through =-F=. Only the port's own path is committed, leaving any
 unrelated working-copy changes in the tree.
+
+The two backends locate the tree differently, and this matters because
+the origin is relative to the tree, not to portia's own directory. =git
+-C= runs inside the tree, so a bare origin resolves there. =jj -R= only
+names the repo without changing directory: jj resolves file arguments
+against the working directory, so a bare origin is read relative to
+where portia was invoked and rejected as escaping the repo when that is
+not the tree (=Invalid component ".."=). The origin is therefore handed
+to jj as a =root:= fileset, which jj resolves against the tree root
+wherever portia runs from.
 
 * =new= reads detail from stdin
 =portia new= reads free-form detail (version, home page, author, git

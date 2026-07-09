@@ -10,8 +10,10 @@ porting judgement, including the commit message, to MODEL. It is sclr's
 pattern aimed at a concrete domain.
 
 * the commands
-Each takes one =category/port= origin and writes to
-=PORTSDIR/category/port=:
+Each takes one argument naming a port - an origin =category/port=
+(relative to =PORTSDIR=) or a path =.../category/port= to a port dir in
+a tree - which portia resolves before the model runs into the origin,
+the ports tree, and the port directory:
 - =new= :: create a complete port from the origin and free-form detail
   read on stdin - finds the distfile, works out the build system and
   dependencies, mines the ports tree for prior art. Requires =Makefile=,
@@ -25,11 +27,11 @@ message the model writes to FreeBSD convention - for =update=, citing
 the changelog of every intermediate version.
 
 * the pieces
-- =portia= :: the harness. Validates the origin, requires =PORTSDIR= to
-  be a jj or git repository (preferring jj), assembles the prompt,
-  creates the port directory, invokes MODEL, checks the required files
-  landed non-empty, then commits the port with the message the model
-  wrote.
+- =portia= :: the harness. Resolves the port argument (origin or path),
+  requires the ports tree to be a jj or git repository (preferring jj),
+  assembles the prompt, creates the port directory, invokes MODEL,
+  checks the required files landed non-empty, then commits the port with
+  the message the model wrote.
 - =prompts/{new,update}.org= :: the porting knowledge. Kept
   as files, so the prompts - the part that actually knows FreeBSD
   porting - evolve without touching the harness.

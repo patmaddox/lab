@@ -20,9 +20,11 @@ export CLAUDE_CODE_GLOB_NO_IGNORE=false
 # Left unquoted at the call site on purpose, so the flags split.
 : "${MODEL:=claude}"
 
-# Where ports are written. A port lands at PORTSDIR/category/port,
-# mirroring a FreeBSD ports tree. Default to the current directory so
-# the tool works inside a checkout without configuration.
+# Where ports are written when named by a bare origin. An origin lands
+# at PORTSDIR/category/port, mirroring a FreeBSD ports tree. Default to
+# the current directory so the tool works inside a checkout without
+# configuration. A port named by a path carries its own tree, so
+# PORTSDIR is not consulted in that case.
 : "${PORTSDIR:=.}"
 
 # Scratch file for the model's commit message. Global so the EXIT trap
@@ -40,29 +42,62 @@ die() {
 }
 
 usage() {
-	echo "usage: ${PROGNAME} new|update category/port" >&2
+	echo "usage: ${PROGNAME} new|update category/port|path" >&2
 	exit 64
 }
 
-# Validate a category/port origin: exactly one slash, both halves
-# non-empty. The origin becomes a path, so a malformed one would place
-# the port outside the tree.
-check_origin() {
-	case "${1}" in
-	*/*/*) return 1 ;;
-	*/*) [ -n "${1%/*}" ] && [ -n "${1#*/}" ] ;;
-	*) return 1 ;;
+# Resolve the port argument, before the model runs, into three globals:
+#   origin    the category/port told to the model and committed
+#   treeroot  the ports tree, which must be under version control
+#   portdir   where the port is written, treeroot/origin
+# The argument takes one of two forms:
+#   category/port      an origin (one slash), taken relative to PORTSDIR;
+#                      the ports tree is PORTSDIR.
+#   .../category/port  a path (more than one slash) to a port dir inside
+#                      a tree; the origin is its last two components and
+#                      the tree is the path above them.
+# Anything with no category/port tail is neither form and is rejected.
+# Resolving both forms to the same three values lets everything
+# downstream - the shape check and the commit - work the same way.
+resolve_port() {
+	local arg="${1}" rest
+
+	# Strip trailing slashes first. A path completed with a shell's tab
+	# completion carries one, and without this the case below reads the
+	# empty tail as a component: every part shifts up, so the tree is
+	# taken one level too deep and the origin comes out malformed.
+	while [ "${arg}" != "${arg%/}" ]; do
+		arg="${arg%/}"
+	done
+
+	case "${arg}" in
+	*/*/*)
+		portdir="${arg}"
+		rest="${arg%/*}"
+		origin="${rest##*/}/${arg##*/}"
+		treeroot="${rest%/*}"
+		;;
+	*/*)
+		[ -n "${arg%/*}" ] && [ -n "${arg#*/}" ] || return 1
+		origin="${arg}"
+		treeroot="${PORTSDIR}"
+		portdir="${PORTSDIR}/${arg}"
+		;;
+	*)
+		return 1
+		;;
 	esac
 }
 
-# drive ORIGIN PROMPT CONTEXT REQUIRED...
-# Hand the model the command's prompt plus the origin, the target
-# directory, a path for the commit message, and any extra context.
-# Require the named files to land non-empty in the port directory, then
-# commit the port with the message the model wrote.
+# drive PROMPT CONTEXT REQUIRED...
+# Hand the model the command's prompt plus the resolved origin, the
+# target directory, a path for the commit message, and any extra
+# context. Require the named files to land non-empty in the port
+# directory, then commit the port with the message the model wrote.
+# origin, treeroot, and portdir come from resolve_port.
 drive() {
-	local origin="${1}" prompt="${2}" context="${3}"
-	shift 3
+	local prompt="${1}" context="${2}"
+	shift 2
 
 	# The ports tree is under version control and the last thing portia
 	# does is commit into it. Refuse up front, before spending a model
@@ -70,18 +105,17 @@ drive() {
 	# names the commit stably where a git sha is opaque to the model, and
 	# a jj workspace has no .git of its own, so git alone would miss it.
 	local vcs
-	if [ -d "${PORTSDIR}/.jj" ]; then
+	if [ -d "${treeroot}/.jj" ]; then
 		vcs=jj
-	elif [ -d "${PORTSDIR}/.git" ]; then
+	elif [ -d "${treeroot}/.git" ]; then
 		vcs=git
 	else
-		die "${PORTSDIR} is neither a jj nor a git repository"
+		die "${treeroot} is neither a jj nor a git repository"
 	fi
 
-	local base portdir
+	local base
 	base="$(cat "${LIBDIR}/prompts/${prompt}")" \
 	    || die "cannot read ${LIBDIR}/prompts/${prompt}"
-	portdir="${PORTSDIR}/${origin}"
 	mkdir -p "${portdir}" || die "cannot create ${portdir}"
 
 	# The model writes its commit message to a scratch file whose path
@@ -108,43 +142,47 @@ ${context}" \
 	[ -s "${msgfile}" ] || die "model produced no commit message"
 
 	# Commit only the port's own path, leaving unrelated working-copy
-	# changes in the tree. jj snapshots the working copy and commits the
-	# path in one step; git must stage first. Each takes the model's
-	# message - jj through -m, git through -F.
+	# changes in the tree. The origin is relative to the tree, and the two
+	# backends locate the tree differently: git -C runs inside it, so a
+	# plain origin resolves there, but jj -R only names the repo without
+	# changing directory, so the origin is passed as a root: fileset -
+	# resolved against the tree root rather than portia's own directory.
+	# jj snapshots the working copy and commits the path in one step; git
+	# must stage first. Each takes the model's message - jj -m, git -F.
 	case "${vcs}" in
 	jj)
-		jj --quiet -R "${PORTSDIR}" commit -m "$(cat "${msgfile}")" \
-		    -- "${origin}" || die "commit failed"
+		jj --quiet -R "${treeroot}" commit -m "$(cat "${msgfile}")" \
+		    -- "root:${origin}" || die "commit failed"
 		;;
 	git)
-		git -C "${PORTSDIR}" add -- "${origin}" \
+		git -C "${treeroot}" add -- "${origin}" \
 		    || die "cannot stage ${origin}"
-		git -C "${PORTSDIR}" commit -q -F "${msgfile}" -- "${origin}" \
+		git -C "${treeroot}" commit -q -F "${msgfile}" -- "${origin}" \
 		    || die "commit failed"
 		;;
 	esac
 }
 
 cmd_new() {
-	local origin="${1:-}"
-	[ -n "${origin}" ] || usage
-	check_origin "${origin}" || die "invalid origin: ${origin}"
+	local arg="${1:-}"
+	[ -n "${arg}" ] || usage
+	resolve_port "${arg}" || die "not a port origin or path: ${arg}"
 
 	# Read free-form detail (version, home page, author, git repo)
 	# from stdin and pass it into the prompt as context.
 	local detail
 	detail="$(cat)"
 
-	drive "${origin}" new.org "Additional detail supplied by the user:
+	drive new.org "Additional detail supplied by the user:
 ${detail}" Makefile distinfo pkg-descr
 }
 
 cmd_update() {
-	local origin="${1:-}"
-	[ -n "${origin}" ] || usage
-	check_origin "${origin}" || die "invalid origin: ${origin}"
+	local arg="${1:-}"
+	[ -n "${arg}" ] || usage
+	resolve_port "${arg}" || die "not a port origin or path: ${arg}"
 
-	drive "${origin}" update.org "" Makefile distinfo pkg-descr
+	drive update.org "" Makefile distinfo pkg-descr
 }
 
 main() {

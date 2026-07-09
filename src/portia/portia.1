@@ -7,10 +7,10 @@
 .Sh SYNOPSIS
 .Nm
 .Cm new
-.Ar category/port
+.Ar port
 .Nm
 .Cm update
-.Ar category/port
+.Ar port
 .Sh DESCRIPTION
 .Nm
 is a deterministic harness around a language model that automates the
@@ -23,19 +23,37 @@ Only the porting work in the middle
 \(em is left to the model.
 .Pp
 Each command takes a single
-.Ar category/port
-origin, which must contain exactly one slash with non-empty halves.
-The port is written to
+.Ar port
+argument, resolved before the model runs into an origin, a ports tree,
+and a port directory.
+It is one of two forms:
+.Bl -tag -width Ds
+.It Ar category/port
+An origin: a single slash with non-empty halves, taken relative to
+.Ev PORTSDIR .
+The port directory is
 .Pa category/port
 beneath
-.Ev PORTSDIR .
-.Nm
-creates that directory, hands the model the command's prompt together
-with the origin and the target path, and then verifies the expected
-port files landed there non-empty.
-.Pp
+.Ev PORTSDIR ,
+which is the ports tree.
+.It Ar path/to/tree/category/port
+A path to a port directory inside a ports tree.
+The origin is its last two components and the ports tree is the path
+above them;
 .Ev PORTSDIR
-must be a repository \(em the ports tree \(em managed by jj or git.
+is not consulted.
+A trailing slash, such as one left by shell tab completion, is ignored.
+.El
+.Pp
+An argument with no
+.Pa category/port
+tail is neither form and is rejected.
+.Nm
+creates the port directory, hands the model the command's prompt
+together with the origin and the target path, and then verifies the
+expected port files landed there non-empty.
+.Pp
+The ports tree must be a repository managed by jj or git.
 .Nm
 prefers jj when both are present, so the commit can be named by a stable
 jj change id rather than a git sha, and because a jj workspace has no
@@ -50,12 +68,10 @@ for an
 cites the upstream changelog for every intermediate version.
 The commit is the natural stopping point;
 .Nm
-refuses to run at all when
-.Ev PORTSDIR
-is under neither jj nor git.
+refuses to run at all when the ports tree is under neither jj nor git.
 .Sh COMMANDS
 .Bl -tag -width troubleshoot
-.It Cm new Ar category/port
+.It Cm new Ar port
 Create a new, complete port.
 Free-form detail
 .Pq version, home page, author, git repository
@@ -67,7 +83,7 @@ a
 .Pa distinfo ,
 and a
 .Pa pkg-descr .
-.It Cm update Ar category/port
+.It Cm update Ar port
 Bump an existing port to its newest upstream version.
 The model raises the version, resets
 .Va PORTREVISION ,
@@ -87,15 +103,19 @@ permission mode that permits edits:
 .Pp
 .Dl MODEL="claude --permission-mode acceptEdits" portia new www/foo
 .It Ev PORTSDIR
-The root of the ports tree, defaulting to the current directory.
-It must be a jj or git repository; the port is written to
+The root of the ports tree for an origin argument, defaulting to the
+current directory.
+The port is written to
 .Pa PORTSDIR/category/port
 and committed there once verified.
-When the tree is managed by both, the commit is made with jj.
+A path argument carries its own tree, so
+.Ev PORTSDIR
+is not consulted then.
+Either way the ports tree must be a jj or git repository, and when it
+is managed by both the commit is made with jj.
 .El
 .Sh FILES
-Relative to the port directory
-.Pa PORTSDIR/category/port :
+Relative to the port directory:
 .Bl -tag -width pkg-descr
 .It Pa Makefile
 The port Makefile.
@@ -111,12 +131,12 @@ A prose description of the software.
 .Nm
 exits 0 when the model leaves every expected file non-empty in the port
 directory and the port is committed.
-It exits 64 when invoked with no command or no origin, and 1 when the
-origin is malformed, a prompt cannot be read,
-.Ev PORTSDIR
-is under neither jj nor git, the model invocation fails, the model
-returns without producing an expected file or a commit message, or the
-commit fails.
+It exits 64 when invoked with no command or no
+.Ar port
+argument, and 1 when the argument is neither an origin nor a port path,
+a prompt cannot be read, the ports tree is under neither jj nor git, the
+model invocation fails, the model returns without producing an expected
+file or a commit message, or the commit fails.
 .Sh EXAMPLES
 Create a new port, feeding it detail on standard input:
 .Bd -literal -offset indent
