@@ -6,6 +6,7 @@ atf_init_test_cases() {
 	atf_add_test_case init_no_args
 	atf_add_test_case init_too_many_args
 	atf_add_test_case init_clones_default
+	atf_add_test_case init_single_branch
 	atf_add_test_case init_removes_origin
 	atf_add_test_case init_dst_exists
 	atf_add_test_case new_no_args
@@ -121,6 +122,20 @@ init_clones_default_body() {
 	atf_check test -d .cell/default.git
 	atf_check -o inline:"true\n" \
 	    git -C .cell/default.git rev-parse --is-bare-repository
+}
+
+atf_test_case init_single_branch
+init_single_branch_head() {
+	atf_set "descr" "cell init clones only the source default branch"
+}
+init_single_branch_body() {
+	setup
+	mk_src
+	git -C src branch feature-a
+	git -C src branch feature-b
+	atf_check -s exit:0 -e ignore "${CELL}" init src/.git
+	atf_check -o inline:"main\n" \
+	    git -C .cell/default.git for-each-ref --format='%(refname:short)'
 }
 
 atf_test_case init_removes_origin

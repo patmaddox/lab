@@ -45,13 +45,18 @@ find_cell_dir() {
 # origin, so we drop it. The result is the bare repo that cells push
 # to and fetch from, wholly disconnected from the repo it was seeded
 # from.
+#
+# --single-branch keeps only the source's default branch. Every other
+# branch default.git holds is one a cell pushed, so a plain checkout of
+# it shows only the default branch plus the active cells, never src's
+# unrelated branches duplicated alongside them.
 cmd_init() {
 	[ "${#}" -eq 1 ] || usage
 	local src="${1}"
 	local dst="${CELL}/${BARE}"
 
 	[ ! -e "${dst}" ] || die "destination already exists: ${dst}"
-	git clone --bare "${src}" "${dst}"
+	git clone --bare --single-branch "${src}" "${dst}"
 	git -C "${dst}" remote remove origin
 }
 

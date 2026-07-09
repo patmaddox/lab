@@ -32,6 +32,11 @@ into
 .Pa .cell/default.git .
 The result is a standalone bare repo, disconnected from the repo it
 was seeded from.
+Only the
+.Ar src
+default branch is cloned; every other branch
+.Pa default.git
+later holds is one pushed by a cell.
 .Nm
 fails if
 .Pa .cell/default.git

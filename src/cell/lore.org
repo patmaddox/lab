@@ -40,6 +40,13 @@ repo has no remaining relationship to the repo it was seeded from:
 that is the whole point, a repo the jail modifies that is disconnected
 from the real checkout. Cells then wire =origin= to this bare repo,
 not to the original.
+* =init= clones only the source's default branch
+=--single-branch= keeps =default.git= to the source's default branch
+alone. A full bare clone would copy every branch the source holds, and
+fetching from =default.git= would then duplicate those unrelated
+branches into each cell and back into the primary workspace, drowning
+the cell branches that matter. With single-branch the only other refs
+=default.git= ever gains are the ones cells push.
 * a cell pushes its work as one branch
 A cell never commits to =main=: it branches off =main=, commits on
 top, and pushes a branch named for the cell, =<name>=, pointing at its
@@ -61,6 +68,7 @@ instead of erroring. Separate verbs each carry one precondition —
 =new= needs the branch absent, =resume= needs it present — and fail
 loudly pointing at the other.
 * deferred: a =cell bookmark= command
-Setting the =<name>= bookmark is left to the in-cell workflow for now. A =cell bookmark= command might help, but its interface is
-unsettled; rather than guess, use the tool as-is and let real usage
-settle the design before building it.
+Setting the =<name>= bookmark is left to the in-cell workflow for now.
+A =cell bookmark= command might help, but its interface is unsettled;
+rather than guess, use the tool as-is and let real usage settle the
+design before building it.
