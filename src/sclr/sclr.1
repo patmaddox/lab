@@ -1,0 +1,93 @@
+.Dd July 9, 2026
+.Dt SCLR 1
+.Os
+.Sh NAME
+.Nm sclr
+.Nd drive a spec through a collab, lore, and report process
+.Sh SYNOPSIS
+.Nm
+.Ar spec.org
+.Sh DESCRIPTION
+.Nm
+is a deterministic harness around a single model inference.
+Given the path to a
+.Ar spec.org
+brief, it drives a model through a fixed four-file process, leaving
+the deliverables in the spec's own directory.
+.Pp
+The process is defined by
+.Pa agent.org ,
+which
+.Nm
+feeds to the model together with the
+.Ar spec.org
+path.
+The model reads the spec and writes its outputs,
+.Pa collab.org ,
+.Pa lore.org ,
+and
+.Pa report.org
+\(em each only when it has content \(em as siblings of the spec.
+.Nm
+passes the spec
+.Em path ,
+not its contents, because the deliverables are files the model must
+create at known locations.
+.Pp
+.Nm
+owns everything around the inference: the argument, the invocation,
+and the post-condition.
+A finished run leaves a non-empty
+.Pa report.org ;
+a run blocked on a question leaves a non-empty
+.Pa collab.org .
+If neither is present when the model returns,
+.Nm
+reports that nothing useful was produced and fails.
+.Sh ENVIRONMENT
+.Bl -tag -width CLAUDE
+.It Ev CLAUDE
+The model command, defaulting to
+.Ql claude .
+It is left unquoted at the call site, so additional words split into
+separate arguments.
+Because the model must be allowed to write files, invoke it with a
+permission mode that permits edits:
+.Pp
+.Dl CLAUDE="claude --permission-mode acceptEdits" sclr spec.org
+.El
+.Sh FILES
+Relative to the directory holding the
+.Ar spec.org :
+.Bl -tag -width report.org
+.It Pa spec.org
+The brief, authored by the user;
+.Nm
+does not modify it.
+.It Pa collab.org
+A two-way buffer of questions and answers; present when the run is
+blocked.
+.It Pa lore.org
+Durable facts and decisions, each with the reason it holds.
+.It Pa report.org
+A concise account of the result; present when the run finished.
+.El
+.Sh EXIT STATUS
+.Nm
+exits 0 when the model leaves a non-empty
+.Pa report.org
+or
+.Pa collab.org
+beside the spec.
+It exits 64 when invoked with no
+.Ar spec.org
+argument, and 1 when the spec does not exist, the model invocation
+fails, or the model returns without producing a deliverable.
+.Sh EXAMPLES
+Drive a spec to a result, allowing the model to write its
+deliverables:
+.Bd -literal -offset indent
+CLAUDE="claude --permission-mode acceptEdits" sclr path/to/spec.org
+.Ed
+.Sh SEE ALSO
+.Xr hello-model 1

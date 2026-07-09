@@ -1,0 +1,172 @@
+#!/usr/bin/env atf-sh
+
+atf_init_test_cases() {
+	atf_add_test_case no_args
+	atf_add_test_case spec_not_found
+	atf_add_test_case produces_report
+	atf_add_test_case produces_collab
+	atf_add_test_case produces_nothing
+	atf_add_test_case empty_report_fails
+	atf_add_test_case inference_fails
+	atf_add_test_case passes_spec_path
+	atf_add_test_case writes_next_to_spec
+	atf_add_test_case claude_flags_split
+}
+
+setup() {
+	SCLR="$(atf_get_srcdir)/sclr"
+	mk_claude
+	export CLAUDE="${PWD}/claude-stub"
+}
+
+# Write a fake claude in the current directory. It records its argv to
+# claude.argv, then stands in for the model: it derives the spec's
+# directory from the prompt - exactly as the real model would - and
+# obeys three env vars that shape the run under test.
+#
+#   STUB_WRITE  space-separated files to create with content
+#   STUB_TOUCH  space-separated files to create empty
+#   STUB_FAIL   when 1, exit non-zero without producing anything
+mk_claude() {
+	cat > claude-stub <<-'EOF'
+	#!/bin/sh
+	: > claude.argv
+	for a in "$@"; do printf '%s\n' "$a" >> claude.argv; done
+	[ "${STUB_FAIL:-0}" = 1 ] && exit 1
+	prompt=; next=
+	for a in "$@"; do
+		[ "$next" = yes ] && { prompt=$a; break; }
+		[ "$a" = -p ] && next=yes
+	done
+	spec=$(printf '%s\n' "$prompt" \
+	    | sed -n 's/^The spec to process is at: //p')
+	dir=$(dirname "$spec")
+	for f in ${STUB_WRITE:-}; do printf 'content\n' > "$dir/$f"; done
+	for f in ${STUB_TOUCH:-}; do : > "$dir/$f"; done
+	exit 0
+	EOF
+	chmod +x claude-stub
+}
+
+# Create a spec at the given path (default specdir/spec.org).
+mk_spec() {
+	local spec="${1:-specdir/spec.org}"
+	mkdir -p "$(dirname -- "${spec}")"
+	printf '#+TITLE: t\nhi\n' > "${spec}"
+}
+
+atf_test_case no_args
+no_args_head() {
+	atf_set "descr" "sclr with no spec prints usage and exits 64"
+}
+no_args_body() {
+	setup
+	atf_check -s exit:64 -e match:"usage" "${SCLR}"
+}
+
+atf_test_case spec_not_found
+spec_not_found_head() {
+	atf_set "descr" "sclr fails when the spec does not exist"
+}
+spec_not_found_body() {
+	setup
+	atf_check -s exit:1 -e match:"no such spec" "${SCLR}" nope.org
+}
+
+atf_test_case produces_report
+produces_report_head() {
+	atf_set "descr" "a run that leaves report.org succeeds"
+}
+produces_report_body() {
+	setup
+	mk_spec
+	export STUB_WRITE="report.org"
+	atf_check -s exit:0 "${SCLR}" specdir/spec.org
+	atf_check test -s specdir/report.org
+}
+
+atf_test_case produces_collab
+produces_collab_head() {
+	atf_set "descr" "a run blocked with collab.org succeeds"
+}
+produces_collab_body() {
+	setup
+	mk_spec
+	export STUB_WRITE="collab.org"
+	atf_check -s exit:0 "${SCLR}" specdir/spec.org
+	atf_check test -s specdir/collab.org
+}
+
+atf_test_case produces_nothing
+produces_nothing_head() {
+	atf_set "descr" "a run that leaves no deliverable fails"
+}
+produces_nothing_body() {
+	setup
+	mk_spec
+	atf_check -s exit:1 \
+	    -e match:"no report.org or collab.org" "${SCLR}" specdir/spec.org
+}
+
+atf_test_case empty_report_fails
+empty_report_fails_head() {
+	atf_set "descr" "an empty report.org does not satisfy the contract"
+}
+empty_report_fails_body() {
+	setup
+	mk_spec
+	export STUB_TOUCH="report.org"
+	atf_check -s exit:1 \
+	    -e match:"no report.org or collab.org" "${SCLR}" specdir/spec.org
+}
+
+atf_test_case inference_fails
+inference_fails_head() {
+	atf_set "descr" "a failed model invocation is reported and fatal"
+}
+inference_fails_body() {
+	setup
+	mk_spec
+	export STUB_FAIL=1
+	atf_check -s exit:1 -e match:"inference failed" "${SCLR}" specdir/spec.org
+}
+
+atf_test_case passes_spec_path
+passes_spec_path_head() {
+	atf_set "descr" "the model is given the spec path and output directory"
+}
+passes_spec_path_body() {
+	setup
+	mk_spec
+	export STUB_WRITE="report.org"
+	atf_check -s exit:0 "${SCLR}" specdir/spec.org
+	atf_check grep -qF "The spec to process is at: specdir/spec.org" \
+	    claude.argv
+	atf_check grep -qF "into the same directory: specdir/" claude.argv
+}
+
+atf_test_case writes_next_to_spec
+writes_next_to_spec_head() {
+	atf_set "descr" "deliverables land beside the spec, not in the cwd"
+}
+writes_next_to_spec_body() {
+	setup
+	mk_spec sub/deep/spec.org
+	export STUB_WRITE="report.org"
+	atf_check -s exit:0 "${SCLR}" sub/deep/spec.org
+	atf_check test -s sub/deep/report.org
+	atf_check test ! -e report.org
+}
+
+atf_test_case claude_flags_split
+claude_flags_split_head() {
+	atf_set "descr" "extra words in CLAUDE split into separate arguments"
+}
+claude_flags_split_body() {
+	setup
+	mk_spec
+	export CLAUDE="${PWD}/claude-stub --model x"
+	export STUB_WRITE="report.org"
+	atf_check -s exit:0 "${SCLR}" specdir/spec.org
+	atf_check -o match:"^--model$" -o match:"^x$" cat claude.argv
+}

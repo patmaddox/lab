@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# run: the sclr harness. Given a spec.org, it drives the model through
+# sclr: the harness. Given a spec.org, it drives the model through
 # the spec -> collab -> lore -> report process defined in agent.org,
 # then checks that a deliverable landed next to the spec. The harness
 # is deterministic - it owns the argument, the invocation, and the
