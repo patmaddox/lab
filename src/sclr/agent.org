@@ -6,6 +6,8 @@ given. Read the spec, move the work forward, and record it in these
 files. Create each file only when it has content; leave it out
 otherwise.
 
+Make as much progress towards the spec as you can.
+
 * the files
 - =spec.org= :: the brief. The user authors it; you do not rewrite it.
 - =collab.org= :: a two-way buffer for questions and answers between
@@ -15,7 +17,21 @@ otherwise.
   holds. Whenever you derive a fact or the user supplies one, record
   it here.
 - =report.org= :: a concise, human-readable account of the result.
+** commit lifecycle
+=spec.org= and =lore.org= represent desired end state. As such, they
+are committed at the beginning of the process. lore may be discovered
+as a part of the work and so is developed later temporally, but it
+should be squashed to earlier commits to inform later
+work. Essentially =spec.org= and =lore.org= represent the most
+informed position at any point in the process, and should be made
+available as early as possible.
 
+=collab.org= is a buffer and should not be committed. It may survive
+intermediate commits, but at the end of the work it should not appear
+in any of the commits.
+
+=report.org= presents the culmination of the work and should be
+committed at the end of the commit chain.
 * what to do
 1. Read =spec.org=. Work out what it asks for, what you can already
    do, and what you are missing.
@@ -27,7 +43,9 @@ otherwise.
    rationale. =lore.org= is the memory: do not leave a decision only
    in your head or only in the report.
 4. When you can produce what the spec asks for, do it, then write
-   =report.org=: what you did and why it matters, briefly.
+   =report.org=: what you did and why it matters, briefly. Do not
+   write =report.org= until you are confident you have implemented all
+   of the provided spec.
 
 Write every file into the spec's own directory, nowhere else.
 
@@ -55,3 +73,140 @@ heading that is not =from model= is from the user.
 * style
 Match the user's conventions: org-mode files, concise prose, reasons
 over restatement. Keep =report.org= short. Explain why, not what.
+
+Use structured text (e.g. headings, lists) when doing so will make the
+text more clear.
+** Do not use emdash or double dash
+Use single ascii dash instead
+** Do not double space
+Use single spaces instead.
+
+DO: =foo. bar. baz.=
+DO NOT: =foo.  bar.  baz.=
+
+* development process
+** iterative, incremental, thin vertical slices
+Each commit will be a fully working, consistent, coherent, thin
+vertical slice of the tool's functionality.
+
+Each commit has:
+- kyua tests
+- man page
+
+The tests and man page changes reflect only the behavior introduced by
+the implementation change - they never describe behavior that hasn't
+been implemented yet.
+
+** doc-driven development
+As part of the development process, produce - but don't commit - a
+goal man page (desired end state). Diff the current man page from the
+goal man page to understand what functionality remains to be
+implemented. Analyze this gap to determine what to implement next.
+
+When committing the man page, make sure it accurately describes the
+current behavior. Rewrite it as needed to ensure that it's clear,
+consistent, coherent at all times. It will not match the goal man page
+until the final implementation is done, so it should evolve as needed
+during development.
+
+Do not commit the goal man page as part of commits. When the work is
+done, and the current man page matches the goal man page, there should
+be no record of the goal man page in the commit history.
+
+Because you may be updating an existing code base, rather than
+starting one from scratch, you may need to consider the current
+version of the man page as the goal. Analyze the man page and
+supporting documentation as written, and the code base to see if it
+meets the behavior as described in docs. This reveals the gap between
+current state and desired state.
+
+The basic flow is =spec.org= -> documentation -> implementation:
+
+1. analyze =spec.org= and =lore.org= to determine desired end state
+2. perform gap analysis of desired end state and current documentation
+3. update documentation to meet desired end state
+4. perform gap analysis of updated documentation and current implementation
+5. update implementation to meet desired end state
+** jj squash to older commit procedure
+Always edit the working copy and squash changes to a relevant commit
+(you may need to create a new commit).
+*** Squash backward, do not commit forward
+DO:
+#+begin_example
+jj new -B @ --no-edit -m 'portia: New functionality'
+jj squash
+#+end_example
+
+DO NOT:
+#+begin_example
+jj commit -m portia: New functionality'
+#+end_example
+
+*** commit points
+Commit only at natural commit points - e.g. where a thin vertical
+slice is added; when artifacts have been produced with no blocking
+questions. DO NOT mindlessly commit after every turn. Each commit
+should have a clear purpose and be production-ready.
+
+Every commit should be as small as possible to represent a complete
+unit of progress. You can think of commits almost like feature flags -
+reverting or removing a commit would result in removing one clearly
+identifiable capability. You should not combine multiple capability
+changes into a single commit.
+
+*** partial commits
+Squash only the files / lines that are relevant to the commit. You may
+need to use interactive squash to accomplish this.
+
+** rewrite mutable commits for a clean history
+When incorporating user feedback, you should rewrite mutable commits
+as needed to produce a clean history, as though the feedback had been
+there from the beginning all along.
+
+This is not limited to rewriting commits in place: split, combine,
+reorder, or remove commits to produce the best possible history.
+
+mutable commits are defined by jj revset =mutable()=. You only want to
+modify commits that are in the current commit chain, e.g. =::@ &
+mutable()=.
+** final review
+When completing the implementation, do a final review to ensure that
+the code, tests, and documentation all align and all requirements are
+met. Ensure that the commit history is the cleanest, clearest possible
+history where each commit introduces a vertical slice of behavior,
+along with its tests and documentation. Revise commit messages as
+necessary to reflect current state.
+** commit messages
+*** wrap at 72 characters by default
+Wrap commit messages to 72 characters whenever possible. There will be
+occasional exceptions, e.g. in the case of including tool output,
+error messages, etc. However the normal case of prose, lists, etc
+should all wrap at 72 characters.
+*** follow existing conventions
+refer to recent commit messages affecting the same path to understand
+commit message conventions
+*** what and why, not how
+Commit messages should not describe the implementation approach. They
+should plainly state what the change does, and if necessary include
+any motivation for the implementation approach.
+*** self contained, can refer backwards if needed, never forwards
+Commit messages should be self-contained as much as possible. They can
+refer to previous commits if doing so will provide useful
+context. They should never refer to work that hasn't been done yet
+(i.e. that appears later in a commit series).
+*** no meta-information about the project
+The process is spec -> docs -> implementation. However, commits should
+not refer to the specs - they do not need to explain the gaps that
+exist. Each commit simply closes a gap that has been identified as
+part of the analysis.
+** file scope
+Modify only files that are in the same dir as =spec.org= or its
+descendants.
+
+#+BEGIN_EXAMPLE
+foo/
+foo/spec.org
+foo/okay-to-touch-this
+foo/also/okay
+bar/absolutely-not-okay
+#+END_EXAMPLE
