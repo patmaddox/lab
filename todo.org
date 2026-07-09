@@ -1,28 +1,84 @@
-* TODO Run slash commands from oneshot mode
+* Figure out some kind of TODO -> agent -> DONE workflow
+This is a tough one... but basically I think it's worth thinking of my
+todo.org as being a simple queue of stuff that I'm interested in
+doing. It's not really a queue - it's just a good way of organizing
+information.
+
+The challenge is when it comes to splitting it up. Obviously I can't
+rebase it very easily if I have agents chopping it up and stuff.
+
+The core idea here is that a heading represents some sort disturbance
+to the current system. I want to run an agent that will resolve that
+disturbance by taking the information and proposing a commit for me to
+integrate.
+
+Essentially what I'm thinking of is something like this:
+
+- todo
+- next
+- wip
+- review
+- done
+
+Review can go back into my todo file (or more likely to doing - but I
+put it in todo and dispatch it to doing). An agent selects which one
+to work on, moves it to wip. When it's ready for my review, it gets
+moved to review. I can then accept it and mark it as done.
+
+So this thing likely has a few components to it. The first is an emacs
+command that takes a heading, and dispatches it to a unique file name
+in next.
+
+The next is agent, which selects the next item to work on, moves it to
+wip (or maybe just sets the status?), and dispatches it to an agent. I
+think moving it to wip is simpler because it's deterministic. When the
+agent completes its work, it moves it into review.
+
+Each stage rebases off the next. In fact, these can probably all be
+stacked branches off of each other? At least next and wip will be. Or
+actually... each item is its own branch, or has its own branches. So
+when it's being worked on, the branch will be wip/abc123. When it's
+done, it'll be review/abc123.
+
+The agent will periodically rebase everything off of trunk, and all I
+have to do to integrate is rebase off of review/whatever.
+
+There's another rule that if I push a commit on top of review/abc123,
+the agent looks at any commits that are authored by me on top of their
+work as feedback, integrate it, and try again.
+
+I then have a pretty simple view of work to review, which is something
+like =bookmark('review/*') ~ ::mine()=. That will show any series of
+commits that I haven't left a review on top of. Review it, and when
+there's nothing left to say, I'm done.
+
+The reviews can even have versions so I can interdiff them.
+* claude: Wrap commit messages at correct number of spaces
+* Run slash commands from oneshot mode
 Figure out how to invoke skills from =claude -p=. Possible approaches:
 - Shell wrapper that reads SKILL.md and passes as prompt
 - =--append-system-prompt-file= to load skill as system prompt
 - Extract "dev", "plan", "continue" soft skills from spec.org
   into =/pm-dev=, =/pm-plan= skill files
-* TODO Surface related commits for review
+* Surface related commits for review
 Commits that don't touch the same files but share a theme (e.g.
 "add locking to scripts" and "add locking to skills") should be
 surfaced as related so a reviewer can consider them together. Could
 use commit message similarity, shared keywords, or LLM-based
 semantic grouping. Useful during review and when selecting feedback
 commits to work on.
-* TODO emacs: Route draft-reply back to origin buffer
+* emacs: Route draft-reply back to origin buffer
 Update create draft command to send the data back to the buffer
 where it came from (assuming origin buffer is a claude-code buffer).
 Otherwise use default behavior and send to the default claude-code
 buffer, or show selection in case of multiple.
-* TODO Version control jj repo config (revset aliases, etc.)
+* Version control jj repo config (revset aliases, etc.)
 =.jj/repo/config.toml= contains revset aliases and jj aliases that
 the review pipeline depends on, but it lives inside =.jj/= so it
 is not version controlled. Investigate whether jj supports loading
 config from a tracked file, or if we need a sync mechanism.
-* TODO Migrate patmaddox.com content from old platform to new
-* TODO Create a /todo-report skill to triage the backlog
+* Migrate patmaddox.com content from old platform to new
+* Create a /todo-report skill to triage the backlog
 Analyze =todo.org= and =fieldstones.org= and produce a concise
 report with three categories, showing the top 5-10 items in each:
 1. *Ready to pursue* — well-defined, feasible, high value.
@@ -33,16 +89,16 @@ report with three categories, showing the top 5-10 items in each:
    developed in a while. Either push them forward or let them go.
 Score items on definition, feasibility, and value. Keep the report
 short enough to scan in a minute.
-* TODO Create a skill to look up man pages
+* Create a skill to look up man pages
 Auto-trigger when unsure how to use a system tool. Read the man page
 and apply what it says rather than guessing at flags.
-* TODO emacs: majjic an interface for jj
-* TODO cron job to ntfy.sh when my home IP address changes
+* emacs: majjic an interface for jj
+* cron job to ntfy.sh when my home IP address changes
 This is because I need to configure my public IP for wireguard. Right
 now I have... something, not sure, but a cron job that posts something
 to some key value store. I think I have a note in my email about
 it. But it would be better to be notified proactively.
-* TODO docs: document workflow for todo -> use cases -> features
+* docs: document workflow for todo -> use cases -> features
 todo list in my dev commit is my working memory. I keep it here so
 that I can edit it all in one place. It's not version controlled
 directly, but it doesn't need to be.
@@ -53,7 +109,7 @@ from git commit trailers:
 
     Use-Case: docs/use-cases/example-use-case.org
 
-* TODO emacs: Figure out why clipboard disappears after exiting
+* emacs: Figure out why clipboard disappears after exiting
 common workflow:
 
 jj describe foo
@@ -65,7 +121,7 @@ There's something about the emacs / clipboard configuration that is
 throwing away the clipboard contents after exiting, which I don't
 want.
 
-* TODO ss: Write .ss files in tests instead of copying example dirs
+* ss: Write .ss files in tests instead of copying example dirs
 All of the files are short and sweet and we probably want to make it
 visible as part of the test setup.
 
@@ -78,7 +134,7 @@ to be done.
 Also, there's absolutely no reason why we actually need to compile C
 files. Build functions that write and/or copy should be enough.
 
-* TODO emacs: Set eat scrollback to less
+* emacs: Set eat scrollback to less
 I have it set to infinity, and so I think emacs slows down over time -
 even in things like claude code sessions that are terminal UIs.
 
