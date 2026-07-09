@@ -1,0 +1,69 @@
+#+TITLE: portia - AI-driven porter's assistant
+
+Porting FreeBSD software is mostly a mechanical process: identify the
+dist files, the dependencies, figure out how to build the software,
+and where to install the artifacts. portia assists in the porting
+process by automating the majority of the mechanical work.
+
+* portia behavior
+This heading and subheadings describe behavior of the portia tool,
+i.e. ./portia and its supporting prompts and documentation.
+** commands
+*** =portia new [category/port]=
+Reads input for additional detail (version, home page, author, git
+repo) that it passes to the model to produce a complete port
+configuration. Model researches thoroughly to find the distfile and
+determines how to build it by analyzing source code, docs,
+etc. Additionally, researches the ports repo for tools built using a
+similar mechanism to use as a basis for the port.
+*** =portia update [category/port]=
+Updates port to the newest version, matches dependencies, etc.
+** goals
+*** prompt model to do the porting work
+portia does not do the porting work itself - it's a harness around
+MODEL which does the porting work. portia provides enough instructions
+to MODEL for it to do the work
+*** check model output
+After model turn completes, portia checks that the results are
+acceptable (basic shape of port with Makefile, distinfo, pkg-descr,
+etc).
+*** commit following freebsd conventions
+Commit changes at natural stopping points, following the conventions
+established by previous commits (in case of =update=) or other ports
+(in case of =new=).
+
+Where possible, include references to changelogs for all intermediate
+versions.
+
+Sources for where to find changelog locations:
+
+- previous commits for this port
+- home page for the upstream repo
+**** verify presence of repo
+PORTSDIR needs to be a repo root - either a git repo or jj. Either one
+is fine. Prefer jj where possible so we can refer to jj change ids
+instead of git shas. jj workspaces will not have a git dir, so it's
+necessary to use jj in those cases anyway.
+
+- =.jj/= indicates jujutsu usage
+- =.git/= indicates git usage
+
+tool should check for presence of either before proceeding with
+work. It's an error if neither is present.
+*** mine the ports tree for useful information
+The ports tree represents a tremendous body of working examples of how
+to port software to FreeBSD. If you have questions of how to proceed,
+research the ports tree to uncover patterns and find useful
+information to provide guidance as much as possible.
+* portia development
+This heading and subheadings describe information supporting
+development of the portia tool, i.e. reference material that will
+inform changes to the portia tool itself.
+** CLI utility
+portia is a unix CLI utility. It should have a man page and test
+suite. Stub the model command out for the tests. You do not need
+access to a ports tree to develop this tool. If you need to refer to
+port-specific information:
+
+- https://docs.freebsd.org/en/books/porters-handbook/
+- https://github.com/freebsd/freebsd-ports
