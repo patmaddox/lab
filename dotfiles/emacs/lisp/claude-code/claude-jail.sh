@@ -23,6 +23,7 @@ _env_fwd="${_env_fwd} CLAUDE_CODE_DISABLE_MOUSE=1"
 _env_fwd="${_env_fwd} CLAUDE_CODE_DISABLE_TERMINAL_TITLE=1"
 _env_fwd="${_env_fwd} CLAUDE_CODE_DISABLE_VIRTUAL_SCROLL=1"
 _env_fwd="${_env_fwd} CLAUDE_CODE_ENABLE_PROMPT_SUGGESTION=false"
+_env_fwd="${_env_fwd} CLAUDE_CODE_GLOB_NO_IGNORE=false"
 _env_fwd="${_env_fwd} CLAUDE_CODE_NATIVE_CURSOR=1"
 _env_fwd="${_env_fwd} USE_BUILTIN_RIPGREP=0"
 _nl='
