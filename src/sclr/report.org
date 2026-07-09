@@ -1,8 +1,8 @@
 #+TITLE: sclr report
 
 * what it is
-=agents/sclr= turns the repo-agents process into an agent. Given a
-spec, =agents/sclr/run path/to/spec.org= drives the model through
+=src/sclr= turns the repo-agents process into an agent. Given a
+spec, =src/sclr/run path/to/spec.org= drives the model through
 spec -> collab -> lore -> report, writing the outputs next to the
 spec.
 
@@ -27,7 +27,7 @@ is non-empty.
 =CLAUDE= overrides the model command. Because the model has to write
 files, invoke it with a permission mode that allows edits, e.g.:
 
-: CLAUDE="claude --permission-mode acceptEdits" agents/sclr/run path/to/spec.org
+: CLAUDE="claude --permission-mode acceptEdits" src/sclr/run path/to/spec.org
 
 * status
 First cut. The process in =agent.org= mirrors the by-hand development
