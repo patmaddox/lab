@@ -9,14 +9,14 @@ process by automating the majority of the mechanical work.
 This heading and subheadings describe behavior of the portia tool,
 i.e. ./portia and its supporting prompts and documentation.
 ** commands
-*** =portia new [category/port]=
+*** =portia new [category/port|path]=
 Reads input for additional detail (version, home page, author, git
 repo) that it passes to the model to produce a complete port
 configuration. Model researches thoroughly to find the distfile and
 determines how to build it by analyzing source code, docs,
 etc. Additionally, researches the ports repo for tools built using a
 similar mechanism to use as a basis for the port.
-*** =portia update [category/port]=
+*** =portia update [category/port|path]=
 Updates port to the newest version, matches dependencies, etc.
 ** goals
 *** prompt model to do the porting work
@@ -55,6 +55,15 @@ The ports tree represents a tremendous body of working examples of how
 to port software to FreeBSD. If you have questions of how to proceed,
 research the ports tree to uncover patterns and find useful
 information to provide guidance as much as possible.
+** PORTSDIR and path handling
+portia ultimately writes to =${PORTSDIR}/category/port=. This path may
+be determined one of two ways:
+
+1. as an origin, e.g. =category/port= relative to =${PORTSDIR}=
+2. as a path to a port dir within a ports dir, e.g. =path/to/ports/category/port=
+
+portia determines at the beginning if this is an origin or path,
+before calling model.
 * portia development
 This heading and subheadings describe information supporting
 development of the portia tool, i.e. reference material that will
