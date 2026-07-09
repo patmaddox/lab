@@ -19,6 +19,7 @@ die() {
 usage() {
 	echo "usage: ${PROGNAME} init <src>" >&2
 	echo "       ${PROGNAME} new <name>" >&2
+	echo "       ${PROGNAME} resume <name>" >&2
 	exit 64
 }
 
@@ -72,8 +73,31 @@ cmd_new() {
 	dest="${cells}/${name}.jj"
 	[ ! -e "${dest}" ] || die "cell \"${name}\" already exists: ${dest}"
 	! git -C "${bare}" show-ref --quiet --verify "refs/heads/${name}" \
-	    || die "branch \"${name}\" already exists in ${BARE}"
+	    || die "branch \"${name}\" already exists in ${BARE};" \
+	           "resume it with ${PROGNAME} resume ${name}"
 	jj git clone --colocate "${bare}" "${dest}"
+}
+
+# Clone the shared .cell default.git into a sibling colocated jj+git
+# checkout named <name>.jj and set its working copy on the existing
+# branch <name>, resuming a cell whose checkout was removed after its
+# work was pushed. Unlike new, resume requires the branch to exist.
+cmd_resume() {
+	[ "${#}" -eq 1 ] || usage
+	local name="${1}"
+	local cells bare dest
+
+	cells="$(find_cell_dir)" \
+	    || die "no ${CELL} directory found from $(pwd -P)"
+	bare="${cells}/${BARE}"
+	[ -d "${bare}" ] || die "${cells} has no ${BARE}"
+	dest="${cells}/${name}.jj"
+	[ ! -e "${dest}" ] || die "cell \"${name}\" already exists: ${dest}"
+	git -C "${bare}" show-ref --quiet --verify "refs/heads/${name}" \
+	    || die "no branch \"${name}\" in ${BARE}"
+	jj git clone --colocate "${bare}" "${dest}"
+	jj -R "${dest}" bookmark track "${name}@origin"
+	jj -R "${dest}" new "${name}"
 }
 
 main() {
@@ -82,6 +106,7 @@ main() {
 	case "${cmd}" in
 	init)	cmd_init "${@}" ;;
 	new)	cmd_new "${@}" ;;
+	resume)	cmd_resume "${@}" ;;
 	*)	usage ;;
 	esac
 }

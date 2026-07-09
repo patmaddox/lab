@@ -51,6 +51,15 @@ enforce this: a cell can be pushed and its checkout removed, leaving
 the branch behind, after which the on-disk check would happily reuse
 the name. =new= thus checks =refs/heads/<name>= in =default.git=
 before cloning.
+* =resume= is a separate subcommand, not a flag on =new=
+A pushed cell can lose its checkout, leaving only its branch in
+=default.git=; getting back to it is a distinct operation from budding
+a fresh cell, so it gets its own verb. Folding it into =new= as a flag
+or a collision fallback would make one command silently attach to
+existing work, so a mistyped name would land on another cell's branch
+instead of erroring. Separate verbs each carry one precondition —
+=new= needs the branch absent, =resume= needs it present — and fail
+loudly pointing at the other.
 * deferred: a =cell bookmark= command
 Setting the =<name>= bookmark is left to the in-cell workflow for now. A =cell bookmark= command might help, but its interface is
 unsettled; rather than guess, use the tool as-is and let real usage

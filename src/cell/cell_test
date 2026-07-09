@@ -18,6 +18,14 @@ atf_init_test_cases() {
 	atf_add_test_case new_checks_out_bare_content
 	atf_add_test_case new_duplicate_fails
 	atf_add_test_case new_branch_exists
+	atf_add_test_case resume_no_args
+	atf_add_test_case resume_too_many_args
+	atf_add_test_case resume_no_cells_dir
+	atf_add_test_case resume_missing_bare
+	atf_add_test_case resume_no_branch
+	atf_add_test_case resume_dest_exists
+	atf_add_test_case resume_checks_out_branch
+	atf_add_test_case resume_tracks_branch
 	atf_add_test_case workflow
 }
 
@@ -50,6 +58,19 @@ mk_cells() {
 	git -C seed add file.txt
 	git -C seed -c user.name=t -c user.email=t@t commit -qm init
 	git -C seed push -q origin main
+	rm -rf seed
+}
+
+# Push a branch <name> to .cell/default.git carrying an extra file
+# work.txt, standing in for a cell that pushed work and was removed.
+mk_branch() {
+	local name="${1}"
+	git clone -q .cell/default.git seed 2>/dev/null
+	git -C seed checkout -q -b "${name}"
+	echo "resumed" > seed/work.txt
+	git -C seed add work.txt
+	git -C seed -c user.name=t -c user.email=t@t commit -qm work
+	git -C seed push -q origin "${name}"
 	rm -rf seed
 }
 
@@ -229,8 +250,94 @@ new_branch_exists_body() {
 	mk_cells
 	# A pushed cell q1 would leave a q1 branch behind.
 	git -C .cell/default.git branch q1 main
-	atf_check -s exit:1 -e match:'branch "q1" already exists' \
+	atf_check -s exit:1 \
+	    -e match:'branch "q1" already exists' \
+	    -e match:'cell resume q1' \
 	    "${CELL}" new q1
+}
+
+atf_test_case resume_no_args
+resume_no_args_head() {
+	atf_set "descr" "cell resume with no name prints usage and exits 64"
+}
+resume_no_args_body() {
+	setup
+	atf_check -s exit:64 -e match:"usage" "${CELL}" resume
+}
+
+atf_test_case resume_too_many_args
+resume_too_many_args_head() {
+	atf_set "descr" "cell resume with extra arguments prints usage and exits 64"
+}
+resume_too_many_args_body() {
+	setup
+	atf_check -s exit:64 -e match:"usage" "${CELL}" resume a b
+}
+
+atf_test_case resume_no_cells_dir
+resume_no_cells_dir_head() {
+	atf_set "descr" "cell resume fails when no .cell directory is found"
+}
+resume_no_cells_dir_body() {
+	setup
+	atf_check -s exit:1 -e match:".cell directory" "${CELL}" resume q1
+}
+
+atf_test_case resume_missing_bare
+resume_missing_bare_head() {
+	atf_set "descr" "cell resume fails when .cell holds no default.git"
+}
+resume_missing_bare_body() {
+	setup
+	mkdir .cell
+	atf_check -s exit:1 -e match:"default.git" "${CELL}" resume q1
+}
+
+atf_test_case resume_no_branch
+resume_no_branch_head() {
+	atf_set "descr" "cell resume fails when default.git has no matching branch"
+}
+resume_no_branch_body() {
+	setup
+	mk_cells
+	atf_check -s exit:1 -e match:'no branch "q1"' "${CELL}" resume q1
+}
+
+atf_test_case resume_dest_exists
+resume_dest_exists_head() {
+	atf_set "descr" "cell resume fails when the cell checkout already exists"
+}
+resume_dest_exists_body() {
+	setup
+	mk_cells
+	mk_branch q1
+	mkdir -p .cell/q1.jj
+	atf_check -s exit:1 -e match:"already exists" "${CELL}" resume q1
+}
+
+atf_test_case resume_checks_out_branch
+resume_checks_out_branch_head() {
+	atf_set "descr" "cell resume checks out the pushed branch content"
+}
+resume_checks_out_branch_body() {
+	setup
+	mk_cells
+	mk_branch q1
+	atf_check -s exit:0 -e ignore "${CELL}" resume q1
+	atf_check -o inline:"resumed\n" cat .cell/q1.jj/work.txt
+}
+
+atf_test_case resume_tracks_branch
+resume_tracks_branch_head() {
+	atf_set "descr" "cell resume leaves a local bookmark on the branch"
+}
+resume_tracks_branch_body() {
+	setup
+	mk_cells
+	mk_branch q1
+	atf_check -s exit:0 -e ignore "${CELL}" resume q1
+	atf_check -o match:"^q1:" -e ignore \
+	    jj -R .cell/q1.jj bookmark list q1
 }
 
 atf_test_case workflow

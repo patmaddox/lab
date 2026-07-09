@@ -11,6 +11,9 @@
 .Nm
 .Cm new
 .Ar name
+.Nm
+.Cm resume
+.Ar name
 .Sh DESCRIPTION
 .Nm
 encodes a simple convention: a
@@ -61,6 +64,35 @@ if
 already exists, or if
 .Pa default.git
 already has a branch
+.Ar name ;
+resume that cell with
+.Cm cell resume
+instead.
+.Ss cell resume
+.Nm
+.Cm resume
+is the counterpart to
+.Cm new
+for a cell that was pushed and had its checkout removed, leaving only
+its branch in
+.Pa default.git .
+It clones
+.Pa default.git
+into
+.Ar name Ns .jj ,
+tracks the existing branch
+.Ar name ,
+and sets the working copy on it.
+.Nm
+fails if no
+.Pa .cell
+directory is found, if the one found holds no
+.Pa default.git ,
+if
+.Ar name Ns .jj
+already exists, or if
+.Pa default.git
+has no branch
 .Ar name .
 .Sh EXIT STATUS
 .Ex -std
