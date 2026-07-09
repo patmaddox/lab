@@ -8,6 +8,9 @@
 .Nm
 .Cm new
 .Ar category/port
+.Nm
+.Cm update
+.Ar category/port
 .Sh DESCRIPTION
 .Nm
 is a deterministic harness around a language model that automates the
@@ -44,6 +47,13 @@ a
 .Pa distinfo ,
 and a
 .Pa pkg-descr .
+.It Cm update Ar category/port
+Bump an existing port to its newest upstream version.
+The model raises the version, resets
+.Va PORTREVISION ,
+reconciles dependencies, and regenerates
+.Pa distinfo
+for the new distfile.
 .El
 .Sh ENVIRONMENT
 .Bl -tag -width PORTSDIR
@@ -68,7 +78,10 @@ Relative to the port directory
 .It Pa Makefile
 The port Makefile.
 .It Pa distinfo
-Distfile checksums and sizes.
+Distfile checksums and sizes, produced by
+.Cm new
+and
+.Cm update .
 .It Pa pkg-descr
 A prose description of the software.
 .El

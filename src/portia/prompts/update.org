@@ -1,0 +1,33 @@
+#+TITLE: portia update - bump a FreeBSD port to a new version
+
+You are updating an existing FreeBSD port to its newest upstream
+version. The current port is in the target directory; change as little
+as the update requires.
+
+* what to produce
+Leave the target directory holding the updated port:
+- =Makefile= :: bump =DISTVERSION= (or =PORTVERSION=) to the newest
+  release and reset =PORTREVISION= - remove it, since a version bump
+  supersedes any revision. Reconcile dependencies with the new
+  version: add, drop, or re-version =*_DEPENDS= to match what the new
+  release needs. Adjust =USES= and options only where the new version
+  demands it.
+- =distinfo= :: regenerate checksums and sizes for the new distfile(s),
+  as =make makesum= would.
+- =pkg-descr= :: update only if the description or =WWW:= changed.
+
+* how to work
+1. Find the newest upstream release for the origin.
+2. Diff what changed between the current and new versions that affects
+   the port: build system, dependencies, installed files.
+3. Update the plist if the set of installed files changed.
+4. Consult prior art for how similar updates were handled.
+   - Porter's Handbook:
+     https://docs.freebsd.org/en/books/porters-handbook/
+   - Ports tree: https://github.com/freebsd/freebsd-ports
+
+* conventions
+- A version bump resets =PORTREVISION=; do not carry it over.
+- Do not invent checksums; regenerate =distinfo= from the new distfile.
+- Keep the change minimal and reviewable - touch only what the new
+  version requires.

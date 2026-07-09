@@ -15,6 +15,11 @@ atf_init_test_cases() {
 	atf_add_test_case new_passes_stdin_detail
 	atf_add_test_case new_writes_into_portsdir
 	atf_add_test_case new_model_flags_split
+	atf_add_test_case update_no_origin
+	atf_add_test_case update_invalid_origin
+	atf_add_test_case update_produces_port
+	atf_add_test_case update_missing_distinfo
+	atf_add_test_case update_passes_origin_and_target
 }
 
 setup() {
@@ -203,4 +208,55 @@ new_model_flags_split_body() {
 	export STUB_WRITE="Makefile distinfo pkg-descr"
 	atf_check -s exit:0 -x "'${PORTIA}' new www/foo </dev/null"
 	atf_check -o match:"^--model$" -o match:"^x$" cat model.argv
+}
+
+atf_test_case update_no_origin
+update_no_origin_head() {
+	atf_set "descr" "update without an origin prints usage and exits 64"
+}
+update_no_origin_body() {
+	setup
+	atf_check -s exit:64 -e match:"usage" "${PORTIA}" update
+}
+
+atf_test_case update_invalid_origin
+update_invalid_origin_head() {
+	atf_set "descr" "update rejects a malformed origin"
+}
+update_invalid_origin_body() {
+	setup
+	atf_check -s exit:1 -e match:"invalid origin" "${PORTIA}" update foo
+}
+
+atf_test_case update_produces_port
+update_produces_port_head() {
+	atf_set "descr" "update requires the port shape, regenerated distinfo included"
+}
+update_produces_port_body() {
+	setup
+	export STUB_WRITE="Makefile distinfo pkg-descr"
+	atf_check -s exit:0 "${PORTIA}" update www/foo
+	atf_check test -s www/foo/distinfo
+}
+
+atf_test_case update_missing_distinfo
+update_missing_distinfo_head() {
+	atf_set "descr" "update fails when distinfo is absent"
+}
+update_missing_distinfo_body() {
+	setup
+	export STUB_WRITE="Makefile pkg-descr"
+	atf_check -s exit:1 -e match:"no distinfo" "${PORTIA}" update www/foo
+}
+
+atf_test_case update_passes_origin_and_target
+update_passes_origin_and_target_head() {
+	atf_set "descr" "update tells the model the origin and target"
+}
+update_passes_origin_and_target_body() {
+	setup
+	export STUB_WRITE="Makefile distinfo pkg-descr"
+	atf_check -s exit:0 "${PORTIA}" update www/foo
+	atf_check grep -qF "Port origin: www/foo" model.argv
+	atf_check grep -qF "Write the port into: ./www/foo" model.argv
 }

@@ -34,7 +34,7 @@ die() {
 }
 
 usage() {
-	echo "usage: ${PROGNAME} new category/port" >&2
+	echo "usage: ${PROGNAME} new|update category/port" >&2
 	exit 64
 }
 
@@ -91,6 +91,14 @@ cmd_new() {
 ${detail}" Makefile distinfo pkg-descr
 }
 
+cmd_update() {
+	local origin="${1:-}"
+	[ -n "${origin}" ] || usage
+	check_origin "${origin}" || die "invalid origin: ${origin}"
+
+	drive "${origin}" update.org "" Makefile distinfo pkg-descr
+}
+
 main() {
 	local command="${1:-}"
 	[ -n "${command}" ] || usage
@@ -98,6 +106,7 @@ main() {
 
 	case "${command}" in
 	new) cmd_new "${@}" ;;
+	update) cmd_update "${@}" ;;
 	*) usage ;;
 	esac
 }
