@@ -66,6 +66,19 @@ it. Verify it via static analysis only - fetching distfiles,
 extracting them as needed, etc.
 
 Verifying the actual build will be down out of band by an operator.
+*** use the framework - do not invent creative solutions
+Languages like python, go, rust, etc all typically have dedicated make
+targets to assist with managing dependencies. Refer to built-in
+framework and documentation when you need to accomplish non-obvious
+tasks.
+
+Do not invent creative solutions to problems. Any problems you come
+across have almost certainly been solved many times before in the
+ports repo. Thoroughly analyze the framework, documentation, and
+existing ports to identify a way forward.
+
+It is better to fail at the task than it is to invent a solution that
+will be rejected by the ports community.
 ** PORTSDIR and path handling
 portia ultimately writes to =${PORTSDIR}/category/port=. This path may
 be determined one of two ways:
