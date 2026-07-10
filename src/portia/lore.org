@@ -89,6 +89,25 @@ shape - so this constraint lands in the prompts, like the
 changelog-reference requirement. =new= and =update= fetch and extract
 the distfile to inspect it and to derive =distinfo=, but do not run
 =make=, =configure=, or a compiler.
+
+* use the framework; do not invent - a prompt constraint
+The spec forbids inventing creative solutions: a language ecosystem
+almost always has dedicated make targets and =USES= knobs for the
+mechanical parts - dependencies especially (=make cargo-crates=, =make
+gomod-vendor=, the Python and PHP helpers) - and any non-obvious problem
+has been solved in the ports tree before. So the prompts tell the model
+to reach for that machinery and to follow an existing port rather than
+hand-roll a rule.
+
+Like the no-build constraint, this shapes the model's approach, not the
+harness's behavior, so it lives in the prompts, not the code, and adds
+no man-page contract: portia checks the same files and commits the same
+way however the port was produced. The sharp edge is the spec's own
+stance - better to fail than to ship a bespoke solution the community
+will reject - which the prompts state outright so the model stops rather
+than improvises when the framework path is unclear. Both =new= and
+=update= carry it, since both do real dependency work.
+
 * the post-condition is the port's shape
 The spec's second goal is checking MODEL's output. portia's check is
 that the expected port files exist and are non-empty in the port dir.

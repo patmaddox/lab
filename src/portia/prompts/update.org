@@ -22,7 +22,11 @@ Leave the target directory holding the updated port:
    new versions that affects the port: build system, dependencies,
    installed files. Work by static analysis of the fetched sources.
 3. Update the plist if the set of installed files changed.
-4. Consult prior art for how similar updates were handled.
+4. Use the framework; do not invent. When the update changes bundled
+   dependencies, regenerate them with the framework's machinery -
+   =make cargo-crates= for =CARGO_CRATES=, =make gomod-vendor= for
+   =GH_TUPLE= - rather than editing the list by hand. Consult prior art
+   for how similar updates were handled.
    - Porter's Handbook:
      https://docs.freebsd.org/en/books/porters-handbook/
    - Ports tree: https://github.com/freebsd/freebsd-ports
@@ -32,6 +36,9 @@ Leave the target directory holding the updated port:
 - Do not invent checksums; regenerate =distinfo= from the new distfile.
 - Keep the change minimal and reviewable - touch only what the new
   version requires.
+- Use the framework; do not invent. Every non-obvious task has almost
+  certainly been solved in the tree already. Better to leave a piece
+  undone than to hand-roll a solution the ports community will reject.
 - Work by static analysis only - fetching and extracting distfiles,
   reading the sources. Do not build the port: do not run =make=,
   =configure=, or a compiler. An operator verifies the build out of

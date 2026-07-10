@@ -35,15 +35,22 @@ complete port:
    - Porter's Handbook:
      https://docs.freebsd.org/en/books/porters-handbook/
    - Ports tree: https://github.com/freebsd/freebsd-ports
-3. Prefer the framework's idioms (USES knobs, helper variables) over
-   hand-rolled rules. A port that leans on the framework is the one a
-   committer will accept.
+3. Use the framework; do not invent. Managing dependencies especially
+   has dedicated machinery - =USES=cargo= with =make cargo-crates= to
+   generate =CARGO_CRATES=, =USES=go:modules= with =make gomod-vendor=
+   to generate =GH_TUPLE=, the Python and PHP dependency helpers. Reach
+   for these =USES= knobs and their helper make targets over
+   hand-rolled rules, and for any non-obvious task find a port built
+   the same way and follow it.
 
 * conventions
 - Keep the Makefile ordered as the handbook prescribes (PORTNAME
   block, MAINTAINER/COMMENT, LICENSE, USES/dependency block).
 - Do not invent checksums; derive =distinfo= from the actual distfile.
 - Account for every installed file; a plist mismatch fails the build.
+- Use the framework; do not invent. Every non-obvious task has almost
+  certainly been solved in the tree already. Better to leave a piece
+  undone than to hand-roll a solution the ports community will reject.
 - Work by static analysis only - fetching and extracting distfiles,
   reading the sources. Do not build the port: do not run =make=,
   =configure=, or a compiler. An operator verifies the build out of
