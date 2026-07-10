@@ -163,5 +163,9 @@ EOF
 The porting work is performed by the model and is not guaranteed
 correct.
 .Nm
-verifies only that the expected files were produced, not that the port
-builds.
+and the model it drives work by static analysis alone
+\(em fetching and extracting distfiles, reading the sources
+\(em and never build the port.
+.Nm
+verifies only that the expected files were produced; that the port
+actually builds must be checked out of band by an operator.

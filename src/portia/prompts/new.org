@@ -44,6 +44,10 @@ complete port:
   block, MAINTAINER/COMMENT, LICENSE, USES/dependency block).
 - Do not invent checksums; derive =distinfo= from the actual distfile.
 - Account for every installed file; a plist mismatch fails the build.
+- Work by static analysis only - fetching and extracting distfiles,
+  reading the sources. Do not build the port: do not run =make=,
+  =configure=, or a compiler. An operator verifies the build out of
+  band.
 
 * the commit message
 Write the commit message to the path given below the prompt. Always

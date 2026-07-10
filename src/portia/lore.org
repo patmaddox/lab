@@ -76,6 +76,19 @@ complete port, =distinfo= included, which does assume a fetchable
 distfile - a port with nothing fetchable yet, pre-release or private,
 is out of scope by that choice, the price of the simpler surface.
 
+* portia does not build; verification is static analysis
+The spec constrains portia - the harness and the model both - never to
+build the port. Verification is static analysis only: fetch the
+distfile, extract it, read the sources, derive =distinfo= from what was
+fetched. The real build is checked out of band by an operator, so a bad
+guess surfaces there rather than in a model turn, which cannot be
+trusted to judge a build anyway.
+
+The harness never built - it stubs the model and checks the port's file
+shape - so this constraint lands in the prompts, like the
+changelog-reference requirement. =new= and =update= fetch and extract
+the distfile to inspect it and to derive =distinfo=, but do not run
+=make=, =configure=, or a compiler.
 * the post-condition is the port's shape
 The spec's second goal is checking MODEL's output. portia's check is
 that the expected port files exist and are non-empty in the port dir.

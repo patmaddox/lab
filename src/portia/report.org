@@ -49,6 +49,11 @@ post-condition, and the commit - so a bad run fails loudly instead of
 leaving a half-built port. The prompts carry the domain knowledge and
 are the natural place to improve results.
 
+Portia and the model both verify by static analysis only - fetching and
+extracting distfiles, reading the sources - and never build the port.
+The build itself is checked out of band by an operator, so this
+constraint lives in the prompts, not the harness.
+
 * status
 Complete against the spec: both commands, each a vertical slice
 with tests and man page, driving the model and committing its result -

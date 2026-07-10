@@ -18,8 +18,9 @@ Leave the target directory holding the updated port:
 
 * how to work
 1. Find the newest upstream release for the origin.
-2. Diff what changed between the current and new versions that affects
-   the port: build system, dependencies, installed files.
+2. Fetch the new distfile and diff what changed between the current and
+   new versions that affects the port: build system, dependencies,
+   installed files. Work by static analysis of the fetched sources.
 3. Update the plist if the set of installed files changed.
 4. Consult prior art for how similar updates were handled.
    - Porter's Handbook:
@@ -31,6 +32,10 @@ Leave the target directory holding the updated port:
 - Do not invent checksums; regenerate =distinfo= from the new distfile.
 - Keep the change minimal and reviewable - touch only what the new
   version requires.
+- Work by static analysis only - fetching and extracting distfiles,
+  reading the sources. Do not build the port: do not run =make=,
+  =configure=, or a compiler. An operator verifies the build out of
+  band.
 
 * the commit message
 Write the commit message to the path given below the prompt. Always
