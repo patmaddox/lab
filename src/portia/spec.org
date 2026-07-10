@@ -59,6 +59,13 @@ information to provide guidance as much as possible.
 It's possible that a run is interrupted, resulting in changed files on
 disk that have not been committed. Proceed as usual, and commit at the
 end if the work is complete.
+** constraints
+*** update config only - do not build
+portia (the command and model) do not build the port to verify
+it. Verify it via static analysis only - fetching distfiles,
+extracting them as needed, etc.
+
+Verifying the actual build will be down out of band by an operator.
 ** PORTSDIR and path handling
 portia ultimately writes to =${PORTSDIR}/category/port=. This path may
 be determined one of two ways:
