@@ -33,6 +33,13 @@ atf_init_test_cases() {
 	atf_add_test_case update_produces_port
 	atf_add_test_case update_missing_distinfo
 	atf_add_test_case update_passes_origin_and_target
+	atf_add_test_case troubleshoot_no_origin
+	atf_add_test_case troubleshoot_invalid_origin
+	atf_add_test_case troubleshoot_produces_port
+	atf_add_test_case troubleshoot_missing_distinfo
+	atf_add_test_case troubleshoot_passes_origin_and_target
+	atf_add_test_case troubleshoot_passes_poudriere_logs
+	atf_add_test_case troubleshoot_poudriere_url_override
 }
 
 setup() {
@@ -547,4 +554,91 @@ update_passes_origin_and_target_body() {
 	atf_check -s exit:0 "${PORTIA}" update www/foo
 	atf_check grep -qF "Port origin: www/foo" model.argv
 	atf_check grep -qF "Write the port into: ./www/foo" model.argv
+}
+
+atf_test_case troubleshoot_no_origin
+troubleshoot_no_origin_head() {
+	atf_set "descr" "troubleshoot without an origin prints usage and exits 64"
+}
+troubleshoot_no_origin_body() {
+	setup
+	atf_check -s exit:64 -e match:"usage" "${PORTIA}" troubleshoot
+}
+
+atf_test_case troubleshoot_invalid_origin
+troubleshoot_invalid_origin_head() {
+	atf_set "descr" "troubleshoot rejects an argument that is neither form"
+}
+troubleshoot_invalid_origin_body() {
+	setup
+	atf_check -s exit:1 -e match:"not a port origin or path" \
+	    "${PORTIA}" troubleshoot foo
+}
+
+atf_test_case troubleshoot_produces_port
+troubleshoot_produces_port_head() {
+	atf_set "descr" "troubleshoot requires the fixed port shape, distinfo included"
+}
+troubleshoot_produces_port_body() {
+	setup
+	mk_repo
+	export STUB_WRITE="Makefile distinfo pkg-descr"
+	atf_check -s exit:0 "${PORTIA}" troubleshoot www/foo
+	atf_check test -s www/foo/distinfo
+}
+
+atf_test_case troubleshoot_missing_distinfo
+troubleshoot_missing_distinfo_head() {
+	atf_set "descr" "troubleshoot fails when distinfo is absent"
+}
+troubleshoot_missing_distinfo_body() {
+	setup
+	mk_repo
+	export STUB_WRITE="Makefile pkg-descr"
+	atf_check -s exit:1 -e match:"no distinfo" \
+	    "${PORTIA}" troubleshoot www/foo
+}
+
+atf_test_case troubleshoot_passes_origin_and_target
+troubleshoot_passes_origin_and_target_head() {
+	atf_set "descr" "troubleshoot tells the model the origin and target"
+}
+troubleshoot_passes_origin_and_target_body() {
+	setup
+	mk_repo
+	export STUB_WRITE="Makefile distinfo pkg-descr"
+	atf_check -s exit:0 "${PORTIA}" troubleshoot www/foo
+	atf_check grep -qF "Port origin: www/foo" model.argv
+	atf_check grep -qF "Write the port into: ./www/foo" model.argv
+}
+
+atf_test_case troubleshoot_passes_poudriere_logs
+troubleshoot_passes_poudriere_logs_head() {
+	atf_set "descr" "the model is handed the default poudriere logs path"
+}
+troubleshoot_passes_poudriere_logs_body() {
+	setup
+	mk_repo
+	export STUB_WRITE="Makefile distinfo pkg-descr"
+	atf_check -s exit:0 "${PORTIA}" troubleshoot www/foo
+	# The default instance and the per-package log path both reach the
+	# prompt so the model knows where to look for the failure.
+	atf_check grep -qF \
+	    "https://poudriere.p7x.dev/data/latest-per-pkg/" model.argv
+}
+
+atf_test_case troubleshoot_poudriere_url_override
+troubleshoot_poudriere_url_override_head() {
+	atf_set "descr" "POUDRIERE_URL overrides the logs instance"
+}
+troubleshoot_poudriere_url_override_body() {
+	setup
+	mk_repo
+	export STUB_WRITE="Makefile distinfo pkg-descr"
+	export POUDRIERE_URL="https://pdr.example.org"
+	atf_check -s exit:0 "${PORTIA}" troubleshoot www/foo
+	atf_check grep -qF \
+	    "https://pdr.example.org/data/latest-per-pkg/" model.argv
+	# The default instance is not what the model is handed once overridden.
+	atf_check -o not-match:"poudriere.p7x.dev" cat model.argv
 }

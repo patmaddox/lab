@@ -271,3 +271,32 @@ wherever portia runs from.
 repo) from stdin and passes it into the prompt as context. stdin is a
 sharp, testable channel for optional free-form input; the other
 commands take none.
+
+* =troubleshoot= diagnoses a build failure from the poudriere logs
+The other two commands take no failure input, so the "current
+standard" and "understand what the build consumes" lessons land in
+=new= and =update= only as *prevention*. =troubleshoot= is the
+*diagnostic* mode: it is the capability the confirmed failure showed was
+missing - the successful run was handed a build log and asked to find
+the root cause, which =new= and =update= never do. So its prompt
+carries the same methodology as a procedure: read the exact error, trace
+what the failing step consumes, find the current-standard mechanism by
+prevalence, research the error class widely (bugzilla, forums, the port's
+failure history), separate cause from trigger, then fix - migrating to
+the standard mechanism where the port is on a broken one. The same
+consensus-default rule applies: an obstacle the standard mechanism hits
+is a problem to research and solve, not grounds to keep the port on the
+minority scheme that happens to work.
+
+The harness side is deliberately thin, reusing everything the other
+commands established. =troubleshoot= resolves the port the same way,
+requires the same complete-port shape (=Makefile=, =distinfo=,
+=pkg-descr=), and commits the same way; a fix that changes the distfile
+set regenerates =distinfo=, so requiring it costs nothing when it does
+not. The one new piece is where the failure log lives: portia hands the
+model =${POUDRIERE_URL}/data/latest-per-pkg/= as context and the model
+navigates it to the port's most recent failure. =POUDRIERE_URL= defaults
+to the project's public instance and carries the whole base URL, so an
+instance laid out differently is overridden in one variable. Only
+=troubleshoot= consults it; the diagnostic knowledge lives in the prompt,
+not the harness, exactly as the porting knowledge does for the others.

@@ -20,14 +20,17 @@ the ports tree, and the port directory:
   =distinfo=, =pkg-descr=.
 - =update= :: bump to the newest upstream version and reconcile deps.
   Requires =Makefile=, =distinfo=, =pkg-descr=.
+- =troubleshoot= :: diagnose a build failure from the poudriere logs
+  and fix its root cause. Requires =Makefile=, =distinfo=, =pkg-descr=.
 
-They are the two mechanical phases of a port's life: create and
-maintain. Each ends by committing the port into the tree, with a
-message the model writes to FreeBSD convention - for =update=, citing
-the changelog of every intermediate version. The commit is keyed on the
-port directory having uncommitted changes, so work an interrupted run
-left on disk is picked up and committed, while a port already at its
-desired state is a clean success that leaves the tree untouched.
+They are the two mechanical phases of a port's life - create and
+maintain - and =troubleshoot= is the repair phase when a build breaks.
+Each ends by committing the port into the tree, with a message the model
+writes to FreeBSD convention - for =update=, citing the changelog of
+every intermediate version. The commit is keyed on the port directory
+having uncommitted changes, so work an interrupted run left on disk is
+picked up and committed, while a port already at its desired state is a
+clean success that leaves the tree untouched.
 
 * the pieces
 - =portia= :: the harness. Resolves the port argument (origin or path),
@@ -36,8 +39,8 @@ desired state is a clean success that leaves the tree untouched.
   checks the required files landed non-empty, then - when the port
   directory has uncommitted changes - commits the port with the message
   the model wrote.
-- =prompts/{new,update}.org= :: the porting knowledge. Kept
-  as files, so the prompts - the part that actually knows FreeBSD
+- =prompts/{new,update,troubleshoot}.org= :: the porting knowledge.
+  Kept as files, so the prompts - the part that actually knows FreeBSD
   porting - evolve without touching the harness.
 - =portia.1=, =portia_test=, =Kyuafile= :: man page and kyua suite.
 
@@ -58,8 +61,22 @@ machinery - dependency-generating make targets, =USES= knobs, an
 existing port to follow - and fail rather than invent a solution the
 ports community would reject.
 
+That constraint is sharper than "reach for a framework mechanism": a
+once-standard mechanism the tree has moved away from is as wrong as an
+invented one, so the prompts have the model pick the mechanism
+comparable ports use *now*, by prevalence, and understand what the build
+actually consumes - because, unable to build, that understanding is its
+only guard against a config that generates cleanly yet cannot compile.
+Consensus is the default the same way: when the standard mechanism hits
+an obstacle, the prompts have the model solve it the framework's way
+rather than retreat to a minority scheme that merely happens to work.
+=troubleshoot= turns the same reasoning outward: pointed at the poudriere
+build logs, the model reads the exact error, researches its class across
+the tree and the wider FreeBSD sources, separates a failure's root cause
+from the change that merely triggered it, and fixes the root.
+
 * status
-Complete against the spec: both commands, each a vertical slice
+Complete against the spec: all three commands, each a vertical slice
 with tests and man page, driving the model and committing its result -
 including work an interrupted run stranded on disk, and exiting cleanly
 when a port is already at its desired state. Exercised only with a

@@ -1,0 +1,85 @@
+#+TITLE: portia troubleshoot - diagnose and fix a build failure
+
+You are diagnosing why an existing FreeBSD port fails to build, and
+implementing the fix. The port is in the target directory.
+
+* the build log
+The port was built in poudriere; its per-package build logs are
+published under the URL given below the prompt
+(=${POUDRIERE_URL}/data/latest-per-pkg/=). Navigate that directory to
+the most recent build-failure log for this port and read it: find the
+phase that failed and the exact error message. Take that error string
+as the key for your research.
+
+* how to work
+1. Read the failure. Identify the failing phase and the precise error,
+   not a paraphrase - the exact string is what prior art is indexed by.
+2. Understand what the build consumes, not just what the config
+   generates. Trace what the failing step actually reads - which
+   artifacts, produced by which framework mechanism - and check whether
+   the config and the fetched upstream sources provide a complete and
+   consistent set of them. A dependency generator exiting 0 does not
+   mean the config is complete; the failure is often a missing artifact
+   the generator never produces.
+3. Find the current standard. Where the ecosystem offers several
+   mechanisms, measure how many comparable ports in the tree use each
+   *now*: the one most use is the standard, and a mechanism only a
+   handful still use is a warning sign, not a template - a once-standard
+   path the tree has moved away from is as broken as one you invent.
+4. Research the failure class widely. Beyond the Porter's Handbook and
+   the tree, search the exact error string in bugzilla
+   (https://bugs.freebsd.org/bugzilla/), the forums and mailing lists,
+   and the port's own build-failure history (portsfallout). A failure
+   you hit has almost certainly been seen and resolved before.
+5. Separate cause from trigger. A port carries whatever mechanism it was
+   last configured with, so a failure that surfaces after an update is
+   often a pre-existing defect the update merely reproduced, not one the
+   update introduced. Check the failure history before blaming the last
+   change; the fix belongs at the root cause, not the trigger.
+6. Implement the fix with the framework's current-standard mechanism,
+   migrating to it if the port is on a deprecated or broken one.
+   Consensus is the default: if migrating surfaces an obstacle - a
+   distfile that will not fetch, an artifact upstream does not provide -
+   treat it as a problem to solve, not proof the port belongs on its
+   minority scheme. Research how *other ports on the standard mechanism*
+   handle the same obstacle, and keep the port on a minority scheme only
+   once you have confirmed no standard remedy exists, saying why. That
+   the existing scheme happens to work is no reason to keep it over the
+   standard one.
+
+* conventions
+- Work by static analysis only - fetch and extract distfiles, read the
+  sources and the build log. Do not build the port: do not run =make=,
+  =configure=, or a compiler. Because you cannot build, understanding
+  what the build consumes is your only check that the fix will work; an
+  operator verifies the actual build out of band.
+- Use the framework; do not invent. Every failure class has almost
+  certainly been solved in the tree already. Better to leave the fix
+  undone than to ship a solution the ports community will reject.
+- If the fix changes the distfile set - migrating a dependency
+  mechanism usually does - regenerate =distinfo= from what the new
+  mechanism fetches; do not invent checksums.
+- If the diagnosis needs a tool the environment does not have, stop and
+  name it in the commit message rather than guessing past it.
+
+* what to produce
+Leave the target directory holding the fixed port - =Makefile=,
+=distinfo=, =pkg-descr= - with the build failure's root cause
+addressed.
+
+* the commit message
+Write the commit message to the path given below the prompt. Always
+write it, describing the port that results. Even when the fix already
+appears on disk, which happens when an earlier run was interrupted
+before committing, still write the message for that state; whether to
+commit is portia's decision, keyed on uncommitted changes, not yours.
+
+Follow the conventions of comparable ports in the tree:
+- Subject =category/port: <summary>=, imperative mood, ~50 characters,
+  naming the fix (e.g. the mechanism migrated to). A build fix that does
+  not change the version takes a =PORTREVISION= bump; add or raise
+  =PORTREVISION= unless the fix also bumps =DISTVERSION=.
+- Body wrapped at 72 columns: the root cause - why the build consumed
+  something the config could not supply - and why the fix resolves it.
+  Cite the sources that confirm the mechanism (handbook, an in-tree port
+  built the same way, the bug or thread).

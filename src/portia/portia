@@ -27,6 +27,12 @@ export CLAUDE_CODE_GLOB_NO_IGNORE=false
 # PORTSDIR is not consulted in that case.
 : "${PORTSDIR:=.}"
 
+# The poudriere instance whose published build logs troubleshoot points
+# the model at. The per-package logs live under data/latest-per-pkg/
+# there; the model navigates that directory to the port's most recent
+# failure. Default to the project's public instance.
+: "${POUDRIERE_URL:=https://poudriere.p7x.dev}"
+
 # Scratch file for the model's commit message. Global so the EXIT trap
 # that removes it can see it under set -u even after drive() returns.
 msgfile=""
@@ -42,7 +48,7 @@ die() {
 }
 
 usage() {
-	echo "usage: ${PROGNAME} new|update category/port|path" >&2
+	echo "usage: ${PROGNAME} new|update|troubleshoot category/port|path" >&2
 	exit 64
 }
 
@@ -223,6 +229,18 @@ cmd_update() {
 	drive update.org "" Makefile distinfo pkg-descr
 }
 
+cmd_troubleshoot() {
+	local arg="${1:-}"
+	[ -n "${arg}" ] || usage
+	resolve_port "${arg}" || die "not a port origin or path: ${arg}"
+
+	# Hand the model where the build logs live; it navigates from there
+	# to the port's most recent failure. POUDRIERE_URL carries the trailing
+	# path so a differently-laid-out instance can override the whole thing.
+	drive troubleshoot.org "Poudriere build logs: \
+${POUDRIERE_URL}/data/latest-per-pkg/" Makefile distinfo pkg-descr
+}
+
 main() {
 	local command="${1:-}"
 	[ -n "${command}" ] || usage
@@ -231,6 +249,7 @@ main() {
 	case "${command}" in
 	new) cmd_new "${@}" ;;
 	update) cmd_update "${@}" ;;
+	troubleshoot) cmd_troubleshoot "${@}" ;;
 	*) usage ;;
 	esac
 }

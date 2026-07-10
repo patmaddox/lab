@@ -11,6 +11,9 @@
 .Nm
 .Cm update
 .Ar port
+.Nm
+.Cm troubleshoot
+.Ar port
 .Sh DESCRIPTION
 .Nm
 is a deterministic harness around a language model that automates the
@@ -95,9 +98,23 @@ The model raises the version, resets
 reconciles dependencies, and regenerates
 .Pa distinfo
 for the new distfile.
+.It Cm troubleshoot Ar port
+Diagnose and fix a build failure in an existing port.
+The model is pointed at the poudriere build logs published under
+.Ev POUDRIERE_URL ,
+navigates them to the port's most recent failure, researches the error
+against the ports tree and the wider FreeBSD sources, and implements a
+fix
+\(em typically migrating a broken or outdated mechanism to the one
+comparable ports use now.
+The result is again a
+.Pa Makefile ,
+.Pa distinfo ,
+and
+.Pa pkg-descr .
 .El
 .Sh ENVIRONMENT
-.Bl -tag -width PORTSDIR
+.Bl -tag -width POUDRIERE_URL
 .It Ev MODEL
 The model command, defaulting to
 .Ql claude .
@@ -118,6 +135,17 @@ A path argument carries its own tree, so
 is not consulted then.
 Either way the ports tree must be a jj or git repository, and when it
 is managed by both the commit is made with jj.
+.It Ev POUDRIERE_URL
+The base URL of the poudriere instance whose build logs
+.Cm troubleshoot
+hands the model, defaulting to
+.Ql https://poudriere.p7x.dev .
+The per-package logs are expected under
+.Pa data/latest-per-pkg/
+beneath it.
+Only
+.Cm troubleshoot
+consults it.
 .El
 .Sh FILES
 Relative to the port directory:
