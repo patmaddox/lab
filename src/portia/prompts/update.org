@@ -21,12 +21,48 @@ Leave the target directory holding the updated port:
 2. Fetch the new distfile and diff what changed between the current and
    new versions that affects the port: build system, dependencies,
    installed files. Work by static analysis of the fetched sources.
-3. Update the plist if the set of installed files changed.
-4. Use the framework; do not invent. When the update changes bundled
-   dependencies, regenerate them with the framework's machinery -
-   =make cargo-crates= for =CARGO_CRATES=, =make gomod-vendor= for
-   =GH_TUPLE= - rather than editing the list by hand. Consult prior art
-   for how similar updates were handled.
+3. Do not treat the port's existing mechanism as given; prefer the
+   consensus. A bump inherits whatever dependency scheme the port
+   already uses, so re-running that scheme's generator faithfully
+   reproduces a scheme that may be broken or no longer standard. The
+   framework prizes consistency, so an update is an opportunity to match
+   convention: confirm the existing mechanism is still the one
+   comparable ports use *now* - by how many use it - and if it is not,
+   migrate to that standard rather than carrying the old scheme forward;
+   a scheme only a handful of ports still use is a warning sign.
+4. When the standard mechanism resists, solve the obstacle - do not
+   retreat to the minority scheme. If migrating to the consensus
+   mechanism surfaces a problem - a distfile that will not fetch, an
+   artifact upstream does not provide - that is a problem to solve, not
+   proof the minority scheme is right. Such problems have almost
+   certainly been met before: research how *other ports on the standard
+   mechanism* handle the same obstacle before concluding the standard
+   cannot be used. Fall back to the port's existing or another minority
+   scheme only once you have confirmed no standard remedy exists - it is
+   the last resort, not the first workaround - and say why in the
+   commit. That a nonstandard scheme happens to fetch and generate
+   cleanly is no reason to prefer it over the one the tree has
+   standardized on.
+5. Understand what the build consumes, not just what generates it. Know
+   which artifacts the build reads, confirm the config produces a
+   *complete and consistent* set, and verify the fetched upstream
+   sources still contain what the mechanism assumes - does upstream
+   vendor? ship a lockfile? A generator exiting 0 is not evidence the
+   config is complete. Because portia never builds (see conventions),
+   this is your only check that the mechanism will actually work - but a
+   standard mechanism failing this check is a problem to solve within
+   the standard approach (step 4), not a licence to retreat to a
+   minority scheme.
+6. Update the plist if the set of installed files changed.
+7. Use the framework; do not invent. When the update changes bundled
+   dependencies, regenerate them with the framework's current-standard
+   machinery - =make cargo-crates= for =CARGO_CRATES=, =GO_MODULE= for
+   Go modules - rather than editing the list by hand. Consult prior art
+   for how similar updates were handled, and when a mechanism choice is
+   non-obvious or a build failure is in play, widen the search past the
+   handbook and the tree to bugzilla
+   (https://bugs.freebsd.org/bugzilla/), the forums and mailing lists,
+   and the port's own build-failure history.
    - Porter's Handbook:
      https://docs.freebsd.org/en/books/porters-handbook/
    - Ports tree: https://github.com/freebsd/freebsd-ports

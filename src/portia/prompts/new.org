@@ -30,18 +30,52 @@ complete port:
 1. Fetch and extract the distfile and inspect it by static analysis:
    its build system, its bundled documentation, and its declared
    dependencies. Derive =distinfo= from the distfile you fetched.
-2. Research prior art. The FreeBSD ports tree has thousands of ports;
-   find one built with the same mechanism and follow its shape.
+2. Research prior art, and let it tell you the *current standard*. The
+   tree has thousands of ports; where an ecosystem offers several
+   mechanisms for a task - dependency management especially - find the
+   one comparable ports use *now* by how many use it, and follow that.
+   The framework prizes consistency, so the consensus mechanism is the
+   default and a minority one a last resort. A mechanism only a handful
+   of ports still use is a warning sign, not a template: a once-standard
+   path the tree has moved away from is as wrong as one you invent
+   yourself.
    - Porter's Handbook:
      https://docs.freebsd.org/en/books/porters-handbook/
    - Ports tree: https://github.com/freebsd/freebsd-ports
-3. Use the framework; do not invent. Managing dependencies especially
+   When a mechanism choice is non-obvious, widen the search past the
+   handbook and the tree to bugzilla
+   (https://bugs.freebsd.org/bugzilla/), the forums and mailing lists,
+   and the port's own build-failure history.
+3. When the standard mechanism resists, solve the obstacle - do not
+   settle for a minority one. If the consensus mechanism surfaces a
+   problem - a distfile that will not fetch, an artifact upstream does
+   not provide - that is a problem to solve, not a licence to reach for
+   a rarely-used scheme that happens to work. Such problems have almost
+   certainly been met before: research how *other ports on the standard
+   mechanism* handle the same obstacle before concluding the standard
+   cannot be used. Choose a minority mechanism only once you have
+   confirmed no standard remedy exists, and say why. That a nonstandard
+   scheme fetches and generates cleanly does not make it right over the
+   one the tree has standardized on.
+4. Understand what the build consumes, not just what generates it. For
+   the mechanism you choose, know which artifacts the build actually
+   reads, confirm your config produces a *complete and consistent* set
+   of them, and verify the fetched upstream sources contain what the
+   mechanism assumes - does upstream vendor its dependencies? ship a
+   lockfile? A dependency-generating make target exiting 0 is not
+   evidence the config is complete; the missing piece is often an
+   artifact the generator never produces. Because portia never builds
+   (see conventions), this understanding is your only check that a
+   dependency mechanism will actually work - but a standard mechanism
+   failing that check is a problem to solve within the standard approach
+   (step 3), not a reason to settle for a minority scheme.
+5. Use the framework; do not invent. Managing dependencies especially
    has dedicated machinery - =USES=cargo= with =make cargo-crates= to
-   generate =CARGO_CRATES=, =USES=go:modules= with =make gomod-vendor=
-   to generate =GH_TUPLE=, the Python and PHP dependency helpers. Reach
-   for these =USES= knobs and their helper make targets over
-   hand-rolled rules, and for any non-obvious task find a port built
-   the same way and follow it.
+   generate =CARGO_CRATES=, =USES=go:modules= with =GO_MODULE= to have
+   the framework fetch and vendor the modules, the Python and PHP
+   dependency helpers. Reach for the =USES= knob and helper target the
+   current standard uses, and for any non-obvious task find a port
+   built the same way and follow it.
 
 * conventions
 - Keep the Makefile ordered as the handbook prescribes (PORTNAME

@@ -108,6 +108,72 @@ will reject - which the prompts state outright so the model stops rather
 than improvises when the framework path is unclear. Both =new= and
 =update= carry it, since both do real dependency work.
 
+* the framework's *current standard*, not merely *a* framework path
+"Use the framework; do not invent" is necessary but not sufficient: an
+ecosystem often ships several mechanisms for one task, and a once-standard
+one the tree has moved away from is as wrong as an invented solution -
+it *is* the framework, just the deprecated part of it. A confirmed
+failure taught this concretely: a Go port was carried on =GH_TUPLE=
+vendoring while 511 of 512 module-based Go ports had moved to
+=GO_MODULE=; the lone outlier was unbuildable, and "use the framework"
+did not catch it because =GH_TUPLE= is framework machinery. So the
+=new= and =update= prompts now tell the model to pick the mechanism
+comparable ports use *now*, measured by prevalence, and to treat a
+mechanism only a handful of ports still use as a warning sign, not a
+template. The rule is stated generally; the model derives the specific
+(for Go it lands on =GO_MODULE=).
+
+Two more lessons from the same failure, also prompt-only:
+- *Understand what the build consumes.* A dependency generator exiting 0
+  is not evidence the config is complete: the Go build reads
+  =vendor/modules.txt=, which =GH_TUPLE= never produces, so every
+  vendored package was ignored. The prompts now require the model to
+  know which artifacts the build reads, confirm the config produces a
+  complete and consistent set, and verify the fetched upstream actually
+  provides what the mechanism assumes (does it vendor? ship a lockfile?).
+  Static analysis being the *only* verification portia has is the reason
+  this matters, so the prompts frame it that way: since you cannot build,
+  mechanistic understanding is the only net against build-breaking config.
+- *=update= must not treat the port's existing scheme as given.* A bump
+  inherits whatever mechanism the port already uses, so mechanically
+  re-running its generator reproduces a pre-existing defect - exactly how
+  the failure arose. =update.org= now tells the model to sanity-check
+  that the existing mechanism is still standard and still sound before
+  bumping it.
+
+These stay in the prompts for the same reason "use the framework" does:
+they shape the model's approach and add no harness contract. Both =new=
+and =update= carry them, since both do real dependency work.
+
+* consensus is the default; a working minority scheme does not justify itself
+The =current standard= rule has an inverse failure mode. Told to prefer
+the mechanism the tree uses now, the model migrates to it, hits an
+obstacle, and retreats to the minority scheme - now self-justified by
+"it works". A confirmed =zk= update did exactly this: it migrated
+=GH_TUPLE= to =GO_MODULE=, found the =GO_MODULE= fetch 404s because an
+upstream test-fixture filename holds a character invalid in a Go module
+path, and kept =GH_TUPLE= because it still fetches. That retreat is the
+very error the =current standard= rule exists to prevent, reached from
+the other side.
+
+The framework prizes consistency, so consensus is the strong default and
+a minority scheme is a last resort, not a first workaround. An obstacle
+the standard mechanism hits is a problem to solve, not a verdict: the
+spec's premise is that any problem has been solved in the tree before,
+so the model must research how other ports *on the standard mechanism*
+handle that same obstacle before concluding the standard cannot be used,
+and fall back only once it has confirmed no standard remedy exists -
+recording why. "It works" is necessary, not sufficient: that a
+nonstandard scheme fetches and generates cleanly is no reason to prefer
+it. The =understand what the build consumes= check guards against a
+config that generates cleanly yet cannot build; it is not an escape
+hatch back to the minority scheme, which is exactly how it was misused
+here.
+
+Prompt-only, like the rest of the mechanism guidance: =new= and =update=
+both carry it, since both do real dependency work. The harness keeps no
+contract about which mechanism a port uses.
+
 * the post-condition is the port's shape
 The spec's second goal is checking MODEL's output. portia's check is
 that the expected port files exist and are non-empty in the port dir.
