@@ -87,6 +87,13 @@ existing ports to identify a way forward.
 
 It is better to fail at the task than it is to invent a solution that
 will be rejected by the ports community.
+*** do not use yanked / removed versions
+When a port uses a language-specific repo (e.g. PyPi, hex, crates,
+etc), check to make sure that the targeted version hasn't been
+yanked. Different repos use different terms, e.g. yank / retract /
+unlist / unpublish / retire / abandon. These versions are not suitable
+for use. When updating, use the most recent version that hasn't been
+yanked.
 ** PORTSDIR and path handling
 portia ultimately writes to =${PORTSDIR}/category/port=. This path may
 be determined one of two ways:
