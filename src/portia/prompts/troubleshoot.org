@@ -59,6 +59,10 @@ as the key for your research.
 - If the fix changes the distfile set - migrating a dependency
   mechanism usually does - regenerate =distinfo= from what the new
   mechanism fetches; do not invent checksums.
+- A withdrawn upstream version or dependency - one a language package
+  repo has yanked, retracted, or unlisted - is unfit for use and a
+  likely cause of a fetch failure even though it still resolves; if the
+  fix re-pins a version, choose one that has not been withdrawn.
 - If the diagnosis needs a tool the environment does not have, stop and
   name it in the commit message rather than guessing past it.
 

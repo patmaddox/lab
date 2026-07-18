@@ -56,10 +56,12 @@ Portia and the model both verify by static analysis only - fetching and
 extracting distfiles, reading the sources - and never build the port.
 The build itself is checked out of band by an operator, so this
 constraint lives in the prompts, not the harness. The prompts likewise
-carry the spec's other model-facing constraint: use the framework's own
+carry the spec's other model-facing constraints: use the framework's own
 machinery - dependency-generating make targets, =USES= knobs, an
 existing port to follow - and fail rather than invent a solution the
-ports community would reject.
+ports community would reject; and never target a version the ecosystem
+has withdrawn - yanked, retracted, unlisted - which still fetches but is
+unfit for use, so an =update= takes the newest release that stands.
 
 That constraint is sharper than "reach for a framework mechanism": a
 once-standard mechanism the tree has moved away from is as wrong as an

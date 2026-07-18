@@ -17,7 +17,12 @@ Leave the target directory holding the updated port:
 - =pkg-descr= :: update only if the description or =WWW:= changed.
 
 * how to work
-1. Find the newest upstream release for the origin.
+1. Find the newest upstream release for the origin - the newest that
+   has not been withdrawn. A language package repo - PyPI, Hex,
+   crates.io - lets a publisher yank, retract, or unlist a release; a
+   withdrawn version is unfit for use even though it still resolves, so
+   pass it over for the newest that stands, and re-pin any dependency
+   the update draws from such a repo to a version that stands too.
 2. Fetch the new distfile and diff what changed between the current and
    new versions that affects the port: build system, dependencies,
    installed files. Work by static analysis of the fetched sources.

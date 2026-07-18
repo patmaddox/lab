@@ -174,6 +174,27 @@ Prompt-only, like the rest of the mechanism guidance: =new= and =update=
 both carry it, since both do real dependency work. The harness keeps no
 contract about which mechanism a port uses.
 
+* a withdrawn version is unfit for use, in any command
+Language package repos - PyPI, Hex, crates.io - let a publisher withdraw
+a release to mark it unfit: yank, retract, unlist, unpublish, retire,
+abandon; the term varies by repo but the meaning is one. A withdrawn
+version usually still resolves and fetches, so nothing mechanical
+rejects it - the model must consult the repo's own status and pass over
+a withdrawn release. This follows the framework's stance the way the
+mechanism guidance does: a version the ecosystem has pulled is as wrong
+as a mechanism the tree has abandoned, and shipping one is the kind of
+result the ports community rejects.
+
+Prompt-only, like the other model-facing constraints: it shapes which
+version the model targets, not any harness behavior, so it adds no
+man-page contract and no test (the stub model selects no version). All
+three commands carry it, since each can land a version - =new= the
+port's initial version and its pinned dependencies, =update= the newest
+release, which must be the newest *non-withdrawn* one (the spec's own
+wording), and =troubleshoot= a fix that re-pins a version. For
+=troubleshoot= it is also diagnostic: a withdrawn upstream version or
+dependency is itself a fetch-failure cause the model must recognize.
+
 * the post-condition is the port's shape
 The spec's second goal is checking MODEL's output. portia's check is
 that the expected port files exist and are non-empty in the port dir.
