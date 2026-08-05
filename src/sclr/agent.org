@@ -26,20 +26,18 @@ work. Essentially =spec.org= and =lore.org= represent the most
 informed position at any point in the process, and should be made
 available as early as possible.
 
-A change to =spec.org= is always its own commit and always precedes the
-implementation that realizes it. Never commit a spec change together
-with the code, tests, or docs that fulfill it: the spec states intent,
-the implementation follows in later commits. This holds for a
-mid-project spec revision as much as the initial spec - land the spec
-change first, on its own, then close the gap it opens in the commits
-that follow.
+If the work can be completed in one commit, all files should be
+committed together: =spec.org=, =lore.org=, =report.org=, and the
+actual changes.
+
+If the work requires multiple commits, =spec.org= and =lore.org=
+should be committed at the beginning. =report.org= should be committed
+alongside the work, always representing the current form of the
+report.
 
 =collab.org= is a buffer and should not be committed. It may survive
 intermediate commits, but at the end of the work it should not appear
 in any of the commits.
-
-=report.org= presents the culmination of the work and should be
-committed at the end of the commit chain.
 * what to do
 1. Read =spec.org=. Work out what it asks for, what you can already
    do, and what you are missing.
