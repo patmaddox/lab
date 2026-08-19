@@ -22,7 +22,7 @@ When the prompt is "dev", follow the development process defined in @spec.org
 
 See top-level `CLAUDE.md` for general version control rules.
 
-The commit prefix for this directory is `[CLAUDE] emacs: ` (e.g. `[CLAUDE] emacs: Add org-capture template for notes`). Use the actual task name, not generic labels like "parent task".
+The commit prefix for this directory is `emacs: ` (e.g. `emacs: Add org-capture template for notes`). Use the actual task name, not generic labels like "parent task".
 
 ## Vendored Code
 
@@ -41,7 +41,7 @@ Third-party code lives in `vendor/`, one subdirectory per package.
 
   Example commit message:
   ```
-  [CLAUDE] emacs: Re-apply local patches to claude-code.el
+  emacs: Re-apply local patches to claude-code.el
 
   Updated claude-code.el from upstream v2.1.0.
 
