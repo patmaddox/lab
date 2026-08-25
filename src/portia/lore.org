@@ -257,9 +257,10 @@ For =update= the requirement is continuity as much as addition: a new
 release can move or restructure the suite, and the handbook asks that a
 port's tests not break when it is updated, so =update= confirms the
 existing hookup still runs the suite before adding one where upstream
-ships tests the port never wired up. That is a deliberate exception to
-=update='s "touch only what the new version requires" convention, which
-is stated as such rather than left to collide with it.
+ships tests the port never wired up. That is named explicitly in
+=update='s minimality convention rather than left to collide with it,
+since a port's existing test wiring is not something a new version
+forces the model to touch.
 
 Prompt-only, like the other model-facing constraints: it shapes the
 Makefile the model writes, not any harness behavior, so it adds no test
@@ -272,12 +273,57 @@ it, since both settle a port's build configuration from a fetched
 source; =troubleshoot= repairs a broken build, and the port's test
 wiring is not its subject.
 
+* =update= is "bring up to date", not "bump the version"
+The spec asks that an update still reach the best outcome it can when
+upstream has no newer release. The prompt had taken the bump as its
+premise - title, opening paragraph, and the step that opens the work by
+finding the newest release - so a port already at that release had no
+path through the rest of the prompt. Individual steps did useful
+version-independent work, the test hookup among them, but each hung off
+a bump that was not going to happen.
+
+That premise is wrong about what dates a port: the version number is one
+axis and the slowest-moving one. A port can be current in version and
+still carry bounds the source moved past, a dependency mechanism the
+tree has abandoned, or no =test= target for a suite upstream ships - the
+last being the spec's own example, and the likeliest, since the test
+requirement is newer than most ports. The work each of those needs is
+work =update= already knew how to do; only its trigger was tied to the
+bump. So the no-bump case is not a second mode but the same
+reconciliation pass run against the version the port already carries.
+
+Two conventions had to be qualified rather than restated, because they
+invert without a bump. =PORTREVISION= is reset by a bump and
+*incremented* without one - and only when the change alters the
+installed package, which wiring a =test= target does not, so the prompt
+says both halves. =distinfo= is regenerated from a new distfile and left
+untouched when the distfile has not changed; the standing "do not invent
+checksums" rule would otherwise invite a needless rewrite. The
+minimality convention needed the same care: "touch only what the new
+version requires" reads as "touch nothing" with no new version, so it is
+now framed as what being up to date requires, with the reconciliation
+work named so it is not mistaken for licence to tidy.
+
+The commit message follows: with no version to announce, the subject
+names what the change does, and the rule requiring a changelog for every
+intermediate version is scoped to the bump case, where intermediate
+versions exist.
+
+Prompt-only, like the other model-facing constraints - the harness never
+read a version. =cmd_update= passes no context, and =drive= keys the
+commit on the port path having uncommitted changes, so a run that only
+adds a test knob to the Makefile already commits correctly. No test
+either: the stub model has no version and writes fixed content, so
+nothing distinguishes the two cases at the harness's edge. It does reach the man page, which
+describes what each command has the model produce.
+
 * the post-condition is the port's shape
 The spec's second goal is checking MODEL's output. portia's check is
 that the expected port files exist and are non-empty in the port dir.
 Both commands produce a complete port - =Makefile=, =distinfo=,
 =pkg-descr=. =new= fetches the distfile to derive =distinfo=; =update=
-regenerates it for the bumped version.
+regenerates it when the distfile changes. The check is that the files
+are present and non-empty, so it holds either way.
 
 * portia commits the port, the model writes the message
 The spec's third goal is committing at natural stopping points,

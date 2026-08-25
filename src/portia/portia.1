@@ -67,8 +67,9 @@ commits the port when the port directory has uncommitted changes, using
 a message the model writes to a scratch file it is handed.
 The message follows the commit conventions of the surrounding tree and,
 for an
-.Cm update ,
-cites the upstream changelog for every intermediate version.
+.Cm update
+that raises the version, cites the upstream changelog for every
+intermediate version.
 It also records any dependency constraint the model had to loosen
 because no port in the tree provides the version upstream requires.
 Committing is keyed on the port directory, not on the run: uncommitted
@@ -98,16 +99,21 @@ port's
 .Cm test
 target.
 .It Cm update Ar port
-Bump an existing port to its newest upstream version.
-The model raises the version, resets
+Bring an existing port up to date, usually by bumping it to its newest
+upstream version.
+Where a newer release exists the model raises the version, resets
 .Va PORTREVISION ,
 reconciles dependencies and their version constraints, and regenerates
 .Pa distinfo
 for the new distfile.
-It also keeps the port's
+Where upstream has no newer release, the update is a reconciliation
+pass over the version the port already carries: the model matches the
+port to that source rather than leaving it alone, since a port can be
+out of date in every way but its version number.
+Either way it keeps the port's
 .Cm test
-target running the new release's suite, and adds one where upstream
-ships tests the port never wired up.
+target running upstream's suite, and adds one where upstream ships
+tests the port never wired up.
 .It Cm troubleshoot Ar port
 Diagnose and fix a build failure in an existing port.
 The model is pointed at the poudriere build logs published under

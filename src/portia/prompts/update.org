@@ -1,21 +1,24 @@
-#+TITLE: portia update - bump a FreeBSD port to a new version
+#+TITLE: portia update - bring a FreeBSD port up to date
 
-You are updating an existing FreeBSD port to its newest upstream
-version. The current port is in the target directory; change as little
-as the update requires.
+You are bringing an existing FreeBSD port up to date. Usually that
+means updating it to its newest upstream version, but not always: where
+upstream has no newer release, bring the port to the best state it can
+reach against the version it already carries. The current port is in
+the target directory; change no more than being up to date requires.
 
 * what to produce
-Leave the target directory holding the updated port:
-- =Makefile= :: bump =DISTVERSION= (or =PORTVERSION=) to the newest
-  release and reset =PORTREVISION= - remove it, since a version bump
-  supersedes any revision. Reconcile dependencies with the new
-  version: add, drop, or re-version =*_DEPENDS= to match the versions
-  the new release's own dependency list requires. Adjust =USES= and
-  options only where the new version demands it. Keep the =test= target
-  pointing at upstream's suite, and add one where upstream ships tests
-  the port never wired up.
+Leave the target directory holding the up-to-date port:
+- =Makefile= :: where a newer release exists, bump =DISTVERSION= (or
+  =PORTVERSION=) to it and reset =PORTREVISION= - remove it, since a
+  version bump supersedes any revision. Reconcile dependencies against
+  the source the port now builds: add, drop, or re-version =*_DEPENDS=
+  to match the versions that source's own dependency list requires.
+  Adjust =USES= and options where that source demands it. Keep the
+  =test= target pointing at upstream's suite, and add one where
+  upstream ships tests the port never wired up.
 - =distinfo= :: regenerate checksums and sizes for the new distfile(s),
-  as =make makesum= would.
+  as =make makesum= would. Leave it alone where the distfile has not
+  changed.
 - =pkg-descr= :: update only if the description or =WWW:= changed.
 
 * how to work
@@ -24,23 +27,32 @@ Leave the target directory holding the updated port:
    crates.io - lets a publisher yank, retract, or unlist a release; a
    withdrawn version is unfit for use even though it still resolves, so
    pass it over for the newest that stands, and re-pin any dependency
-   the update draws from such a repo to a version that stands too.
-2. Fetch the new distfile and diff what changed between the current and
-   new versions that affects the port: build system, dependencies,
-   installed files. Work by static analysis of the fetched sources.
+   the update draws from such a repo to a version that stands too. If
+   the newest release that stands is the one the port already carries,
+   there is no bump - and that is not "nothing to do". A port can be out
+   of date in every way but its version number: bounds the source has
+   moved past, a dependency mechanism the tree has abandoned, a suite
+   upstream ships that the Makefile never wired up. The update becomes a
+   reconciliation pass over the current version, and every step below
+   runs against its distfile instead of a new one.
+2. Fetch the distfile for the version the port will carry and work out
+   what the port needs from it: build system, dependencies, installed
+   files. Where the version moved, diff that against the version the
+   port carried to see what the release changed. Work by static analysis
+   of the fetched sources.
 3. Reconcile the dependency constraints, not just the dependency set.
    The fetched source declares the versions it requires - =Cargo.toml=,
    =go.mod=, =pyproject.toml=, =setup.py=, =mix.exs= - and =*_DEPENDS=
    is where the port expresses them, so read that list rather than
-   carrying the old bounds forward: a bump that revisits which
+   carrying the old bounds forward: an update that revisits which
    dependencies the port needs but not which versions ships constraints
-   the new release has already moved past. Check each upstream bound
+   the source has already moved past. Check each upstream bound
    against the version the ports tree actually provides. Where the tree
    cannot satisfy it, loosen the bound to what the tree has - a
    dependency pinned to a version no port provides makes the port
    uninstallable - and record the loosening in the commit message.
 4. Do not treat the port's existing mechanism as given; prefer the
-   consensus. A bump inherits whatever dependency scheme the port
+   consensus. An update inherits whatever dependency scheme the port
    already uses, so re-running that scheme's generator faithfully
    reproduces a scheme that may be broken or no longer standard. The
    framework prizes consistency, so an update is an opportunity to match
@@ -71,13 +83,14 @@ Leave the target directory holding the updated port:
    standard mechanism failing this check is a problem to solve within
    the standard approach (step 5), not a licence to retreat to a
    minority scheme.
-7. Keep the =test= target working across the bump, and add one if the
+7. Keep the =test= target working across the update, and add one if the
    port has none. A new release can move, rename, or restructure the
    suite, so confirm the port's existing hookup still runs it - the
    handbook asks that a port's tests not break when it is updated.
    Where the fetched source has a suite and the Makefile has no test
-   target at all, wire it up now. Reach for the knob the port's =USES=
-   already supplies - =CARGO_TEST=, =GO_TESTTARGET=, =USE_PYTHON=pytest=
+   target at all, wire it up now: that is the most common thing a port
+   with no newer release is still missing. Reach for the knob the port's
+   =USES= supplies - =CARGO_TEST=, =GO_TESTTARGET=, =USE_PYTHON=pytest=
    (or =unittest=, =nose=), =USES=cmake:testing=, =TEST_TARGET= - rather
    than writing =do-test= by hand: each of those is defined only when
    the port has no =do-test= of its own, so a hand-written one silently
@@ -99,20 +112,25 @@ Leave the target directory holding the updated port:
    - Ports tree: https://github.com/freebsd/freebsd-ports
 
 * conventions
-- A version bump resets =PORTREVISION=; do not carry it over.
+- A version bump resets =PORTREVISION=; do not carry it over. Without a
+  bump, increment it instead, but only where the change alters the
+  package a user installs - wiring up a =test= target does not.
 - Do not invent checksums; regenerate =distinfo= from the new distfile.
+  Where the distfile has not changed, leave =distinfo= as it is.
 - Do not pin a dependency to a version the ports tree does not provide.
   Match the upstream bound where the tree can satisfy it; where it
   cannot, loosen the bound to what the tree has and say so in the commit
   message. A silent loosening hides that the port is built against
   something other than what upstream asked for.
-- Do not let the port's tests break across a bump, and give the port a
-  =test= target where upstream ships a suite and the port has none. Use
-  the framework knob that exists for it; a hand-written =do-test=
+- Do not let the port's tests break across an update, and give the port
+  a =test= target where upstream ships a suite and the port has none.
+  Use the framework knob that exists for it; a hand-written =do-test=
   overrides that knob rather than adding to it. Test-only dependencies
   go in =TEST_DEPENDS=.
-- Keep the change minimal and reviewable - beyond the test target
-  above, touch only what the new version requires.
+- Keep the change minimal and reviewable - touch what being up to date
+  requires and no more. With no newer release, that still covers the
+  dependency bounds, the dependency mechanism, and the test target, but
+  it is not licence to tidy the Makefile.
 - Use the framework; do not invent. Every non-obvious task has almost
   certainly been solved in the tree already. Better to leave a piece
   undone than to hand-roll a solution the ports community will reject.
@@ -124,19 +142,21 @@ Leave the target directory holding the updated port:
 * the commit message
 Write the commit message to the path given below the prompt. Always
 write it, describing the port that results - not what you did this
-session. If the port on disk is already at the newest version but
-uncommitted - as when an earlier run bumped it without committing -
-that is not "nothing to do": write the update message for that state so
-portia can commit it. Do not conflate what is on disk with what is
-committed; whether to commit is portia's decision, keyed on uncommitted
-changes.
+session. If the port on disk already looks finished but uncommitted - as
+when an earlier run updated it without committing - that is not "nothing
+to do": write the update message for that state so portia can commit it.
+Do not conflate what is on disk with what is committed; whether to
+commit is portia's decision, keyed on uncommitted changes.
 
 Match the shape of this port's previous update commits:
 - Subject =category/port: Update to <new version>=, ~50 characters.
-- Body wrapped at 72 columns. Reference the changelog for *every*
-  intermediate version between the old and the new release, not just
-  the newest - a reviewer follows these to audit the jump. Find them
-  in:
+  Where the version did not move, name what the change does instead -
+  =category/port: Hook up the upstream test suite= - since there is no
+  new version to announce.
+- Body wrapped at 72 columns. Where the version moved, reference the
+  changelog for *every* intermediate version between the old and the
+  new release, not just the newest - a reviewer follows these to audit
+  the jump. Find them in:
   - this port's previous commit messages, which show where past
     updates linked their changelogs;
   - the upstream home page or release pages.

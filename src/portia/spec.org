@@ -18,6 +18,10 @@ etc. Additionally, researches the ports repo for tools built using a
 similar mechanism to use as a basis for the port.
 *** =portia update [category/port|path]=
 Updates port to the newest version, matches dependencies, etc.
+
+Even if there's not a newer version, bring the port up to date with
+best possible outcome (e.g. adding tests if they're available but not
+present in =Makefile=).
 *** =portia troubleshoot [category/port|path]=
 User runs this command when build fails. portia provides path to
 poudriere package logs as ${POUDRIERE_URL}/data/latest-per-pkg/ where

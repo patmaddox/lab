@@ -18,18 +18,21 @@ the ports tree, and the port directory:
   read on stdin - finds the distfile, works out the build system and
   dependencies, mines the ports tree for prior art, hooks up upstream's
   test suite. Requires =Makefile=, =distinfo=, =pkg-descr=.
-- =update= :: bump to the newest upstream version, reconcile
-  dependencies and their version bounds, keep the test target working.
-  Requires =Makefile=, =distinfo=, =pkg-descr=.
+- =update= :: bring the port up to date - usually a bump to the newest
+  upstream version, reconciling dependencies and their version bounds
+  and keeping the test target working. Where upstream has no newer
+  release it is the same reconciliation pass over the version the port
+  already carries, since a port can be out of date in every way but its
+  version number. Requires =Makefile=, =distinfo=, =pkg-descr=.
 - =troubleshoot= :: diagnose a build failure from the poudriere logs
   and fix its root cause. Requires =Makefile=, =distinfo=, =pkg-descr=.
 
 They are the two mechanical phases of a port's life - create and
 maintain - and =troubleshoot= is the repair phase when a build breaks.
 Each ends by committing the port into the tree, with a message the model
-writes to FreeBSD convention - for =update=, citing the changelog of
-every intermediate version. The commit is keyed on the port directory
-having uncommitted changes, so work an interrupted run left on disk is
+writes to FreeBSD convention - for an =update= that raises the version,
+citing the changelog of every intermediate version. The commit is keyed
+on the port directory having uncommitted changes, so work an interrupted run left on disk is
 picked up and committed, while a port already at its desired state is a
 clean success that leaves the tree untouched.
 
@@ -75,7 +78,8 @@ have the model hook it into the framework's =test= target through the
 =do-test=, which the framework treats as a replacement for that knob
 rather than an addition to it. Since portia never builds, =make test= is
 the first check a port gets, so an =update= keeps the target running
-across a bump and wires one up where the port never had one.
+across a bump and wires one up where the port never had one - the
+commonest thing a port with no newer release is still missing.
 
 That constraint is sharper than "reach for a framework mechanism": a
 once-standard mechanism the tree has moved away from is as wrong as an
@@ -95,8 +99,11 @@ from the change that merely triggered it, and fixes the root.
 All three commands are in place, each a vertical slice with tests and
 man page, driving the model and committing its result - including work
 an interrupted run stranded on disk, and exiting cleanly when a port is
-already at its desired state. Outstanding: =update= still takes a newer
-upstream version as its premise, where the spec now asks it to bring a
-port to the best state it can reach even when there is no new release.
+already at its desired state. The whole spec is now covered.
+
 Exercised only with a stubbed model; the prompts have not yet been run
-against a live model or checked against a real ports tree.
+against a live model or checked against a real ports tree. That gap is
+inherent to the split - the harness's edges are what a stub can test,
+and the prompts carry the porting knowledge - so the prompts improve
+from confirmed failures, as the mechanism and commit-message lore
+already record.
