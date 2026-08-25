@@ -1,0 +1,11 @@
+#+TITLE: poudriere
+* Installing packages / upgrading a jail
+We can manipulate the jail root directly, for example to install the
+packages necessary to run tests.
+
+#+BEGIN_EXAMPLE
+pkg -o ABI=FreeBSD:15:amd64 -o IGNORE_OSVERSION=yes \
+  -o REPOS_DIR=/usr/local/poudriere/jails/150/etc/pkg \
+  -r /usr/local/poudriere/jails/150/ \
+  install -r FreeBSD-base FreeBSD-tests
+#+END_EXAMPLE
