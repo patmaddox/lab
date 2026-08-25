@@ -17,7 +17,8 @@ complete port:
   Determine the build system from the distfile and set the right =USES=
   (e.g. =cmake=, =gmake=, =cargo=, =python=, =go=). Declare
   =LIB_DEPENDS=, =BUILD_DEPENDS=, and =RUN_DEPENDS= for every dependency
-  the build and the installed program actually need. Set =LICENSE= (and
+  the build and the installed program actually need, bounded to the
+  versions upstream's own dependency list requires. Set =LICENSE= (and
   =LICENSE_FILE= when the distfile ships one). Add a =pkg-plist= or
   =PLIST_FILES=, or set =plist= via the framework, so every installed
   file is accounted for.
@@ -30,7 +31,16 @@ complete port:
 1. Fetch and extract the distfile and inspect it by static analysis:
    its build system, its bundled documentation, and its declared
    dependencies. Derive =distinfo= from the distfile you fetched.
-2. Research prior art, and let it tell you the *current standard*. The
+2. Take the dependency constraints from the source, not from guesswork.
+   The distfile carries a list of what the software requires and at
+   which versions - =Cargo.toml=, =go.mod=, =pyproject.toml=,
+   =setup.py=, =mix.exs= - and =*_DEPENDS= is where the port expresses
+   it, bounds included. Check each upstream bound against the version
+   the ports tree actually provides. Where the tree cannot satisfy it,
+   loosen the bound to what the tree has - a dependency pinned to a
+   version no port provides makes the port uninstallable - and record
+   the loosening in the commit message.
+3. Research prior art, and let it tell you the *current standard*. The
    tree has thousands of ports; where an ecosystem offers several
    mechanisms for a task - dependency management especially - find the
    one comparable ports use *now* by how many use it, and follow that.
@@ -46,7 +56,7 @@ complete port:
    handbook and the tree to bugzilla
    (https://bugs.freebsd.org/bugzilla/), the forums and mailing lists,
    and the port's own build-failure history.
-3. When the standard mechanism resists, solve the obstacle - do not
+4. When the standard mechanism resists, solve the obstacle - do not
    settle for a minority one. If the consensus mechanism surfaces a
    problem - a distfile that will not fetch, an artifact upstream does
    not provide - that is a problem to solve, not a licence to reach for
@@ -57,7 +67,7 @@ complete port:
    confirmed no standard remedy exists, and say why. That a nonstandard
    scheme fetches and generates cleanly does not make it right over the
    one the tree has standardized on.
-4. Understand what the build consumes, not just what generates it. For
+5. Understand what the build consumes, not just what generates it. For
    the mechanism you choose, know which artifacts the build actually
    reads, confirm your config produces a *complete and consistent* set
    of them, and verify the fetched upstream sources contain what the
@@ -68,8 +78,8 @@ complete port:
    (see conventions), this understanding is your only check that a
    dependency mechanism will actually work - but a standard mechanism
    failing that check is a problem to solve within the standard approach
-   (step 3), not a reason to settle for a minority scheme.
-5. Use the framework; do not invent. Managing dependencies especially
+   (step 4), not a reason to settle for a minority scheme.
+6. Use the framework; do not invent. Managing dependencies especially
    has dedicated machinery - =USES=cargo= with =make cargo-crates= to
    generate =CARGO_CRATES=, =USES=go:modules= with =GO_MODULE= to have
    the framework fetch and vendor the modules, the Python and PHP
@@ -86,6 +96,11 @@ complete port:
   confirm the targeted release has not been yanked, retracted, or
   unlisted; a withdrawn version still resolves and fetches but is unfit
   for use, so pick one that stands.
+- Do not pin a dependency to a version the ports tree does not provide.
+  Match the upstream bound where the tree can satisfy it; where it
+  cannot, loosen the bound to what the tree has and say so in the commit
+  message. A silent loosening hides that the port is built against
+  something other than what upstream asked for.
 - Account for every installed file; a plist mismatch fails the build.
 - Use the framework; do not invent. Every non-obvious task has almost
   certainly been solved in the tree already. Better to leave a piece
@@ -109,5 +124,8 @@ ports' initial commits:
   naming what the software is (e.g. =www/foo: Add new port=).
 - Body wrapped at 72 columns explaining what the software does, the
   build system and dependencies you settled on, and why the port
-  exists - not what lines you wrote. Cite the upstream home page if one
-  was supplied.
+  exists - not what lines you wrote. Where you loosened a dependency
+  constraint because the tree could not satisfy the version upstream
+  requires, name the upstream bound, the version the tree provides, and
+  the constraint you settled on. Cite the upstream home page if one was
+  supplied.

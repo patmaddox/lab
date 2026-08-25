@@ -195,6 +195,37 @@ wording), and =troubleshoot= a fix that re-pins a version. For
 =troubleshoot= it is also diagnostic: a withdrawn upstream version or
 dependency is itself a fetch-failure cause the model must recognize.
 
+* dependency bounds come from the source; a loosening goes on the record
+The spec asks portia to read the fetched source's own dependency list
+and match the Makefile's constraints to it. That list - =Cargo.toml=,
+=go.mod=, =pyproject.toml=, =mix.exs= - is upstream's statement of which
+versions the software requires, and =*_DEPENDS= is the tree's expression
+of the same thing; nothing else in the prompts told the model to derive
+one from the other. "Reconcile dependencies with the new version" named
+the *set* of dependencies, not their bounds, so an update could add and
+drop dependencies correctly while carrying constraints the new release
+had already moved past.
+
+The tree is the other half, and it does not always cooperate: a port
+cannot depend on a version no port in the tree provides, so a bound
+upstream states may be unsatisfiable here. Pinning it anyway makes the
+port uninstallable, so the resolution is to loosen the bound to what the
+tree has - but a silent loosening hides that the port is built against
+something other than what upstream asked for. The spec settles it by
+requiring the loosening to be named in the commit message, which puts
+the discrepancy where a reviewer and a later updater both find it, and
+follows the split everything else in portia follows: the model owns the
+judgement and writes it into the message, the harness owns the commit.
+
+Prompt-only, like the other model-facing constraints - it shapes which
+bounds the model writes, not any harness behavior, so it adds no test
+(the stub model declares no dependencies). It does reach the man page,
+because the loosening note is part of the commit-message contract the
+man page already describes for the changelog references. =new= and
+=update= carry it, since both settle a port's dependency bounds from a
+fetched source; =troubleshoot= re-pins versions under its own diagnostic
+rules.
+
 * the post-condition is the port's shape
 The spec's second goal is checking MODEL's output. portia's check is
 that the expected port files exist and are non-empty in the port dir.

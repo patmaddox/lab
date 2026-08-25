@@ -67,6 +67,11 @@ information to provide guidance as much as possible.
 It's possible that a run is interrupted, resulting in changed files on
 disk that have not been committed. Proceed as usual, and commit at the
 end if the work is complete.
+*** update deps lists
+Download the source code and review its dependencies list. Update the
+dependency constraints in the Makefile to match. If it's not possible
+to match because the ports tree doesn't provide that version, make a
+note of the loosened constraints in the commit message.
 ** constraints
 *** update config only - do not build
 portia (the command and model) do not build the port to verify

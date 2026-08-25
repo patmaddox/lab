@@ -18,8 +18,9 @@ the ports tree, and the port directory:
   read on stdin - finds the distfile, works out the build system and
   dependencies, mines the ports tree for prior art. Requires =Makefile=,
   =distinfo=, =pkg-descr=.
-- =update= :: bump to the newest upstream version and reconcile deps.
-  Requires =Makefile=, =distinfo=, =pkg-descr=.
+- =update= :: bump to the newest upstream version and reconcile
+  dependencies and their version bounds. Requires =Makefile=,
+  =distinfo=, =pkg-descr=.
 - =troubleshoot= :: diagnose a build failure from the poudriere logs
   and fix its root cause. Requires =Makefile=, =distinfo=, =pkg-descr=.
 
@@ -62,6 +63,12 @@ existing port to follow - and fail rather than invent a solution the
 ports community would reject; and never target a version the ecosystem
 has withdrawn - yanked, retracted, unlisted - which still fetches but is
 unfit for use, so an =update= takes the newest release that stands.
+Dependency bounds come from the same source the code does: the prompts
+have the model read the fetched source's own dependency list and match
+=*_DEPENDS= to it, loosening a bound only when no port in the tree
+provides the version upstream requires - and naming that loosening in
+the commit message, so the discrepancy is on the record rather than
+buried in the Makefile.
 
 That constraint is sharper than "reach for a framework mechanism": a
 once-standard mechanism the tree has moved away from is as wrong as an

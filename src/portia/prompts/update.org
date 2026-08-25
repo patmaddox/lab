@@ -9,9 +9,9 @@ Leave the target directory holding the updated port:
 - =Makefile= :: bump =DISTVERSION= (or =PORTVERSION=) to the newest
   release and reset =PORTREVISION= - remove it, since a version bump
   supersedes any revision. Reconcile dependencies with the new
-  version: add, drop, or re-version =*_DEPENDS= to match what the new
-  release needs. Adjust =USES= and options only where the new version
-  demands it.
+  version: add, drop, or re-version =*_DEPENDS= to match the versions
+  the new release's own dependency list requires. Adjust =USES= and
+  options only where the new version demands it.
 - =distinfo= :: regenerate checksums and sizes for the new distfile(s),
   as =make makesum= would.
 - =pkg-descr= :: update only if the description or =WWW:= changed.
@@ -26,7 +26,18 @@ Leave the target directory holding the updated port:
 2. Fetch the new distfile and diff what changed between the current and
    new versions that affects the port: build system, dependencies,
    installed files. Work by static analysis of the fetched sources.
-3. Do not treat the port's existing mechanism as given; prefer the
+3. Reconcile the dependency constraints, not just the dependency set.
+   The fetched source declares the versions it requires - =Cargo.toml=,
+   =go.mod=, =pyproject.toml=, =setup.py=, =mix.exs= - and =*_DEPENDS=
+   is where the port expresses them, so read that list rather than
+   carrying the old bounds forward: a bump that revisits which
+   dependencies the port needs but not which versions ships constraints
+   the new release has already moved past. Check each upstream bound
+   against the version the ports tree actually provides. Where the tree
+   cannot satisfy it, loosen the bound to what the tree has - a
+   dependency pinned to a version no port provides makes the port
+   uninstallable - and record the loosening in the commit message.
+4. Do not treat the port's existing mechanism as given; prefer the
    consensus. A bump inherits whatever dependency scheme the port
    already uses, so re-running that scheme's generator faithfully
    reproduces a scheme that may be broken or no longer standard. The
@@ -35,7 +46,7 @@ Leave the target directory holding the updated port:
    comparable ports use *now* - by how many use it - and if it is not,
    migrate to that standard rather than carrying the old scheme forward;
    a scheme only a handful of ports still use is a warning sign.
-4. When the standard mechanism resists, solve the obstacle - do not
+5. When the standard mechanism resists, solve the obstacle - do not
    retreat to the minority scheme. If migrating to the consensus
    mechanism surfaces a problem - a distfile that will not fetch, an
    artifact upstream does not provide - that is a problem to solve, not
@@ -48,7 +59,7 @@ Leave the target directory holding the updated port:
    commit. That a nonstandard scheme happens to fetch and generate
    cleanly is no reason to prefer it over the one the tree has
    standardized on.
-5. Understand what the build consumes, not just what generates it. Know
+6. Understand what the build consumes, not just what generates it. Know
    which artifacts the build reads, confirm the config produces a
    *complete and consistent* set, and verify the fetched upstream
    sources still contain what the mechanism assumes - does upstream
@@ -56,10 +67,10 @@ Leave the target directory holding the updated port:
    config is complete. Because portia never builds (see conventions),
    this is your only check that the mechanism will actually work - but a
    standard mechanism failing this check is a problem to solve within
-   the standard approach (step 4), not a licence to retreat to a
+   the standard approach (step 5), not a licence to retreat to a
    minority scheme.
-6. Update the plist if the set of installed files changed.
-7. Use the framework; do not invent. When the update changes bundled
+7. Update the plist if the set of installed files changed.
+8. Use the framework; do not invent. When the update changes bundled
    dependencies, regenerate them with the framework's current-standard
    machinery - =make cargo-crates= for =CARGO_CRATES=, =GO_MODULE= for
    Go modules - rather than editing the list by hand. Consult prior art
@@ -75,6 +86,11 @@ Leave the target directory holding the updated port:
 * conventions
 - A version bump resets =PORTREVISION=; do not carry it over.
 - Do not invent checksums; regenerate =distinfo= from the new distfile.
+- Do not pin a dependency to a version the ports tree does not provide.
+  Match the upstream bound where the tree can satisfy it; where it
+  cannot, loosen the bound to what the tree has and say so in the commit
+  message. A silent loosening hides that the port is built against
+  something other than what upstream asked for.
 - Keep the change minimal and reviewable - touch only what the new
   version requires.
 - Use the framework; do not invent. Every non-obvious task has almost
@@ -105,4 +121,7 @@ Match the shape of this port's previous update commits:
     updates linked their changelogs;
   - the upstream home page or release pages.
   Call out any dependency, option, or plist change the update forced,
-  and why.
+  and why. Where you loosened a dependency constraint because the tree
+  could not satisfy the version upstream requires, name the upstream
+  bound, the version the tree provides, and the constraint you settled
+  on.

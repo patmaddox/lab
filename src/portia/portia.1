@@ -69,6 +69,8 @@ The message follows the commit conventions of the surrounding tree and,
 for an
 .Cm update ,
 cites the upstream changelog for every intermediate version.
+It also records any dependency constraint the model had to loosen
+because no port in the tree provides the version upstream requires.
 Committing is keyed on the port directory, not on the run: uncommitted
 changes
 \(em including a complete port left on disk by an interrupted earlier
@@ -95,7 +97,7 @@ and a
 Bump an existing port to its newest upstream version.
 The model raises the version, resets
 .Va PORTREVISION ,
-reconciles dependencies, and regenerates
+reconciles dependencies and their version constraints, and regenerates
 .Pa distinfo
 for the new distfile.
 .It Cm troubleshoot Ar port
