@@ -226,6 +226,52 @@ man page already describes for the changelog references. =new= and
 fetched source; =troubleshoot= re-pins versions under its own diagnostic
 rules.
 
+* upstream's tests belong on the port's =test= target
+The spec asks that a port hook upstream's unit tests into the ports
+framework's =test= target whenever the source distribution provides
+them. It matters more here than it would elsewhere: portia never builds,
+so =make test= is the first point at which anything checks the port
+does what it claims, and a port with no test target gives the operator
+who does that check nothing to run.
+
+The spec says "implement =do-test=", but the framework reads that
+narrowly. =bsd.port.mk= and the =USES= modules each define =do-test=
+behind =!target(do-test)=, so a hand-written =do-test= does not add to
+what the module supplies - it silences it. The knobs are already there:
+=CARGO_TEST= for cargo, =GO_TESTTARGET= for Go modules,
+=USE_PYTHON=pytest= (also =unittest=, =nose=) for Python,
+=USES=cmake:testing= for ctest, and =TEST_TARGET=, which =bsd.port.mk=
+turns into a sub-make of the build system's own test target (=meson=
+sets it outright). So the prompts read the spec as "hook the suite into
+the =test= target" and reach for the knob first, writing =do-test= only
+where none fits - the same "use the framework; do not invent" stance the
+rest of the prompts take, applied to a target whose override happens
+silently. =TEST_WRKSRC=, =TEST_ENV=, and =TEST_ARGS= steer the generated
+target without replacing it.
+
+=TEST_DEPENDS= is the other half. A suite usually needs a runner the
+build and the installed program do not, and declaring it anywhere else
+drags a test-only dependency onto the user's system with the package.
+
+For =update= the requirement is continuity as much as addition: a new
+release can move or restructure the suite, and the handbook asks that a
+port's tests not break when it is updated, so =update= confirms the
+existing hookup still runs the suite before adding one where upstream
+ships tests the port never wired up. That is a deliberate exception to
+=update='s "touch only what the new version requires" convention, which
+is stated as such rather than left to collide with it.
+
+Prompt-only, like the other model-facing constraints: it shapes the
+Makefile the model writes, not any harness behavior, so it adds no test
+(the stub model writes no Makefile) and no new required file - a port's
+shape is the same whether or not it has a test target. It does reach the
+man page, which describes what each command has the model produce, and
+the caveat that portia never builds now says the test target is wired up
+from a reading of the distfile and never run. =new= and =update= carry
+it, since both settle a port's build configuration from a fetched
+source; =troubleshoot= repairs a broken build, and the port's test
+wiring is not its subject.
+
 * the post-condition is the port's shape
 The spec's second goal is checking MODEL's output. portia's check is
 that the expected port files exist and are non-empty in the port dir.

@@ -1,4 +1,4 @@
-.Dd July 9, 2026
+.Dd August 25, 2026
 .Dt PORTIA 1
 .Os
 .Sh NAME
@@ -93,6 +93,10 @@ a
 .Pa distinfo ,
 and a
 .Pa pkg-descr .
+Where the distfile ships a test suite, the model hooks it into the
+port's
+.Cm test
+target.
 .It Cm update Ar port
 Bump an existing port to its newest upstream version.
 The model raises the version, resets
@@ -100,6 +104,10 @@ The model raises the version, resets
 reconciles dependencies and their version constraints, and regenerates
 .Pa distinfo
 for the new distfile.
+It also keeps the port's
+.Cm test
+target running the new release's suite, and adds one where upstream
+ships tests the port never wired up.
 .It Cm troubleshoot Ar port
 Diagnose and fix a build failure in an existing port.
 The model is pointed at the poudriere build logs published under
@@ -199,3 +207,7 @@ and the model it drives work by static analysis alone
 .Nm
 verifies only that the expected files were produced; that the port
 actually builds must be checked out of band by an operator.
+A
+.Cm test
+target is likewise wired up from a reading of the distfile and never
+run.

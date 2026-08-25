@@ -11,7 +11,9 @@ Leave the target directory holding the updated port:
   supersedes any revision. Reconcile dependencies with the new
   version: add, drop, or re-version =*_DEPENDS= to match the versions
   the new release's own dependency list requires. Adjust =USES= and
-  options only where the new version demands it.
+  options only where the new version demands it. Keep the =test= target
+  pointing at upstream's suite, and add one where upstream ships tests
+  the port never wired up.
 - =distinfo= :: regenerate checksums and sizes for the new distfile(s),
   as =make makesum= would.
 - =pkg-descr= :: update only if the description or =WWW:= changed.
@@ -69,8 +71,21 @@ Leave the target directory holding the updated port:
    standard mechanism failing this check is a problem to solve within
    the standard approach (step 5), not a licence to retreat to a
    minority scheme.
-7. Update the plist if the set of installed files changed.
-8. Use the framework; do not invent. When the update changes bundled
+7. Keep the =test= target working across the bump, and add one if the
+   port has none. A new release can move, rename, or restructure the
+   suite, so confirm the port's existing hookup still runs it - the
+   handbook asks that a port's tests not break when it is updated.
+   Where the fetched source has a suite and the Makefile has no test
+   target at all, wire it up now. Reach for the knob the port's =USES=
+   already supplies - =CARGO_TEST=, =GO_TESTTARGET=, =USE_PYTHON=pytest=
+   (or =unittest=, =nose=), =USES=cmake:testing=, =TEST_TARGET= - rather
+   than writing =do-test= by hand: each of those is defined only when
+   the port has no =do-test= of its own, so a hand-written one silently
+   replaces it. Steer the generated target with =TEST_WRKSRC=,
+   =TEST_ENV=, or =TEST_ARGS=, and keep what only the suite needs in
+   =TEST_DEPENDS=, not in =BUILD_DEPENDS= or =RUN_DEPENDS=.
+8. Update the plist if the set of installed files changed.
+9. Use the framework; do not invent. When the update changes bundled
    dependencies, regenerate them with the framework's current-standard
    machinery - =make cargo-crates= for =CARGO_CRATES=, =GO_MODULE= for
    Go modules - rather than editing the list by hand. Consult prior art
@@ -91,8 +106,13 @@ Leave the target directory holding the updated port:
   cannot, loosen the bound to what the tree has and say so in the commit
   message. A silent loosening hides that the port is built against
   something other than what upstream asked for.
-- Keep the change minimal and reviewable - touch only what the new
-  version requires.
+- Do not let the port's tests break across a bump, and give the port a
+  =test= target where upstream ships a suite and the port has none. Use
+  the framework knob that exists for it; a hand-written =do-test=
+  overrides that knob rather than adding to it. Test-only dependencies
+  go in =TEST_DEPENDS=.
+- Keep the change minimal and reviewable - beyond the test target
+  above, touch only what the new version requires.
 - Use the framework; do not invent. Every non-obvious task has almost
   certainly been solved in the tree already. Better to leave a piece
   undone than to hand-roll a solution the ports community will reject.

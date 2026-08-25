@@ -16,11 +16,11 @@ a tree - which portia resolves before the model runs into the origin,
 the ports tree, and the port directory:
 - =new= :: create a complete port from the origin and free-form detail
   read on stdin - finds the distfile, works out the build system and
-  dependencies, mines the ports tree for prior art. Requires =Makefile=,
-  =distinfo=, =pkg-descr=.
-- =update= :: bump to the newest upstream version and reconcile
-  dependencies and their version bounds. Requires =Makefile=,
-  =distinfo=, =pkg-descr=.
+  dependencies, mines the ports tree for prior art, hooks up upstream's
+  test suite. Requires =Makefile=, =distinfo=, =pkg-descr=.
+- =update= :: bump to the newest upstream version, reconcile
+  dependencies and their version bounds, keep the test target working.
+  Requires =Makefile=, =distinfo=, =pkg-descr=.
 - =troubleshoot= :: diagnose a build failure from the poudriere logs
   and fix its root cause. Requires =Makefile=, =distinfo=, =pkg-descr=.
 
@@ -68,7 +68,14 @@ have the model read the fetched source's own dependency list and match
 =*_DEPENDS= to it, loosening a bound only when no port in the tree
 provides the version upstream requires - and naming that loosening in
 the commit message, so the discrepancy is on the record rather than
-buried in the Makefile.
+buried in the Makefile. Where upstream ships a test suite, the prompts
+have the model hook it into the framework's =test= target through the
+=USES= knob that already exists for it - =CARGO_TEST=, =GO_TESTTARGET=,
+=USE_PYTHON=pytest=, =USES=cmake:testing= - rather than a hand-written
+=do-test=, which the framework treats as a replacement for that knob
+rather than an addition to it. Since portia never builds, =make test= is
+the first check a port gets, so an =update= keeps the target running
+across a bump and wires one up where the port never had one.
 
 That constraint is sharper than "reach for a framework mechanism": a
 once-standard mechanism the tree has moved away from is as wrong as an
@@ -85,9 +92,11 @@ the tree and the wider FreeBSD sources, separates a failure's root cause
 from the change that merely triggered it, and fixes the root.
 
 * status
-Complete against the spec: all three commands, each a vertical slice
-with tests and man page, driving the model and committing its result -
-including work an interrupted run stranded on disk, and exiting cleanly
-when a port is already at its desired state. Exercised only with a
-stubbed model; the prompts have not yet been run against a live model or
-checked against a real ports tree.
+All three commands are in place, each a vertical slice with tests and
+man page, driving the model and committing its result - including work
+an interrupted run stranded on disk, and exiting cleanly when a port is
+already at its desired state. Outstanding: =update= still takes a newer
+upstream version as its premise, where the spec now asks it to bring a
+port to the best state it can reach even when there is no new release.
+Exercised only with a stubbed model; the prompts have not yet been run
+against a live model or checked against a real ports tree.

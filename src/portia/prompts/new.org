@@ -21,7 +21,9 @@ complete port:
   versions upstream's own dependency list requires. Set =LICENSE= (and
   =LICENSE_FILE= when the distfile ships one). Add a =pkg-plist= or
   =PLIST_FILES=, or set =plist= via the framework, so every installed
-  file is accounted for.
+  file is accounted for. Where upstream ships a test suite, hook it
+  into the framework's =test= target and put anything only the suite
+  needs in =TEST_DEPENDS=.
 - =distinfo= :: checksums and sizes for the distfile(s), in the format
   =make makesum= produces.
 - =pkg-descr= :: a prose description of the software, ending with a
@@ -79,7 +81,23 @@ complete port:
    dependency mechanism will actually work - but a standard mechanism
    failing that check is a problem to solve within the standard approach
    (step 4), not a reason to settle for a minority scheme.
-6. Use the framework; do not invent. Managing dependencies especially
+6. Hook upstream's tests into the port's =test= target. Look through
+   the fetched source for a suite - a =tests/= directory, =#[test]=
+   functions, =_test.go= files - and if there is one, make =make test=
+   run it. Reach for the knob the port's =USES= already supplies rather
+   than writing =do-test= by hand: =CARGO_TEST= for cargo,
+   =GO_TESTTARGET= for Go modules, =USE_PYTHON=pytest= (or =unittest=,
+   =nose=) for Python, =USES=cmake:testing= for ctest, =TEST_TARGET=
+   for a build system with a test target of its own. Every one of those
+   is defined only when the port has no =do-test= of its own, so a
+   hand-written one silently replaces what the framework would have
+   given you; write it only where no knob fits, and steer the generated
+   target with =TEST_WRKSRC=, =TEST_ENV=, or =TEST_ARGS= instead.
+   Declare what the suite needs but the build and the installed package
+   do not in =TEST_DEPENDS=, so a test runner does not follow the
+   package onto the user's system. Where upstream ships no tests, leave
+   the target alone rather than inventing one.
+7. Use the framework; do not invent. Managing dependencies especially
    has dedicated machinery - =USES=cargo= with =make cargo-crates= to
    generate =CARGO_CRATES=, =USES=go:modules= with =GO_MODULE= to have
    the framework fetch and vendor the modules, the Python and PHP
@@ -102,6 +120,10 @@ complete port:
   message. A silent loosening hides that the port is built against
   something other than what upstream asked for.
 - Account for every installed file; a plist mismatch fails the build.
+- Give the port a =test= target when upstream ships tests, using the
+  framework knob that exists for it; a hand-written =do-test= overrides
+  that knob rather than adding to it. Test-only dependencies go in
+  =TEST_DEPENDS=.
 - Use the framework; do not invent. Every non-obvious task has almost
   certainly been solved in the tree already. Better to leave a piece
   undone than to hand-roll a solution the ports community will reject.
