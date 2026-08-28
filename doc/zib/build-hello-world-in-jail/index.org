@@ -1,0 +1,62 @@
+#+TITLE: Building "hello world!" in a jail
+
+I keep all of my stuff in a monorepo, and I want a clean build
+process. I don't want random python stuff spamming my home dir.
+
+We have jails, we have zfs, we have nullfs. Surely we can combine
+these to do something good?
+
+Also can the various jail managers help? podman seems like a plausible
+one.
+* basic structure
+- set up a jail
+- give it the source files
+- execute the build command
+- capture the output
+
+In our case, the input is our =Makefile= and =hello.c=, and the output
+is =hello= binary.
+
+Ideally we're not getting too tricky with read-only file systems,
+because most build systems do in-tree work, i.e. they modify the
+underlying file system. Doing out of tree builds means configuring a
+bunch of env vars. It's possible, but not how most build tools are set
+up.
+* jail.conf notes
+jail.conf uses absolute paths for the path, mounts, etc. Need to
+generate config, can't do it dynamically.
+
+jail.conf has no code substitution.
+
+jail name can't be a variable
+
+=.include= resolves relative to the config file's directory, not
+=cwd=.
+* podman notes
+podman config is done via CLI rather than config file, e.g. =--dns=.
+* FreeBSD hand rolls OCI image in release tools
+* keeping things alive
+- jails: =persist=
+- containers: =container-init= to run forever
+
+  userspace ceremony because it can't persist
+* can use buildah / podman as build and delivery infrastructure
+somehow can export to a tar ball or dir? so basically use podman for
+layering, building, and registry
+
+Similar to =bootc= but we already have the pieces we need.
+
+#+BEGIN_EXAMPLE
+imageroot=$(doas podman image mount myimage)
+doas tar -C ${imageroot} -c | doas tar -C ${destroot} -x
+#+END_EXAMPLE
+* same kernel object: jail(2)
+An OCI container is a concept. In FreeBSD, it's implemented as
+jail(2).
+* jails have PID separate, not a PID namespace
+Containers on Linux each have their own PID 1. In FreeBSD, there is
+only one PID 1.
+
+OCI containers on FreeBSD, we can think of the container's main
+process - the one the runtime execs at start and records in the state
+file.
