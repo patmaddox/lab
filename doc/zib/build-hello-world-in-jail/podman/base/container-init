@@ -1,0 +1,24 @@
+#!/bin/sh
+
+# The container's main process. FreeBSD has no PID namespace, so this
+# is ordinary process that starts and watches, not the PID 1 it would
+# be on Linux. The container stops when it exits.
+
+# jail(8) configures start and stop commands with exec.start and
+# exec.stop, e.g.
+#     exec.start = "/bin/sh /etc/rc";
+#     exec.stop = "/bin/sh /etc/rc.shutdown jail";
+#
+# podman executes a single command, so we handle shutdown via signal
+# trap, effectively mirroring the jail config mechanism.
+#
+# trap shutdown signals before /etc/rc, to handle an interrupted
+# start.
+trap '/bin/sh /etc/rc.shutdown jail; exit 0' TERM INT
+/bin/sh /etc/rc
+
+# rc returns once the daemons are up, but the script has to stay alive
+# or podman considers the container finished. sh only runs a trap
+# between commands, so background the tail. wait gets interrupted.
+tail -f /dev/null &
+wait $!

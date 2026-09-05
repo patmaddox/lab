@@ -1,0 +1,2 @@
+FROM freebsd-base:15.0
+RUN pkg install -y FreeBSD-set-base-jail

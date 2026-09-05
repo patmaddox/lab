@@ -1,7 +1,0 @@
-#!/bin/sh
-/bin/sh /etc/rc
-
-trap '/bin/sh /etc/rc.shutdown jail; exit 0' TERM INT
-
-tail -f /dev/null &
-wait $!

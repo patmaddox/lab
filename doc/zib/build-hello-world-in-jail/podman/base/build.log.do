@@ -26,16 +26,15 @@ build() {
 	doas pkg -r ${broot} -C ../../pkgbase-150.conf install \
 	    -r FreeBSD-base \
 	    -y FreeBSD-set-minimal-jail
+	doas mkdir -p ${broot}/usr/local/etc/pkg/repos
+	echo "FreeBSD-base: { enabled: yes }" | doas tee ${broot}/usr/local/etc/pkg/repos/FreeBSD.conf >/dev/null
+	doas install -m 0700 container-init ${broot}/sbin/container-init
+	doas buildah config --cmd /sbin/container-init ${name}
 	doas buildah unmount ${name}
 	doas buildah commit ${name} ${name}
 	doas buildah rm ${name}
 	echo "DONE build_base"
 }
 
-case ${1} in
-build.log) build | _redo_log ;;
-*)
-	echo "E: unknown target ${1}" >&2
-	exit 1
-	;;
-esac
+redo-ifchange container-init ../../pkgbase-150.conf
+build | _redo_log
