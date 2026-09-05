@@ -3,7 +3,8 @@ set -eu
 set -o pipefail
 
 readonly outfile=${3}
-readonly rootdir=/tmp/jails/jello-world
+readonly name=$(./jailname.sh)
+readonly rootdir=/tmp/jails/${name}
 
 build_jail() {
 	mkdir -p ${rootdir}
