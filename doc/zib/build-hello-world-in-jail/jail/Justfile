@@ -1,0 +1,18 @@
+help:
+  just -l
+
+build:
+  redo-ifchange tmp/build_jail.log
+
+start:
+  jls -c -j jello-world || doas jail -f jail.conf -c jello-world
+
+stop:
+  if jls -c -j jello-world; then doas jail -f jail.conf -r jello-world; fi
+
+login:
+  TERM=xterm-256color doas jexec -l jello-world login -f root
+
+clean: stop
+  if [ -d /tmp/jails/jello-world ]; then doas chflags -R noschg /tmp/jails/jello-world && doas rm -rf /tmp/jails/jello-world; fi
+  rm -f tmp/build_jail.log

@@ -1,0 +1,17 @@
+help:
+  just -l
+
+build:
+  redo-ifchange tmp/build_image.log
+
+start:
+  ./podman.sh start
+
+stop:
+  ./podman.sh stop
+
+login:
+  ./podman.sh login
+
+clean: stop
+  redo clean
