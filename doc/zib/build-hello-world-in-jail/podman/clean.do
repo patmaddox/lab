@@ -4,6 +4,11 @@ set -o pipefail
 
 exec >&2
 
+if ./podman.sh is_running; then
+	echo "E: cannot clean hello-podman because it is still running"
+	exit 1
+fi
+
 for i in freebsd-base:15.0 hello-podman; do
 	if [ -n "$(doas podman ps --noheading -a -f name=${i})" ]; then
 		echo doas podman rm ${i}

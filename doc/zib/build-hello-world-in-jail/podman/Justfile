@@ -13,5 +13,5 @@ stop:
 login:
   ./podman.sh login
 
-clean: stop
+clean:
   redo clean
