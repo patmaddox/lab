@@ -1,0 +1,6 @@
+* redo
+=goredo= is best implementation I've seen.
+
+Catch-all =default.do= shadows sibling sources. It produces warnings
+and never caches (i.e. always rebuilds). Thus for multi-target =.do=
+files you need a naming convention, e.g. =default.log.do=.
