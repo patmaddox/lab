@@ -18,21 +18,6 @@ _rm_container() {
 	fi
 }
 
-build_base() {
-	_rm_container ${base}
-	doas buildah from --name ${base} scratch
-	readonly broot=$(doas buildah mount ${base})
-	doas mkdir -p ${broot}/usr/share
-	doas cp -Rp /usr/share/keys ${broot}/usr/share
-	doas pkg -r ${broot} -C ../pkgbase-150.conf install \
-	    -r FreeBSD-base \
-	    -y FreeBSD-set-base-jail
-	doas buildah unmount ${base}
-	doas buildah commit ${base} ${base}
-	doas buildah rm ${base}
-	echo "DONE build_base"
-}
-
 build_image() {
 	_rm_container ${image}
 	doas buildah from --name ${image} ${base}
@@ -44,9 +29,8 @@ build_image() {
 }
 
 case ${1} in
-tmp/build_base.log) build_base | _redo_log ;;
-tmp/build_image.log)
-	redo-ifchange tmp/build_base.log
+build_image.log)
+	redo-ifchange base/build.log
 	build_image | _redo_log
 	;;
 *)

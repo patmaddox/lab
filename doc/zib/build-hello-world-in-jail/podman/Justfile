@@ -2,7 +2,7 @@ help:
   just -l
 
 build:
-  redo-ifchange tmp/build_image.log
+  redo-ifchange build_image.log
 
 start:
   ./podman.sh start
@@ -14,4 +14,4 @@ login:
   ./podman.sh login
 
 clean:
-  redo clean
+  redo clean base/clean
