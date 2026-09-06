@@ -1,17 +1,27 @@
 readonly name=$(basename $(pwd))
 readonly zroot="zroot/hal"
 readonly wroot="${zroot}/instances/${name}"
+readonly instance_conf="/hal/jail.conf.d/${name}.conf"
 
 _is_running() {
 	jls -c -j ${name}
 }
 
 _jail_start() {
-	_is_running || doas jail -f jail.conf -c ${name}
+	if _is_running; then return; fi
+
+	# Copy the conf the jail was started with, so we can stop it
+	# with the same one. This lets us edit the config file after
+	# the jail is running, without breaking it.
+	doas cp jail.conf ${instance_conf}
+	doas jail -f ${instance_conf} -c ${name}
 }
 
 _jail_stop() {
-	if _is_running; then doas jail -f jail.conf -r ${name}; fi
+	if _is_running; then
+		doas jail -f ${instance_conf} -r ${name}
+		doas rm ${instance_conf}
+	fi
 }
 
 _jail_exec() {

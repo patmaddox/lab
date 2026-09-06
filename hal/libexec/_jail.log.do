@@ -42,6 +42,10 @@ verify_hal() {
 			exit 1
 		fi
 	done
+
+	if [ ! -f /hal/jail.defaults.conf ]; then
+		doas cp ${HALROOT}/share/jail.defaults.conf /hal/
+	fi
 }
 
 create_jail_root() {
