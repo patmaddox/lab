@@ -1,0 +1,9 @@
+#+TITLE: research with LLMs
+
+I think LLMs can be super helpful for research. The basic idea is to
+have the model produce a single research report, and possibly
+supporting documents.
+
+Update it periodically. Basically it's a =Makefile=. That's my current
+thinking on the best way to use these tools. Set up a =spec.org= and
+treat it like a =Makefile=.
