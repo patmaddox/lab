@@ -1,0 +1,15 @@
+#+TITLE: sh
+* pipelines fork and vars defined in it don't propagate
+#+BEGIN_SRC lang="sh"
+foo() {
+  foo_var="hello"
+}
+
+# call foo, and it sets var
+foo
+echo "${foo_var}" # hello
+
+# call foo in a pipe, and it doesn't
+foo | echo
+echo "${foo_var}" # nada
+#+END_SRC
