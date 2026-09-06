@@ -1,3 +1,21 @@
 readonly name="test-workspace"
 readonly zroot="zroot/hal"
-readonly wroot="${zroot}/${name}"
+readonly wroot="${zroot}/instances/${name}"
+readonly defaultuser="patmaddox"
+
+readonly users="
+patmaddox:501:1001
+claude:1002:1002
+"
+
+_jail_start() {
+	jls -c -j ${name} || doas jail -f jail.${name}.conf -c ${name}
+}
+
+_jail_stop() {
+	if jls -c -j ${name}; then doas jail -f jail.${name}.conf -r ${name}; fi
+}
+
+_jail_exec() {
+	doas jexec -l ${name} "${@}"
+}

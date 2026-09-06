@@ -18,7 +18,8 @@ readonly pkgbase_sets="FreeBSD-set-minimal-jail"
 main() {
 	create_jail_root
 	install_freebsd
-	# start jail
+	_jail_start
+	create_users
 	clone_repo
 	bootstrap
 	# ready
@@ -40,6 +41,70 @@ install_freebsd() {
 	doas mkdir -p ${rootdir}/usr/share/keys/pkgbase-15
 	tar -C /usr/share/keys/pkgbase-15 -cf - . | doas tar -C ${rootdir}/usr/share/keys/pkgbase-15 -xf -
 	doas pkg -r ${rootdir} -C ${pkgbase_conf} install -r FreeBSD-base -y ${pkgbase_sets}
+}
+
+create_users() {
+	local _username _uid _gid
+	while IFS=: read -r _username _uid _gid _rest; do
+		if validate_userline "${_username}" "${_uid}" "${_gid}" "${_rest}"; then
+			add_group ${_username} ${_gid}
+			add_user ${_username} ${_uid}
+		fi
+	done <<EOF
+${users}
+EOF
+}
+
+validate_userline() {
+	local line username uid gid rest
+	username=${1}; shift
+	uid=${1}; shift
+	gid=${1}; shift
+	rest=${1}; shift
+
+	# this is how we filter empty userlines
+	if [ -z "${username}${uid}${gid}${rest}" ]; then
+		return 1
+	fi
+
+	if [ -z "${username}" ]; then
+		echo "E: invalid userline" >&2
+		exit 1
+	fi
+	if [ -z "${uid}" ]; then
+		echo "E: invalid userline" >&2
+		exit 1
+	fi
+	if [ -z "${gid}" ]; then
+		echo "E: invalid userline" >&2
+		exit 1
+	fi
+	if [ -n "${rest}" ]; then
+		echo "E: invalid userline" >&2
+		exit 1
+	fi
+}
+
+add_group() {
+	local group gid
+	group=${1}; shift
+	gid=${1}; shift
+
+	if ! _jail_exec pw group show ${group} >/dev/null 2>&1; then
+		echo "making new group: ${group} with gid: ${gid}"
+		_jail_exec pw group add -n ${group} -g ${gid}
+	fi
+}
+
+add_user() {
+	local username uid
+	username=${1}; shift
+	uid=${1}; shift
+
+	if ! _jail_exec pw user show ${username} >/dev/null 2>&1; then
+		echo "making new user: ${username} with uid: ${uid}"
+		_jail_exec pw user add -n ${username} -u ${uid} -g ${username} -m -s sh
+	fi
 }
 
 clone_repo() {

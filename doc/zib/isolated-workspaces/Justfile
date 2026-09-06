@@ -6,3 +6,12 @@ build:
 
 clean:
   redo clean
+
+jail-start:
+  ./jail.sh start
+
+jail-stop:
+  ./jail.sh stop
+
+jail-login:
+  ./jail.sh login

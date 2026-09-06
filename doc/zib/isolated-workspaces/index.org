@@ -4,6 +4,8 @@ Isolated workspaces have always been useful, but they're more
 important now that we live in an agentic coding world.
 
 (idea: call it =hal= after 2001 space odyssey)
+
+"I'm sorry HAL, I'm afraid you can't do that." -Dave
 * main workspace
 A repeatable workspace that everything else forks from
 
