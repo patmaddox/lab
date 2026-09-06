@@ -1,0 +1,17 @@
+help:
+  just -l
+
+build:
+  redo-ifchange jail.log
+
+clean:
+  redo clean
+
+start:
+  ../../libexec/jail.sh start
+
+stop:
+  ../../libexec/jail.sh stop
+
+login:
+  ../../libexec/jail.sh login

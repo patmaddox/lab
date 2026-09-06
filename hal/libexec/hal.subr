@@ -1,0 +1,19 @@
+readonly name=$(basename $(pwd))
+readonly zroot="zroot/hal"
+readonly wroot="${zroot}/instances/${name}"
+
+_is_running() {
+	jls -c -j ${name}
+}
+
+_jail_start() {
+	_is_running || doas jail -f jail.conf -c ${name}
+}
+
+_jail_stop() {
+	if _is_running; then doas jail -f jail.conf -r ${name}; fi
+}
+
+_jail_exec() {
+	doas jexec -l ${name} "${@}"
+}
