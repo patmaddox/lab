@@ -1,8 +1,9 @@
 *#*
+**/.state/
 *.core
 *.elc
-*.img
 *.git
+*.img
 *.jar
 *.jj
 *.log
@@ -16,8 +17,7 @@
 .ninja_log
 .plzconfig.local
 .pnpm-store
-**/.redo/
-**/.state/
+.redo*
 /lib
 _build
 dotfiles/nvim/lazy
