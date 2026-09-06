@@ -1,0 +1,3 @@
+readonly name="test-workspace"
+readonly zroot="zroot/hal"
+readonly wroot="${zroot}/${name}"

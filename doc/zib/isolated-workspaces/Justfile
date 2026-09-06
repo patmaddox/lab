@@ -1,0 +1,8 @@
+help:
+  just -l
+
+build:
+  redo-ifchange jail.log
+
+clean:
+  redo clean

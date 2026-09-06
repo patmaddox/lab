@@ -1,0 +1,74 @@
+#+TITLE: isolated workspaces
+
+Isolated workspaces have always been useful, but they're more
+important now that we live in an agentic coding world.
+
+(idea: call it =hal= after 2001 space odyssey)
+* main workspace
+A repeatable workspace that everything else forks from
+
+This simply pulls the main branch and builds everything. If it
+succeeds, it produces a snapshot of the workspace.
+
+All new workspaces clone from that snapshot.
+
+The repeatable aspect is checked into the repo, it has nothing to do
+with the workspace specifically. The workspace is just a cache.
+
+The process from here on out is:
+
+1. clone the workspace
+2. fetch any additional code that represents ongoing work
+3. update the workspace (run any build scripts that are needed etc)
+4. get to work
+
+The workspace may mount additional context, e.g. the =.claude=
+directory for any agent workspaces, or a secrets dir for developer
+workspaces that need to be able to deploy, etc.
+** nothing special about the main workspace
+Fundamentally this does not need to be a long-lived workspace. In fact
+it is really just a cache, and every workspace can be independent of
+one another.
+
+As a starting point for building this system, it makes sense for each
+workspace to bootstrap itself first. Once that's achieved, then we can
+have a main workspace that provides a speedup.
+* strict separation of workspaces
+Sharing state across workspaces needs to be handled carefully. e.g. an
+agent workspace must never mount a shared file system with a developer
+workspace that contains secrets, otherwise the agent may be able to
+read the secrets.
+
+Human and agent isn't really the important designation, but rather
+trust boundaries and the secrets available to them. As a starting
+point, it's helpful to think of the human as being trusted and agent
+as being non-trusted. Zooming out though, it's better to think of
+capabilities and the resources needed to fulfill them. We can then
+think of a human workspace as one that has certain resources that
+enable certain capabilities (i.e. keys to deploy), and an agent
+workspace as having different resources (i.e. access tokens to
+integrate with LLM).
+** basic data exchange across workspaces
+The primary data exchange across workspaces is a buffer, e.g. a git
+repo that all workspaces can push to. Though if this is a =file://=
+URL shared via nullfs, then it means that the path must necessarily be
+writable by all workspaces. This is potentially a security issue
+because they can configure the repo itself.
+
+Instead, data transfer is pull-based. Each workspace receives a
+writable clone of the repo. Workspaces interested in another can
+receive readable clones of the repo that they can add as origins.
+* bootstrapping a workspace
+1. create a new jail root for it
+2. install a freebsd jail userland
+3. mount the repo into it
+4. run the bootstrap script
+* questions
+** how do we give jails an updated view of the workspace?
+Running claude in an interactive session is helpful, but I don't want
+to nullfs mount into it and share a file system. So I need some way of
+pushing the latest code and updating it in the jail, so that claude
+can see it.
+
+I think this is probably pretty simple... push code to a branch, and
+then =jexec= into the jail to update it.
