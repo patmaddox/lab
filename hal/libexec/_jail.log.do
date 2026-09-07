@@ -18,7 +18,7 @@ redo-ifchange hal.instance.conf ${HALROOT}/libexec/hal.subr
 . hal.instance.conf
 . ${HALROOT}/libexec/hal.subr
 readonly PKGBASE_CONF="${HALROOT}/share/pkgbase-150.conf"
-readonly PKGBASE_SETS="${pkgbase_sets:-FreeBSD-set-base-jail}"
+readonly PKGBASE_PACKAGES="${pkgbase_sets:-FreeBSD-set-base-jail} ${pkgbase_extras:-}"
 readonly PACKAGES="${packages:-}"
 
 # global vars created by functions
@@ -65,7 +65,7 @@ install_freebsd() {
 
 	doas mkdir -p ${rootdir}/usr/share/keys/pkgbase-15
 	tar -C /usr/share/keys/pkgbase-15 -cf - . | doas tar -C ${rootdir}/usr/share/keys/pkgbase-15 -xf -
-	doas pkg -r ${rootdir} -C ${PKGBASE_CONF} install -r FreeBSD-base -y ${PKGBASE_SETS}
+	doas pkg -r ${rootdir} -C ${PKGBASE_CONF} install -r FreeBSD-base -y ${PKGBASE_PACKAGES}
 
 	if [ ! -f ${rootdir}/etc/resolv.conf ]; then
 		echo "nameserver 8.8.8.8" | doas tee ${rootdir}/etc/resolv.conf > /dev/null
