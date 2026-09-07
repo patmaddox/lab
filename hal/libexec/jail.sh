@@ -12,7 +12,16 @@ if [ -z "${name}" ]; then
 fi
 
 _jail_login() {
-	TERM=xterm-256color doas jexec -l ${name} login -f "${1:-${defaultuser}}"
+	local user="${1:-${defaultuser:-root}}"
+
+	if ! doas jexec -l ${name} pw user show -n "${user}" >/dev/null 2>&1; then
+		echo "E: no such user ${user}" >&2
+		exit 1
+	fi
+	doas jexec -l ${name} env \
+	    COLORTERM=${COLORTERM:} \
+	    INSIDE_EMACS=${INSIDE_EMACS:} \
+	    login -fp "${user}"
 }
 
 cmd=${1}; shift

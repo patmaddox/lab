@@ -18,7 +18,8 @@ redo-ifchange hal.instance.conf ${HALROOT}/libexec/hal.subr
 . hal.instance.conf
 . ${HALROOT}/libexec/hal.subr
 readonly PKGBASE_CONF="${HALROOT}/share/pkgbase-150.conf"
-readonly PKGBASE_SETS=${pkgbase_sets:-FreeBSD-set-minimal-jail}
+readonly PKGBASE_SETS="${pkgbase_sets:-FreeBSD-set-base-jail}"
+readonly PACKAGES="${packages:-}"
 
 # global vars created by functions
 # rootdir
@@ -28,6 +29,7 @@ main() {
 	create_jail_root
 	install_freebsd
 	_jail_start
+	create_groups
 	create_users
 	clone_repo
 	bootstrap
@@ -64,48 +66,47 @@ install_freebsd() {
 	doas mkdir -p ${rootdir}/usr/share/keys/pkgbase-15
 	tar -C /usr/share/keys/pkgbase-15 -cf - . | doas tar -C ${rootdir}/usr/share/keys/pkgbase-15 -xf -
 	doas pkg -r ${rootdir} -C ${PKGBASE_CONF} install -r FreeBSD-base -y ${PKGBASE_SETS}
+
+	if [ ! -f ${rootdir}/etc/resolv.conf ]; then
+		echo "nameserver 8.8.8.8" | doas tee ${rootdir}/etc/resolv.conf > /dev/null
+	fi
+
+	if [ -n "${PACKAGES}" ]; then
+		doas pkg -c ${rootdir} install -y ${PACKAGES}
+	fi
 }
 
-create_users() {
-	local _username _uid _gid
-	while IFS=: read -r _username _uid _gid _rest; do
-		if validate_userline "${_username}" "${_uid}" "${_gid}" "${_rest}"; then
-			add_group ${_username} ${_gid}
-			add_user ${_username} ${_uid}
+create_groups() {
+	local _name _gid
+	while IFS=: read -r _name _gid; do
+		if [ -n "${_name}" ] && [ -n "${_gid}" ]; then
+			add_group ${_name} ${_gid}
 		fi
 	done <<EOF
-${users}
+${groups:-}
 EOF
 }
 
-validate_userline() {
-	local line username uid gid rest
-	username=${1}; shift
-	uid=${1}; shift
-	gid=${1}; shift
-	rest=${1}; shift
+create_users() {
+	local _username _uid _gid _groups
+	while IFS=: read -r _username _uid _gid _groups; do
+		if [ -n "${_username}" ] && [ -n "${_uid}" ] && [ -n "${_gid}" ]; then
+			   add_group "${_username}" "${_gid}"
+			   add_user "${_username}" "${_uid}"
 
-	# this is how we filter empty userlines
-	if [ -z "${username}${uid}${gid}${rest}" ]; then
-		return 1
-	fi
-
-	if [ -z "${username}" ]; then
-		echo "E: invalid userline" >&2
-		exit 1
-	fi
-	if [ -z "${uid}" ]; then
-		echo "E: invalid userline" >&2
-		exit 1
-	fi
-	if [ -z "${gid}" ]; then
-		echo "E: invalid userline" >&2
-		exit 1
-	fi
-	if [ -n "${rest}" ]; then
-		echo "E: invalid userline" >&2
-		exit 1
-	fi
+			   if [ -n "${_groups}" ]; then
+				   local group
+				   while IFS=, read -r group; do
+					   echo "adding ${_username} to ${group}"
+					   _jail_exec pw group mod -m ${_username} -n ${group}
+				   done <<EOF
+${_groups}
+EOF
+			   fi
+		fi
+	done <<EOF
+${users:-}
+EOF
 }
 
 add_group() {

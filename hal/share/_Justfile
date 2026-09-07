@@ -13,5 +13,5 @@ start:
 stop:
   ../../libexec/jail.sh stop
 
-login:
-  ../../libexec/jail.sh login
+login name="":
+  ../../libexec/jail.sh login {{name}}

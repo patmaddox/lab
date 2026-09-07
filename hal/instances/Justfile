@@ -1,0 +1,5 @@
+help:
+  just -l
+
+init name:
+  ../tools/init-instance/init-instance.sh {{name}}

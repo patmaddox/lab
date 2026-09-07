@@ -1,0 +1,18 @@
+#+TITLE: hal
+
+"I'm sorry HAL, I'm afraid you can't do that." -Dave
+* setup
+#+BEGIN_EXAMPLE
+/hal/data/patmaddox/lab.git
+/hal/data/patmaddox/lab-submissions.git
+#+END_EXAMPLE
+
+jails get either =origin.git= as =rw=, or =ro= with =submissions.git=
+as =rw= depending on permissions. i.e. developer gets =rw= access to
+=origin.git= whereas agent jails get =ro= access to =origin.git= and
+=rw= access to =submissions.git=.
+
+Also maybe it flips, so dev jails can't push to =submissions.git=
+either... not sure if that would be advisable or not. It does seem
+like it would be useful so I could do code review just by committing
+on top of the code and pushing it.
