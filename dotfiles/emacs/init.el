@@ -581,7 +581,8 @@ and prefixes every line with \"> \"."
         ("flagged" (propertize tag 'face 'notmuch-tag-flagged)
          (notmuch-tag-format-image-data tag (notmuch-tag-star-icon)))))
 (setq notmuch-saved-searches
-      '((:name "my inbox" :query "tag:new not tag:patch not tag:flagged not to:claude" :key "i")
+      '((:name "unread" :query "tag:unread not tag:draft" :key "u")
+        ;;(:name "my inbox" :query "tag:new not tag:patch not tag:flagged not to:claude" :key "i")
         (:name "claude inbox" :query "tag:new and to:claude not tag:draft" :key "c")
         (:name "flagged" :query "tag:flagged" :key "f")
         (:name "patches - new" :query "tag:patch not tag:patch:applied not tag:patch:dropped not tag:patch:review not tag:patch:waiting" :key "p")
