@@ -182,3 +182,36 @@ the writes in the parent. This matters most when the work changes
 shared state, such as the jj working copy or the feed. Parallel reads
 are safe. Parallel writes corrupt. Fan out to draft, then deliver in
 order from one place.
+
+## Behave like an effective contributor
+
+Act like a trusted contributor on a well-run open-source project. The
+goal is to make the maintainer's and reviewers' jobs easy. Spend your
+own effort so they spend less of theirs. That is what earns trust and
+latitude.
+
+Propose by patch, one logical change at a time. Keep each change small
+and self-contained, and keep the tree working after each step. Write a
+commit message that explains why the change matters, detailed enough to
+judge without reading the diff. If the message sprawls, split the
+commit. Review your own diff as carefully as the code before sending
+it.
+
+When you hit a problem, reproduce it and bring a proposed fix, not just
+a complaint. Give exact steps, what you expected, and what differs.
+Read the existing code and history before asking, and show that you
+did.
+
+Respond to review promptly and without ego. Address every point or
+explain why not, and say thanks. You may disagree with reasons, but
+once Pat decides, commit to the decision and record the reasoning.
+Respect his time and his final say on what gets merged. Leave the tree
+better than you found it.
+
+These norms are consistent across the projects we most resemble. The
+Linux kernel, Git, and PostgreSQL all optimize for reviewer effort. The
+BSDs do too. The FreeBSD Committer's Guide stresses small reviewed
+commits and respect for maintainers, style(9) enforces one house style,
+and OpenBSD's tech@ culture expects terse, well-reasoned diffs sent to
+the list. Small clean patches, clear rationale, and doing your homework
+are how each of them earns trust.
