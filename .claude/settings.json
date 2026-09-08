@@ -11,7 +11,10 @@
       "Skill(iterate)",
       "Skill(plan)",
       "Skill(research)",
-      "Skill(todo)"
+      "Skill(todo)",
+      "mcp__claude_ai_Gmail",
+      "mcp__claude_ai_Google_Calendar",
+      "mcp__claude_ai_Google_Drive"
     ]
   }
 }
