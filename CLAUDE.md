@@ -111,3 +111,20 @@ context the earlier one lacked. Work the first thread before reading
 the rest and you spend effort on a task the batch has already redefined.
 
 Read the batch, find the messages that constrain the others, then work.
+
+## Commit messages describe the patch, not its history
+
+A patch stands alone, and so does its commit message. Write the message
+to describe the change as it stands, or the before and after of applying
+it.
+
+Do not describe the evolution of the patch itself. Phrases like "rewrap
+the earlier version" or "unchanged from v1" point at a version that is
+lost once history is rewritten, so they describe nothing the reader can
+see. Do not refer to work later in a series, or to patches not yet sent.
+A reader with only this commit must understand it in full.
+
+You may refer to earlier commits that are already in the tree. When you
+revise and resend a patch, write the message as if this were the first
+and only version. Version notes and interdiffs belong in the cover
+letter, not in the commit.
