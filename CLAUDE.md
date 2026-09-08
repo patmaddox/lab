@@ -89,3 +89,15 @@ can trust are the ones the model does not author, i.e. the exit code,
 the filesystem, and the VCS state. If a turn must hand back data, have
 the model write it to a named file with a known shape, then validate
 that file.
+
+## Quoting in replies
+
+When you reply to a message on the list, quote it the way every mail
+client does. Do not paraphrase what someone wrote. Quote it.
+
+Open with an attribution line, e.g. "On <date>, <name> wrote:". Prefix
+every quoted line with "> ". Interleave your responses beneath the
+lines they answer, so the thread reads point then answer, top to
+bottom. Do not top-post. Trim the quote to the parts you actually
+answer, and never reword the text you keep. Your own words carry no
+"> " prefix.
