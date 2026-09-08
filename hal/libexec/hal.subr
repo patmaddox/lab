@@ -1,26 +1,39 @@
 readonly name=$(basename $(pwd))
 readonly zroot="zroot/hal"
 readonly wroot="${zroot}/instances/${name}"
-readonly instance_conf="/hal/jail.conf.d/${name}.conf"
+
+# service(8) finds a jail's config by name in /etc/jail.conf.d.
+# install writes it there; start, stop and status drive it from there.
+readonly confdir="/etc/jail.conf.d"
+readonly installed_conf="${confdir}/${name}.conf"
 
 _is_running() {
 	jls -c -j ${name}
 }
 
-_jail_start() {
-	if _is_running; then return; fi
+# Copy the instance config into /etc/jail.conf.d so service(8) can find
+# it by name. hal writes nothing else: the shared defaults are the
+# operator's, in ${confdir}/defaults.conf, and each jail.conf includes
+# them itself.
+_jail_install() {
+	doas cp jail.conf ${installed_conf}
+}
 
-	# Copy the conf the jail was started with, so we can stop it
-	# with the same one. This lets us edit the config file after
-	# the jail is running, without breaking it.
-	doas cp jail.conf ${instance_conf}
-	doas jail -f ${instance_conf} -c ${name}
+# onestart and onestop drive the jail without jail_enable in rc.conf,
+# so hal runs a jail whether or not the operator lists it for boot.
+_jail_start() {
+	doas service jail onestart ${name}
 }
 
 _jail_stop() {
-	if _is_running; then
-		doas jail -f ${instance_conf} -r ${name}
-		doas rm ${instance_conf}
+	doas service jail onestop ${name}
+}
+
+_jail_status() {
+	if _is_running >/dev/null 2>&1; then
+		echo "${name}: running"
+	else
+		echo "${name}: stopped"
 	fi
 }
 

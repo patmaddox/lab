@@ -7,11 +7,17 @@ build:
 clean:
   redo clean
 
+install:
+  ../../libexec/jail.sh install
+
 start:
   ../../libexec/jail.sh start
 
 stop:
   ../../libexec/jail.sh stop
+
+status:
+  ../../libexec/jail.sh status
 
 login name="":
   ../../libexec/jail.sh login {{name}}

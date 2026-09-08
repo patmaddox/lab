@@ -31,22 +31,15 @@ main() {
 	_jail_start
 	create_groups
 	create_users
-	clone_repo
-	bootstrap
+	# clone_repo
+	# bootstrap
 	# ready
 }
 
 verify_hal() {
-	local d
-	for d in instances jail.conf.d; do
-		if ! zfs list ${zroot}/${d} >/dev/null 2>&1; then
-			echo "E: missing ${zroot}/${d}" >&2
-			exit 1
-		fi
-	done
-
-	if [ ! -f /hal/jail.defaults.conf ]; then
-		doas cp ${HALROOT}/share/jail.defaults.conf /hal/
+	if ! zfs list ${zroot}/instances >/dev/null 2>&1; then
+		echo "E: missing ${zroot}/instances" >&2
+		exit 1
 	fi
 }
 
@@ -134,11 +127,13 @@ add_user() {
 clone_repo() {
 	# clone to tmp if needed
 	# move it into place
+	:
 }
 
 bootstrap() {
 	# ...
 	# install additional packages etc?
+	:
 }
 
 # no "${@}" since it's called by redo and we don't want the params,
