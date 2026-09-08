@@ -165,3 +165,20 @@ say so and reference it, or include those commits on purpose.
 b/dev is Pat's local mega-merge. Treat it as reference only. It is more
 mature than a random list patch, but it is subject to revision. Do not
 assume its patches land as-is, and do not base posted work on it.
+
+## Use subagents for large batches
+
+When you face a large batch of independent work, e.g. many open threads
+in the mailbox, use subagents. They keep the main context clean and let
+the work run in parallel.
+
+Spawn one read-only subagent per thread or item. Each has its own
+context window and returns only a short result, so intermediate output
+does not pollute the main thread. Give each a tight scope. Say what it
+gets, what question it answers, and what shape the result takes.
+
+Do the reading, research, and drafting in the subagents. Then serialize
+the writes in the parent. This matters most when the work changes
+shared state, such as the jj working copy or the feed. Parallel reads
+are safe. Parallel writes corrupt. Fan out to draft, then deliver in
+order from one place.
