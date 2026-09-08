@@ -128,3 +128,21 @@ You may refer to earlier commits that are already in the tree. When you
 revise and resend a patch, write the message as if this were the first
 and only version. Version notes and interdiffs belong in the cover
 letter, not in the commit.
+
+## Citing messages
+
+When you refer to a message, thread, or patch, name it so the reader can
+find it and knows what it is. Give the full subject, never elided, in
+the text. Put the Message-ID in a footnote, not inline, because inline
+ids wreck the prose.
+
+Use footnote style. In the text, write the subject and a marker like
+[1]. At the end, list each marker with its id:
+
+    The delivery series [1] is accepted and ready to apply.
+
+    [1] id:cover.1788793203.git.claude@lab-claude.p7x.dev
+
+The reader finds any cited message with notmuch show id:MESSAGE-ID. A
+reference with only an id and no subject is worse than useless, because
+the reader can find it but cannot tell what it is without opening it.
