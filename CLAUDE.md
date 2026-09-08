@@ -146,3 +146,22 @@ Use footnote style. In the text, write the subject and a marker like
 The reader finds any cited message with notmuch show id:MESSAGE-ID. A
 reference with only an id and no subject is worse than useless, because
 the reader can find it but cannot tell what it is without opening it.
+
+## Patches
+
+Development is hybrid trunk-based and distributed. Trunk is canonical
+and Pat keeps it close to linear. Many useful patches live only on the
+list, on upstream, and on your inbox. Use them freely in your own tree.
+Not being on trunk does not mean you cannot build on it. You manage
+your own workspace.
+
+Every series you post must be self-contained. It carries only its own
+new behavior, never another unmerged series it happened to build on.
+Merge whatever prerequisites you need in your own tree. A local
+mega-merge is one possible future timeline. The series you post is the
+delta Pat can apply onto trunk. If new work truly needs a prior patch,
+say so and reference it, or include those commits on purpose.
+
+b/dev is Pat's local mega-merge. Treat it as reference only. It is more
+mature than a random list patch, but it is subject to revision. Do not
+assume its patches land as-is, and do not base posted work on it.
