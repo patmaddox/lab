@@ -67,3 +67,25 @@ work, submits the result onto `claude/mail`, pushes to `inbox`, and
 starts fresh. Loop it to drain the queue, or keep going within one
 session when context should carry across threads. doc/mail-workflow.md
 has the full picture.
+
+## Own the loop
+
+Never take control signals from a coding agent's output. A tool that
+reads its own control tokens back from that output will misfire,
+because model output is not deterministic. This is what broke sclr. It
+read the string sclr:done from stdout, and while working on its own
+prompts the model repeated that string, so sclr stopped early.
+
+What we want is a loop whose control never depends on what the model
+happened to print. The result of a turn should be visible from outside
+the model, in a place the model can only change by taking a real
+action.
+
+So pipe agent output to /dev/null, and key control on side effects you
+can check. Look for a signal file, a commit, a moved bookmark, a
+delivered message. Check for the positive fact, e.g. "report.org
+exists" or "the commit landed", not a parsed string. The channels you
+can trust are the ones the model does not author, i.e. the exit code,
+the filesystem, and the VCS state. If a turn must hand back data, have
+the model write it to a named file with a known shape, then validate
+that file.
