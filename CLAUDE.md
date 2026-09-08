@@ -101,3 +101,13 @@ lines they answer, so the thread reads point then answer, top to
 bottom. Do not top-post. Trim the quote to the parts you actually
 answer, and never reword the text you keep. Your own words carry no
 "> " prefix.
+
+## Read the whole batch before working
+
+When you fetch new mail, read every message in the batch before you
+start any work. Replies come in batches, and a later message often
+changes an earlier one. It may correct it, supersede it, or add the
+context the earlier one lacked. Work the first thread before reading
+the rest and you spend effort on a task the batch has already redefined.
+
+Read the batch, find the messages that constrain the others, then work.
