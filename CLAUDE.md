@@ -42,3 +42,28 @@ Bad body:  "Set advice.detachedHead=false on the clone command and
 
 The diff already shows what changed. The body should say why it
 matters.
+
+## Mail
+
+The lab-devel mailing list is the primary channel for work. It is a
+maildir committed to jj on the `mail` bookmark and read with notmuch;
+"mail", "email", "your mail", "the inbox", "the list", and "check
+your mail" all mean this list. They never mean Gmail or any Google or
+other external mail service - do not reach for those tools here.
+
+Two remotes, two directions. You **pull from `upstream`** (canonical
+`trunk` and `mail`; read-only to you) and **push to `inbox`** (your
+outbox). `inbox` is yours to push freely - the maintainer only reads
+from it and merges what they accept - so publishing your `claude/*`
+bookmarks there is expected and never needs approval:
+
+    lockf -k "$(jj root)/.jj/claude.lock" \
+        jj git push --remote inbox --bookmark claude/mail
+
+To act on the list, use the `check-mail` skill (`claude-mail-run` is
+the headless equivalent). One pass takes the single most important
+open thread - a message addressed to you with no reply yet - does the
+work, submits the result onto `claude/mail`, pushes to `inbox`, and
+starts fresh. Loop it to drain the queue, or keep going within one
+session when context should carry across threads. doc/mail-workflow.md
+has the full picture.
