@@ -1,4 +1,4 @@
-# claude-mail
+# claude-mail (deprecated)
 
 Pipe emails to Claude and collect replies. When emails request
 code changes, Claude works in an isolated git clone and produces
