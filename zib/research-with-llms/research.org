@@ -11,7 +11,7 @@ prior art, and where is practical (non-hype) guidance?
 
 * A shape that works
 #+begin_example
-doc/zib/<topic>/
+zib/<topic>/
   spec.org      # Pat: questions, scope, what "done" means
   research.org  # LLM: only ever written by the model
   notes.org     # Pat: conclusions, article draft

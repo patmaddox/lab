@@ -63,7 +63,7 @@ So one research request can return two things:
 
 * Standing rules in one place
 Conventions that apply to every topic go in one place, e.g.
-=doc/zib/CLAUDE.md=, not in each request:
+=zib/CLAUDE.md=, not in each request:
 
 - cite sources
 - check claims on the local system

@@ -7,7 +7,7 @@
   agents, as practised in 2025-2026, plus older patterns from software
   and other fields that solved the same problems.
 - Method :: Web research by three parallel subagents, checked against
-  [[file:../../mail-workflow.md][doc/mail-workflow.md]] for fit.
+  [[file:../../doc/mail-workflow.md][doc/mail-workflow.md]] for fit.
   Several claims came from search summaries, not full page reads.
   Those resting on one secondary source are marked UNVERIFIED.
 - Book citations :: Canonical books and papers are cited from

@@ -11,7 +11,7 @@ disablePathToLower = true
   source = 'content'
   target = 'content'
 [[module.mounts]]
-  source = '../../doc/zib'
+  source = '../../zib'
   target = 'content/zib'
 
 [markup.tableOfContents]
