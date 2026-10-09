@@ -66,6 +66,36 @@ applied patch and push it.
 Maintainer may also reject patches on the list. Resolution of a patch
 will always be either to apply or reject. Maintainer may revise a
 patch before applying.
+* Process
+** Contributor
+Getting up to date:
+- Fetch =trunk= and =mail= branches from =upstream= repo
+- Rebase local work onto =upstream/trunk= and drop superseded commits
+- Rebase local mail onto =upstream/mail= and drop superseded commits
+
+Developing new work:
+- Identify new work to be done via new messages on the list
+- Develop new work
+- Compose new message to the list (including patches) and publish to
+  =submissions= repo
+** Moderator
+- Fetch devlist commits from =submissions= repo
+- Verify that the commits only add maildir messages and make no other
+  changes.
+- Decide which messages to cherry-pick or reject
+- Cherry-pick commits to =mail= branch
+- Publish mail branch
+** Reviewer
+- Fetch the list
+- Respond to messages, publishing new messages the same way a
+  contributor does
+** Maintainer
+- Fetch mailing list
+- Read new messages
+- Apply patches to =trunk= without moving bookmark
+- Review and test, revise if needed
+- Accept (move trunk and push) or reject (abandon)
+- Post resolution to list
 * Tech notes
 ** mailing list doesn't have to be a real mailing list
 For my purposes, the mailing list is probably just a maildir in a
@@ -75,3 +105,5 @@ at this point.
 notmuch by default renames files to indicate if they've been
 seen. This will be disabled by setting =maildir.synchronize_flags
 false=. Once a message is added to the list, it does not get renamed.
+** maintainer can post directly to the list
+Trusted members don't have a moderation queue.
