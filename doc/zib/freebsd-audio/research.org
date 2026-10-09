@@ -1,0 +1,392 @@
+#+TITLE: freebsd audio research
+#+AUTHOR: Claude (LLM-generated research, not Pat's writing)
+#+DATE: 2026-10-09
+
+* Basis
+- Release :: 15.1-RELEASE (the research host runs 15.1-RELEASE-p4).
+  Man page claims below were checked against the installed system.
+- STABLE :: stable/15. virtual_oss came to stable/15 in time for 15.0.
+  The 15.1 release notes list no new audio features, only a
+  security fix [fn:rn151].
+- CURRENT :: main (16.0). Newer work from the FreeBSD Foundation
+  audio project is described under [[*Developments in stable/15 and CURRENT][Developments]].
+- Unverified :: Items marked UNVERIFIED were found but could not be
+  confirmed against a primary source.
+
+* Overview of FreeBSD audio stack options
+:PROPERTIES:
+:STATUS: answered
+:END:
+FreeBSD audio is built on OSS (Open Sound System). The kernel
+=sound(4)= driver provides =/dev/dspN= devices that speak the OSS
+ioctl API. It also mixes in the kernel: virtual channels (VCHANs)
+let many programs play at once, and each stream gets its own volume
+(VPC). So unlike bare ALSA on Linux, you do not need a sound server
+just to share the card [fn:sound4].
+
+The options stack up in layers:
+
+1. Kernel OSS only :: Apps open =/dev/dsp=. This works for most
+   desktop use with no daemons at all.
+2. virtual_oss (in base since 15.0) :: A userspace OSS multiplexer
+   built on =cuse(3)=. It handles device switching and hot-plug
+   (with devd), routing, loopback and recording, Bluetooth, and
+   sndio bridging [fn:voss8][fn:d52308].
+3. Sound servers from ports :: PulseAudio (what KDE and GNOME
+   expect), sndio (light, and a common Firefox/Chromium backend),
+   JACK (pro audio and low latency), PipeWire (available, but on
+   FreeBSD used mainly for screen capture, not as the main audio
+   server).
+4. Compatibility shims :: The ALSA OSS plugin (=audio/alsa-plugins=)
+   and Linux-ABI apps opening =/dev/dsp= directly.
+5. Alternative kernel stack :: 4Front OSS v4 (=audio/oss=). It
+   conflicts with =sound.ko= and is effectively legacy; avoid it
+   [fn:oss4port].
+
+The project has had heavy investment since 2024. The FreeBSD
+Foundation has sponsored audio work (Christos Margiolis), which
+brought the =mixer(8)= rewrite, =sndctl(8)=, virtual_oss in base,
+devd-driven jack redirection, and better hot-plug [fn:fdnproj]. The
+Handbook's multimedia chapter has not caught up: it does not mention
+virtual_oss, sndctl, sndio, JACK or PipeWire [fn:handbook].
+
+* Main components of the audio stack
+:PROPERTIES:
+:STATUS: answered
+:END:
+** Kernel
+- =sound(4)= (aka =pcm=, =snd=) :: The core driver. It provides
+  VCHAN mixing, VPC per-app volume, a feeder chain (format and
+  channel conversion, a rate converter with selectable quality,
+  optional EQ), bit-perfect mode, and up to 8-channel matrixing
+  [fn:sound4].
+- Bridge drivers :: Per-chipset drivers. =snd_hda(4)= (Intel HD
+  Audio, nearly every PC since about 2005) is loaded by default on
+  amd64. =snd_uaudio(4)= (USB audio) loads automatically on plug.
+  Others include =snd_hdspe= (RME) and =snd_emu10kx=. If unsure,
+  =snd_driver= loads them all [fn:sound4]. The ISA drivers were
+  removed in 14.0 [fn:rn140].
+- Device nodes ::
+  - =/dev/dspN= is PCM audio.
+  - =/dev/dsp= is the default unit (=hw.snd.default_unit=).
+  - =/dev/mixerN= is the mixer, 1:1 with dspN.
+  - =/dev/sndstat= is the status report.
+  Since 14.1 there are no =/dev/dspN.M= clone nodes, because
+  snd_clone was removed [fn:rn141].
+- Knobs ::
+  - =hw.snd.*= are global sysctls: =default_unit=, =default_auto=,
+    =latency=, =feeder_rate_quality=, =vchans_enable=, and so on.
+  - =dev.pcm.N.*= are per-device sysctls: =bitperfect=,
+    =play.vchanrate=, =play.vchanformat=, =vchanmode=.
+  - =hint.pcm.N.*= are loader hints (eq, vpc).
+  - =hint.hdac.N.cad0.nidNN.config= remaps snd_hda pins, for example
+    for headphone auto-switching [fn:sound4][fn:handbook].
+- devd events :: =sound(4)= emits =SND CONN IN/OUT/NODEV= events.
+  The stock =/etc/devd/snd.conf= reacts to them by retargeting
+  virtual_oss with =virtual_oss_cmd= (checked on 15.1). The FreeBSD
+  Journal calls this experimental [fn:journal].
+
+** Base userland
+- =mixer(8)= / =mixer(3)= (=libmixer=) :: Volume, mute and recording
+  source control. It also changes the default device (=mixer -d
+  pcm1=). It was rewritten in 14.0 and its command-line syntax is
+  incompatible with 13.x [fn:mixer8][fn:sr2021q3].
+- =sndctl(8)= :: Per-device properties: format, rate, vchans,
+  bitperfect, realtime, autoconv. It also shows per-channel stats
+  such as pid, process, xruns, latency and the feeder chain. It
+  supports libxo output [fn:sndctl8][fn:sr2025q2].
+- =virtual_oss(8)=, =virtual_oss_cmd(8)=, =virtual_bt_speaker(8)= ::
+  In base since 15.0. Base ships only the =voss_oss= and =voss_null=
+  backends (in =/usr/lib/virtual_oss=, checked on 15.1). The sndio
+  backend, the Bluetooth backend and =virtual_equalizer= stay in
+  ports [fn:d52308].
+- rc scripts :: =/etc/rc.d/mixer= saves and restores levels.
+  =/etc/rc.d/virtual_oss= is configured with =virtual_oss_enable=
+  and =virtual_oss_configs=. Its default config is a 48 kHz/24-bit
+  =dsp= on top of =/dev/dsp${default_unit}=, with control device
+  =vdsp.ctl=.
+- Other base tools :: =beep(1)= is a quick test tone,
+  =mididump(1)= was added in 14.2, and =/usr/share/examples/sound/=
+  holds OSS API sample code.
+
+** Ports
+Sound servers, compatibility layers and GUIs:
+- Sound servers: pulseaudio, sndio, jack, pipewire.
+- Compatibility layers: alsa-lib/alsa-plugins.
+- Mixers and GUIs: dsbmixer, mixertui, the KDE plasma-pa widget
+  [fn:handbook].
+
+* PulseAudio, JACK, etc.: what they are and which matter
+:PROPERTIES:
+:STATUS: answered
+:END:
+A "sound server" is a daemon that owns the hardware device. Clients
+talk to it over its own protocol, and it mixes, routes, resamples
+and switches devices for them. On Linux that is the only way to share
+a card. On FreeBSD the kernel already shares the card, so a server is
+optional and is there for features, not for basic function.
+
+| Name             | Port                   | What it is for on FreeBSD                                                                   | Know it?  |
+|------------------+------------------------+---------------------------------------------------------------------------------------------+-----------|
+| OSS (=/dev/dsp=) | base                   | The native API. Everything ends up here.                                                    | Essential |
+| virtual_oss      | base (15.0+)           | Routing, hot-plug switching, Bluetooth, loopback/recording. FreeBSD-native.                 | Essential |
+| PulseAudio       | audio/pulseaudio       | Desktop sound server that KDE and GNOME expect. More than 100 ports depend on it.           | Yes       |
+| sndio            | audio/sndio            | OpenBSD's small sound server. A good Firefox/Chromium backend; also network audio.          | Yes       |
+| JACK             | audio/jack             | Low-latency pro audio with an app-to-app patchbay. Needed by Ardour.                        | If music  |
+| PipeWire         | multimedia/pipewire    | Linux's new unified server. On FreeBSD mainly for screen sharing; pipewire-pulse immature.  | Watch     |
+| ALSA             | audio/alsa-plugins     | Linux API shim; the OSS plugin routes ALSA clients to =/dev/dsp=. Unmaintained.             | Rarely    |
+| OSS v4 (4Front)  | audio/oss              | Replacement kernel stack. Conflicts with sound(4).                                          | No        |
+
+Details, with the port versions checked on FreshPorts in 2026-10:
+- PulseAudio 17.0 :: Maintained by desktop@. Firefox builds the
+  PULSEAUDIO, JACK and SNDIO backends by default and always has an
+  OSS fallback. Chromium builds ALSA, PULSEAUDIO and SNDIO
+  [fn:fp-pulse][fn:fp-ff][fn:fp-chromium].
+- PipeWire 1.6 :: JACK support is on and PULSEAUDIO/ALSA are off in
+  the default options. KDE Plasma pulls it in for screen sharing.
+  Using pipewire-pulse as the main sound server reportedly broke with
+  Plasma 6.5 [fn:fp-pipewire][fn:forum-kde-pw].
+- JACK 1.9.22 :: Uses an OSS backend (=jackd -d oss=) and ships an
+  rc script. Realtime scheduling uses =mac_priority(4)= (the
+  =realtime= group) [fn:fp-jack].
+- sndio 1.10 :: Ships an rc script for =sndiod=. It can also be the
+  far end of virtual_oss's =/dev/sndio/...= backend, which needs the
+  sndio backend from ports [fn:fp-sndio][fn:voss8].
+- virtual_oss port :: The =audio/virtual_oss= port is IGNOREd on 15+
+  because virtual_oss is in base. =audio/virtual_oss_bluetooth=
+  needs =/usr/src=, so there is no binary package [fn:fp-voss].
+
+Short version: start with OSS plus the kernel. Use virtual_oss for
+switching and routing. Add PulseAudio if you run KDE or GNOME. Add
+JACK only for music production. Leave PipeWire, ALSA and OSS v4
+alone for now.
+
+* Simplest possible working config
+:PROPERTIES:
+:STATUS: answered
+:END:
+On amd64 with HDA or USB audio, the simplest config is no config at
+all. =sound(4)= and =snd_hda(4)= are loaded by default, and
+=snd_uaudio(4)= loads on plug. Applications open =/dev/dsp= and VCHANs
+mix them [fn:sound4][fn:handbook].
+
+#+begin_src sh
+cat /dev/sndstat            # list pcm devices; "default" marks /dev/dsp
+beep                        # or: cat /some/file.wav > /dev/dsp
+mixer                       # show levels on the default mixer
+mixer vol.volume=80% pcm.volume=100%
+#+end_src
+
+If the sound comes out of the wrong output (common: HDMI is picked
+over the analog jack, or vice versa):
+
+#+begin_src sh
+mixer -d pcm1                       # make pcm1 the default (runtime)
+sysrc -f /etc/sysctl.conf hw.snd.default_unit=1   # persist
+sysrc mixer_enable=YES              # save/restore levels (default on)
+#+end_src
+
+If no =pcm= device shows up, add =snd_driver_load="YES"= to
+=/boot/loader.conf= (or run =kldload snd_driver=) and check
+=dmesg | grep pcm= [fn:sound4][fn:handbook].
+
+* Progressively more sophisticated configs
+:PROPERTIES:
+:STATUS: answered
+:END:
+** 1. Tune the kernel path (no daemons)
+Use when: you want better quality or lower latency, or you have
+several cards and no virtual_oss.
+- Better resampling :: =hw.snd.feeder_rate_quality=4= and
+  =hw.snd.feeder_rate_round=0=. The default, 1, is linear
+  interpolation with no anti-aliasing [fn:sound4][fn:handbook].
+- Fixed mix rate/format :: =sndctl play.rate=48000
+  play.format=s24le:2.0= (or the =dev.pcm.N.play.vchanrate= /
+  =vchanformat= sysctls).
+- Lower latency :: =hw.snd.latency= (0-10) and
+  =hw.snd.latency_profile=0=, or =sndctl autoconv=0 realtime=1=
+  [fn:sndctl8].
+- Headphone auto-mute on HDA :: Set pin configs in
+  =/boot/device.hints= (=hint.hdac.0.cad0.nidNN.config="as=1
+  seq=15"=), following =snd_hda(4)= [fn:handbook].
+- USB DAC defaults :: =hw.usb.uaudio.default_rate=,
+  =default_bits= and =buffer_ms= (=snd_uaudio(4)=).
+
+** 2. Hot-plug and device switching with virtual_oss
+Use when: a laptop with headphones, a USB headset or dock, or HDMI,
+where you want playing apps to follow the device without restarting
+them. Apps open the stable virtual =/dev/dsp=; virtual_oss retargets
+the real device beneath them.
+
+#+begin_src sh
+sysrc kld_list+=cuse
+sysrc virtual_oss_enable=YES    # default config: 48k/24-bit dsp on default unit
+service virtual_oss start
+# manual switch:
+virtual_oss_cmd /dev/vdsp.ctl -f /dev/dsp1
+#+end_src
+
+The stock =/etc/devd/snd.conf= already calls =virtual_oss_cmd= on
+=SND CONN IN/OUT/NODEV= events, so devices that report jack events
+are switched for you. On 15.x this is described as experimental
+[fn:journal][fn:sr2025q4]. Extra virtual_oss instances go in
+=virtual_oss_configs="dsp foo"= with =virtual_oss_foo="...args..."=.
+
+** 3. Routing, recording and loopback with virtual_oss
+Use when: you want to record what is playing, split a multichannel
+interface into stereo devices for different apps, or send output to
+a WAV file or a remote sndio server. The examples in =virtual_oss(8)=
+cover each case: =-l=/=-L= loopback, =-w= WAV companion devices,
+=-M= monitor mixes, =-m= channel maps, and the =/dev/sndio/...=
+backend (needs the sndio backend from ports) [fn:voss8][fn:meka].
+
+** 4. Bluetooth audio
+Use when: you have wireless headphones or speakers. This is the
+roughest edge. The base =virtual_oss= has no Bluetooth backend, so
+you build =audio/virtual_oss_bluetooth= from ports (it needs
+=/usr/src=). Then pair with =hccontrol= / =hcsecd=, or use =blued=
+for devices that require SSP, and run:
+
+#+begin_src sh
+virtual_oss -C 2 -c 2 -r 48000 -b 16 -s 4ms \
+    -R /dev/null -P /dev/bluetooth/xx:xx:xx:xx:xx:xx -d dsp
+#+end_src
+
+[fn:voss8][fn:fp-voss][fn:forum-bt][fn:forum-airpods]
+=virtual_bt_speaker(8)= does the reverse: the FreeBSD machine acts as
+a Bluetooth speaker. The Foundation started a Bluetooth management
+utility in 2026Q1, but it is not in 15.1 [fn:sr2026q1].
+
+** 5. Desktop sound server (PulseAudio or sndio)
+Use when: you run KDE Plasma or GNOME, whose volume widgets and
+per-app routing assume PulseAudio. Also when an app (for example a
+browser built without OSS) needs a particular backend.
+- PulseAudio comes in as a dependency of the DE and runs per user on
+  top of OSS (=module-oss=, autodetected).
+- sndio is the light alternative for window-manager setups: run
+  =sysrc sndiod_enable=YES= and Firefox and Chromium will use it.
+- Device switching can still be done below the server with
+  virtual_oss.
+
+vermaden's desktop series shows a worked PulseAudio + devd
+switching setup [fn:vermaden29].
+
+** 6. Bit-perfect / audiophile playback
+Use when: you play to an external DAC and want samples to arrive
+unchanged.
+
+#+begin_src sh
+sysctl dev.pcm.1.play.vchans=0      # or: sndctl -f /dev/dsp1 play.vchans=0
+sysctl dev.pcm.1.bitperfect=1
+#+end_src
+
+Only one app can play at a time, because there is no mixing
+[fn:sound4][fn:m4c].
+
+** 7. Pro audio / music production (JACK)
+Use when: you use a DAW (Ardour has no OSS backend, so it needs JACK
+on FreeBSD), connect apps to each other, or want low-latency
+monitoring.
+
+#+begin_src sh
+pkg install jack ardour qjackctl
+sysrc kld_list+=mac_priority
+pw groupmod realtime -m $USER
+jackd -r -d oss -r 48000 -p 256 -w 24 -C /dev/dsp1 -P /dev/dsp1
+#+end_src
+
+- Turn VCHANs off and bit-perfect on for the interface JACK owns.
+- Use virtual_oss (=-d vdsp.jack=) to bridge JACK and the desktop
+  =/dev/dsp=, so ordinary apps still play.
+- Run =alsa-seq-server= if you need ALSA MIDI.
+
+[fn:fp-jack][fn:ardour][fn:vermaden-studio][fn:forum-guitar][fn:meka]
+
+* Developments in stable/15 and CURRENT
+:PROPERTIES:
+:STATUS: answered
+:END:
+Timeline of what reached releases:
+- 14.0 :: =mixer(8)= and =mixer(3)= rewritten. ISA drivers removed
+  [fn:rn140][fn:sr2021q3].
+- 14.1 :: snd_clone removed. Asynchronous detach, which makes USB
+  unplug and suspend/resume work better [fn:rn141].
+- 14.2 :: =mixer(8)= hot-swap support. =mididump(1)= added
+  [fn:rn142].
+- 14.3 :: VCHANs allocated on demand [fn:rn143].
+- 15.0 :: =sndctl(8)=, virtual_oss in base (main 2025-09-28,
+  stable/15 2025-10-02), devd jack redirection, kqueue(2) support in
+  sound(4), AFMT_FLOAT, more laptop HDA support
+  [fn:rn150][fn:d52308][fn:sr2025q2][fn:sr2025q4].
+- 15.1 :: No new audio features in the release notes. Security fix
+  FreeBSD-SA-26:27.sound (sound(4) mmap path) [fn:rn151].
+
+2026 Foundation status reports describe more work. Its arrival in
+stable/15 is UNVERIFIED, and none of it is in 15.1:
+- 2026Q1 [fn:sr2026q1]:
+  - libxo output for =sndctl= (this one *is* in 15.1's man page).
+  - DSD/DoP work started.
+  - A Bluetooth device-management utility started.
+- 2026Q2 [fn:sr2026q2]:
+  - An =audio= group (GID 43) owning the sound device nodes. It is
+    absent from 15.1's =/etc/group=, so it is CURRENT-only for now.
+  - Roland UA-33 support.
+  - A virtual_oss service option in the installer.
+  - kqueue improvements.
+  - Better hot-swap.
+  - EQ controls in =sndctl= and =mixer=.
+  - virtual_oss security fixes.
+
+There is still no FreeBSD work on SOF (Sound Open Firmware) or
+SoundWire. Recent Intel/AMD laptops whose speakers or microphones
+sit behind a DSP will not work. This is the main hardware gap
+[fn:sof].
+
+The Q3 2026 status report is due mid-October 2026. Re-check it, and
+=git log main -- sys/dev/sound usr.sbin/virtual_oss=, when this
+research is next converged.
+
+* Sources
+Official:
+- [fn:sound4] =sound(4)=, FreeBSD 15.1 (local; also https://man.freebsd.org/cgi/man.cgi?query=sound&sektion=4)
+- [fn:mixer8] =mixer(8)=, FreeBSD 15.1 (local)
+- [fn:sndctl8] =sndctl(8)=, FreeBSD 15.1 (local)
+- [fn:voss8] =virtual_oss(8)=, =virtual_oss_cmd(8)=, =virtual_bt_speaker(8)=, FreeBSD 15.1 (local)
+- [fn:handbook] FreeBSD Handbook, Multimedia chapter: https://docs.freebsd.org/en/books/handbook/multimedia/
+- [fn:rn140] https://www.freebsd.org/releases/14.0R/relnotes/
+- [fn:rn141] https://www.freebsd.org/releases/14.1R/relnotes/
+- [fn:rn142] https://www.freebsd.org/releases/14.2R/relnotes/
+- [fn:rn143] https://www.freebsd.org/releases/14.3R/relnotes/
+- [fn:rn150] https://www.freebsd.org/releases/15.0R/relnotes/
+- [fn:rn151] https://www.freebsd.org/releases/15.1R/relnotes/
+- [fn:d52308] virtual_oss import review: https://reviews.freebsd.org/D52308 ; stable/15 MFC: https://lists.freebsd.org/archives/dev-commits-src-all/2025-October/061180.html
+- [fn:fdnproj] FreeBSD Foundation, "FreeBSD Audio Stack Improvements": https://freebsdfoundation.org/project/freebsd-audio-stack-improvements/
+- [fn:journal] Christos Margiolis, "Vox FreeBSD: How Sound Works", FreeBSD Journal (15.0 issue): https://freebsdfoundation.org/our-work/journal/browser-based-edition/freebsd-15-0/vox-freebsd-how-sound-works/
+- [fn:sr2021q3] https://www.freebsd.org/status/report-2021-07-2021-09/
+- [fn:sr2025q2] https://www.freebsd.org/status/report-2025-04-2025-06/
+- [fn:sr2025q4] https://www.freebsd.org/status/report-2025-10-2025-12/audio/
+- [fn:sr2026q1] https://www.freebsd.org/status/report-2026-01-2026-03/
+- [fn:sr2026q2] https://www.freebsd.org/status/report-2026-04-2026-06/audio/
+
+Ports:
+- [fn:fp-pulse] https://www.freshports.org/audio/pulseaudio/
+- [fn:fp-pipewire] https://www.freshports.org/multimedia/pipewire/
+- [fn:fp-jack] https://www.freshports.org/audio/jack/
+- [fn:fp-sndio] https://www.freshports.org/audio/sndio/
+- [fn:fp-voss] https://www.freshports.org/audio/virtual_oss/ ; https://www.freshports.org/audio/virtual_oss_bluetooth/
+- [fn:fp-ff] https://www.freshports.org/www/firefox/
+- [fn:fp-chromium] https://www.freshports.org/www/chromium/
+- [fn:oss4port] https://www.freshports.org/audio/oss/
+
+Community:
+- [fn:vermaden29] vermaden, "FreeBSD Desktop - Part 29 - Configuration - Audio Improvements": https://vermaden.wordpress.com/2024/01/13/freebsd-desktop-part-29-configuration-audio-improvements/
+- [fn:vermaden-studio] vermaden, "FreeBSD Home Audio Studio": https://vermaden.wordpress.com/2023/03/02/freebsd-home-audio-studio/
+- [fn:meka] Goran Mekić, FreeBSD audio with virtual_oss: https://meka.rs/blog/2021/10/12/freebsd-audio/
+- [fn:m4c] Bit-perfect / EQ / realtime setup: https://m4c.pl/blog/freebsd-audio-setup-bitperfect-equalizer-realtime/
+- [fn:forum-bt] FreeBSD Forums, Bluetooth headphones how-to: https://forums.freebsd.org/threads/bluetooth-audio-how-to-connect-and-use-bluetooth-headphones-on-freebsd.82671/
+- [fn:forum-airpods] FreeBSD Forums, AirPods A2DP on 15 with blued + virtual_oss: https://forums.freebsd.org/threads/airpods-pro-a2dp-bluetooth-audio-working-on-freebsd-15-with-blued-virtual_oss.102408/
+- [fn:forum-guitar] FreeBSD Forums, recording guitar with jack/carla/ardour on 15: https://forums.freebsd.org/threads/freebsd15-recording-guitar-audio-using-jack-carla-ardour-and-lv2-plugins.102299/
+- [fn:forum-kde-pw] FreeBSD Forums, KDE and PipeWire: https://forums.freebsd.org/threads/kde-and-pipewire.100638/
+- [fn:ardour] Ardour forum, no OSS backend: https://discourse.ardour.org/t/not-jack-audio-interface/89043
+- [fn:sof] SOF discussion on FreeBSD: https://github.com/orgs/thesofproject/discussions/9506
+- Not consulted (blocked by a bot wall): https://wiki.freebsd.org/Sound

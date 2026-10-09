@@ -1,0 +1,20 @@
+#+TITLE: freebsd audio spec
+This dir contains research, notes, and writing on the freebsd audio
+stack.
+
+Model must ONLY modify =research.org= and MUST NOT modify any other
+files in this dir.
+
+Produce =research.org= with responses to the following questions /
+items. Include references to official and community sources.
+
+* research.org
+** overview of freebsd audio stack options
+** what are the main components of the audio stack?
+** what are things like pulseaudio, jack, etc, and what are the main ones to know about?
+** what's the simplest possible working config for audio in freebsd?
+** what are progressively more sophisticated configs, and when would you use them?
+* finding current info
+Use the most recent RELEASE version as a basis for research when
+determining current info. Additionally, look at the relevant STABLE
+branch and CURRENT for any developments.
