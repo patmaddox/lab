@@ -1,0 +1,24 @@
+#+TITLE: linear devlist
+
+I am experimenting with a mailing-list-driven workflow to interact
+with models. Previously I merged the model's mail branch into mine.
+
+I am now thinking the mail branch should be linear, and I should treat
+patches from the model the same way I treat any other patch. Instead
+of merging, I'll cherry-pick messages into my mail branch. Merging
+forces me to take the model's entire branch, or none at all, whereas a
+cherry-pick lets me take only the messages I actually care about. The
+model will rebase its mail branch onto mine after I publish mine.
+
+In practice this works like a moderated list. The model's mail branch
+is the moderation queue. The messages that I cherry-pick are accepted
+into the mailing list archive. Messages not yet cherry-picked aren't
+rejected - they simply remain in the moderation queue.
+
+This also provides a gate to have some tool rewrite messages if
+needed. If a list message provides a patch, and the patch no longer
+applies, the tool can reject it and have it be rewritten.
+
+Here's a question: should =mail= be a dedicated branch, or simply a
+dir in =trunk=? I think a dedicated branch is simpler. I accept
+messages onto the list at a different cadence than I accept patches.
