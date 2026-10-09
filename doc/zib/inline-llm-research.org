@@ -1,0 +1,79 @@
+#+TITLE: documents, messages, and patches for LLM research
+#+AUTHOR: Claude (LLM-generated, from a conversation with Pat)
+#+DATE: 2026-10-09
+
+* Where the ceremony comes from
+The =spec.org= / =research.org= pairs in =freebsd-audio/= and
+=llm-interaction-patterns/= feel heavier than they need to. The
+=llm-interaction-patterns/spec.org= file is already loose. It's
+thinking out loud, which is fine. The weight is in the shape around
+it:
+
+1. Instructions live inside the document. "Model must ONLY modify
+   research.org" is an instruction to the model, not part of a spec.
+   It's in the file because there was nowhere else to put it.
+2. One big report per run. 392 and 586 lines come back at once.
+   That's more than you'll absorb, so it ends up as a reference you
+   don't read rather than notes you own.
+3. The Makefile idea from =research-with-llms.org=. It treats research
+   as a build: write the inputs, regenerate the output. But research
+   doesn't rebuild. It grows a little at a time, and your questions
+   change as you read the answers.
+4. Rules repeated in each spec. "Use the latest RELEASE, check STABLE
+   and CURRENT, cite sources" is a standing rule that gets restated
+   per topic.
+
+Tagging headings =:ask:= and having the model answer inline as
+=:llm:= children looks lighter, but it has the same flaw as point 1.
+The question and the answer are messages written into the document.
+
+* Documents, messages, patches
+- The document is the state. It holds only what you've accepted. It
+  stays curated and in your voice.
+- A message carries intent. "Look into X," "this part is wrong,"
+  "what about Y?"
+- A patch is a proposed change to the document, sent as a message.
+  You review it, quote the hunks, push back, take some of it, or drop
+  it.
+
+This is the mailing-list model, and it fixes the problem with the big
+reports. A patch has to be reviewable, so it has to be small and say
+why it matters. A report doesn't. A rejected patch costs nothing, and
+the discussion stays in the thread instead of cluttering the doc.
+
+* Discussion vs. patch
+Not all research belongs in a patch. A lot of it is exploration:
+here's the landscape, three options, this is how they compare. That
+belongs in the reply body, as discussion. Only the conclusion you
+agree on becomes a patch to the doc. The kernel works this way too:
+an RFC thread first, then the patch.
+
+So one research request can return two things:
+
+1. A reply with the exploration. It can be long, and it's fine for
+   it to be thrown away. It lives in the list archive.
+2. A small patch that folds the conclusion into the document, for you
+   to accept or revise.
+
+* Example: freebsd-audio
+1. Write =freebsd-audio.org= with your notes and open questions.
+2. Mail the list: "dig into the simplest working config."
+3. Get back a discussion reply plus a 15-line patch to the doc.
+4. Answer by quoting. Accept, revise, or ask for another round.
+
+* Standing rules in one place
+Conventions that apply to every topic go in one place, e.g.
+=doc/zib/CLAUDE.md=, not in each request:
+
+- cite sources
+- check claims on the local system
+- use the current RELEASE and note STABLE/CURRENT
+- keep patches small; put exploration in the reply, not the doc
+
+Then a request is just a message saying what to look into.
+
+* Open problem
+There isn't a reliable way to post to the list yet. Until there is,
+the same split still works by hand: keep the document as the only
+state, put requests and exploration in the session (or a scratch
+file), and land changes to the document as small reviewed commits.
