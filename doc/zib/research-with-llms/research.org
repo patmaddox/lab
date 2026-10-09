@@ -1,0 +1,165 @@
+#+TITLE: research with LLMs: declarative specs and coverage reports
+#+AUTHOR: Claude (LLM-generated research, not Pat's writing)
+#+DATE: 2026-10-09
+
+* Question
+How do I get a declarative way of working with an LLM, like a
+=Makefile= that describes desired outputs and lets the model figure
+out how to produce them? Concretely: a =spec.org= holding my
+questions, and a =research.org= the model produces from it. Is there
+prior art, and where is practical (non-hype) guidance?
+
+* A shape that works
+#+begin_example
+doc/zib/<topic>/
+  spec.org      # Pat: questions, scope, what "done" means
+  research.org  # LLM: only ever written by the model
+  notes.org     # Pat: conclusions, article draft
+  report.org    # LLM: coverage of spec by research and notes
+#+end_example
+
+One author per file. Splitting at the file boundary is the cleanest
+provenance; jj authorship backs it up. Fencing "my part" and "its
+part" inside one file decays fast.
+
+** What goes in spec.org
+- Questions :: one heading each, with a stable =CUSTOM_ID= so other
+  files can point back at them.
+- Constraints :: OS version, preferred sources (handbook, man pages),
+  "run commands and show output", "mark anything unverified".
+- Output contract :: the shape of =research.org=, e.g. one section
+  per question with =:STATUS: answered|partial|open=, sources, and
+  commands tried.
+
+* Rules that make it declarative
+1. Converge, don't regenerate. Prompt "bring research.org into line
+   with spec.org": keep valid answers, work on new or changed
+   questions. Editing the spec becomes the interface. =jj diff= on
+   =spec.org= tells the model exactly what changed.
+2. Check "done" from outside the model (the "Own the loop" rule). A
+   script checks that every spec =CUSTOM_ID= has a matching section
+   with a status. The target passes or fails on that, not on model
+   output.
+3. Iterate through the spec. Read =research.org=, write conclusions
+   in =notes.org=, turn follow-ups into new spec headings.
+
+redo fits naturally (mtime rebuild means "spec changed, research is
+stale"):
+
+#+begin_src sh
+# research.org.do
+redo-ifchange spec.org
+[ -f research.org ] && cp research.org "$3"
+claude -p "Update $3 so it satisfies spec.org. Preserve valid answers; \
+address new or changed questions. Follow the output contract." >/dev/null
+./check-research spec.org "$3"
+#+end_src
+
+* Coverage report
+A report that says, per spec question, whether it is answered in the
+research and whether it is answered in my notes.
+
+Systems engineering prior art: the requirements traceability matrix
+(each requirement against the places that satisfy it).
+
+|                   | in research                  | not in research          |
+|-------------------+------------------------------+--------------------------|
+| in my notes       | done, or a conflict to check | I know something it doesn't |
+| not in my notes   | my reading queue             | open question            |
+
+The cells mean different things. "Research yes, notes no" is unread
+material. "Both, but different answers" is the most valuable thing
+the report can surface.
+
+** Keeping it trustworthy
+- No citation means not answered. Each "answered" cell links to the
+  exact heading or passage. A pointer is checkable; a bare "yes" is
+  not.
+- Do the mechanical part mechanically. If notes sections carry
+  =:ANSWERS: q-id=, the notes column is a grep, and only "does this
+  research section actually answer it?" needs the LLM. Tradeoff:
+  tagging discipline vs leaning on model judgment.
+- The report is disposable; research.org isn't. Research converges
+  incrementally. The report is a pure function of spec + research +
+  notes and is cheap to rebuild every time - the most make-like
+  piece.
+- It doubles as the staleness check. The report, not mtimes, tells
+  you whether research needs another pass.
+
+* Prior art
+The term is *spec-driven development* (SDD). Nearly all of it targets
+code. I found no published workflow running it for research as
+described here; the coverage report is the least explored part.
+
+** Böckeler's three levels
+Birgitta Böckeler, "Understanding Spec-Driven Development: Kiro,
+spec-kit, and Tessl", martinfowler.com, 2025-10-15. The taxonomy most
+others now cite:
+- spec-first :: write a spec, use it for one task
+- spec-anchored :: spec stays a living document as the thing evolves
+- spec-as-source :: only the spec is maintained by hand; output is
+  regenerated
+
+This setup is spec-anchored.
+
+Her criticisms are the useful part:
+- Too much ceremony. Kiro turned a small bug fix into 4 user stories
+  with 16 acceptance criteria. Spec Kit produced so many files for a
+  mid-sized feature she never finished.
+- Review moves rather than shrinks: "I'd rather review code than all
+  these markdown files."
+- Regenerating from the same spec (Tessl) gives different output each
+  run - inflexibility plus non-determinism.
+
+A research spec written by hand as a short list of questions avoids
+most of this.
+
+** Tools
+- GitHub Spec Kit :: open-sourced 2025-09. CLI-driven, customizable,
+  heavy. Phases: constitution, specify, clarify, plan, tasks,
+  implement, analyze.
+- AWS Kiro :: VS Code-based IDE. requirements / design / tasks, three
+  markdown files. GA 2025-11.
+- Tessl :: spec-as-source.
+
+** Other
+- Piskala, "Spec-Driven Development: From Code to Contract in the Age
+  of AI Coding Assistants", arXiv:2602.00180 (2026-01). Adopts the
+  three levels; names LLM non-determinism as an open problem.
+- Pushback: a commenter on Microsoft's SDD post argues mid-2026 agents
+  run the spec-kit steps unattended, and human gates between phases
+  only slow things down. Argues for a thin process: spec, output,
+  check.
+- Harper Reed, "My LLM codegen workflow atm" (2025-02): spec.md ->
+  prompt_plan.md -> todo.md.
+- Geoffrey Huntley, "Ralph": a shell while loop feeding the same
+  prompt plus a specs/ directory until things converge.
+- Systematic literature reviews: the closest research-side analogue.
+  Formal protocols of "here are my questions, here's what the evidence
+  covers". PRISMA-LLM (arXiv:2609.11559) is a reporting framework for
+  AI-assisted reviews. Heavier than wanted, but the ideas carry over.
+
+* Practical guidance that isn't hype
+- Simon Willison (simonwillison.net) - most consistently grounded. His
+  =llm= CLI suits Makefile/redo pipelines.
+- Addy Osmani, "My LLM coding workflow going into 2026". Has the model
+  interrogate him until the spec is complete, then loads spec.md into
+  context.
+- Armin Ronacher (lucumr.pocoo.org), Mitchell Hashimoto, Thorsten
+  Ball, Kent Beck ("augmented coding").
+- Anthropic engineering posts on Claude Code best practices and
+  context engineering.
+
+* Sources
+- https://www.martinfowler.com/articles/exploring-gen-ai/sdd-3-tools.html
+- https://daniliants.com/insights/understanding-spec-driven-development-kiro-spec-kit-and-tessl/
+- https://en.wikipedia.org/wiki/Spec-driven_development
+- https://www.researchgate.net/publication/400370399_Spec-Driven_DevelopmentFrom_Code_to_Contract_in_the_Age_of_AI_Coding_Assistants
+- https://developer.microsoft.com/blog/spec-driven-development-ai-native-engineering/
+- https://dev.to/krlz/spec-driven-development-in-2026-what-it-is-the-tooling-and-how-teams-actually-use-it-2fk2
+- https://medium.com/@addyosmani/my-llm-coding-workflow-going-into-2026-52fe1681325e
+- https://arxiv.org/pdf/2609.11559
+- https://arxiv.org/pdf/2606.04967
+
+Unverified from search (from model knowledge, cutoff mid-2026):
+Harper Reed, Huntley's Ralph, and the practitioner list.
