@@ -1,0 +1,27 @@
+#+TITLE: messages vs docs
+
+As I'm interacting with this LLM, I notice that I make a distinction
+between messages and docs. A lot of the difficulty I have in finding a
+good way of working with these tools comes from conflating messages
+and documents, or artifacts.
+
+For example, I might write a =spec.org= file that I want the tool to
+implement. I might even want it to give me feedback. I've tried to
+develop these mechanisms of providing inline feedback, with org-mode
+tags, or code blocks, or whatever.
+
+The email-style approach remains the simplest, most straightforward
+way to provide feedback. Quote the idea you're responding to, and
+respond.
+
+This system that I'm trying to develop then, is not really one where I
+want the tool to iterate on the doc inline. Ultimately it will, but it
+will provide patches that I review and integrate.
+
+I introduce new data into the system by way of commits. I'll write
+this document and commit it. I then want to send a message to the LLM,
+which does its own work and produces a commit that I'll review.
+
+I don't think I want the LLM iterating on documents in place in my
+workspace. That's not necessarily a bad workflow - but it should be in
+its own dedicated workspace.
