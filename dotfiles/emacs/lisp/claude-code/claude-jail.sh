@@ -5,8 +5,15 @@
 # the jail.  This works around doas/jexec dropping the caller's
 # environment.
 
+_env_fwd=""
+
+# claude freeze fix:
+# https://bugs.freebsd.org/bugzilla/show_bug.cgi?id=298878
+# https://bugs.freebsd.org/bugzilla/show_bug.cgi?id=299200
+_env_fwd="${_env_fwd} BUN_JSC_useConcurrentGC=0"
+
 # Screen reader / view tweaks for the emacs terminal.
-_env_fwd=" CLAUDE_CODE_DISABLE_ALTERNATE_SCREEN=1"
+_env_fwd="${_env_fwd} CLAUDE_CODE_DISABLE_ALTERNATE_SCREEN=1"
 _env_fwd="${_env_fwd} CLAUDE_CODE_DISABLE_AGENT_VIEW=1"
 _env_fwd="${_env_fwd} CLAUDE_AX_SCREEN_READER=1"
 
