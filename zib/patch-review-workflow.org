@@ -1,0 +1,77 @@
+#+TITLE: patch review workflow
+
+Motivation: Develop an effective workflow for working with LLMs, where
+they can produce commits in isolated environments, and I can review
+and apply them.
+
+Inspiration: Mailing-list-driven workflow as found in Linux, OpenBSD,
+PostgreSQL. All of those projects work with highly concurrent,
+untrusted developers - which is essentially what it's like to work
+with a coding agent.
+* Goal
+The basic goal here is to produce =trunk= as a mostly-linear series of
+commits applied from a mailing list.
+
+The mailing list is also a series of linear commits. Contributors
+(mostly LLMs, but could be anyone) post messages to the mailing list,
+including their patches. They submit messages by publishing a branch,
+which serves as a moderation queue. Moderator cherry-picks messages
+into the mailing list archive.
+
+From there, Maintainer reviews the commits and integrates them into
+=trunk=, perhaps responding to them directly on the mailing list.
+
+Agents rebase their own mail branches onto the canonical mail branch,
+dropping any messages that have been integrated into the archive.
+* Async
+One of the most important problems this solves is by making all
+communication async. Right now I can use a coding agent to review a
+doc, but I have no way to queue work for the agent to do, or treat its
+responses as a queue.
+* Roles
+** Contributor
+Contributors track two branches: =trunk= and =mail=. They produce new
+commits on top of each of those branches. Commits on top of =trunk=
+are patches that will be submitted for consideration. Commits on top
+of =mail= are messages that will be sent to the moderation
+queue. Contributors submit patches by publishing their =mail=
+branch. Mailing list moderator then cherry-picks commits from
+contributor branches into canonical =mail= branch. The contributor's
+trunk-based branch is their private source and is never pulled.
+
+When a contributor begins a work session, they fetch upstream =trunk=
+and =mail= and rebase their local branches. Commits that have been
+integrated into upstream branches are automatically dropped from the
+local branches, e.g. using =jj rebase --skip-emptied=. Maintainers
+might modify commits, in which case contributor will need to drop the
+superseded commits themselves.
+** Moderator
+Moderators review incoming messages in published =mail= branches, and
+cherry-pick them into the canonical =mail= branch to produce the
+devlist archive.
+
+Criteria for accepting or rejecting messages are out of scope.
+
+Process for rejecting messages is out of scope.
+** Reviewer
+Reviewers read patches on the mailing list and provide feedback by
+responding on the mailing list. Feedback goes to the moderation queue
+like any other message. Reviewers may participate in any discussion on
+the list.
+** Maintainer
+Maintainers decide which patches reach trunk. They apply patches from
+the list, and if the patch is acceptable, move =trunk= to the newly
+applied patch and push it.
+
+Maintainer may also reject patches on the list. Resolution of a patch
+will always be either to apply or reject. Maintainer may revise a
+patch before applying.
+* Tech notes
+** mailing list doesn't have to be a real mailing list
+For my purposes, the mailing list is probably just a maildir in a
+dedicated branch. I don't need an actual mailing list infrastructure
+at this point.
+** maildir doesn't rename files
+notmuch by default renames files to indicate if they've been
+seen. This will be disabled by setting =maildir.synchronize_flags
+false=. Once a message is added to the list, it does not get renamed.
