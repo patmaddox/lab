@@ -1,0 +1,33 @@
+#+TITLE: llm interaction patterns
+
+Goal: Produce =research.org= with useful information in response to
+the ideas presented in this spec.
+
+I want good info on low-tech, low-dependency ways of working with
+LLMs.
+
+The first basic thing of course is running an agent like claude code
+and prompting it interactively. Another approach is to use =claude -p=
+and prompt it as a one-shot.
+
+I am sort of doing that with my =spec.org= thing where I write out
+this spec, and then have the LLM do something with it.
+
+Another approach that I've experimented with is the mailing list
+approach. That seems pretty intuitive to me - I am sending and
+receiving messages, there's a history, quoting, threads, etc.
+
+I'm still in the early stages of this, but just want to get a sense of
+what is out there. I would like to develop an effective approach for
+working with LLMs.
+
+The email thing appeals to me. It just seems very elixir-y in the
+sense of message passing. I can have a natural conversation and then
+have it progress into a design doc and then implement it.
+
+See what people are up to these days, and look for parallels to
+interaction patterns that predate LLMs. The LLM is of course
+interesting technology in its own right, but the thing that is seems
+to enable for regular users is lower latency, more parallelized work,
+and that has to be something that we've addressed as a software
+industry and in other industries.

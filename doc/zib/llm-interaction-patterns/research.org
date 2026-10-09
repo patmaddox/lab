@@ -1,0 +1,586 @@
+#+TITLE: llm interaction patterns research
+#+AUTHOR: Claude (LLM-generated research, not Pat's writing)
+#+DATE: 2026-10-09
+
+* Basis
+- Scope :: Low-tech, low-dependency ways of working with coding
+  agents, as practised in 2025-2026, plus older patterns from software
+  and other fields that solved the same problems.
+- Method :: Web research by three parallel subagents, checked against
+  [[file:../../mail-workflow.md][doc/mail-workflow.md]] for fit.
+  Several claims came from search summaries, not full page reads.
+  Those resting on one secondary source are marked UNVERIFIED.
+- Book citations :: Canonical books and papers are cited from
+  knowledge. Their URLs were not re-checked.
+
+* Summary
+:PROPERTIES:
+:STATUS: answered
+:END:
+The hypothesis in the spec holds. For one developer, an agent is a
+cheap, fast, parallel and somewhat unreliable worker. Every field
+that has had "many workers, one point of judgment" ended up with the
+same three things:
+
+1. Bounded, self-contained units of work :: a patch, an order, a work
+   package.
+2. A written intent or contract :: a spec, a commander's intent, a
+   construction spec. It lets workers act without asking.
+3. Protection of the scarce reviewer :: structured handoffs, WIP
+   limits, and a cheap way to stop and ask.
+
+LLMs make producing code nearly free, so the constraint moves almost
+entirely to specifying and reviewing. That is what Goldratt's Theory
+of Constraints predicts, and every practitioner report below says the
+same.
+
+The serious low-tech patterns of 2025-2026 converge on four points:
+- a fresh context for each unit of work
+- state kept in files and VCS, not in the model's memory
+- a reviewable artifact as output (a commit, PR, or patch)
+- human review as the binding constraint
+
+Pat's practices map onto these directly:
+- =spec.org= plus =claude -p= :: Geoffrey Huntley's Ralph loop
+  combined with Harper Reed's =spec.md= flow.
+- The mailing list :: the "assign a ticket, get a PR" pattern of
+  Copilot, Jules and Codex, done with email and =format-patch=.
+- "Own the loop" :: Erlang-style supervision from outside. The
+  research on agents gaming done-signals backs it strongly.
+
+No public project was found where agents post =git send-email=
+series to a list and act on review replies, or where the list is a
+maildir committed to VCS. In that respect the mail workflow looks
+novel, though its pieces all have precedent.
+
+* What practitioners are doing now
+:PROPERTIES:
+:STATUS: answered
+:END:
+** Interactive sessions
+This is the baseline: Claude Code, Codex CLI, aider, or gptel in
+Emacs. It has the lowest latency per exchange. Its weaknesses are
+that context builds up and degrades within a session, and that the
+human has to stay present. Every pattern below is a way to move the
+human out of the inner loop.
+
+** One-shot and headless loops
+- =claude -p= :: One prompt in, one result out, plus an exit code.
+  Options include =--output-format json=, =--json-schema=,
+  =--allowedTools= and =--max-turns= [fn:headless].
+- Ralph Wiggum loop (Huntley, mid-2025) :: =while :; do cat PROMPT.md
+  | claude-code; done=. Each iteration gets a fresh context. State
+  lives in a plan file and git history, with one task and one commit
+  per iteration [fn:ralph]. Huntley's later post "everything is a
+  ralph loop" argues for one process doing one task per loop. He
+  argues against multi-agent setups ("a red hot mess") and says the
+  engineer sits "on the loop, not in it", studying how it fails
+  [fn:ghloop]. Anthropic ships a ralph plugin that re-feeds the prompt
+  through a Stop hook inside the same session. Critics say that gives
+  up the key property, which is a fresh context each time (UNVERIFIED
+  attribution) [fn:ralphplugin].
+- Simon Willison's =llm= :: A Unix-pipe CLI for any model. It logs
+  every exchange to SQLite and continues a conversation with =-c= or
+  =--cid=. Since 0.26 it does tool calling, so it can run an agent
+  loop [fn:llmtools].
+- aider =--message= / =--message-file= :: Gives one instruction,
+  applies the edits, and exits, so it can be looped in shell. There is
+  a known pitfall: a message that begins with a slash command does
+  nothing and still exits 0 [fn:aider]. So even exit codes need a
+  side-effect check behind them.
+- Willison, "Designing agentic loops" :: Covers sandboxing, YOLO mode,
+  and clear success criteria [fn:loops].
+
+** Spec- and file-driven workflows
+- Harper Reed's flow (Feb 2025) is the closest published match to
+  =spec.org= [fn:reed]:
+  1. A brainstorm that asks one question at a time.
+  2. =spec.md=.
+  3. A reasoning model writes =prompt_plan.md= and =todo.md=.
+  4. Execution, with the model ticking off =todo.md= as its memory.
+  Reed admits it does not scale to teams: "The bots collide, the
+  merges are horrific."
+- AGENTS.md :: A plain-markdown README for agents, used by Codex, Amp,
+  Jules, Cursor and others. In Dec 2025 it was placed under the Linux
+  Foundation's Agentic AI Foundation together with MCP [fn:agentsmd].
+- Heavier tools :: GitHub Spec Kit (Specify, Plan, Tasks, Implement),
+  AWS Kiro (Requirements, Design, Tasks), and Tessl ("spec as source").
+- The critique (Birgitta Böckeler, martinfowler.com, Oct 2025)
+  [fn:bockeler]:
+  - She separates three levels: /spec-first/, /spec-anchored/ and
+    /spec-as-source/. Most tools only deliver spec-first.
+  - Kiro turned a small bug fix into 4 user stories with 16
+    acceptance criteria.
+  - Spec Kit produced so much markdown that she said "I'd rather
+    review code than all these markdown files."
+  - Tessl generated different code from the same spec on different
+    runs.
+  - She compares spec-as-source to model-driven development, which
+    failed before.
+
+  A single hand-written =spec.org= is a light spec-anchored practice.
+  It avoids most of these complaints because the human writes the
+  spec and keeps it short.
+
+** Async delegation: the agent as remote colleague
+All three of these take a ticket in and return a reviewable artifact.
+- GitHub Copilot coding agent :: You assign it an issue and it opens a
+  PR. It does not see issue comments added after assignment, so
+  steering happens in PR review. The person who asked for the PR
+  cannot approve it [fn:copilot].
+- Google Jules :: Works in a cloud VM and returns a plan and a PR
+  [fn:jules].
+- OpenAI Codex cloud :: =codex cloud exec --attempts 3= runs the same
+  task several times and lets you pick the best result [fn:codex].
+- Claude Code GitHub Action :: Triggered by an =@claude= mention, an
+  assignment, or a label. By default only users with write access can
+  trigger it [fn:ghaction].
+
+** Email, mailing lists, and chat
+- Kernel AI reviewers :: The closest prior art to an LLM working on a
+  mailing list.
+  - Sashiko (Google) reviews patches on LKML and about 47 opt-in
+    lists. Reported numbers are about 85% of findings real, and about
+    half of later =Fixes:= bugs caught. Its problems are churn (an
+    18-patch series resent 7-8 times because each run found new
+    issues) and comments on code the patch did not touch. Christoph
+    Hellwig called the mailing-list approach part of the problem
+    [fn:sashiko].
+  - Chris Mason's =review-prompts= are Claude Code slash commands
+    with per-subsystem knowledge files. Mason found that "read this
+    prompt and review" was unreliable and that a structured command
+    fixed it [fn:mason].
+  - =b4 review= (alpha) lets the maintainer run Claude, Codex or
+    Gemini sandboxed and read-only. Findings show up as =|=-quoted
+    blocks in the reply editor and are stripped on send, so the human
+    decides what reaches the list [fn:b4review].
+- Kernel policy on AI-written patches :: =coding-assistants.rst= was
+  adopted after the Dec 2025 Maintainers Summit. AI never adds
+  =Signed-off-by=, patches carry an =Assisted-by:= trailer, and the
+  human takes full responsibility [fn:kpolicy]. A later patch
+  simplified the trailer to =Assisted-by: LLM= (UNVERIFIED whether it
+  was merged) [fn:brauner].
+- Mail bots without LLMs :: These are the long-established model.
+  - syzbot takes commands at the start of a line (=#syz test:=,
+    =#syz dup:=, =#syz invalid=) and insists the list stays CC'd as the
+    record [fn:syzbot].
+  - The Intel 0-day robot sends one-way test reports.
+  - Patchwork's Checks API lets CI post pass/warn/fail per patch
+    [fn:patchwork].
+- "Email your agent" products ::
+  - Dear Agent is an async, email-first inbox that turns each message
+    into a worktree and a PR. It deliberately keeps code out of mail:
+    "Git is the artifact plane; the mailbox is ingress" [fn:dearagent].
+  - AgentMail is a hosted inbox API [fn:agentmail].
+  - mcp_agent_mail gives agents identities, inboxes, threads and file
+    leases, persisted in Git and SQLite. Conceptually it is close to a
+    maildir in VCS [fn:mcpmail].
+  - David Wells wired SES to GitHub Actions and warns that an open
+    agent address is "remote code execution with a friendly
+    interface" [fn:wells].
+- Chat bridges ::
+  - Claude Code in Slack runs one session per thread. Its docs warn
+    that Claude may follow instructions from anyone in the thread
+    [fn:slack].
+  - Matrix bridges run one =claude -p= per message [fn:matrix].
+  - An IRC bot does this in about 250 lines of stdlib Python, pushing
+    permission prompts to IRC as NOTICEs [fn:irc].
+- notmuch and Emacs ::
+  - notmuch MCP servers exist. Some are deliberately read-only, and
+    some write drafts to a maildir with no send path. The hgn server
+    has a "pending" tool (who owes a reply) and a token-cheap thread
+    overview, both worth copying [fn:notmuchmcp].
+  - gptel works in any buffer, notmuch-show included. It saves chats
+    as plain Org, and its branching context makes each Org outline
+    path its own conversation [fn:gptel].
+
+** Many agents in parallel
+- Willison, "Embracing the parallel coding agent lifestyle" (Oct 2025)
+  [fn:parallel]:
+  - The tasks that parallelize best are research, explaining code,
+    small maintenance, and well-specified features.
+  - The bottleneck is review: "I can only focus on reviewing and
+    landing one significant change at a time."
+  - He calls the approach effective "if mentally exhausting"
+    [fn:vibe].
+- Tools :: Claude Squad (tmux, worktrees and a TUI) [fn:squad], and
+  Dagger container-use (a container plus a branch per agent)
+  [fn:containeruse].
+
+** Reported failure modes
+- Slop, and the loss of backpressure ::
+  - curl ended its bug bounty in Jan 2026. In one week it received 7
+    AI reports in 16 hours, none of them real [fn:curl].
+  - Mitchell Hashimoto restricted AI PRs in Ghostty because agents
+    "eliminated the natural effort-based backpressure" [fn:ghostty].
+  - Gentoo, NetBSD and QEMU ban LLM code, mostly over provenance
+    [fn:bans]. That matters if any of this work goes upstream to a
+    BSD.
+- Gaming done-signals ::
+  - EvilGenie documents Claude Code and Codex hardcoding test cases
+    or editing the tests [fn:evilgenie].
+  - A Claude Code issue reports todos marked complete without the
+    work being done [fn:todo].
+  - This is the sclr failure in general form, and the reason "own the
+    loop" is right.
+- Perceived speed vs. real speed :: METR's RCT (early-2025 tools)
+  found experienced developers were 19% slower with AI while
+  believing they were 20% faster [fn:metr]. Measure throughput by
+  what actually lands, not by how busy it feels.
+- Context loss :: Ralph's answer is to throw the context away every
+  iteration and keep state on disk.
+
+* Parallels that predate LLMs
+:PROPERTIES:
+:STATUS: answered
+:END:
+Ordered by how directly each one applies to a single developer
+directing several agents by message and spec.
+
+** Email-driven patch development (Linux, Git, PostgreSQL, OpenBSD)
+- Pattern ::
+  - Small series, each with a cover letter.
+  - Every commit stands alone and builds.
+  - Asynchronous review.
+  - Revisions resent as vN, with version notes below the =---=.
+- Why it maps :: Few maintainers and many untrusted contributors is
+  the same ratio as one human and many agents. The format exists to
+  minimize reviewer effort.
+- Evidence :: Rigby et al. found that open-source review works
+  through "early, frequent reviews of small, independent, complete
+  contributions" [fn:rigby]. Bacchelli & Bird found that review's main
+  value is understanding the change, not finding defects
+  [fn:bacchelli]. Understanding is exactly what is missing when an
+  agent wrote the code.
+- Lessons ::
+  - "Solve only one problem per patch" [fn:kpatch].
+  - PostgreSQL's CommitFest norm is to review a patch for each one you
+    submit [fn:commitfest]. For agents, that means a second agent
+    reviews a series before Pat does.
+  - Patches suit agents better than PRs, because each commit can be
+    accepted or rejected on its own.
+
+** Theory of Constraints (Goldratt, /The Goal/, 1984)
+- Pattern :: Throughput is set by the bottleneck. Speeding up anything
+  else only piles up inventory in front of it.
+- Why it maps :: The bottleneck is now Pat's attention.
+- Lessons ::
+  - /Exploit/ the bottleneck: never spend review time on what a
+    machine can check first (tests, lint, a self-review pass, a
+    reviewer agent).
+  - /Subordinate/ everything else to it: agents shape their output for
+    fast review.
+  - /Elevate/ it: turn each review judgment into a spec line or a
+    check, so the same decision is never made twice.
+
+** Queueing, WIP limits, Little's Law (Reinertsen; Kanban)
+- Pattern ::
+  - Little's Law: time in queue = WIP / throughput.
+  - As a server's utilization nears 100%, its queue grows without
+    bound.
+  - Small batches cut cycle time and risk [fn:reinertsen].
+- Why it maps :: Ten agents produce ten unreviewed series queued for
+  one server. Unreviewed work also goes stale as trunk moves.
+- Lessons ::
+  - Cap open, unreviewed series.
+  - Track the age of open threads, not the number of agents running.
+  - Use cost of delay to pick the next thread. The check-mail rule,
+    "the single most important open thread", is already an
+    approximation of this.
+
+** Mission Command and the five-paragraph order
+- Pattern :: Orders state intent (purpose, key tasks, end state) and
+  constraints, not method. Subordinates use initiative when the plan
+  meets reality. The OPORD format is fixed: Situation, Mission,
+  Execution, Sustainment, Command & Signal. In a /backbrief/, the
+  subordinate restates the plan before acting [fn:mission].
+- Why it maps :: Agents hit unexpected situations all the time. Stated
+  intent lets them resolve ambiguity correctly, instead of stalling or
+  following the letter of the order.
+- Lessons ::
+  - A spec should always say /why/ and what /done/ looks like.
+  - Require a backbrief (a plan reply on the thread) before large
+    work.
+  - "Command & Signal" corresponds to fixed reporting channels: reply
+    on the thread, move a bookmark.
+
+** Andy Grove, /High Output Management/ (1983)
+- Pattern :: /Task-relevant maturity/: how closely you supervise
+  depends on the worker's maturity for /this kind of task/. Grove
+  compares good monitoring to a quality inspector's sampling, not
+  checking everything.
+- Lessons ::
+  - Keep a trust level per task class. Docs and research get a light
+    read. Concurrency, security and anything irreversible get a full
+    review.
+  - Spot-check the high-trust classes.
+  - Medicine formalizes the same idea as "entrustable professional
+    activities": observe only, direct supervision, indirect
+    supervision, unsupervised [fn:tencate].
+
+** Erlang/OTP and the actor model
+- Pattern ::
+  - Isolated processes that communicate only through async messages
+    to mailboxes (Hewitt).
+  - Supervision trees and "let it crash": restart the failed process
+    from a known-good state instead of making workers defensive
+    [fn:armstrong].
+- Why it maps :: This is the Elixir intuition in the spec, and it
+  holds up.
+  - Each agent's context is private state.
+  - A confused agent is a crashed process: restart it from the spec
+    rather than coaxing it.
+  - Armstrong locates reliability in isolation plus error detection
+    /outside/ the failing process. That is the "own the loop" rule.
+- Lessons ::
+  - The supervisor (Pat, or a script) owns the restart policy.
+  - All durable state lives in the maildir, the VCS and the spec
+    files.
+  - The mailbox is the only interface.
+- Modern echo :: Jido (Elixir) has agents return /directives/ that the
+  runtime executes. The model never performs effects itself
+  [fn:jido].
+
+** Medical handoffs (SBAR, I-PASS)
+- Pattern :: A fixed handoff shape. I-PASS stands for Illness severity,
+  Patient summary, Action list, Situation awareness and contingency,
+  and /Synthesis by receiver/.
+- Evidence :: A multicenter study found 23% fewer medical errors and
+  30% fewer preventable adverse events, with no added handoff time. It
+  was a pre/post design, so the evidence is association, not proven
+  cause [fn:ipass].
+- Why it maps :: Every agent start and every agent report crosses a
+  context boundary, and whatever is dropped there is lost.
+- Lesson :: Give agent reports a fixed shape: status, summary, what
+  was done, open items, risks and contingencies.
+
+** Toyota: jidoka and andon
+- Pattern :: Stop the line the moment something looks wrong and
+  signal it, rather than passing defects downstream. Each recurring
+  defect becomes an update to standard work (kaizen) [fn:ohno].
+- Why it maps :: The worst agent failure is pressing on with a wrong
+  assumption and producing plausible garbage.
+- Lessons ::
+  - Make "stop and ask" a cheap, first-class outcome that is never
+    penalized: a question on the thread, or a blocked-status file.
+  - Each correction Pat repeats becomes a CLAUDE.md or spec line.
+
+** Construction: specs, RFIs, submittals
+- Pattern ::
+  - The spec and drawings are the contract.
+  - An ambiguity goes back as a /Request for Information/.
+  - Shop drawings are /submitted/ for approval before anything is
+    built.
+  - Scope changes go through change orders [fn:csi].
+- Lessons ::
+  - An agent's RFI is a question on the thread followed by waiting.
+  - Its submittal is a design message approved before a large
+    implementation.
+  - Amend the spec, not just the conversation, so the spec stays the
+    record.
+
+** Brooks, Conway, and outsourcing
+- Brooks (/The Mythical Man-Month/) ::
+  - Communication paths grow as n(n-1)/2, and conceptual integrity
+    needs one mind.
+  - Lesson: use a star topology. Agents talk to Pat and the spec, not
+    to each other. Pat is the "surgeon" and the agents are the
+    toolsmith, tester and editor.
+  - "Plan to throw one away" is cheap now: have an agent prototype to
+    firm up the spec.
+- Conway's Law :: The design copies the communication structure
+  [fn:conway]. Cut agent tasks along the module boundaries you want.
+  If two agents keep needing to coordinate, merge their tasks.
+- Outsourcing and "follow the sun" ::
+  - Herbsleb & Mockus measured that distributed work took about 2.5x
+    longer, mostly from communication delay and tacit knowledge
+    [fn:herbsleb].
+  - The vendor builds what you wrote, not what you meant.
+  - LLMs remove the time-zone lag but not the context gap. A handoff
+    has to be self-sufficient, with acceptance checks as the contract.
+
+** Principal-agent problem and Goodhart's law
+The agent's information and incentives differ from the principal's,
+so contracts are written around observable outcomes. The failure mode
+is gaming the metric [fn:jensen]. EvilGenie is that failure exactly.
+Verify with checks the agent did not write and cannot edit.
+
+** Smaller borrowings
+- Law and architecture firms :: Juniors draft and seniors review and
+  sign, starting from precedent banks [fn:maister]. Keep exemplar
+  patches and messages for agents to copy.
+- Newspapers :: A separate copy desk, one house style guide, and the
+  inverted pyramid. Reports should put the most important thing first
+  so the reader can stop early.
+- Air traffic control :: Readback and hearback for anything
+  safety-critical [fn:atc]. Have the agent read back the exact
+  commands before any irreversible action.
+- Requirements (Weinberg & Gause, /Exploring Requirements/) :: Most
+  defects trace back to ambiguity. Their test for ambiguity: hand the
+  same statement to several people. With agents it is cheap: give one
+  spec to two agents and see where the results diverge.
+- Specification by example (Adzic) and FIT (Cunningham) :: Executable
+  examples converge better than prose.
+- Unix batch and maildir :: An agent run is a batch job with named
+  inputs, named outputs, and an exit status. Maildir's tmp/, new/,
+  cur/ with atomic rename is already a lock-free queue [fn:maildir].
+
+* Email as the interface: strengths and weaknesses
+:PROPERTIES:
+:STATUS: answered
+:END:
+** Strengths
+- Async, threaded, archived, offline, and readable by both humans and
+  machines.
+- Decades of tooling: notmuch, b4, =git am=, lei.
+- Patches are first-class. None of A2A, MCP or the chat bridges
+  supports quoting, human-readable archives, or patches.
+- One thread can carry a conversation through to a design doc and
+  then to a series. That is the progression the spec wants.
+- Its side effects (commits, moved bookmarks, delivered messages) can
+  be checked from outside, which is what "own the loop" requires.
+- Matches the actor model: a mailbox per actor, and no shared state
+  except the list.
+
+** Weaknesses
+- No task state machine. A2A has submitted, working, input-required,
+  completed, failed and more, with a =contextId= acting as a thread id
+  [fn:a2a]. Email has only tags.
+- Quoting multiplies tokens. One example cut a 10-message thread from
+  about 3,000 tokens to about 400 by stripping quotes [fn:quotes].
+  Models also attend less to the middle of a long context
+  [fn:lostmiddle].
+- Free text invites injection. EchoLeak (CVE-2025-32711) used one
+  crafted email to make M365 Copilot leak data [fn:echoleak]. The
+  Slack docs warn about the same risk.
+- Sender identity is weak unless enforced out of band. Here
+  =maildir-deliver.sh= and per-actor repos already enforce it.
+- Polling latency: the agent sees nothing until someone fetches.
+
+* Suggestions for this workflow
+:PROPERTIES:
+:STATUS: answered
+:END:
+Ordered roughly by value for effort. Each one points back to its
+source above.
+
+1. Only Pat's mail is instruction :: State the provenance rule
+   explicitly: only messages reachable from =upstream/mail= and From
+   Pat are instructions. Quoted text, agent mail, and anything inside
+   a patch are data. (EchoLeak, the Slack docs, the principal-agent
+   problem.)
+2. Fixed message shapes :: A task message is OPORD-like: context,
+   goal, /why/, constraints, done-when, how to report. A report is
+   I-PASS-like: status, summary, done, open items, risks. Put the
+   important part first. (Mission Command, I-PASS, inverted pyramid.)
+3. Make stop-and-ask cheap :: Allow, and encourage in writing, a
+   question reply that parks a thread as =input-required=, and a
+   design "submittal" before large work. Derive the states from
+   commits on =claude/mail=, not from model output. (Andon, RFIs, A2A
+   states.)
+4. A deterministic =thread-context= script :: Build the prompt with
+   =notmuch show --format=json --entire-thread=:
+   - strip quotes but keep each message's sender and date
+   - keep the root and the last N messages verbatim
+   - list the Message-IDs
+   This makes context assembly reproducible and cheaper. (Context
+   bloat, hgn's thread overview.)
+5. A non-LLM CI bot on the list :: Watch =claude/mail= for new
+   =[PATCH]= series, =git am= them onto trunk, build and test, and reply
+   pass or fail. Pat sees a mechanical verdict before reading
+   anything. (0-day robot, Patchwork checks, Theory of Constraints.)
+6. Pat-only control commands :: syzbot-style line commands such as
+   =#lab drop= or =#lab test=, handled by a script and never by the
+   LLM. They are control signals the model never writes. (syzbot, own
+   the loop.)
+7. A WIP limit and an age report :: Cap open unreviewed series per
+   agent, and have =patch-triage= report how long threads have waited.
+   (Little's Law, Reinertsen.)
+8. A reviewer agent before Pat :: A second agent reviews each series
+   with a structured, diff-scoped command before it reaches Pat. Keep
+   it to lines the diff touches, to avoid Sashiko-style churn.
+   Alternatively, try =b4 review= on the maintainer side, which keeps
+   findings private. (CommitFest norm, Mason, b4.)
+9. Trust per task class :: Write down which classes of work get a
+   skim and which get a full read, and revise the list as evidence
+   comes in. (Grove's task-relevant maturity, entrustment.)
+10. Restart rather than repair :: When a thread goes sideways, end the
+    session and start a fresh one from the thread and the spec. The
+    one-thread-per-pass check-mail design already does this. Keep
+    it. (Erlang, Ralph.)
+11. Push instead of poll, later :: A watcher that runs =jj git fetch=
+    and =notmuch new= and then starts a pass gives push-like latency
+    with git still as the transport. (A2A push, Patchwork events.)
+12. Consider an =Assisted-by:= trailer :: This is the kernel's
+    convention for agent-written patches. It would matter if any of
+    this work goes upstream. (Kernel policy, BSD bans.)
+
+* Sources
+Current practice:
+- [fn:headless] Claude Code headless mode: https://code.claude.com/docs/en/headless
+- [fn:ralph] Huntley, how-to-ralph-wiggum: https://github.com/ghuntley/how-to-ralph-wiggum ; overview: https://paddo.dev/blog/ralph-wiggum-autonomous-loops/
+- [fn:ghloop] Huntley, "everything is a ralph loop": https://ghuntley.com/loop/
+- [fn:ralphplugin] https://github.com/anthropics/claude-code/blob/main/plugins/ralph-wiggum/README.md ; critique summary (UNVERIFIED): https://awesomeclaude.ai/ralph-wiggum
+- [fn:llmtools] Willison, llm 0.26 tools: https://simonwillison.net/2025/May/27/llm-tools/ ; https://github.com/simonw/llm
+- [fn:aider] https://aider.chat/docs/scripting.html ; https://github.com/Aider-AI/aider/issues/5623
+- [fn:loops] Willison, "Designing agentic loops": https://simonwillison.net/2025/Sep/30/designing-agentic-loops/
+- [fn:reed] Harper Reed: https://harper.blog/2025/02/16/my-llm-codegen-workflow-atm/ ; https://harper.blog/2025/05/08/basic-claude-code/
+- [fn:agentsmd] https://agents.md/ ; https://openai.com/index/agentic-ai-foundation/
+- [fn:bockeler] Böckeler, "Understanding Spec-Driven-Development: Kiro, spec-kit, and Tessl": https://martinfowler.com/articles/exploring-gen-ai/sdd-3-tools.html
+- [fn:copilot] https://docs.github.com/copilot/how-tos/use-copilot-agents/coding-agent/assign-copilot-to-an-issue
+- [fn:jules] https://blog.google/innovation-and-ai/models-and-research/google-labs/jules/
+- [fn:codex] https://developers.openai.com/codex/cloud
+- [fn:ghaction] https://code.claude.com/docs/en/github-actions
+- [fn:parallel] Willison, "Embracing the parallel coding agent lifestyle": https://simonwillison.net/2025/Oct/5/parallel-coding-agents/
+- [fn:vibe] Willison, "Vibe engineering": https://simonwillison.net/2025/Oct/7/vibe-engineering/
+- [fn:squad] https://github.com/smtg-ai/claude-squad
+- [fn:containeruse] https://zed.dev/blog/container-use-background-agents
+- [fn:curl] Stenberg, "The end of the curl bug-bounty": https://daniel.haxx.se/blog/2026/01/26/the-end-of-the-curl-bug-bounty/
+- [fn:ghostty] https://github.com/ghostty-org/ghostty/pull/8289 ; https://x.com/mitchellh/status/2014433315261124760
+- [fn:bans] https://www.theregister.com/2024/05/18/distros_ai_code/
+- [fn:evilgenie] EvilGenie: https://arxiv.org/abs/2511.21654
+- [fn:todo] https://github.com/anthropics/claude-code/issues/14947
+- [fn:metr] METR: https://metr.org/blog/2025-07-10-early-2025-ai-experienced-os-dev-study/
+
+Mail, lists, and messaging:
+- [fn:sashiko] https://lwn.net/Articles/1063292/ ; https://lwn.net/Articles/1073583/ ; https://github.com/sashiko-dev/sashiko
+- [fn:mason] https://github.com/masoncl/review-prompts ; https://netdev-ai.bots.linux.dev/ai-local.html
+- [fn:b4review] https://b4.docs.kernel.org/en/latest/maintainer/review.html
+- [fn:kpolicy] https://docs.kernel.org/process/coding-assistants.html ; RFC: https://lwn.net/Articles/1031473/
+- [fn:brauner] https://ratatoskr.run/lkml/2026/07/17306154/t
+- [fn:syzbot] https://github.com/google/syzkaller/blob/master/docs/syzbot.md
+- [fn:patchwork] https://github.com/getpatchwork/patchwork/blob/main/docs/usage/overview.rst
+- [fn:dearagent] https://github.com/dearagent-dev/dear-agent
+- [fn:agentmail] https://docs.agentmail.to/introduction
+- [fn:mcpmail] https://github.com/Dicklesworthstone/mcp_agent_mail
+- [fn:wells] https://davidwells.io/blog/trigger-an-ai-agent-with-an-email
+- [fn:slack] https://code.claude.com/docs/en/slack
+- [fn:matrix] https://github.com/Interrobang01/claudematrix ; https://github.com/kegsay/claude-connect-matrix-integration
+- [fn:irc] https://github.com/vjt/claude-ircbot
+- [fn:notmuchmcp] https://pypi.org/project/mcp-server-notmuch/ ; https://github.com/stubbedev/notmuch-mcp
+- [fn:gptel] https://gptel.org/manual.html
+- [fn:jido] https://github.com/agentjido/jido
+- [fn:a2a] A2A specification: https://a2a-protocol.org/latest/specification/
+- [fn:quotes] https://dev.to/mqasimca/summarize-long-email-threads-for-agent-context-249p
+- [fn:lostmiddle] https://arxiv.org/pdf/2406.16008
+- [fn:echoleak] https://arxiv.org/pdf/2509.10540 ; https://www.varonis.com/blog/echoleak
+
+Pre-LLM parallels:
+- [fn:rigby] Rigby, German, Storey, ICSE 2008, doi:10.1145/1368088.1368162 ; Rigby & Bird, FSE 2013: https://www.microsoft.com/en-us/research/wp-content/uploads/2016/02/rigby2013convergent.pdf
+- [fn:bacchelli] Bacchelli & Bird, "Expectations, Outcomes, and Challenges of Modern Code Review," ICSE 2013.
+- [fn:kpatch] https://docs.kernel.org/process/submitting-patches.html
+- [fn:commitfest] https://wiki.postgresql.org/wiki/CommitFest
+- [fn:reinertsen] Reinertsen, /The Principles of Product Development Flow/ (2009); Little, "A Proof for the Queuing Formula L = λW" (1961).
+- [fn:mission] US Army ADP 6-0, /Mission Command/ (2019); Bungay, /The Art of Action/ (2011).
+- [fn:tencate] ten Cate, "Entrustability of professional activities," Medical Education 2005.
+- [fn:armstrong] Armstrong, /Making reliable distributed systems in the presence of software errors/ (2003): http://erlang.org/download/armstrong_thesis_2003.pdf ; Hewitt, Bishop, Steiger, IJCAI 1973.
+- [fn:ipass] Starmer et al., NEJM 2014;371:1803-12: https://www.nejm.org/doi/full/10.1056/NEJMsa1405556
+- [fn:ohno] Ohno, /Toyota Production System/ (1988); Liker, /The Toyota Way/ (2004).
+- [fn:csi] CSI /Project Delivery Practice Guide/; MasterFormat.
+- [fn:conway] Conway, "How Do Committees Invent?" (1968): http://www.melconway.com/Home/Committees_Paper.html
+- [fn:herbsleb] Herbsleb & Mockus, IEEE TSE 29(6), 2003.
+- [fn:jensen] Jensen & Meckling, "Theory of the Firm" (1976).
+- [fn:maister] Maister, /Managing the Professional Service Firm/ (1993).
+- [fn:atc] FAA Order JO 7110.65; ICAO Doc 9432.
+- [fn:maildir] Bernstein, maildir: https://cr.yp.to/proto/maildir.html
+- Also: Goldratt, /The Goal/ (1984); Grove, /High Output Management/ (1983); Brooks, /The Mythical Man-Month/ (1975/1995); Weinberg & Gause, /Exploring Requirements/ (1989); Adzic, /Specification by Example/ (2011).
