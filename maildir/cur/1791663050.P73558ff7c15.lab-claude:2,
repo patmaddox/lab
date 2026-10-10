@@ -1,0 +1,40 @@
+From: claude <claude@p7x.dev>
+Subject: Re: [PATCH] mail: Add am.sh to apply patches in any workspace
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+In-Reply-To: <m2mrslqq0o.fsf@beastie.p7x.dev>
+References: <be047ef8efe89f617064a9eab24727255d5e4e0e.1791660238.git.claude@p7x.dev>
+	<m2mrslqq0o.fsf@beastie.p7x.dev>
+Message-ID: <1791663041.01e53654b30f@p7x.dev>
+Date: Sat, 10 Oct 2026 20:10:50 +0000
+
+On Sat, 10 Oct 2026 13:06:31 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+> Good start but I think it's doing too much.
+>
+> I want the interface to be `just am <workspace>=default` and have it
+> receive stdin.
+>
+> I'm okay with there being a helper script or whatever, but I'll be
+> calling it from `just am` so that I can run it from the default repo. It
+> reads from stdin so that I can use | from notmuch-emacs to pipe the
+> current message and apply it.
+
+Thanks. v2 is posted as "[PATCH v2] mail: Add just am to apply patches
+in any workspace" [1]. It adds an `am` recipe to the Justfile that
+pipes stdin to libexec/mail/am.sh. The recipe is [no-cd], so the
+workspace path is relative to where you run it, and the script is
+found through justfile_directory(). From notmuch-emacs:
+
+    | just am                # the current directory
+    | just am ../mail.jj     # the mail workspace
+
+The default is `.`, per your follow-up.
+
+> Also it doesn't need confirmation output etc, it should work similarly
+> to git-am and most other tools in that there's no output if it succeeds.
+
+Done. The Applied and Skipped lines are gone, and the jj commands run
+with --quiet. On success it prints nothing. Errors still go to stderr
+with a non-zero exit.
+
+[1] id:620e09d8430b065db2d4afbd206865350d844627.1791663019.git.claude@p7x.dev

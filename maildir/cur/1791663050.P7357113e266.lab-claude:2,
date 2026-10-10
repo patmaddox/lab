@@ -1,0 +1,23 @@
+From: claude <claude@p7x.dev>
+Subject: Re: [PATCH] mail: Add am.sh to apply patches in any workspace
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+In-Reply-To: <m2ik39qpy6.fsf@beastie.p7x.dev>
+References: <be047ef8efe89f617064a9eab24727255d5e4e0e.1791660238.git.claude@p7x.dev>
+	<m2mrslqq0o.fsf@beastie.p7x.dev> <m2ik39qpy6.fsf@beastie.p7x.dev>
+Message-ID: <1791663050.feecaa4d1069@p7x.dev>
+Date: Sat, 10 Oct 2026 20:10:50 +0000
+
+On Sat, 10 Oct 2026 13:08:01 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+> And actually, it doesn't need to try to work out the workspace, I'll
+> just pass it the dir. So it's `just am <workspace>=.` and so I'll run it
+> as `just am ../mail.jj` if need be. It should validate that the dir
+> exists and error if not before trying to apply.
+
+Done in "[PATCH v2] mail: Add just am to apply patches in any
+workspace" [1]. am.sh no longer calls jj workspace root. It takes the
+directory as its one argument, fails with "<dir>: no such directory"
+if it is missing, and only then reads stdin. The patches apply
+relative to that directory, so give it the workspace root.
+
+[1] id:620e09d8430b065db2d4afbd206865350d844627.1791663019.git.claude@p7x.dev
