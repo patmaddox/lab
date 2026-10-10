@@ -1,0 +1,52 @@
+Message-ID: <bc2e1c6271b4db70f95dc0bae7c32fe9c3fb97ff.1791656705.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Date: Sat, 10 Oct 2026 18:24:43 +0000
+Subject: [PATCH] mail: Keep just fetch from rewriting published mail
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+Change-Id: uxvxuvwrswokxpspsqtwmnsyxquvnlzv
+
+just fetch rebases every ancestor of @ that claude@submissions lacks.
+When the list has moved past the outbox Claude last pushed, those
+ancestors include mail already pushed to upstream. jj refuses to
+rewrite those immutable commits, and fetch fails until Claude
+rebases and pushes again.
+
+Rebase onto the newest of the published list and the outbox instead.
+When the outbox is built on the list, as it usually is, that is
+claude@submissions alone and the history stays linear. When the two
+have diverged, @ becomes a merge of both, and no published commit is
+rewritten.
+---
+change-id: uxvxuvwrswokxpspsqtwmnsyxquvnlzv
+
+This applies to the mail line, not trunk: base-commit is mail@upstream.
+
+Tested in a scratch repo with mail@origin immutable and Claude's
+outbox on an untracked claude@submissions. With the outbox built on
+the list, the old and new recipes agree and @ stays linear. With
+Pat's pushed commit M not under the outbox, the old recipe fails with
+"Commit ... is immutable", and the new one makes @ a merge of M and
+the outbox.
+
+ Justfile | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/Justfile b/Justfile
+index 1e637a8..e0f32d0 100644
+--- a/Justfile
++++ b/Justfile
+@@ -11,7 +11,7 @@ advance:
+ 
+ fetch:
+   jj --quiet git fetch --remote submissions
+-  jj --quiet rebase -b @ -d claude@submissions
++  jj --quiet rebase -b @ -d 'heads((::@ & immutable()) | claude@submissions)'
+   jj --quiet simplify-parents
+ 
+ push:
+
+base-commit: 5c721a836a89d55db80627c81bca2c3cf4d7b976
+-- 
+2.56.0
+
