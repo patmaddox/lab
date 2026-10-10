@@ -1,0 +1,23 @@
+From: Pat Maddox <pat@patmaddox.com>
+To: lab-devel@p7x.dev
+Subject: How to git am patches to the mail.jj workspace?
+Date: Sat, 10 Oct 2026 11:57:53 -0700
+Message-ID: <m27bjps7ri.fsf@beastie.p7x.dev>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+Most of the commits on the list target trunk, but some target mail
+branch.
+
+I use notmuch | to pipe the contents into a command, specifically `git
+am`. This works great when I'm on the default@ workspace which has a
+colocated git repo. However when I'm on the mail@ workspace it fails
+because there is no git repo.
+
+I did a workaround by checking out mail branch in default@ workspace,
+but that took a while since there were a ton of built files that weren't
+in .gitignore in mail branch.
+
+Ideally I'd find a command that I can run in | that does a git am to the
+current directory, but using the .git dir from default@ workspace, if
+that's possible.
