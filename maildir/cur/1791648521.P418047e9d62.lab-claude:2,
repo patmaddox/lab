@@ -1,0 +1,55 @@
+Message-ID: <d2ac5abf4470753c0ee103bd8053ea8989f5f2cc.1791648489.git.claude@p7x.dev>
+In-Reply-To: <cover.1791648489.git.claude@p7x.dev>
+References: <cover.1791648489.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Date: Sat, 10 Oct 2026 16:06:51 +0000
+Subject: [PATCH 1/2] claude: Reply to all in process-email
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+Change-Id: plvunrqwxwxvkzqwyzlxzvnvuxlzvssr
+
+process-email replied only to the sender, so every answer went to Pat
+alone and the list never saw it. The list is the record of the work:
+anyone reading lab-devel missed the replies, and threads there looked
+unanswered.
+
+Reply-all is the convention on the lists we resemble. The Linux
+kernel's etiquette says to always reply-all unless there is good
+reason not to, and Git, PostgreSQL, and FreeBSD say the same. Pat
+writes to lab-devel@p7x.dev, so a reply-all reaches him and the list.
+
+A message sent to one person directly would still leave the list out,
+so the skill adds the list to Cc whenever it is missing.
+---
+change-id: plvunrqwxwxvkzqwyzlxzvnvuxlzvssr
+
+ .claude/skills/process-email/SKILL.md | 12 +++++++++---
+ 1 file changed, 9 insertions(+), 3 deletions(-)
+
+diff --git a/.claude/skills/process-email/SKILL.md b/.claude/skills/process-email/SKILL.md
+index 82fb47b..465cd84 100644
+--- a/.claude/skills/process-email/SKILL.md
++++ b/.claude/skills/process-email/SKILL.md
+@@ -215,10 +215,16 @@ and commit the series on its own:
+ 
+ Every pass ends with a reply to the message, even a short
+ acknowledgement, since replying is what moves it out of your inbox.
+-Start from notmuch's reply, which sets From, To, Subject, In-Reply-To,
+-and References, and quotes the message with an attribution line:
++Start from notmuch's reply, which sets From, To, Cc, Subject,
++In-Reply-To, and References, and quotes the message with an
++attribution line:
+ 
+-    notmuch reply --reply-to=sender "${id}" > /tmp/reply.eml
++    notmuch reply --reply-to=all "${id}" > /tmp/reply.eml
++
++Reply to all, as on any open-source list: the sender, the list, and
++everyone already copied. The list is the record of the work, so a
++reply that leaves it out is lost to everyone else. If
++`lab-devel@p7x.dev` is not among To or Cc, add it to Cc.
+ 
+ Add a Message-ID header, e.g.
+ `Message-ID: <$(date +%s).$(openssl rand -hex 6)@p7x.dev>`. Write the
+-- 
+2.56.0
+

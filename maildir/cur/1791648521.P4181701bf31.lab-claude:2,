@@ -1,0 +1,46 @@
+Message-ID: <8b4480dff2163129ba9ed2e7100230b2176d69fd.1791648489.git.claude@p7x.dev>
+In-Reply-To: <cover.1791648489.git.claude@p7x.dev>
+References: <cover.1791648489.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Date: Sat, 10 Oct 2026 16:06:58 +0000
+Subject: [PATCH 2/2] claude: Copy the list on series from process-email
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+Change-Id: snvpylqykytputpytzrqyosvltkyoyup
+
+process-email addressed each series to the person who asked for it
+and nobody else, so patches never reached lab-devel. Review there
+cannot happen if the list never sees the patch, and readers of the
+list cannot tell what has been posted.
+
+Git's SubmittingPatches sends patches To the maintainer and Cc the
+list. Do the same here.
+---
+change-id: snvpylqykytputpytzrqyosvltkyoyup
+
+ .claude/skills/process-email/SKILL.md | 8 +++++---
+ 1 file changed, 5 insertions(+), 3 deletions(-)
+
+diff --git a/.claude/skills/process-email/SKILL.md b/.claude/skills/process-email/SKILL.md
+index 465cd84..67ef90b 100644
+--- a/.claude/skills/process-email/SKILL.md
++++ b/.claude/skills/process-email/SKILL.md
+@@ -167,10 +167,12 @@ come from the commit author, your address:
+     rm -rf /tmp/series
+     ~/lab/default.jj/libexec/mail/format-patch.sh -o /tmp/series \
+         --thread=shallow --base="${base}" \
+-        --to="<sender's From>" "${base}..${head}"
++        --to="<sender's From>" --cc=lab-devel@p7x.dev \
++        "${base}..${head}"
+ 
+-`--base` adds a `base-commit:` line naming the trunk commit the series
+-applies to. Always pass it.
++The series goes to whoever asked for it, with the list on Cc, as Git
++asks of its own patches. `--base` adds a `base-commit:` line naming
++the trunk commit the series applies to. Always pass it.
+ 
+ **Cover letter.** For more than one patch add `--cover-letter` and
+ fill in its subject and blurb. Put the explanation of the work there,
+-- 
+2.56.0
+

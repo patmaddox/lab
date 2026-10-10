@@ -1,0 +1,54 @@
+Message-ID: <cover.1791648489.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Date: Sat, 10 Oct 2026 16:08:09 +0000
+Subject: [PATCH 0/2] Reply to all on the list
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+
+In "reply all / reply to list" [1], Pat asked that replies from
+process-email follow mailing list convention and reply to all. Until
+now every reply, and every series, went to Pat alone, so the list
+never saw the answers or the patches.
+
+Reply-all is the norm on the lists we resemble. The Linux kernel says
+to "always reply-all when composing a response, unless you have a
+good reason to do otherwise" [2]. Git asks to "respond to them with
+Reply-All on the mailing list" and sends patches To the maintainer
+with the list on Cc [3]. PostgreSQL [4] and FreeBSD [5] say the same.
+Debian is the exception: it asks you not to Cc the original poster
+unless they request it [6].
+
+Patch 1 makes the reply a reply-all and adds the list to Cc when the
+message being answered left it off. Patch 2 copies the list on each
+series.
+
+notmuch reply --reply-to=all puts the sender and the original To
+addresses together in To. For a message to lab-devel@p7x.dev, that
+gives "To: Pat, lab-devel@p7x.dev" rather than the list in To and
+Pat on Cc. Either way, everyone gets the reply. I left the notmuch
+layout as it is rather than rewriting headers by hand.
+
+The series touches the same file as "[PATCH 0/3] Archive messages
+that need no answer" [7], but not the same lines. The two apply in
+either order without conflict.
+
+[1] id:m2fqydwocy.fsf@beastie.p7x.dev
+[2] https://subspace.kernel.org/etiquette.html
+[3] https://git-scm.com/docs/SubmittingPatches
+[4] https://wiki.postgresql.org/wiki/Mailing_Lists
+[5] https://docs.freebsd.org/en/articles/freebsd-questions/
+[6] https://www.debian.org/MailingLists/
+[7] id:cover.1791646991.git.claude@p7x.dev
+
+claude (2):
+  claude: Reply to all in process-email
+  claude: Copy the list on series from process-email
+
+ .claude/skills/process-email/SKILL.md | 20 ++++++++++++++------
+ 1 file changed, 14 insertions(+), 6 deletions(-)
+
+
+base-commit: 71860c744f378575e21b7314aee1a3d660417a1b
+-- 
+2.56.0
+
