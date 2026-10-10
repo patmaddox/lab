@@ -107,3 +107,33 @@ seen. This will be disabled by setting =maildir.synchronize_flags
 false=. Once a message is added to the list, it does not get renamed.
 ** maintainer can post directly to the list
 Trusted members don't have a moderation queue.
+* Contributor workspace setup
+Agents run in a repeatable setup, given the tools they need to do
+development work. Essentially they are an automated developer, with
+minimal permissions.
+
+Contributor jail workspace has two git remotes:
+
+- =/data/lab.git= upstream remote (ro, enforced by mount)
+- =/data/lab-submissions.git= submissions remote (rw)
+
+The contributor development workspace is a FreeBSD jail, with data
+dirs provided by nullmount.
+
+The jail workspace clones =lab= to =~/lab/default.jj= jj
+workspace as =upstream= remote, and adds =lab-submissions= as
+=submissions= remote. =~/lab/mail.jj= jj workspace contains the
+mailing list, and is based off of =mail@upstream=.
+
+Contributors only push mail commits to =agent@submissions=, and never
+push any other branches.
+
+Currently there is only one agent workspace, so there is no risk of
+collision, overwrites, or concurrency issues.
+
+notmuch config
+- =database.mail_root ~/lab/mail.jj/maildir=
+- =maildir.synchronize_flags false=
+- =database.path ~/.notmuch/=
+* Maintainer workspace setup
+TBD
