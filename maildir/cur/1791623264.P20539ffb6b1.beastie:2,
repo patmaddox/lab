@@ -1,0 +1,11 @@
+From: Pat Maddox <pat@patmaddox.com>
+To: lab-devel@p7x.dev
+Subject: hello lab-devel
+Date: Sat, 10 Oct 2026 02:07:44 -0700
+Message-ID: <m2y0c5ly8v.fsf@beastie.p7x.dev>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+Easy assignment: add a zib called hello-lab-devel with a hello.sh script
+and a README. This all should be tiny - it's just a proof of concept to
+see if the email workflow works.
