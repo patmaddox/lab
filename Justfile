@@ -11,8 +11,8 @@ advance:
 
 fetch:
   jj --quiet git fetch --remote submissions
-  jj --quiet rebase -b @ -d 'heads((::@ & immutable()) | claude@submissions)'
-  jj --quiet simplify-parents
+  jj --quiet duplicate -B @ '::claude@submissions ~ ::@'
+  jj --quiet abandon 'empty() & mutable() & ::@ ~ mine()'
 
 push:
   jj --quiet git push -b mail --remote tngl
