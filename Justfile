@@ -22,3 +22,6 @@ push:
 
 summary:
   jj log -s -r '::@ ~::mail'
+
+reauthor *revset:
+  jj metaedit --update-author {{revset}}
