@@ -1,0 +1,123 @@
+Message-ID: <42a305bfe3b8b6eb570642a6ba258aafcabf240d.1791660619.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Date: Sat, 10 Oct 2026 19:29:44 +0000
+Subject: [PATCH] emacs: Archive notmuch mail by moving its file
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+Change-Id: tozlwyntmyxlllpmrvyltnmstypmzxsu
+
+On this list a message is archived when its file lives under
+maildir/archive/, and the post-new hook derives the archived and inbox
+tags from that. notmuch-emacs only edits tags, so its "a" key did
+nothing lasting: the next notmuch new put inbox back. Archiving took a
+second step outside emacs to move the file.
+
+Make the archived tag the operation. "a" now adds archived, and a tag
+hook moves the file into archive/ at once and reindexes. C-u a removes
+the tag and moves the file back to cur/. Any path that tags through
+notmuch-emacs works the same way, whether "a" on a message, a thread
+or a region, or "+" by hand.
+
+The filesystem stays the source of truth. A draft never moves, and a
+tag that matches no move is corrected by notmuch new, so the database
+always agrees with what is committed to the mail branch.
+---
+change-id: tozlwyntmyxlllpmrvyltnmstypmzxsu
+
+This needs patch 1 of "[PATCH v2 0/2] Archive messages that need no
+answer" [1], "notmuch: Tag messages under archive/ as archived" [2].
+Without it, notmuch new puts inbox back on a moved message and never
+drops archived from an unarchived one.
+
+It supersedes "[PATCH v2] mail: Add just archive" [3] and both patches
+of "[PATCH 0/2] Archive from notmuch-emacs with the archive tag" [4].
+With no tag-then-script step, there is no archive request tag to keep
+out of the inbox.
+
+Files go flat into maildir/archive/, as in [3]. Unarchived files go to
+cur/, since synchronize_flags is off and nothing reads the
+subdirectory.
+
+Tested in a scratch maildir with the real post-new hook, calling
+notmuch-tag with notmuch-archive-tags as "a" and C-u a do. Archiving
+moved files from cur/ and new/ into archive/ and left them tagged
+archived only. A draft in the same query stayed put. Unarchiving moved
+the file to cur/ and brought inbox back. An unrelated tag moved
+nothing. just test fails in this jail, which lacks the markdown-mode
+port: init.el stops at that require, before the notmuch settings.
+
+[1] id:cover.1791652315.git.claude@p7x.dev
+[2] id:aebdd150bfe012de3141bbf35f9e0d2524af1412.1791652315.git.claude@p7x.dev
+[3] id:d8d50722cda97de4c004df237c5154c071c82e3c.1791655188.git.claude@p7x.dev
+[4] id:cover.1791655463.git.claude@p7x.dev
+
+ dotfiles/emacs/init.el            |  2 ++
+ dotfiles/emacs/lisp/pm-notmuch.el | 36 +++++++++++++++++++++++++++++++
+ 2 files changed, 38 insertions(+)
+
+diff --git a/dotfiles/emacs/init.el b/dotfiles/emacs/init.el
+index e620223..36ba96b 100644
+--- a/dotfiles/emacs/init.el
++++ b/dotfiles/emacs/init.el
+@@ -576,6 +576,8 @@ and prefixes every line with \"> \"."
+ (setq sendmail-program
+       (expand-file-name "libexec/maildir-deliver.sh" user-emacs-directory))
+ (setq notmuch-draft-tags '("+draft"))
++;; "a" archives by moving the file; see pm-notmuch-archive-move-files.
++(setq notmuch-archive-tags '("-inbox" "+archived"))
+ (setq notmuch-search-oldest-first nil)
+ (setq notmuch-show-only-matching-messages t)
+ (setq notmuch-show-mark-read-tags nil)
+diff --git a/dotfiles/emacs/lisp/pm-notmuch.el b/dotfiles/emacs/lisp/pm-notmuch.el
+index a323f53..feacf65 100644
+--- a/dotfiles/emacs/lisp/pm-notmuch.el
++++ b/dotfiles/emacs/lisp/pm-notmuch.el
+@@ -79,6 +79,42 @@ Added to `notmuch-show-insert-text/plain-hook'."
+ (add-hook 'notmuch-show-insert-text/plain-hook
+           #'pm-notmuch-highlight-diff-regions)
+ 
++;;; Archiving
++
++(defun pm-notmuch-archive-move-files ()
++  "Move the files of messages that gained or lost the archived tag.
++Adding archived moves each file from cur/ or new/ into archive/;
++removing it moves the file back to cur/.  Drafts never move.
++`notmuch new' then derives the tags from where the files live.
++Added to `notmuch-after-tag-hook'."
++  (with-no-warnings ; Bound dynamically by `notmuch-tag'.
++    (defvar tag-changes)
++    (defvar query))
++  (let* ((archive (member "+archived" tag-changes))
++         (unarchive (member "-archived" tag-changes))
++         (from (if archive
++                   "\\`\\(cur\\|new\\)/[^/]+\\'"
++                 "\\`archive/[^/]+\\'"))
++         (root (and (or archive unarchive)
++                    (file-name-as-directory
++                     (car (process-lines "notmuch" "config" "get"
++                                         "database.mail_root")))))
++         (dest (and root (expand-file-name (if archive "archive" "cur")
++                                           root)))
++         (moved nil))
++    (when root
++      (dolist (file (process-lines "notmuch" "search" "--output=files"
++                                   query))
++        (when (string-match-p from (file-relative-name file root))
++          (make-directory dest t)
++          (rename-file file (expand-file-name
++                             (file-name-nondirectory file) dest))
++          (setq moved t)))
++      (when moved
++        (call-process "notmuch" nil nil nil "new" "--quiet")))))
++
++(add-hook 'notmuch-after-tag-hook #'pm-notmuch-archive-move-files)
++
+ ;;; Claude message handling
+ 
+ (defvar pm-notmuch-claude-handle-message-program "claude-handle-message"
+
+base-commit: adfead7e79604b57c15a09626b0895d6028e97bf
+prerequisite-patch-id: ee5f0a993aa8daeeecdb2585656794efd9ea1947
+-- 
+2.56.0
+
