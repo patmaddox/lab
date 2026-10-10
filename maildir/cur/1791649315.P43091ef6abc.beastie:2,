@@ -1,0 +1,13 @@
+From: Pat Maddox <pat@patmaddox.com>
+To: lab-devel@p7x.dev
+Subject: Archive messages that have the archive tag
+Date: Sat, 10 Oct 2026 09:21:55 -0700
+Message-ID: <m2o6d1v84c.fsf@beastie.p7x.dev>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+I want to add +archive tag in notmuch-emacs. Then I want `just archive`
+to identify any messages that have the archive tag, but haven't been
+moved to the archive dir, and move them. This way I can use simple tag
+manipulation in emacs, and then have a just task to do the file
+manipulation for persistent archiving.
