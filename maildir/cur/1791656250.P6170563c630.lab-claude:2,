@@ -1,0 +1,134 @@
+From: claude <claude@p7x.dev>
+Subject: Re: find info on notmuch-git(1) and how notmuch list uses notmuch
+To: Pat Maddox <pat@patmaddox.com>
+In-Reply-To: <m21p9xtql3.fsf@beastie.p7x.dev>
+References: <m21p9xtql3.fsf@beastie.p7x.dev>
+Message-ID: <1791656241.336eb348ac00@p7x.dev>
+Date: Sat, 10 Oct 2026 18:17:30 +0000
+
+On Sat, 10 Oct 2026 10:26:00 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+> notmuch devs and their mailing lists are probably pretty effective users
+> at notmuch. Find me info on how they use it. I'm particularly interested
+> in personal usage patterns, as well as collaborative usage patterns.
+
+Here is a first survey. Sources are the local notmuch 0.40 man pages
+and notmuchmail.org, fetched today. I mark guesses as guesses. It
+follows from "Re: need some way to close the loop on threads" [1],
+where notmuch-git(1) came up as the next step if one shared archive
+dir stops scaling.
+
+The short version: the notmuch project tracks patch state as shared
+tags in a git repo (nmbug, now notmuch-git). Its tags are judgments
+by people, not facts that a hook can derive. Personal setups are
+mostly a "new" tag plus a post-new hook, with sync tools on top.
+
+notmuch-git(1)
+--------------
+
+- It commits tags that match a prefix from the notmuch database into
+  a bare git repo, and checks them back out. Subcommands: init,
+  clone, commit, checkout, fetch, merge, pull, push, status, log,
+  archive. [man notmuch-git]
+- It started as nmbug, a devel/ tool for the project's own patch
+  tracker. 0.37 (2022-08) promoted it to notmuch-git. Invoked as
+  nmbug (or with -N), it keeps the old defaults: repo at ~/.nmbug and
+  prefix notmuch::. Otherwise the defaults are
+  $XDG_DATA_HOME/notmuch/<profile>/git and no prefix, i.e. all tags.
+  git.path and git.tag_prefix set them in config.
+- Storage is one empty file per tag, tags/<msgid>/<tag>. Format 1
+  adds hashed directory levels. So the repo knows only Message-IDs
+  and tag names, not mail.
+- Tags for a message you do not have yet are kept (status "U"), so
+  tags can arrive before the mail does.
+- pull is a plain git merge, and it refuses while you have
+  uncommitted tag changes. My guess, not verified: since each tag is
+  its own empty file, real conflicts are rare.
+- git.safe_fraction (default 0.1) makes commit and checkout refuse
+  to change more than that share of messages without -f. That
+  protects against a runaway script.
+- muchsync is the other common sync tool. It syncs mail files and
+  all tags between your own machines. notmuch-git syncs only tags,
+  only a prefix, through any git remote, with history and several
+  writers. muchsync is for one person; notmuch-git is for a group.
+
+How the notmuch list uses it together
+-------------------------------------
+
+- The tags all carry the notmuch:: prefix. The core set from the
+  nmbug page: patch, wip, needs-review, trivial, moreinfo ("waiting
+  for feedback from patch proposer or others"), obsolete ("replaced
+  by some other patch"), stale ("no longer applies to master"),
+  pushed ("is pushed to master"), wontfix, bug, fixed. There are
+  also topic tags (emacs, doc, test, python, ...) and release tags.
+- Setup: nmbug clone https://nmbug.notmuchmail.org/git/nmbug-tags.git,
+  then checkout. The loop is pull, tag, commit, push. Push access is
+  granted by David Bremner, who asks for an ssh key, ideally in a
+  gpg-signed mail. Anyone can read.
+- The status page (nmbug.notmuchmail.org/status/) has views like
+  Review, Moreinfo, Stale, Bugs and "Maybe ready". Each view is a
+  saved notmuch query over those tags. notmuch-report (formerly
+  nmbug-status) generates it from a JSON config kept on a branch of
+  the same tags repo, so everyone sees the same queues.
+- Triage (notmuchmail.org/contributing/): developers tag incoming
+  patches. Contributors with access are asked to tag their own, and
+  to tag the old version obsolete when they send -vN. A resend cites
+  the previous version's Message-ID rather than threading under it.
+  That is what process-email already does.
+- Patches still go through git send-email and git am. nmbug plays
+  the part patchwork would, but as distributed tags, not a central
+  database. I found nothing saying they ever used patchwork.
+- Side note: that page says LLM-generated contributions or
+  interactions are not accepted, so I would not post there.
+
+Personal usage
+--------------
+
+- new.tags=new, then a post-new hook that runs notmuch tag queries
+  on tag:new and finally removes new (notmuchmail.org/initial_tagging).
+  afew is a popular ready-made version of that hook. Our mail-tag.sh
+  is the same pattern.
+- search.exclude_tags=deleted;spam is the default from notmuch
+  setup. We exclude deleted.
+- Delivery with notmuch insert from procmail, sieve or an MDA,
+  tagging on the way in; pre-new hooks that run the fetcher.
+- Emacs: notmuch-saved-searches, address completion, msmtp or
+  sendmail to send, notmuch-fcc-dirs for sent mail. Named queries
+  (query.<name> in config) work from the CLI too.
+- Sync across machines: muchsync, notmuch-git with a personal
+  prefix, running notmuch over ssh, or lieer for Gmail labels.
+- Bremner's git-remote-notmuch, used with git-annex, puts mail and
+  tags in one git repo. That is the closest to how we commit our
+  maildir. It was posted to the list as v3 in 2025-08. I could not
+  confirm it is merged, and he warns it is experimental.
+
+What this means for us
+----------------------
+
+You asked in [1] why they need these tools at all. This confirms
+the answer there. Their list is not in git: each person gets the
+mail by SMTP, so only the Message-ID is shared, and tags travel on
+their own. Ours is in the tree, so derived tags like inbox, sent and
+replied need no sync, because every checkout derives the same ones.
+
+The gap is judged state, which a hook cannot rebuild: archived for
+now, and later patch status (needs-review, moreinfo, obsolete,
+applied). If that outgrows the archive dir, notmuch-git fits:
+
+- Put judged tags under a prefix, e.g. lab::, and set
+  git.tag_prefix to it. Hook-derived tags then never enter the
+  tags repo.
+- The tags repo is a separate bare git repo, so it does not touch
+  the jj workspaces. It can follow the same two remotes: I push my
+  tags to submissions, you merge and publish the canonical ones.
+  That is nmbug's trust model too.
+- Status views could live in the repo as query.<name> entries, so
+  you and I see the same Review and Moreinfo queues.
+
+For per-person state like "I have read this", a personal prefix in
+a personal repo would do it, without touching the shared tree.
+
+If you want, I can try a next step: a throwaway notmuch-git repo
+with a lab:: prefix over a copy of the list, to see how it fits
+with jj and the hooks before anything changes in the real setup.
+
+[1] id:m2ld85wpae.fsf@beastie.p7x.dev
