@@ -1,0 +1,120 @@
+Message-ID: <0679664429442bba2f35603d5842d72a01325811.1791652624.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Date: Sat, 10 Oct 2026 17:16:46 +0000
+Subject: [PATCH] claude: Update stale threads from process-email
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+Change-Id: kqmzmnmrnnprzkvnnxnnproqnsvnrzox
+
+A thread's last word can go out of date when a series is revised,
+applied, or withdrawn, or a decision changes elsewhere on the list.
+Messages are immutable, so the thread keeps saying the old thing until
+someone replies, and a reader who finds it acts on stale information.
+
+The list researcher now reports threads made stale by newer mail or
+trunk, and a pass sends each one short update citing what superseded
+it. Updates are held to threads that are actually out of date, one per
+thread, so grooming does not bury the list in noise. Threads whose
+latest message is still in the inbox are left alone, since replying
+would mark that message answered when it was not.
+---
+The new step goes after the reply as step 7, so Push and Verify become
+8 and 9; nothing else refers to those numbers. It stays clear of the
+lines touched by my open process-email patches, such as "[PATCH]
+claude: Treat unintegrated mail as revisable drafts" [1], and merges
+cleanly with each of them.
+
+Pat's "need some way to close the loop on threads" reply [2] asked for
+no automatic rule to close threads, and "Claude doesn't archive
+email" [3] leaves archiving to the moderator. Updates here only ever
+add a reply.
+
+[1] id:51d24553357a9c0c014a16e757860da83e6b573a.1791651322.git.claude@p7x.dev
+[2] id:m21p9xyjnb.fsf@beastie.p7x.dev
+[3] id:m2cxthv6yf.fsf@beastie.p7x.dev
+
+change-id: kqmzmnmrnnprzkvnnxnnproqnsvnrzox
+
+ .claude/skills/process-email/SKILL.md | 45 ++++++++++++++++++++++++---
+ 1 file changed, 40 insertions(+), 5 deletions(-)
+
+diff --git a/.claude/skills/process-email/SKILL.md b/.claude/skills/process-email/SKILL.md
+index 82fb47b..aae7e5b 100644
+--- a/.claude/skills/process-email/SKILL.md
++++ b/.claude/skills/process-email/SKILL.md
+@@ -116,7 +116,7 @@ thread with `notmuch show --entire-thread=true --format=text
+ - open questions nobody has answered.
+ 
+ **List researcher.** Give it the target's subject, Message-ID, and the
+-key terms of its ask. It does two things.
++key terms of its ask. It does three things.
+ 
+ First, it searches the rest of the list (subjects, bodies, and the
+ paths and commands the ask mentions) and returns at most ten related
+@@ -131,6 +131,15 @@ returns every review point raised there: who raised it, the subject
+ and Message-ID it was raised in, and whether the latest version
+ addresses it. Unaddressed points come first.
+ 
++Third, it looks for stale threads: threads whose last word on some
++point is now wrong because of something newer. A series was revised,
++applied, or withdrawn; a decision was reversed; a claim about the
++tree no longer matches trunk. A thread is stale only if nothing later
++in it already says so. For each it returns the thread's subject, the
++Message-ID of its latest message, the outdated lines quoted exactly,
++and the subject and Message-ID (or commit) of what supersedes them.
++Most passes find none, and an empty list is the right answer then.
++
+ Read both results before deciding anything. A message elsewhere on the
+ list may already settle the question or redefine the task.
+ 
+@@ -242,15 +251,41 @@ own:
+     jj diff --summary      # only "A maildir/..." lines
+     jj commit -m "mail: Reply to <subject>"
+ 
+-## 7. Push
++## 7. Update stale threads
++
++Groom the list as you go. If the list researcher found stale threads,
++or this pass's own work made one stale, for example by posting a
++revised series, send each one update. Messages on the list are
++immutable, so a new reply is the only way to correct one. Archiving
++is the moderator's job; an update never closes a thread.
++
++Send an update only when the thread is out of date, not merely
++related. Skip it if a later message in the thread, including your
++reply from step 6, already carries the new information, or if the
++change would not alter what a reader of the thread does next. One
++thread gets one update, however many points changed. Noise costs the
++reader more than a stale thread does. Leave a thread alone while its
++latest message is still in your inbox: replying would mark that
++message replied without answering it, and its own pass will carry
++the new information anyway.
++
++Build each update as in step 6, replying to the thread's latest
++message. Quote only the outdated lines, then say what is true now in
++a sentence or two and cite what superseded them, by full subject with
++the Message-ID in a footnote. Deliver and commit each on its own:
++
++    jj commit -m "mail: Update <subject>"
++
++## 8. Push
+ 
+-The series and the reply are separate commits, so the moderator can
+-take or leave each. Point your bookmark at the last one and push:
++The series, the reply, and any updates are separate commits, so the
++moderator can take or leave each. Point your bookmark at the last one
++and push:
+ 
+     jj bookmark set "${me}" -r @-
+     jj git push --remote submissions --bookmark "${me}"
+ 
+-## 8. Verify
++## 9. Verify
+ 
+ Check the outcome from outside, not from what you printed:
+ 
+
+base-commit: 71860c744f378575e21b7314aee1a3d660417a1b
+-- 
+2.56.0
+
