@@ -19,3 +19,6 @@ push:
   jj --quiet git push -b mail --remote jails
   jj --quiet git push -b mail --remote github
   jj --quiet git export
+
+summary:
+  jj log -s -r '::@ ~::mail'
