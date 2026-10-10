@@ -1,0 +1,86 @@
+Message-ID: <247def61c90e911a23c0c5b04d3ff2a04866c857.1791659541.git.claude@p7x.dev>
+In-Reply-To: <cover.1791659541.git.claude@p7x.dev>
+References: <cover.1791659541.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Date: Sat, 10 Oct 2026 19:12:16 +0000
+Subject: [PATCH 2/2] claude/skills/process-email: Get up to date with just
+To: Pat Maddox <pat@patmaddox.com>
+Change-Id: nmxozuumyywwuoxlxrtsuonwswylrozp
+
+Step 1 had the model fetch, rebase both workspaces, and reindex by
+copying shell from the skill. just get-up-to-date now does that work
+deterministically, the same way the process-email loop does, so a
+single pass and the loop start from the same state and the model
+spends its effort only on what the rebase leaves to settle.
+---
+change-id: nmxozuumyywwuoxlxrtsuonwswylrozp
+
+ .claude/skills/process-email/SKILL.md | 40 ++++++++-------------------
+ 1 file changed, 11 insertions(+), 29 deletions(-)
+
+diff --git a/.claude/skills/process-email/SKILL.md b/.claude/skills/process-email/SKILL.md
+index ef496eb..f587733 100644
+--- a/.claude/skills/process-email/SKILL.md
++++ b/.claude/skills/process-email/SKILL.md
+@@ -45,23 +45,22 @@ message is what moves it out of your inbox.
+ ## 1. Get up to date
+ 
+ Before any work, bring in everything that has landed since the last
+-pass, on both trunk and the list. Both workspaces share one repo, so
+-one fetch covers them:
++pass, on both trunk and the list. One recipe does the mechanical part:
+ 
+     me="$(whoami)"
++    work='mine() ~ ::trunk@upstream ~ (::mail@upstream ~ root())::'
+     cd ~/lab/default.jj
+-    jj git fetch --all-remotes
+-
+-**Trunk.** Rebase your unmerged trunk work onto the new trunk. The
+-revset is your commits that are not on trunk upstream and not on the
+-list's history. Trunk and the list share no commit but `root()`, so
+-everything descended from the list, your outbox included, is left out
+-however far the list has moved since you built on it:
++    just get-up-to-date
+ 
+-    work='mine() ~ ::trunk@upstream ~ (::mail@upstream ~ root())::'
+-    jj rebase -s "roots(${work})" -d trunk@upstream --skip-emptied
++It fetches every remote, rebases your unmerged trunk work (`${work}`)
++onto trunk@upstream, rebases your outbox onto mail@upstream, starts a
++fresh change in the mail workspace, and indexes the list, so messages
++you already answered count as replied. `just process-email` runs it
++before each pass too; running it again is harmless. If it fails, a
++fetch or rebase could not run at all: say so in your reply and do not
++build on a stale tree.
+ 
+-Then settle what the rebase left:
++The recipe makes no judgements, so settle what its rebase left:
+ 
+ - A patch Pat applied unchanged becomes empty and is dropped.
+ - A patch Pat applied with edits survives, now redundant. Find it by
+@@ -76,23 +75,6 @@ Then settle what the rebase left:
+ When `jj log -r "${work}"` shows only open work, every commit is
+ conflict-free, and nothing landed is left, trunk is current.
+ 
+-**The list.** Base your outbox on the canonical list, dropping what
+-was accepted, then index the list together with your own pending mail
+-so messages you already answered count as replied:
+-
+-    cd ~/lab/mail.jj
+-    if [ -z "$(jj log -r "bookmarks(exact:${me}) ~ ::mail@upstream" \
+-            --no-graph -T 'commit_id')" ]; then
+-        jj bookmark set "${me}" -r mail@upstream
+-    fi
+-    jj rebase -b "${me}" -d mail@upstream --skip-emptied
+-    jj new "${me}"
+-    notmuch new
+-
+-A bookmark with no pending mail, missing or merged in full, is
+-pointed at the list's tip first. It has nothing to rebase, so the
+-rebase alone would leave it behind on an old list.
+-
+ ## 2. Pick the message
+ 
+ The skill's argument, if given, names the message to answer as a
+-- 
+2.56.0
+
