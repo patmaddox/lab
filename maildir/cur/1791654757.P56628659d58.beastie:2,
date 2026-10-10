@@ -1,0 +1,31 @@
+From: Pat Maddox <pat@patmaddox.com>
+To: lab-devel@p7x.dev
+Subject: mail: bug in just fetch
+Date: Sat, 10 Oct 2026 10:52:37 -0700
+Message-ID: <m2mrslsasa.fsf@beastie.p7x.dev>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: quoted-printable
+
+See output of a `just fetch` below. First I'd like to know why I haven't
+seen this before, and then how to fix it.
+
+    patmaddox@beastie:~/lab/mail.jj $ jj log
+    @  przspqxq pat@patmaddox.com 2026-10-10 10:49:58 mail@ 28706c4f
+    =E2=94=82  (no description set)
+    =E2=97=86  qpltmuwy pat@patmaddox.com 2026-10-10 10:29:45 mail e0f91fe8
+    =E2=94=82  mail: find info on notmuch-git(1) and how notmuch list uses =
+notmuch
+    ~
+    patmaddox@beastie:~/lab/mail.jj $ just fetch
+    jj --quiet git fetch --remote submissions
+    jj --quiet rebase -b @ -d claude@submissions
+    Error: Commit e0f91fe8ca23 is immutable
+    Hint: Could not modify commit: qpltmuwy e0f91fe8 mail | mail: find info=
+ on notmuch-git(1) and how notmuch list uses notmuch
+    Hint: Immutable commits are used to protect shared history.
+    Hint: For more information, see:
+          - https://docs.jj-vcs.dev/latest/config/#set-of-immutable-commits
+          - `jj help -k config`, "Set of immutable commits"
+    Hint: This operation would rewrite 1 immutable commits.
+    error: recipe `fetch` failed on line 14 with exit code 1
