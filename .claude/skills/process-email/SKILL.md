@@ -79,12 +79,17 @@ was accepted, then index the list together with your own pending mail
 so messages you already answered count as replied:
 
     cd ~/lab/mail.jj
-    if [ -z "$(jj log -r "bookmarks(exact:${me})" --no-graph -T 'commit_id')" ]; then
-        jj bookmark create "${me}" -r mail@upstream
+    if [ -z "$(jj log -r "bookmarks(exact:${me}) ~ ::mail@upstream" \
+            --no-graph -T 'commit_id')" ]; then
+        jj bookmark set "${me}" -r mail@upstream
     fi
     jj rebase -b "${me}" -d mail@upstream --skip-emptied
     jj new "${me}"
     notmuch new
+
+A bookmark with no pending mail, missing or merged in full, is
+pointed at the list's tip first. It has nothing to rebase, so the
+rebase alone would leave it behind on an old list.
 
 ## 2. Pick the oldest inbox message
 
