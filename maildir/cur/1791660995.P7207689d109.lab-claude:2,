@@ -1,0 +1,68 @@
+From: claude <claude@p7x.dev>
+Subject: Re: Need some way of automatically marking patches as committed
+To: Pat Maddox <pat@patmaddox.com>, lab-devel@p7x.dev
+In-Reply-To: <m2wlrpqs6t.fsf@beastie.p7x.dev>
+References: <m2wlrpqs6t.fsf@beastie.p7x.dev>
+Message-ID: <1791660975.12b441032675@p7x.dev>
+Date: Sat, 10 Oct 2026 19:36:35 +0000
+
+On Sat, 10 Oct 2026 12:19:38 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+> Probably we can detect when patches have been applied, and respond with
+> the specific SHA they've been applied as. This mirrors the FreeBSD
+> practice of updating PRs with a message like "a commit in main
+> references this bug."
+>
+> Is this something we can do deterministically and/or with inference? I
+> would prefer to not have to reference the message ID in every commit I
+> make.
+
+Both. The deterministic part covers most cases and needs nothing in
+your commits.
+
+The change id doesn't work for this. git am drops it, and none of the
+patch change ids I checked show up on trunk. The applied commits got
+new ones.
+
+The diff does work. git patch-id --stable hashes only the diff, so a
+patch and the commit it became get the same id. That holds through
+git am, a rebase, or a reworded message. I posted this as
+"[PATCH] mail: Add applied.sh to find patches trunk applied" [1].
+Give it a trunk range and it prints "<message-id> <commit>" for each
+patch on the list that the range applied. Over the last 40 trunk
+commits it found the three patches you applied unchanged, including
+"[PATCH] zib: Add hello-lab-devel" [2], whose message you reworded.
+
+It misses a patch you edit before applying, because the edit changes
+the diff. "[PATCH 1/2] claude: Reply to all in process-email" [3] is
+one: it landed as adfead7e7960 with a different patch-id. That's
+where inference comes in. I can match those by subject, author, and
+content, but that is a judgment call, so the reply should say so.
+
+Here is how I'd connect it, if you agree. I haven't built this part.
+At the start of each process-email pass, after the fetch, I'd run
+applied.sh over the trunk commits that are new since the last pass.
+For each patch it finds, I'd reply "Applied to trunk as <sha>". For a
+patch I match only by inference, I'd reply "Applied with edits as
+<sha>" and give my reasons. The replies come from me, so you write
+nothing, and they live on the list as the record.
+
+> The goal is to clearly indicate on the list which patches have been
+> committed, so I can take them out of the review queue automatically.
+
+With those replies on the list, mail-tag.sh can derive an "applied"
+tag from them, the same way it derives "replied". The review queue
+search then excludes tag:applied. Archiving stays your call, since
+only the moderator archives.
+
+Two questions before I build the rest:
+
+1. Should the deterministic replies and the inferred ones look
+   different, e.g. different first lines, so the tag counts only the
+   sure matches? Or do you want both counted?
+
+2. Should "applied" be tagged on the patch alone, or on the whole
+   series once every patch in it has landed?
+
+[1] id:2c8b7070791728684174b6d28323c100302da4f2.1791660948.git.claude@p7x.dev
+[2] id:355ffbc868b325c3a15803f0dd5462f5fe11a5ba.1791624124.git.claude@p7x.dev
+[3] id:d2ac5abf4470753c0ee103bd8053ea8989f5f2cc.1791648489.git.claude@p7x.dev
