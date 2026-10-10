@@ -11,7 +11,7 @@ advance:
 
 fetch:
   jj --quiet git fetch --remote submissions
-  jj --quiet rebase -b @ -d claude@submissions
+  jj --quiet rebase -b @ -d 'heads((::@ & immutable()) | claude@submissions)'
   jj --quiet simplify-parents
 
 push:
