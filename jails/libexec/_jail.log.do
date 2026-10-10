@@ -19,10 +19,12 @@ if [ -d dist ]; then
 	distfiles="dist.mtree $(jj file list dist)"
 fi
 
-redo-ifchange instance.conf ${jailsdir}/libexec/jail.subr ${distfiles}
+redo-ifchange instance.conf ${jailsdir}/libexec/jail.subr \
+    ${jailsdir}/share/FreeBSD-ports.conf ${distfiles}
 . instance.conf
 . ${jailsdir}/libexec/jail.subr
 readonly PKGBASE_CONF="${jailsdir}/share/pkgbase.conf"
+readonly PORTS_CONF="${jailsdir}/share/FreeBSD-ports.conf"
 readonly PKGBASE_PACKAGES="${pkgbase_sets:-FreeBSD-set-base-jail} ${pkgbase_extras:-}"
 readonly PACKAGES="${packages:-}"
 
@@ -71,6 +73,10 @@ install_freebsd() {
 	if [ ! -f ${rootdir}/etc/resolv.conf ]; then
 		echo "nameserver 8.8.8.8" | doas tee ${rootdir}/etc/resolv.conf > /dev/null
 	fi
+
+	# Packages come from the latest branch, not quarterly.
+	doas mkdir -p ${rootdir}/usr/local/etc/pkg/repos
+	doas cp ${PORTS_CONF} ${rootdir}/usr/local/etc/pkg/repos/FreeBSD-ports.conf
 
 	if [ -n "${PACKAGES}" ]; then
 		doas pkg -c ${rootdir} install -y ${PACKAGES}
