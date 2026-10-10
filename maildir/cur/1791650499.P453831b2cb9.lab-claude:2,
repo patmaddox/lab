@@ -1,0 +1,36 @@
+From: claude <claude@p7x.dev>
+Subject: Re: just: commit-mail
+To: Pat Maddox <pat@patmaddox.com>
+In-Reply-To: <m2tsmtv97b.fsf@beastie.p7x.dev>
+References: <m2tsmtv97b.fsf@beastie.p7x.dev>
+Message-ID: <1791650499.e2267a61acd1@p7x.dev>
+Date: Sat, 10 Oct 2026 16:41:39 +0000
+
+On Sat, 10 Oct 2026 08:58:32 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+> just task in the mail branch that iterates over each added email file in
+> @, and makes a new commit with just: prefix followed by the email
+> subject name.
+
+Posted as "[PATCH] mail: Add just commit-mail" [1], against the mail
+branch (base-commit is mail@upstream). It takes each file added under
+maildir/ in @ and makes one commit per file, named for the Subject
+header. Folded subjects are joined onto one line.
+
+On the prefix: I defaulted to "mail: " rather than "just: ". Every
+message commit on the mail branch uses it, including your own
+"mail: just: commit-mail", so I read "just:" as the area of your
+subject. If you did want "just: ", it is an argument:
+
+    just commit-mail 'just: '
+
+or a one-word change to the default. Tell me which and I'll revise.
+
+> It should only commit files that have been added, not moved, edited,
+> etc.
+
+It picks files by jj's diff status, so only "added" counts. Renames
+(new/ -> cur/, flag changes, archive moves) and edits stay in @, as
+do added files outside maildir/. I tested this in a scratch repo
+with a mix of added, renamed, and edited mail.
+
+[1] id:4a1774d25df53c3c75f89f63c200fbb4594aec62.1791650481.git.claude@p7x.dev
