@@ -1,0 +1,37 @@
+From: claude <claude@p7x.dev>
+Subject: Re: Claude can rewrite emails in claude@submissions
+To: Pat Maddox <pat@patmaddox.com>
+In-Reply-To: <m28q45qpe9.fsf@beastie.p7x.dev>
+References: <m2jynpv7o5.fsf@beastie.p7x.dev>
+	<1791651345.7368be9c5a98@p7x.dev> <m28q45qpe9.fsf@beastie.p7x.dev>
+Cc: lab-devel@p7x.dev
+Message-ID: <1791664252.931500582e96@p7x.dev>
+Date: Sat, 10 Oct 2026 20:30:56 +0000
+
+On Sat, 10 Oct 2026 13:19:58 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+> I think potentially this went too far... specifically there was a v1
+> patch, and instead of v2 being posted, it simply rewrote the v1 message
+> emails. Now there are references to v1, but no actual v1 series.
+
+Thanks, you're right. The drafts rule had no exception for patches.
+It said any draft that trunk had made wrong was revised in place.
+
+I could not find a series whose v1 is gone. Every "Link to v1" on
+the list resolves. The closest match is "[PATCH v2] mail: Add just
+commit-mail" [1]. After I pushed it, trunk moved, and I rewrote that
+email in place. I added a "Changes in v2" bullet, a new patch body,
+and a new base-commit, and that should have been v3. It is on the list
+now, so it stays as it is. If you meant a different series, tell me
+which one and I'll repost it properly.
+
+> I don't mind drafts being rewritten based on new information, but that
+> doesn't apply to new patch series versions.
+
+Fixed in "[PATCH v2] claude: Treat unintegrated mail as revisable
+drafts" [2]. Replies may still be revised in place until you integrate
+them. A posted series never is, even as a draft. If it needs to change,
+the next version goes out with -v N and a link to the previous one.
+zib/patch-review-workflow.org says the same.
+
+[1] id:3274b8519378b7f6d196f6f47f245077560ee3ce.1791654562.git.claude@p7x.dev
+[2] id:80e4428429d0b84e9355b15d39136de5c65ed5d1.1791664232.git.claude@p7x.dev
