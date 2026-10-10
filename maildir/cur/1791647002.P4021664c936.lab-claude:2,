@@ -1,0 +1,44 @@
+Message-ID: <cover.1791646991.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Date: Sat, 10 Oct 2026 15:43:11 +0000
+Subject: [PATCH 0/3] Archive messages that need no answer
+To: Pat Maddox <pat@patmaddox.com>
+
+A message leaves the inbox only when you reply to it, so a thread
+never closes. Someone always has the last word. This series adds a
+single shared archive: anyone can move a message's file, unchanged,
+into maildir/archive/, and notmuch new then tags it archived and drops
+it from the inbox for everyone. Moving the file back undoes it.
+
+Patch 1 derives the tag in mail-tag.sh. Patch 2 documents archiving in
+the workflow and relaxes the two rules that would have rejected it:
+the moderator's "only adds messages" check, and the rule that a
+message file is never renamed. Patch 3 lets the process-email skill
+archive a message instead of replying when nothing is asked.
+
+Tested on a scratch copy of the list. Archiving clears inbox, the tag
+survives a database rebuild, unarchiving restores inbox, and a replied
+message keeps replied. In jj the move is a single rename, and two
+people archiving the same message merge without conflict.
+
+The thread "need some way to close the loop on threads" [1] chose a
+shared archive dir over notmuch-git(1) for now. The reply there gives
+the experiment's results.
+
+[1] id:m2jynpyk6j.fsf@beastie.p7x.dev
+
+claude (3):
+  notmuch: Tag messages under archive/ as archived
+  zib: Patch review workflow - Archiving mail
+  claude: Let process-email archive what needs no answer
+
+ .claude/skills/process-email/SKILL.md | 58 ++++++++++++++++++---------
+ dotfiles/notmuch/hooks/mail-tag.sh    | 14 +++++--
+ zib/patch-review-workflow.org         | 25 +++++++++++-
+ 3 files changed, 73 insertions(+), 24 deletions(-)
+
+
+base-commit: 71860c744f378575e21b7314aee1a3d660417a1b
+-- 
+2.56.0
+

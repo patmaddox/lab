@@ -1,0 +1,149 @@
+Message-ID: <38ea7d1a464e413a31ad5e7d8da7b2ef79789014.1791646991.git.claude@p7x.dev>
+In-Reply-To: <cover.1791646991.git.claude@p7x.dev>
+References: <cover.1791646991.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Date: Sat, 10 Oct 2026 15:42:56 +0000
+Subject: [PATCH 3/3] claude: Let process-email archive what needs no answer
+To: Pat Maddox <pat@patmaddox.com>
+Change-Id: kwyvvpqrrvlsppmyxpqrrvnkmvwystvu
+
+The skill makes every inbox message get a reply, because replying was
+the only way out of the inbox. So a message that asks nothing, like a
+thanks or an applied notice, still drew an acknowledgement. That reply
+then sat in the sender's inbox in turn, and the thread never closed.
+
+With the archive in place, those messages can leave the inbox without
+adding anything to the list. Anything that asks a question or needs a
+decision acknowledged still gets a reply, and in doubt the skill
+replies.
+---
+change-id: kwyvvpqrrvlsppmyxpqrrvnkmvwystvu
+
+ .claude/skills/process-email/SKILL.md | 58 ++++++++++++++++++---------
+ 1 file changed, 40 insertions(+), 18 deletions(-)
+
+diff --git a/.claude/skills/process-email/SKILL.md b/.claude/skills/process-email/SKILL.md
+index 82fb47b..5149360 100644
+--- a/.claude/skills/process-email/SKILL.md
++++ b/.claude/skills/process-email/SKILL.md
+@@ -4,18 +4,20 @@ description: >-
+   Process the oldest message in your lab-devel inbox and act on it.
+   Gather the message's thread and related list context with subagents,
+   do the work it asks for, post any patches as their own series, and
+-  reply on the list, pushing to the submissions remote. Never use
+-  Gmail or any external mail tool. The operator does not read your
+-  stdout, so the result must land on the list.
++  reply on the list, or archive a message that needs no answer,
++  pushing to the submissions remote. Never use Gmail or any external
++  mail tool. The operator does not read your stdout, so the result
++  must land on the list.
+ disable-model-invocation: true
+ ---
+ 
+ # process-email
+ 
+ One pass takes the single oldest message in your inbox, does whatever
+-it asks, and answers it on the list. The answer is always a reply; any
+-patches go out first as their own series, which the reply cites. Loop
+-the skill to drain the inbox.
++it asks, and answers it on the list. The answer is a reply; any
++patches go out first as their own series, which the reply cites. A
++message that needs no answer is archived instead. Loop the skill to
++drain the inbox.
+ 
+ The list is a maildir carried by jj on the `mail` bookmark.
+ zib/patch-review-workflow.org describes the whole workflow; this skill
+@@ -37,8 +39,9 @@ answer, question, and caveat in mail.
+ 
+ notmuch derives the tags from the list itself on every `notmuch new`:
+ your mail is `sent`, mail you answered with an In-Reply-To is
+-`replied`, and all other mail from others is `inbox`. Replying to a
+-message is what moves it out of your inbox.
++`replied`, mail anyone filed under `maildir/archive/` is `archived`,
++and all other mail from others is `inbox`. Replying to a message or
++archiving it is what moves it out of your inbox.
+ 
+ ## 1. Get up to date
+ 
+@@ -74,7 +77,7 @@ conflict-free, and nothing landed is left, trunk is current.
+ 
+ **The list.** Base your outbox on the canonical list, dropping what
+ was accepted, then index the list together with your own pending mail
+-so messages you already answered count as replied:
++so messages you already answered or archived leave the inbox:
+ 
+     cd ~/lab/mail.jj
+     if [ -z "$(jj log -r "bookmarks(exact:${me})" --no-graph -T 'commit_id')" ]; then
+@@ -93,9 +96,13 @@ so messages you already answered count as replied:
+ 
+ If there is none, the inbox is empty: stop without writing anything.
+ 
+-Every inbox message gets an answer, even if it is a short
+-acknowledgement. Replying is the only way a message leaves the inbox,
+-so an unanswered one blocks every pass after it.
++Every inbox message gets a reply or is archived. A message that is
++neither stays in the inbox and blocks every pass after it.
++
++Archive only a message that asks nothing of you and leaves nothing for
++you to answer, e.g. a thanks for a reply of yours, or a note that your
++patch was applied. Anything with a question, a request, review, or a
++decision to acknowledge gets a reply. When in doubt, reply.
+ 
+ ## 3. Gather context with subagents
+ 
+@@ -136,7 +143,8 @@ list may already settle the question or redefine the task.
+ 
+ ## 4. Do the work
+ 
+-Decide whether the message needs code changes, or only a reply.
++Decide whether the message needs code changes, only a reply, or no
++answer at all. For no answer, skip to Archive instead, under step 6.
+ 
+ For code changes, work in the trunk workspace on a fresh change:
+ 
+@@ -242,10 +250,22 @@ own:
+     jj diff --summary      # only "A maildir/..." lines
+     jj commit -m "mail: Reply to <subject>"
+ 
++**Archive instead.** For a message that needs no answer, move its file
++unchanged into the shared archive and commit the move on its own. It
++is then archived for everyone on the list:
++
++    cd ~/lab/mail.jj
++    f="$(notmuch search --output=files "${id}")"
++    mkdir -p maildir/archive/cur
++    mv "${f}" maildir/archive/cur/
++    jj diff --summary      # only one "R maildir/{ => archive}/cur/..."
++    jj commit -m "mail: Archive <subject>"
++
+ ## 7. Push
+ 
+-The series and the reply are separate commits, so the moderator can
+-take or leave each. Point your bookmark at the last one and push:
++The series and the reply or archive are separate commits, so the
++moderator can take or leave each. Point your bookmark at the last one
++and push:
+ 
+     jj bookmark set "${me}" -r @-
+     jj git push --remote submissions --bookmark "${me}"
+@@ -255,12 +275,14 @@ take or leave each. Point your bookmark at the last one and push:
+ Check the outcome from outside, not from what you printed:
+ 
+     notmuch new
+-    notmuch search --output=tags "${id}"        # includes replied
++    notmuch search --output=tags "${id}"        # replied or archived
+     jj log -r "${me}@submissions" --no-graph -T commit_id
+     jj log -r "${me}" --no-graph -T commit_id   # the same commit
+ 
+-If the message is not `replied`, the reply's In-Reply-To is wrong. If
+-the commits differ, the push failed. Fix it before stopping.
++If a replied message is not `replied`, the reply's In-Reply-To is
++wrong. If an archived one is not `archived`, its file is not under
++`maildir/archive/`. If the commits differ, the push failed. Fix it
++before stopping.
+ 
+ ## Modes
+ 
+-- 
+2.56.0
+

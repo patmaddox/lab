@@ -1,0 +1,81 @@
+Message-ID: <d1cfcde15c24f45c16a45028151d294f3532ee2f.1791646991.git.claude@p7x.dev>
+In-Reply-To: <cover.1791646991.git.claude@p7x.dev>
+References: <cover.1791646991.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Date: Sat, 10 Oct 2026 15:41:55 +0000
+Subject: [PATCH 2/3] zib: Patch review workflow - Archiving mail
+To: Pat Maddox <pat@patmaddox.com>
+Change-Id: lknvxszrtysqspqrwnmmurkkkzmzwutt
+
+Archiving closes a message for everyone by moving its file into
+maildir/archive/, so the workflow must allow that move. Two rules in
+the document forbade it: the moderator accepted commits that only add
+messages, and a message's file was never to be renamed. Followed as
+written, they would reject every archive commit.
+
+The file still keeps its content and name, and only its directory
+changes, so the list stays immutable in the sense that matters: no
+message is ever edited.
+---
+change-id: lknvxszrtysqspqrwnmmurkkkzmzwutt
+
+ zib/patch-review-workflow.org | 25 +++++++++++++++++++++++--
+ 1 file changed, 23 insertions(+), 2 deletions(-)
+
+diff --git a/zib/patch-review-workflow.org b/zib/patch-review-workflow.org
+index 3914398..ef892ed 100644
+--- a/zib/patch-review-workflow.org
++++ b/zib/patch-review-workflow.org
+@@ -80,7 +80,8 @@ Developing new work:
+   =submissions= repo
+ ** Moderator
+ - Fetch devlist commits from =submissions= repo
+-- Verify that the commits only add maildir messages and make no other
++- Verify that the commits only add maildir messages, or move existing
++  ones unchanged into or out of =maildir/archive/=, and make no other
+   changes.
+ - Decide which messages to cherry-pick or reject
+ - Cherry-pick commits to =mail= branch
+@@ -104,7 +105,9 @@ at this point.
+ ** maildir doesn't rename files
+ notmuch by default renames files to indicate if they've been
+ seen. This will be disabled by setting =maildir.synchronize_flags
+-false=. Once a message is added to the list, it does not get renamed.
++false=. Once a message is added to the list, its file is never renamed
++or edited. The one exception is archiving, which moves the file
++unchanged in and out of =maildir/archive/=.
+ ** maintainer can post directly to the list
+ Trusted members don't have a moderation queue.
+ * Contributor workspace setup
+@@ -157,10 +160,28 @@ The rules are simple:
+   is tagged with ~inbox~
+ - any email from someone else, that user has directly replied to, is
+   tagged with ~replied~, and the inbox tag is removed
++- any email under =maildir/archive/= is tagged with ~archived~, and the
++  inbox tag is removed
+ 
+ ~just index~ in the =mail= jj workspace runs =notmuch new=, which
+ applies the tags that it can and does whatever post-processing it
+ needs.
++
++Archiving closes a message that needs no answer, e.g. a patch applied
++without a reply, or a question already settled. Anyone may archive a
++message by moving its file unchanged from =maildir/cur/= to
++=maildir/archive/cur/= and committing the move like any other mail. It
++is archived for everyone. Moving it back unarchives it. Archiving works
++per message, not per thread, so a later message in the same thread
++still lands in the inbox.
++
++In the =mail= jj workspace:
++
++#+BEGIN_SRC sh
++f=$(notmuch search --output=files id:<message-id>)
++mkdir -p maildir/archive/cur
++mv "${f}" maildir/archive/cur/
++#+END_SRC
+ * Shared repo setup
+ Two repos shared across jails:
+ - =/jails/share/lab.git= owned by host user =patmaddox=
+-- 
+2.56.0
+
