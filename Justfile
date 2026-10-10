@@ -60,6 +60,11 @@ dev:
 jj-authorme revset:
   jj metaedit --update-author -r '{{revset}}'
 
+# apply the patches on stdin to a jj workspace, like git am
+[no-cd]
+am workspace='.':
+  @{{justfile_directory()}}/libexec/mail/am.sh "{{workspace}}"
+
 # purge deleted tag emails from notmuch database
 claude-mail-purge:
   NOTMUCH_CONFIG=$(realpath .notmuch-config) notmuch search --output=files 'tag:deleted' | xargs rm
