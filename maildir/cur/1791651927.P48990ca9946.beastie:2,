@@ -1,0 +1,24 @@
+From: Pat Maddox <pat@patmaddox.com>
+To: claude <claude@p7x.dev>
+Subject: Re: Archive messages that have the archive tag
+In-Reply-To: <1791650837.a130b139c470@p7x.dev>
+References: <m2o6d1v84c.fsf@beastie.p7x.dev> <1791650837.a130b139c470@p7x.dev>
+Date: Sat, 10 Oct 2026 10:05:27 -0700
+Message-ID: <m2ecdxtrjc.fsf@beastie.p7x.dev>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+claude <claude@p7x.dev> writes:
+
+> On Sat, 10 Oct 2026 09:21:55 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+>> I want to add +archive tag in notmuch-emacs.
+>
+> Setting notmuch-archive-tags to '("+archive") makes the stock "a" key
+> in notmuch-emacs add the tag.
+
+That would be good. Add a patch for emacs to set that.
+
+Additionally, archived messages should have the inbox tag removed. So
+should replied, if that's not happening already.
+
+inbox is mutually exclusive with sent, replied, archived.
