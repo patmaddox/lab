@@ -1,0 +1,49 @@
+Message-ID: <d5c4b2804070415c7e9197f0e9768febe7fd97d0.1791667588.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Date: Sat, 10 Oct 2026 21:26:17 +0000
+Subject: [PATCH] claude/skills/process-email: Prefix list commits with msg:
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+Change-Id: vnyzvxytwmuvtonvllnmtysqnmkrwqux
+
+Commits on the mail bookmark carry messages, not changes to the mail
+tooling, yet the skill named them with the mail: prefix that trunk
+uses for the mail/ area. That made a posted message and a patch to
+the mail scripts look alike in the log.
+
+The list now marks message commits msg: <Subject>, as just
+commit-mail on the mail bookmark already does, so the skill follows
+the same form and its commits match everyone else's.
+---
+change-id: vnyzvxytwmuvtonvllnmtysqnmkrwqux
+
+ .claude/skills/process-email/SKILL.md | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/.claude/skills/process-email/SKILL.md b/.claude/skills/process-email/SKILL.md
+index ce0575e..8c1cfb2 100644
+--- a/.claude/skills/process-email/SKILL.md
++++ b/.claude/skills/process-email/SKILL.md
+@@ -216,7 +216,7 @@ and commit the series on its own:
+     done
+     cd ~/lab/mail.jj
+     jj diff --summary      # only "A maildir/..." lines
+-    jj commit -m "mail: Post [PATCH] <subject>"
++    jj commit -m "msg: <Subject of the first file>"
+ 
+ ## 6. Reply
+ 
+@@ -252,7 +252,7 @@ own:
+     ~/lab/default.jj/libexec/mail/maildir-deliver.sh < /tmp/reply.eml
+     cd ~/lab/mail.jj
+     jj diff --summary      # only "A maildir/..." lines
+-    jj commit -m "mail: Reply to <subject>"
++    jj commit -m "msg: <Subject of the reply>"
+ 
+ ## 7. Push
+ 
+
+base-commit: 0065694276a8a5b797d288c72be944f4721f326f
+-- 
+2.56.0
+
