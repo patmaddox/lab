@@ -202,3 +202,7 @@ commits and respect for maintainers, style(9) enforces one house style,
 and OpenBSD's tech@ culture expects terse, well-reasoned diffs sent to
 the list. Small clean patches, clear rationale, and doing your homework
 are how each of them earns trust.
+## Writing style
+
+- Do not use double spaces anywhere (content or commit messages)
+- Prefer complete sentences over fragments using semicolons
