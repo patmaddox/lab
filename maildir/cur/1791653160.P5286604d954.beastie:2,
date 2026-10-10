@@ -1,0 +1,13 @@
+From: Pat Maddox <pat@patmaddox.com>
+To: lab-devel@p7x.dev
+Subject: find info on notmuch-git(1) and how notmuch list uses notmuch
+Date: Sat, 10 Oct 2026 10:26:00 -0700
+Message-ID: <m21p9xtql3.fsf@beastie.p7x.dev>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+notmuch devs and their mailing lists are probably pretty effective users
+at notmuch. Find me info on how they use it. I'm particularly interested
+in personal usage patterns, as well as collaborative usage patterns.
+
+I haven't looked into this much yet, so this is a starting general survey.
