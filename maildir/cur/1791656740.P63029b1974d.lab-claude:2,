@@ -1,0 +1,71 @@
+From: claude <claude@p7x.dev>
+Subject: Re: mail: bug in just fetch
+To: Pat Maddox <pat@patmaddox.com>
+In-Reply-To: <m2mrslsasa.fsf@beastie.p7x.dev>
+References: <m2mrslsasa.fsf@beastie.p7x.dev>
+Message-ID: <1791656740.815611fadce4@p7x.dev>
+Date: Sat, 10 Oct 2026 18:25:40 +0000
+
+On Sat, 10 Oct 2026 10:52:37 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+> See output of a `just fetch` below. First I'd like to know why I haven't
+> seen this before,
+
+Two things had to be true together, and today was the first time
+they were.
+
+First, the recipe changed at 16:36 UTC today in "mail: just fetch
+rebases only onto claude@submissions" (dd1db9aa2c31). Before that
+commit, the rebase was `-b @ -d mail -d claude@submissions`. With
+`mail` as a destination, everything under `mail` counted as already
+in place, so your own commits never moved. Now only the ancestors of
+claude@submissions count as in place. Every ancestor of @ outside
+that set gets rebased, and that includes your published mail.
+
+Second, my outbox has to be behind your published mail. Usually it
+isn't, because each of my passes rebases the outbox onto
+mail@upstream before pushing. But it was here. My last push before
+your fetch was at 17:49 UTC. It was built on the list as of my 17:44
+fetch, whose tip was "mail: just process-email". Your e0f91fe8 was
+not on upstream yet then. So when you fetched at 17:52, e0f91fe8 was
+an ancestor of @ but not of claude@submissions. The rebase tried to
+move it, and jj refused because it was immutable.
+
+That's a race, and my side can't close it. Whenever you push to
+upstream between my fetch and my push, the next `just fetch` hits
+it. If there is no such push, the recipe works.
+
+> and then how to fix it.
+
+The fix is posted as "[PATCH] mail: Keep just fetch from rewriting
+published mail" [1]. It changes the rebase destination to
+
+    heads((::@ & immutable()) | claude@submissions)
+
+That is the newest published commit under @ or my outbox, whichever
+is further along. When my outbox is built on your published tip, as
+it usually is, this is just claude@submissions. Your mutable commits
+move onto it and history stays linear, as you intended in
+dd1db9aa2c31. In the race, the two heads have diverged. @ becomes a
+merge of both, and nothing published is rewritten. The merge only
+happens in that case.
+
+I reproduced the failure in a scratch repo and tested the new
+recipe there, in both the linear case and the race. The patch notes
+give the details.
+
+There are two other ways to handle the race. Neither seemed better
+to me:
+
+- Rebase my unmerged commits onto your tip instead. That keeps
+  history linear, but in your repo claude@submissions is untracked
+  and therefore immutable. It would need --ignore-immutable, and the
+  old commits would stay visible under the remote bookmark until I
+  push again.
+- Keep failing in the race, but with a clear message, and run
+  `just fetch` again after my next pass. That pass rebases my outbox
+  onto your new tip. It stays linear but makes you wait on me.
+
+If you'd rather have either of these than the merge, I'll revise
+the patch.
+
+[1] id:bc2e1c6271b4db70f95dc0bae7c32fe9c3fb97ff.1791656705.git.claude@p7x.dev
