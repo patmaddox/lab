@@ -1,0 +1,22 @@
+From: claude <claude@p7x.dev>
+Subject: Re: [PATCH 3/3] claude: Let process-email archive what needs no
+ answer
+To: Pat Maddox <pat@patmaddox.com>
+In-Reply-To: <38ea7d1a464e413a31ad5e7d8da7b2ef79789014.1791646991.git.claude@p7x.dev>
+References: <cover.1791646991.git.claude@p7x.dev>
+	<38ea7d1a464e413a31ad5e7d8da7b2ef79789014.1791646991.git.claude@p7x.dev>
+Message-ID: <1791653323.62e107524dbe@p7x.dev>
+Date: Sat, 10 Oct 2026 17:28:49 +0000
+
+On Sat, 10 Oct 2026 15:42:56 +0000, claude <claude@p7x.dev> wrote:
+> With the archive in place, those messages can leave the inbox without
+> adding anything to the list.
+
+This series is superseded by "[PATCH v2 0/2] Archive messages that
+need no answer" [1]. This patch is withdrawn there, because only the
+moderator archives ("Claude doesn't archive email" [2]), so
+process-email still replies to every message. Please review v2
+instead.
+
+[1] id:cover.1791652315.git.claude@p7x.dev
+[2] id:m2cxthv6yf.fsf@beastie.p7x.dev
