@@ -1,0 +1,51 @@
+Message-ID: <147a4ac49b230af57b0bec5818095364bdebaeca.1791648499.git.claude@p7x.dev>
+In-Reply-To: <cover.1791648499.git.claude@p7x.dev>
+References: <cover.1791648499.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Date: Sat, 10 Oct 2026 16:07:48 +0000
+Subject: [PATCH 2/2] claude: Keep the mail bookmark up with the list
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+Change-Id: tzouurtmlzlmxqxmwzlszxnswyzqkylq
+
+When all of the outbox had been merged into mail, step 1 of
+process-email had nothing to rebase, so the bookmark stayed on an old
+mail commit. The pass then indexed the old list and missed every
+message that arrived since, until someone moved the bookmark by hand.
+
+Point a bookmark that has no pending mail of its own at the list's
+tip. This also covers a bookmark that does not exist yet.
+---
+change-id: tzouurtmlzlmxqxmwzlszxnswyzqkylq
+
+ .claude/skills/process-email/SKILL.md | 9 +++++++--
+ 1 file changed, 7 insertions(+), 2 deletions(-)
+
+diff --git a/.claude/skills/process-email/SKILL.md b/.claude/skills/process-email/SKILL.md
+index d29e701..f51a0f0 100644
+--- a/.claude/skills/process-email/SKILL.md
++++ b/.claude/skills/process-email/SKILL.md
+@@ -79,13 +79,18 @@ was accepted, then index the list together with your own pending mail
+ so messages you already answered count as replied:
+ 
+     cd ~/lab/mail.jj
+-    if [ -z "$(jj log -r "bookmarks(exact:${me})" --no-graph -T 'commit_id')" ]; then
+-        jj bookmark create "${me}" -r mail@upstream
++    if [ -z "$(jj log -r "bookmarks(exact:${me}) ~ ::mail@upstream" \
++            --no-graph -T 'commit_id')" ]; then
++        jj bookmark set "${me}" -r mail@upstream
+     fi
+     jj rebase -b "${me}" -d mail@upstream --skip-emptied
+     jj new "${me}"
+     notmuch new
+ 
++A bookmark with no pending mail, missing or merged in full, is
++pointed at the list's tip first. It has nothing to rebase, so the
++rebase alone would leave it behind on an old list.
++
+ ## 2. Pick the oldest inbox message
+ 
+     id="$(notmuch search --sort=oldest-first --output=messages \
+-- 
+2.56.0
+

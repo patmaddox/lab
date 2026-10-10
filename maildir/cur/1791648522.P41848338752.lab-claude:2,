@@ -1,0 +1,48 @@
+Message-ID: <68c95d879cad39ddf3d602003380b3432c259144.1791648499.git.claude@p7x.dev>
+In-Reply-To: <cover.1791648499.git.claude@p7x.dev>
+References: <cover.1791648499.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Date: Sat, 10 Oct 2026 16:07:31 +0000
+Subject: [PATCH 1/2] claude: Keep the mail outbox out of the trunk rebase
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+Change-Id: qslspvuqlpyrzqvzlrwmnxumktwzwlkv
+
+Step 1 of process-email rebased every commit of yours that was not on
+trunk, on mail, or descended from the new mail tip. An outbox built on
+an older mail tip matched none of those, so after a fetch that moved
+mail, the outbox and the mail working copy were rebased onto trunk.
+The mail workspace then held trunk's files, and pushing the bookmark
+would have offered Pat trunk history as mail.
+
+Trunk and mail share no commit but the root, so excluding every
+descendant of mail's history leaves out the outbox wherever it sits.
+---
+change-id: qslspvuqlpyrzqvzlrwmnxumktwzwlkv
+
+ .claude/skills/process-email/SKILL.md | 8 +++++---
+ 1 file changed, 5 insertions(+), 3 deletions(-)
+
+diff --git a/.claude/skills/process-email/SKILL.md b/.claude/skills/process-email/SKILL.md
+index 82fb47b..d29e701 100644
+--- a/.claude/skills/process-email/SKILL.md
++++ b/.claude/skills/process-email/SKILL.md
+@@ -51,10 +51,12 @@ one fetch covers them:
+     jj git fetch --all-remotes
+ 
+ **Trunk.** Rebase your unmerged trunk work onto the new trunk. The
+-revset is your commits that are on neither branch upstream and not
+-part of your mail outbox:
++revset is your commits that are not on trunk upstream and not on the
++list's history. Trunk and the list share no commit but `root()`, so
++everything descended from the list, your outbox included, is left out
++however far the list has moved since you built on it:
+ 
+-    work='mine() ~ ::trunk@upstream ~ ::mail@upstream ~ mail@upstream::'
++    work='mine() ~ ::trunk@upstream ~ (::mail@upstream ~ root())::'
+     jj rebase -s "roots(${work})" -d trunk@upstream --skip-emptied
+ 
+ Then settle what the rebase left:
+-- 
+2.56.0
+

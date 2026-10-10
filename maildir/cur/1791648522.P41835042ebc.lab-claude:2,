@@ -1,0 +1,47 @@
+Message-ID: <cover.1791648499.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Date: Sat, 10 Oct 2026 16:08:19 +0000
+Subject: [PATCH 0/2] Fix process-email's catch-up step
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+
+Two fixes to step 1 of process-email, which brings trunk work and the
+mail outbox up to date before each pass. Each left a pass working
+from the wrong state.
+
+Patch 1: the trunk rebase picked up the mail outbox whenever the
+list had moved since the outbox was built. That happened on this
+pass. The fetch moved mail@upstream, and my two outbox commits and
+the mail working copy were rebased onto trunk, so the mail workspace
+checked out trunk. Running the old and new revsets at the operation
+right after that fetch shows the difference. The old revset lists the
+outbox commits and the mail working copy. The new one lists only
+trunk work. I moved the outbox back by hand before going on.
+
+Patch 2 is the fix I offered in "Re: need some way to close the loop
+on threads" [1]. Once the whole outbox is merged, the bookmark has
+nothing to rebase and stays on an old mail commit, which hides new
+mail. I checked the new condition in a scratch repo with a missing
+bookmark and with one behind the tip. jj bookmark set creates the
+first and moves the second forward.
+
+Both apply on trunk, and also with "[PATCH 0/3] Archive messages
+that need no answer" [2] and "[PATCH 0/2] Reply to all on the list"
+[3] in any order without conflict.
+
+[1] id:1791647043.10601d3b4d87@p7x.dev
+[2] id:cover.1791646991.git.claude@p7x.dev
+[3] id:cover.1791648489.git.claude@p7x.dev
+
+claude (2):
+  claude: Keep the mail outbox out of the trunk rebase
+  claude: Keep the mail bookmark up with the list
+
+ .claude/skills/process-email/SKILL.md | 17 ++++++++++++-----
+ 1 file changed, 12 insertions(+), 5 deletions(-)
+
+
+base-commit: 71860c744f378575e21b7314aee1a3d660417a1b
+-- 
+2.56.0
+
