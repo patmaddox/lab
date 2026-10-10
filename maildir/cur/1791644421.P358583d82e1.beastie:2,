@@ -1,0 +1,81 @@
+From: Pat Maddox <pat@patmaddox.com>
+To: claude <claude@p7x.dev>
+Subject: Re: need some way to close the loop on threads
+In-Reply-To: <1791625669.208d76cef9dd@p7x.dev>
+References: <m2jynpyk6j.fsf@beastie.p7x.dev>
+ <1791624953.28bc56c3e2bb@p7x.dev> <m21p9xyjnb.fsf@beastie.p7x.dev>
+ <1791625669.208d76cef9dd@p7x.dev>
+Date: Sat, 10 Oct 2026 08:00:21 -0700
+Message-ID: <m2qzhxwqgq.fsf@beastie.p7x.dev>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+claude <claude@p7x.dev> writes:
+
+> On Sat, 10 Oct 2026 02:44:40 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+>> - Is it possible to just add a header to an existing message? The files
+>>   are in version control, so we could modify the files instead of
+>>   posting a new message. Essentially we're adding metadata to existing
+>>   files.
+>
+> It's possible, but I'd avoid it, for three reasons:
+>
+> - The archive would no longer match what was sent. Every message is
+>   byte-for-byte what its author delivered, and a patch's headers are
+>   what git am reads. Editing them in place turns the list from a
+>   record into mutable state.
+
+That's a good point. I think it's reasonable to say that messages are
+movable, but immutable.
+
+>> Another idea I had was an archive dir, and so mute a thread by moving
+>> messages into the archive dir. This can be done on a per-message basis,
+>> and doesn't change any of the existing rules. i.e. if claude sends the
+>> last message, and I archive it, it will no longer show up in my inbox
+>> but claude doesn't see it as something as needing to be
+>> responded. Archived messages would add the archived tag and remove inbox
+>> tag.
+>
+> One thing to decide: the archive is shared. With just the two of us
+> that doesn't matter, because a message is only ever in one inbox.
+> Yours holds my mail and mine holds yours. With a third participant, a
+> message from you to the list sits in both our inboxes, and whoever
+> archives it archives it for both. Per-user dirs (archive/pat/,
+> archive/claude/) don't fix that, because a file can only be in one of
+> them. Per-user state would need something like a per-user list of
+> archived Message-IDs. I'd start with one shared archive/ and only
+> revisit if a third person joins.
+
+Let's think through how we could handle multi-user support. Maybe each
+user has a symlinked archive dir? So something like:
+
+    maildir/archive/pat@patmaddox.com
+    maildir/archive/claude@p7x.dev
+
+Then to archive it, we don't move it into the archives dir... we symlink
+it our respective dir?
+
+First I want to see if that mechanic works.
+
+Also want to think if there are any other ways - obviously that approach
+wouldn't scale to many users. In that case, there'd need to be some
+other mechanism, perhaps everyone maintains a separate fork / branch
+with their own archiving setup. I don't want to get too hung up on it,
+but I'd at least like to think through how to make the process scale to
+more users.
+
+> If that works for you, I'll send a series that:
+>
+>   - adds the archived tag to dotfiles/notmuch/hooks/mail-tag.sh,
+>   - updates "Indexing mail" in zib/patch-review-workflow.org, and
+>   - changes the process-email skill so a message that needs no answer
+>     is archived rather than replied to. The skill currently insists
+>     every inbox message gets a reply, which is what keeps these
+>     threads alive.
+
+That all sounds good. I don't want to do it just yet though - I want to
+think through the ideas that I brought up here.
+
+Also maybe research how people in notmuch community do stuff like this?
+Both for personal databases, and shared ones. I know notmuch itself is
+storing their mailing list in git if I remember correctly.
