@@ -18,8 +18,8 @@
 #     mail-send.sh --cover-letter -3 HEAD      # with a cover letter
 #     mail-send.sh /tmp/patches/*.patch        # pre-formatted patches
 #
-# The From address is enforced and the destination maildir is resolved
-# by maildir-deliver.sh (${MAILDIR} or notmuch config).  --suppress-cc
+# The destination maildir is resolved by maildir-deliver.sh
+# (${MAILDIR} or notmuch config).  --suppress-cc
 # keeps git send-email from adding the author as a Cc.
 
 set -eu

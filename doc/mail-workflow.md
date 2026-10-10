@@ -38,9 +38,7 @@ transport instead of SMTP**.
 `libexec/mail/maildir-deliver.sh` is a sendmail-compatible program that
 files one message into the maildir:
 
-- It **enforces the From address** to `login@host` of whoever runs it --
-  identity is a property of the delivering machine, not of composed
-  headers that could claim anything -- while keeping any display name.
+- It keeps the From the sender's mail config set.
 - It adds a `Date` header if the message lacks one.
 - The destination is `$MAILDIR`, else notmuch's configured mail root.
 
@@ -62,7 +60,7 @@ Either way the message lands in the maildir; commit and push to share.
 1. Fetch the canonical list and base your work on it.
 2. Compose either a **reply** to a message or a **patch series** from
    commits.
-3. Deliver into the maildir (above); the From is stamped `login@host`.
+3. Deliver into the maildir (above).
 4. Commit the new message(s) and push your `claude/mail`.
 5. When the maintainer's list advances, rebase your proposal onto it and
    drop whatever was accepted.

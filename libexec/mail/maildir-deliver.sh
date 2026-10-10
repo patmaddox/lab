@@ -11,14 +11,9 @@
 # maildir.  git format-patch output can be piped through it too; a
 # leading mbox "From " separator line is dropped.
 #
-# The From address is rewritten to the login and host of whoever runs
-# this script, e.g. patmaddox@beastie.p7x.dev.  Sender identity is a
-# property of the delivering machine, not of the composed message, so it
-# is enforced here rather than trusted from headers that could say
-# anything.  A display name the composer supplied is kept, so
-# "Pat Maddox <old@addr>" becomes "Pat Maddox <login@host>".  A Date
-# header is added if the message lacks one, so a message never lands
-# undated (which sorts as the epoch).
+# The From header is kept as composed; the sender's mail config sets
+# it.  A Date header is added if the message lacks one, so a message
+# never lands undated (which sorts as the epoch).
 #
 # git is the transport: the message is only saved, not sent.  Commit it
 # and push; notmuch new indexes it wherever the branch is checked out.
@@ -57,7 +52,7 @@ main() {
 	# Write under tmp/ first and rename into cur/ so a reader never
 	# sees a partial message.
 	name="$(unique_name)"
-	enforce_headers >"${maildir}/tmp/${name}"
+	add_headers >"${maildir}/tmp/${name}"
 	mv "${maildir}/tmp/${name}" "${maildir}/cur/${name}:2,"
 }
 
@@ -82,42 +77,21 @@ resolve_maildir() {
 	die "no maildir: set MAILDIR or configure notmuch database.mail_root"
 }
 
-# Enforce the sender address in the header block, keeping any display
-# name, and add a Date if the message has none.  A leading mbox "From "
+# Add a Date if the message has none.  A leading mbox "From "
 # separator is dropped.  in_header is true until the blank line that
-# ends the headers; a From is rewritten in place, and injected at the
-# end of the headers if the message had none.
-enforce_headers() {
-	awk -v addr="$(id -un)@$(hostname)" \
-	    -v date="$(date '+%a, %d %b %Y %H:%M:%S %z')" '
-		# Reformat a From header, preserving its display name.
-		function enforce_from(line,   name) {
-			name = line
-			sub(/^[Ff]rom:[ \t]*/, "", name)
-			sub(/[ \t]*<.*/, "", name)		# drop <addr>
-			if (name ~ /@/) name = ""		# bare addr, no name
-			return name == "" ? "From: " addr \
-					  : "From: " name " <" addr ">"
-		}
+# ends the headers.
+add_headers() {
+	awk -v date="$(date '+%a, %d %b %Y %H:%M:%S %z')" '
 		BEGIN { in_header = 1 }
 		NR == 1 && /^From / { next }			# mbox separator
 		!in_header { print; next }			# body
 		/^$/ {						# end of headers
-			if (!from_done) print "From: " addr
 			if (!date_done) print "Date: " date
 			in_header = 0
 			print
 			next
 		}
-		/^[Ff]rom:/ {
-			print enforce_from($0)
-			from_done = 1
-			in_from = 1
-			next
-		}
-		in_from && /^[ \t]/ { next }			# folded old From
 		{
-			in_from = 0
 			if (tolower($0) ~ /^date:/) date_done = 1
 			print
 		}
