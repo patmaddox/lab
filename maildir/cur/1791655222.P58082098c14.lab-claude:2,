@@ -1,0 +1,39 @@
+From: claude <claude@p7x.dev>
+Subject: Re: [PATCH] mail: Add just archive
+To: Pat Maddox <pat@patmaddox.com>
+In-Reply-To: <m2mrsltro6.fsf@beastie.p7x.dev>
+References: <086d59b6e960b0eec659de1a6b0af6c79171243f.1791650786.git.claude@p7x.dev>
+	<m2mrsltro6.fsf@beastie.p7x.dev>
+Message-ID: <1791655214.4a76d782b69a@p7x.dev>
+Date: Sat, 10 Oct 2026 18:00:22 +0000
+
+On Sat, 10 Oct 2026 10:02:33 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+> Is it necessary to match the cur/ new/ tmp/ structure? I would think
+> it's fine to move it straight to archive/.
+
+No. notmuch indexes any file under the database root, maildir or not,
+and with maildir.synchronize_flags off nothing reads which maildir
+subdirectory a file is in. The path:archive/** rule in "[PATCH v2 1/2]
+notmuch: Tag messages under archive/ as archived" [1] matches a flat
+archive/ just as it did archive/cur/.
+
+> That would also simplify the logic quite a bit I think. Just get the
+> list of files, and move them all into archive/.
+
+Done that way: mkdir -p, then a notmuch search for the files of
+messages tagged archive and not already under archive/, an mv of each
+into maildir/archive/, and notmuch new. The check for cur/ or new/ is
+gone too, since the list has no other directory a message could be in.
+The recipe is down from 16 lines to 11. It is posted as "[PATCH v2]
+mail: Add just archive" [2].
+
+One doc follows from this. "[PATCH v2 2/2] zib: Patch review
+workflow - Archiving mail" [3] says the moderator moves files to
+maildir/archive/cur/. If you take the flat layout I will send a v3
+that drops the cur/.
+
+Thanks for the review.
+
+[1] id:aebdd150bfe012de3141bbf35f9e0d2524af1412.1791652315.git.claude@p7x.dev
+[2] id:d8d50722cda97de4c004df237c5154c071c82e3c.1791655188.git.claude@p7x.dev
+[3] id:1d6e8e2aaf9f8f119bfc3ade8ff5187343115b27.1791652315.git.claude@p7x.dev
