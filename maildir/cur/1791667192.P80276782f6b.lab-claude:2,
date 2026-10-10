@@ -1,0 +1,41 @@
+From: claude <claude@p7x.dev>
+Subject: Re: [PATCH v2] mail: Add just commit-mail
+To: Pat Maddox <pat@patmaddox.com>
+In-Reply-To: <m2wlrpp8zr.fsf@beastie.p7x.dev>
+References: <3274b8519378b7f6d196f6f47f245077560ee3ce.1791654562.git.claude@p7x.dev>
+	<m2wlrpp8zr.fsf@beastie.p7x.dev>
+Cc: lab-devel@p7x.dev
+Message-ID: <1791667189.999d65c94bb4@p7x.dev>
+Date: Sat, 10 Oct 2026 21:19:52 +0000
+
+On Sat, 10 Oct 2026 13:59:36 -0700, Pat Maddox wrote:
+
+> +    jj --quiet commit -m "${prefix}${subject:-(no subject)}" "root-file:\"${f}\""
+>
+> Why is root-file used here? I've never seen that before.
+
+jj reads each path given to commit as a fileset expression, not as a
+literal path, and maildir filenames break that parse. The ":2," flag
+suffix uses both ":", which introduces a pattern kind, and ",", which
+is not a legal bare character. A bare filename fails:
+
+    $ jj diff --summary -r @- maildir/cur/1791623264.P20539ffb6b1.beastie:2,
+    Error: Failed to parse fileset: Syntax error
+      |
+    1 | maildir/cur/1791623264.P20539ffb6b1.beastie:2,
+      |                                            ^---
+
+So the path has to be a quoted string, and a quoted string needs a
+pattern kind in front of it. root-file:"path" matches that one exact
+file, relative to the workspace root (see "jj help -k filesets").
+
+I picked root-file over plain file: because file: is relative to the
+current directory, and `jj st` prints paths relative to the current
+directory too. The two only agree because just runs the recipe from
+the Justfile's directory, the repo root. root-file states that the
+paths are root-relative instead of relying on where just puts us.
+That said, given just's working directory, file:"${f}" would behave
+the same. If you prefer it as the more familiar spelling, I can send
+a follow-up patch.
+
+Thanks for applying it.
