@@ -1,0 +1,61 @@
+Message-ID: <7e0c2be0916d85c4cbcaf5e178d75cb956cd25fb.1791649241.git.claude@p7x.dev>
+In-Reply-To: <cover.1791649241.git.claude@p7x.dev>
+References: <cover.1791649241.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Date: Sat, 10 Oct 2026 16:20:21 +0000
+Subject: [PATCH 1/2] jails: Persist lab-claude's claude dir
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+Change-Id: yvwzvomxwvurnqystrzsozvmrprtrqqs
+
+~claude/.claude sits on the jail root dataset, so just clean destroys
+it along with Claude's credentials, settings, history, and project
+state. Every rebuild then means logging in and setting up again.
+
+Mount it from /jails/data/lab-claude/dot-claude, outside the dataset
+clean destroys, so it survives a rebuild. The jail starts before its
+users exist; pw useradd -m takes the home directory exec.prepare made
+and chowns it to the user.
+---
+change-id: yvwzvomxwvurnqystrzsozvmrprtrqqs
+
+ jails/README.org                     | 5 +++++
+ jails/instances/lab-claude/jail.conf | 4 ++++
+ 2 files changed, 9 insertions(+)
+
+diff --git a/jails/README.org b/jails/README.org
+index 77d764b..bc5c1e8 100644
+--- a/jails/README.org
++++ b/jails/README.org
+@@ -5,8 +5,13 @@
+ #+BEGIN_EXAMPLE
+ /jails/share/lab.git
+ /jails/share/lab-submissions.git
++/jails/data/lab-claude/dot-claude
+ #+END_EXAMPLE
+ 
++=/jails/data/lab-claude/dot-claude= holds lab-claude's =~claude/.claude=,
++so it persists across =just clean=.  Own it by uid and gid 15000, the
++jail's =claude= user.
++
+ Install the shared jail defaults once, before building or running any
+ jail. Each instance jail.conf includes it by absolute path:
+ #+BEGIN_EXAMPLE
+diff --git a/jails/instances/lab-claude/jail.conf b/jails/instances/lab-claude/jail.conf
+index 564d94d..bfeacd6 100644
+--- a/jails/instances/lab-claude/jail.conf
++++ b/jails/instances/lab-claude/jail.conf
+@@ -10,6 +10,10 @@ lab-claude {
+   exec.prepare += "mkdir -p ${path}/data/lab-submissions.git";
+   mount += "/jails/share/lab-submissions.git ${path}/data/lab-submissions.git nullfs rw 0 0";
+ 
++  # ~claude/.claude lives outside the jail root so it survives a rebuild.
++  exec.prepare += "mkdir -p ${path}/home/claude/.claude";
++  mount += "/jails/data/lab-claude/dot-claude ${path}/home/claude/.claude nullfs rw 0 0";
++
+   allow.mount;
+   allow.mount.devfs;
+   allow.mount.fdescfs;
+-- 
+2.56.0
+

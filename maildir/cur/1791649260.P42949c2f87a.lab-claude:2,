@@ -1,0 +1,62 @@
+Message-ID: <cover.1791649241.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Date: Sat, 10 Oct 2026 16:20:41 +0000
+Subject: [PATCH 0/2] jails: Persist lab-claude's Claude state
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+
+Today ~claude/.claude and ~claude/.claude.json both sit on lab-claude's
+root dataset, so just clean destroys Claude's credentials, settings,
+history, and config, and every rebuild starts from scratch.
+
+Patch 1 nullfs-mounts /jails/data/lab-claude/dot-claude onto
+~claude/.claude. Patch 2 sets CLAUDE_CONFIG_DIR=/home/claude/.claude
+in the claude user's login environment, which moves .claude.json into
+the mounted dir.
+
+On .claude.json, from reading the Claude Code 2.1.283 installed in the
+jail:
+
+- With CLAUDE_CONFIG_DIR set, the global config is
+  $CLAUDE_CONFIG_DIR/.claude.json, and settings.json, .credentials.json,
+  history, projects, and plugins all live in $CLAUDE_CONFIG_DIR too.
+  Pointing it at ~/.claude changes only where .claude.json lives.
+- Without the variable, a ~/.claude/.config.json is preferred over
+  ~/.claude.json. That would work with no env var, but it is a legacy
+  fallback, so I did not rely on it.
+- I found nothing that breaks with .claude.json inside .claude/. Claude
+  already writes its .claude.json backups to ~/.claude/backups. The
+  device-keys file is always under ~/.claude, whatever the variable
+  says, and that is still the mounted dir.
+
+Operator steps before restarting the jail:
+
+    doas mkdir -p /jails/data/lab-claude/dot-claude
+    doas chown 15000:15000 /jails/data/lab-claude/dot-claude
+
+To keep the current state, copy ~claude/.claude/ into it and
+~claude/.claude.json to dot-claude/.claude.json.
+
+Not tested: I cannot build or start jails from inside lab-claude. On a
+fresh build the jail starts before its users exist, so exec.prepare
+creates /home/claude as root. I expect pw useradd -m to chown the
+existing directory to claude. Please check that /home/claude is owned
+by claude after the first build.
+
+Only lab-claude is changed. lab-claude-devel has the same layout and
+can take the same change if you want it there.
+
+claude (2):
+  jails: Persist lab-claude's claude dir
+  jails: Keep lab-claude's .claude.json in the claude dir
+
+ jails/README.org                                        | 5 +++++
+ jails/instances/lab-claude/dist/home/claude/.login_conf | 6 ++++++
+ jails/instances/lab-claude/jail.conf                    | 4 ++++
+ 3 files changed, 15 insertions(+)
+
+
+base-commit: 71860c744f378575e21b7314aee1a3d660417a1b
+-- 
+2.56.0
+

@@ -1,0 +1,53 @@
+Message-ID: <556629acbe617ae90e470c0c19989ca1adc2803c.1791649241.git.claude@p7x.dev>
+In-Reply-To: <cover.1791649241.git.claude@p7x.dev>
+References: <cover.1791649241.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Date: Sat, 10 Oct 2026 16:20:31 +0000
+Subject: [PATCH 2/2] jails: Keep lab-claude's .claude.json in the claude dir
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+Change-Id: lnststtmqlmokupuvptzssstyntxyzyk
+
+Claude Code keeps its global config, ~/.claude.json, beside the
+claude dir rather than in it, so the persistent claude dir mount does
+not cover it. Onboarding state, the account, and per-project trust
+are lost on every rebuild.
+
+Claude Code resolves the config as $CLAUDE_CONFIG_DIR/.claude.json
+when that variable is set, and keeps everything else it would put in
+~/.claude in the same directory. Setting it to ~/.claude in the login
+environment moves the config into the mounted dir and leaves all
+other paths where they were. A config already at ~/.claude.json is
+not migrated; move it into ~/.claude once.
+---
+change-id: lnststtmqlmokupuvptzssstyntxyzyk
+
+ jails/instances/lab-claude/dist/home/claude/.login_conf | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/jails/instances/lab-claude/dist/home/claude/.login_conf b/jails/instances/lab-claude/dist/home/claude/.login_conf
+index f3a0497..d0ceead 100644
+--- a/jails/instances/lab-claude/dist/home/claude/.login_conf
++++ b/jails/instances/lab-claude/dist/home/claude/.login_conf
+@@ -8,12 +8,18 @@
+ # https://bugs.freebsd.org/bugzilla/show_bug.cgi?id=298878
+ # https://bugs.freebsd.org/bugzilla/show_bug.cgi?id=299200
+ #
++# CLAUDE_CONFIG_DIR keeps .claude.json inside ~/.claude, which is
++# mounted from the host, so the config persists with the rest of
++# Claude's state.  It is not in claude-jail.sh; only this jail mounts
++# the claude dir.
++#
+ # getcap(3) does not allow comments inside a record, so they all
+ # live up here.
+ 
+ me:\
+ 	:setenv=\
+ 	BUN_JSC_useConcurrentGC=0,\
++	CLAUDE_CONFIG_DIR=/home/claude/.claude,\
+ 	CLAUDE_CODE_DISABLE_ALTERNATE_SCREEN=1,\
+ 	CLAUDE_CODE_DISABLE_AGENT_VIEW=1,\
+ 	CLAUDE_AX_SCREEN_READER=1,\
+-- 
+2.56.0
+
