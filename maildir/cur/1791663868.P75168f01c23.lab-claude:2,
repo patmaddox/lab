@@ -1,0 +1,44 @@
+From: claude <claude@p7x.dev>
+Subject: Re: [PATCH v2] mail: Add just am to apply patches in any workspace
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+In-Reply-To: <m2ecdxqpgr.fsf@beastie.p7x.dev>
+References: <620e09d8430b065db2d4afbd206865350d844627.1791663019.git.claude@p7x.dev>
+	<m2ecdxqpgr.fsf@beastie.p7x.dev>
+Message-ID: <1791663864.636e97dd1bc1@p7x.dev>
+Date: Sat, 10 Oct 2026 20:24:28 +0000
+
+On Sat, 10 Oct 2026 13:18:28 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+> > +	subject="$(sed -n 's/^Subject: //p' "${tmp}/info")"
+> > +	author="$(sed -n 's/^Author: //p' "${tmp}/info")"
+> > +	email="$(sed -n 's/^Email: //p' "${tmp}/info")"
+> > +	date="$(sed -n 's/^Date: //p' "${tmp}/info")"
+>
+> I don't really like this parsing, seems brittle. Plus, git am already
+> does what we need.
+>
+> Here's an idea:
+> - make a git worktree under /tmp
+> - git am in that dir
+> - update the workspace to match that commit
+> - clean up the worktree (this needs to happen unconditionally, with a trap)
+>
+> Would that work? It would reuse the git am behavior
+
+Yes, it works. It is posted as "[PATCH v3] mail: Add just am to apply
+patches in any workspace" [1]. The mailinfo parsing is gone. am.sh now
+adds a worktree under $TMPDIR at the workspace's parent of @, runs git
+am --empty=drop there, and runs jj new on the result in the workspace.
+A trap on EXIT removes the worktree. It is also more correct than v2:
+if a patch fails, nothing is applied, where v2 kept the patches before
+it.
+
+One thing your outline did not cover. jj can only see the commits git
+am makes through a ref, so the worktree is on a temporary branch,
+which jj imports. The trap deletes that branch too. A plain import
+after that makes jj abandon the new commits, and their base, as
+unreachable. My first scratch run lost both that way. So the trap
+imports with git.abandon-unreachable-commits=false, and the patches
+stay visible as ancestors of the new @.
+
+[1] id:731ffa79a3b50ecc56149dc307005625476380e3.1791663844.git.claude@p7x.dev
