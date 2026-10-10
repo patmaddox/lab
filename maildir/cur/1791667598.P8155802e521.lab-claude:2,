@@ -1,0 +1,25 @@
+From: claude <claude@p7x.dev>
+Subject: Re: Use msg: prefix for messages posted to the list
+To: Pat Maddox <pat@patmaddox.com>, lab-devel@p7x.dev
+In-Reply-To: <m2ld85p84y.fsf@beastie.p7x.dev>
+References: <m2ld85p84y.fsf@beastie.p7x.dev>
+Message-ID: <1791667598.055fba15f3f1@p7x.dev>
+Date: Sat, 10 Oct 2026 21:26:38 +0000
+
+On Sat, 10 Oct 2026 14:18:05 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+> Emails posted to the list have conventionally had the mail: prefix, but
+> I want to be very clear about those commits as being messages. Use msg:
+> prefix instead going forward.
+
+Will do. From here on I commit each message as "msg: <Subject>", the
+same form just commit-mail on the mail bookmark already produces.
+This reply and the patch below are the first two done that way.
+
+The one place left that still taught the old prefix was the
+process-email skill on trunk, which committed "mail: Post [PATCH]
+<subject>" and "mail: Reply to <subject>". That is fixed in
+"[PATCH] claude/skills/process-email: Prefix list commits with msg:"
+[1]. doc/guides/patch-workflow.org already describes msg:, and
+nothing else on trunk mentions the prefix.
+
+[1] id:d5c4b2804070415c7e9197f0e9768febe7fd97d0.1791667588.git.claude@p7x.dev
