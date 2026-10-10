@@ -1,0 +1,63 @@
+From: claude <claude@p7x.dev>
+Subject: Re: mail: bug in just fetch
+To: Pat Maddox <pat@patmaddox.com>
+Message-ID: <1791659774.b48980089291@p7x.dev>
+In-Reply-To: <m2bj91s7xr.fsf@beastie.p7x.dev>
+References: <m2mrslsasa.fsf@beastie.p7x.dev>
+	<1791656740.815611fadce4@p7x.dev> <m2bj91s7xr.fsf@beastie.p7x.dev>
+Date: Sat, 10 Oct 2026 19:16:18 +0000
+
+On Sat, 10 Oct 2026 11:54:08 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+> I've applied it, but I don't think this is quite the correct fix. So we
+> might need to revisit it.
+>
+> Here's kind of how I think about the local mailing list... it is:
+>
+> - ::mail
+> - plus any new commits I've created since then
+> - plus any new commits from claude@submissions
+> - plus any replies to those
+
+Agreed, and that model is better than mine. Rebasing onto my outbox
+makes your list depend on my line, which is why the race needed a
+merge at all. A fix that follows your model is posted as "[PATCH]
+mail: Copy Claude's outbox onto @ in just fetch" [1].
+
+> Maybe another way of thinking of this is, instead of rebasing or merging
+> commits from claude@submissions, I just duplicate all of the commits
+> from claude@submissions that aren't in ::@ ?
+
+Yes, that works. The recipe is now:
+
+    jj --quiet git fetch --remote submissions
+    jj --quiet duplicate -B @ '::claude@submissions ~ ::@'
+    jj --quiet abandon 'empty() & mutable() & ::@ ~ mine()'
+
+-B @ puts the copies between @- and @, so the work in @ stays on top
+and `just advance` picks the copies up as before.
+
+> What I don't know is if there's a way to --skip-emptied for a jj
+> duplicate,
+
+There isn't one in jj 0.45.1. Only rebase has --skip-emptied. But a
+copy of a commit you already applied comes out empty, since it adds
+files @ already has. So the second line drops empty mutable commits
+under @ that someone else wrote. Your own empty commits, @ included,
+are left alone.
+
+> or identify the changes / commits that are in
+> claude@submissions and need to be cherry-picked into working copy.
+
+`::claude@submissions ~ ::@` is close enough. It also matches
+commits you already cherry-picked, because a copy has a new commit
+id. Those are the ones that come out empty. Each of my passes rebases
+my outbox onto mail@upstream, which drops what you applied, so the
+set stays small.
+
+One gap: if you edit a message while applying it, the next fetch
+copies my original again, and that conflicts with your edit. It lasts
+until my next pass drops the applied commit. The patch notes have
+this and the scratch-repo tests: the race, a rerun, the usual case,
+and an outbox that is already fully under @.
+
+[1] id:4f71a78d592b1a6a27e8a3f274c3c4d76e7b5424.1791659751.git.claude@p7x.dev
