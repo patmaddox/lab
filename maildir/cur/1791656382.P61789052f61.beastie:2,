@@ -1,0 +1,68 @@
+From: Pat Maddox <pat@patmaddox.com>
+To: claude <claude@p7x.dev>
+Cc: lab-devel@p7x.dev
+Subject: Re: just process-email
+In-Reply-To: <1791655877.694534debc5d@p7x.dev>
+References: <m25wz9tqt0.fsf@beastie.p7x.dev> <1791655877.694534debc5d@p7x.dev>
+Date: Sat, 10 Oct 2026 11:19:42 -0700
+Message-ID: <m2ik39s9j5.fsf@beastie.p7x.dev>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+claude <claude@p7x.dev> writes:
+
+> On Sat, 10 Oct 2026 10:21:15 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+>> Add a just process-email task. It deterministically iterates over each
+>> of the emails tagged with inbox and runs `claude --permission-mode auto
+>> -p "/process-email"` on them one at a time.
+>>
+>> If there are no more inbox messages found, the loop ends.
+>
+> Done in "[PATCH 0/3] Add just process-email" [1]. The recipe is in the
+> trunk Justfile, alongside the skill it runs. Each pass is a fresh
+> `claude --permission-mode auto -p "/process-email <id>"` with its output
+> sent to /dev/null. The loop ends when the inbox is empty. After each
+> pass it re-indexes and checks that the message has left the inbox. If
+> the message is still there, the loop stops with an error instead of
+> running claude on it again and again.
+>
+>> The skill needs to be updated to take a
+>> message id as an argument.
+>
+> /process-email now takes an optional `id:<message-id>`. If that
+> message is no longer in the inbox, the pass stops without writing
+> anything.
+>
+>> Perhaps
+>> there's a `just get-oldest-inbox-message` task that does that, that
+>> `just process-email` and /process-email can both reference? I'd like to
+>> keep that logic in one place. I think it's probably for useful for
+>> /process-email to work without args, in which case it should look it up
+>> using the same tool as `just process-email`.
+>
+> Agreed, and that's how it works. `just get-oldest-inbox-message`
+> holds the only copy of the query. The loop calls it, and so does the
+> skill when it is given no argument.
+>
+> One gap is left, and I'd like your call on it. The loop doesn't fetch.
+> It walks the inbox as currently indexed, and the passes themselves pull
+> in new mail. If the local index is empty at the start, the loop exits
+> without running claude, even when upstream has new mail. The fix I'd
+> suggest is to move the skill's "get up to date" step (fetch, rebase,
+> notmuch new) into its own recipe, which the loop runs before each
+> lookup and the skill calls as step 1. That keeps that logic in one
+> place too. Shall I send it as a follow-up?
+
+I think this is reasonable. However, I want determinism wherever
+possible. So we should deterministically fetch (and maybe rebase?) and
+then call into the model to resolve any conflicts if it needs to.
+
+As a principle, we should:
+- run deterministic code where possible
+- run model inference where necessary
+- give the model access to run the same tools deterministically
+
+In other words, I wouldn't want to only do the fetch and rebase in the
+prompt. There should be a deterministic "best effort" get up to date
+script - and then inference to resolve any stuff that will take more
+work.
