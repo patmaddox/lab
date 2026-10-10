@@ -1,0 +1,137 @@
+From: claude <claude@p7x.dev>
+Subject: Re: claude: self-improve skill
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+In-Reply-To: <m2zewlv99t.fsf@beastie.p7x.dev>
+References: <m2zewlv99t.fsf@beastie.p7x.dev>
+Message-ID: <1791649807.f686d0da47e0@p7x.dev>
+Date: Sat, 10 Oct 2026 16:30:11 +0000
+
+On Sat, 10 Oct 2026 08:57:02 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+> /self-improve should review the claude logs for any of these conditions,
+> and look for opportunities to add / update / refactor / delete
+> components in this repo.
+
+Spec sketch below. No code yet; I'd like your call on the open points
+at the end before writing the skill.
+
+* Input
+
+Session transcripts in ~/.claude/projects/-home-claude-lab-default-jj/,
+one <uuid>.jsonl per session, plus <uuid>/subagents/agent-*.jsonl.
+Records are user/assistant/system/attachment; assistant content holds
+text, thinking and tool_use blocks, and tool_result comes back on the
+user side. Six sessions exist today.
+
+These only outlive a jail rebuild once "[PATCH 0/2] jails: Persist
+lab-claude's Claude state" [1] lands, so that series is a prerequisite
+in practice.
+
+jq, python3 and claude-code-log are not installed in the jail. Either
+we add jq, or subagents read the JSONL directly. I lean toward jq: a
+pre-pass that drops thinking and long tool output keeps each subagent
+small.
+
+* What it looks for
+
+Friction signals, cheapest first:
+
+- tool calls that failed and were retried in a different form (e.g.
+  GNU flags on FreeBSD, then the BSD form);
+- your corrections ("no", "don't", "instead") and undo operations
+  (jj op restore, jj undo, jj abandon of fresh work);
+- steps the model did by hand that a skill or script nearly covers,
+  i.e. the same command sequence across several sessions;
+- instructions in CLAUDE.md or a skill that the transcripts show being
+  ignored, contradicted, or never needed (candidates for delete).
+
+A concrete one from this pass: process-email's trunk rebase swept up my
+mail outbox commits because mail@upstream had moved since the last
+pass, so "~ mail@upstream::" no longer excluded them. I undid it with
+jj op restore and rebased the outbox first. That is exactly the kind
+of thing /self-improve should surface as a patch to the skill.
+
+* How it works
+
+1. Pick sessions: those since the last run. The last run is recorded
+   as a file (e.g. .self-improve/last-run with the newest session id
+   reviewed), not inferred from model output, per "Own the loop".
+2. Fan out one read-only subagent per session. Each writes findings to
+   a named file of known shape: signal, evidence (session id + record
+   uuid), affected component, proposed action
+   (add/update/refactor/delete).
+3. The parent validates those files, merges duplicates across
+   sessions, and ranks by recurrence. One-off friction is reported but
+   not acted on.
+4. For the top findings, the parent writes changes as jj commits on
+   trunk@upstream, one logical change each, and posts them to the list
+   as a series. Nothing is edited in place; you review everything.
+   Findings not acted on go in the cover letter.
+
+* Shape
+
+.claude/skills/self-improve/SKILL.md with
+"disable-model-invocation: true", matching process-email. Per the
+docs that keeps it out of the model's context and user-only.
+(Note that "user-invocable: false" is the opposite: hidden from /,
+still model-callable.)
+
+> Sketch a brief spec of what this could look like. Additionally, research
+> to see what existing skills or techniques exist already, that we can use
+> off-the-shelf, or learn from and incorporate into a custom component.
+
+Built into Claude Code:
+
+- /insights reports friction across recent sessions and suggests
+  CLAUDE.md additions. Reports only. Cheap first pass worth running
+  by hand to see whether it finds what we care about.
+- /fewer-permission-prompts mines transcripts and writes a settings
+  allowlist. Same pattern as ours, but it writes in place.
+- Hooks: SessionEnd gets transcript_path, so a hook could append each
+  finished session to a queue file. That is a cleaner step 1 than
+  scanning by mtime.
+- Auto memory writes notes under ~/.claude/projects/*/memory/ without
+  review. I'd turn it off (autoMemoryEnabled: false) so learning goes
+  through patches only.
+- Anthropic's skill-creator (github.com/anthropics/skills) drafts,
+  evals and revises skills. Usable off-the-shelf when a finding calls
+  for a new skill.
+
+Community:
+
+- claude-reflect (github.com/BayramAnnakov/claude-reflect): hooks
+  catch correction phrases into a queue; /reflect walks them with
+  approve/edit/skip; --scan-history mines old transcripts;
+  /reflect-skills drafts skills from repeated requests. Closest to
+  what you describe. Borrow the queue, history scan and dedupe; skip
+  its in-place CLAUDE.md writes.
+- reflect-skill-claude (github.com/hansvangent/reflect-skill-claude):
+  extract, then audit config against actual behavior, then compress
+  CLAUDE.md. The audit and compress phases map to our "delete"
+  action.
+- claude-code-log (github.com/daaain/claude-code-log): JSONL to
+  Markdown/HTML. Needs Python; jq covers what we need.
+
+Research:
+
+- ExpeL (arXiv 2308.10144) keeps a lesson list edited with
+  add/upvote/downvote/edit rather than append-only. That is the right
+  model for CLAUDE.md: revise rules, don't just pile them up.
+- Voyager (arXiv 2305.16291) only admits skills that pass
+  verification. For us: a proposed script or skill change ships with
+  the test that shows it works.
+- Agent Workflow Memory (arXiv 2409.07429) turns repeated action
+  sequences into reusable workflows. That is the "same commands across
+  sessions" signal above.
+
+Open points for you:
+
+- Scope of input: only this repo's sessions, or also the jail's other
+  projects?
+- jq in the jail, or subagents on raw JSONL?
+- A SessionEnd hook queue, or just "sessions since last run"?
+- Disable auto memory now, as its own patch?
+
+If the shape suits you, I'll send the skill as a series.
+
+[1] id:cover.1791649241.git.claude@p7x.dev
