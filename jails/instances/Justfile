@@ -2,4 +2,6 @@ help:
   just -l
 
 init name:
-  ../tools/init-instance/init-instance.sh {{name}}
+  test ! -e {{name}}
+  cp -R ../templates/basic {{name}}
+  sed -i '' -e 's/%NAME%/{{name}}/g' {{name}}/jail.conf
