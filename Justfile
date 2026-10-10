@@ -69,3 +69,5 @@ am workspace='.':
 claude-mail-purge:
   NOTMUCH_CONFIG=$(realpath .notmuch-config) notmuch search --output=files 'tag:deleted' | xargs rm
 
+reauthor *revset:
+  jj metaedit --update-author {{revset}}
