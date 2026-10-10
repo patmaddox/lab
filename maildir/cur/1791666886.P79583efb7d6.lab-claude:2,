@@ -1,0 +1,134 @@
+Message-ID: <e38adbdc9cafc8f70ff53e025c9763e9c41e7a72.1791666882.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Date: Sat, 10 Oct 2026 21:14:14 +0000
+Subject: [PATCH] notmuch: Tag patches reported committed
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+Change-Id: louvprnwkoxmwzywloqvvnqksswtqvxy
+
+Patches are applied from the list without a reply from the maintainer,
+so the review queue cannot drop them by tag, and committed patches
+stay in it until someone checks trunk by hand.
+
+A message that reports a patch committed names it in a Committed
+header, as just committed on the mail branch writes.  Deriving the
+tag from that header, like replied from In-Reply-To, keeps it a pure
+function of the list: it needs no parsing of prose, comes back the
+same when the database is rebuilt, and disappears if the report is
+dropped.  The review queue can then exclude tag:committed.
+---
+This reads the header that "[PATCH] mail: Add just committed to report
+patches trunk took" writes on the mail branch, posted next.  The two
+apply to different branches and either is harmless without the other.
+
+The In-Reply-To parser becomes header_ids, which takes the header's
+name, so Committed reuses it rather than copying it.
+
+Tested against a scratch copy of the list with its own notmuch
+database: the four patches trunk took unchanged were tagged
+committed, the replied and inbox tags came out identical to the
+current script's, and removing one report removed its tag on the next
+run.
+
+change-id: louvprnwkoxmwzywloqvvnqksswtqvxy
+
+ dotfiles/notmuch/hooks/mail-tag.sh | 44 ++++++++++++++++++------------
+ dotfiles/notmuch/hooks/post-new    |  2 +-
+ 2 files changed, 27 insertions(+), 19 deletions(-)
+
+diff --git a/dotfiles/notmuch/hooks/mail-tag.sh b/dotfiles/notmuch/hooks/mail-tag.sh
+index 269caaf..334726b 100755
+--- a/dotfiles/notmuch/hooks/mail-tag.sh
++++ b/dotfiles/notmuch/hooks/mail-tag.sh
+@@ -2,16 +2,18 @@
+ #
+ # mail-tag.sh -- derive notmuch tags from the contents of the list.
+ #
+-# The sent, inbox and replied tags are recomputed from the messages on
+-# every run, so the database holds no state of its own: rebuild it from
+-# the maildir and the same tags come back.
++# The sent, inbox, replied and committed tags are recomputed from the
++# messages on every run, so the database holds no state of its own:
++# rebuild it from the maildir and the same tags come back.
+ #
+-#   sent     from the user (notmuch user.primary_email or other_email)
+-#   inbox    from someone else, and the user has not replied to it
+-#   replied  from someone else, and the user has replied to it
++#   sent       from the user (notmuch user.primary_email or other_email)
++#   inbox      from someone else, and the user has not replied to it
++#   replied    from someone else, and the user has replied to it
++#   committed  a patch that a message on the list reports committed
+ #
+ # "Replied to" means a message from the user names it in In-Reply-To.
+-# Drafts get none of these tags.
++# "Reports committed" means a message from anyone names it in a
++# Committed header.  Drafts get none of these tags.
+ #
+ # Runs from the notmuch post-new hook, so notmuch new applies it.
+ 
+@@ -25,12 +27,17 @@ main() {
+ 	me="$(me_query)"
+ 
+ 	{
++		echo "-committed -- *"
+ 		echo "-sent -inbox -replied -- ${drafts}"
+ 		echo "+sent -inbox -replied -- (${me}) and not ${drafts}"
+ 		echo "-sent +inbox -replied -- not (${me}) and not ${drafts}"
+-		replied_ids "${me}" | while read -r id; do
++		header_ids "(${me}) and not ${drafts}" in-reply-to |
++		    while read -r id; do
+ 			echo "+replied -inbox -- id:\"${id}\" and not (${me}) and not ${drafts}"
+ 		done
++		header_ids "not ${drafts}" committed | while read -r id; do
++			echo "+committed -- id:\"${id}\" and not ${drafts}"
++		done
+ 	} | notmuch tag --batch
+ }
+ 
+@@ -48,21 +55,22 @@ $(notmuch config get user.other_email 2>/dev/null | tr ';' '\n')"
+ 	' || die "no user address: set notmuch user.primary_email"
+ }
+ 
+-# Message-IDs the user has replied to, from In-Reply-To of their mail.
+-replied_ids() {
+-	notmuch search --output=files --format=text0 \
+-	    "(${1}) and not ${drafts}" |
+-	    xargs -0 -r awk '
+-		FNR == 1 { in_header = 1; irt = 0 }
++# The Message-ID in the header <name>, given in lower case, of each
++# message the query matches: In-Reply-To names the message replied
++# to, and Committed the patch reported committed.
++header_ids() {
++	notmuch search --output=files --format=text0 "${1}" |
++	    xargs -0 -r awk -v name="${2}:" '
++		FNR == 1 { in_header = 1; want = 0 }
+ 		!in_header { next }
+ 		/^$/ { in_header = 0; next }
+-		tolower($0) ~ /^in-reply-to:/ { irt = 1; grab($0); next }
+-		irt && /^[ \t]/ { grab($0); next }
+-		{ irt = 0 }
++		index(tolower($0), name) == 1 { want = 1; grab($0); next }
++		want && /^[ \t]/ { grab($0); next }
++		{ want = 0 }
+ 		function grab(s) {
+ 			if (match(s, /<[^>]+>/)) {
+ 				print substr(s, RSTART + 1, RLENGTH - 2)
+-				irt = 0
++				want = 0
+ 			}
+ 		}
+ 	' | sort -u
+diff --git a/dotfiles/notmuch/hooks/post-new b/dotfiles/notmuch/hooks/post-new
+index 0fa95b4..3f1e9be 100755
+--- a/dotfiles/notmuch/hooks/post-new
++++ b/dotfiles/notmuch/hooks/post-new
+@@ -1,3 +1,3 @@
+ #!/bin/sh
+-# Derive sent, inbox and replied from the list's contents.
++# Derive sent, inbox, replied and committed from the list's contents.
+ "$(dirname "$0")/mail-tag.sh"
+
+base-commit: 0065694276a8a5b797d288c72be944f4721f326f
+-- 
+2.56.0
+
