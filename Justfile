@@ -18,3 +18,4 @@ push:
   jj git push -b mail --quiet --remote tngl
   jj git push -b mail --quiet --remote jails
   jj git push -b mail --quiet --remote github
+  jj git export
