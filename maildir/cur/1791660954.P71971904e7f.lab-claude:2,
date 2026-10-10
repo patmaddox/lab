@@ -1,0 +1,125 @@
+Message-ID: <2c8b7070791728684174b6d28323c100302da4f2.1791660948.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Date: Sat, 10 Oct 2026 19:35:16 +0000
+Subject: [PATCH] mail: Add applied.sh to find patches trunk applied
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+Change-Id: vmtxrlwvnlnwstpzskqwytqmwvskmonl
+
+Pat applies patches from the list without replying to each one, so
+nothing on the list says which patches landed, and the review queue
+cannot be cleared without checking trunk by hand.
+
+The change id cannot make the link, because git am drops it and the
+applied commit gets a new one.  The diff survives, though: git
+patch-id --stable gives a patch and the commit it became the same id
+even after git am, a rebase, or a reworded message.  Matching on it
+needs nothing extra in Pat's commits, and the answer is the same on
+every run.
+
+A patch edited before it was applied gets a new id and is not found;
+those still need a person, or a reviewer, to say so.
+---
+change-id: vmtxrlwvnlnwstpzskqwytqmwvskmonl
+
+Run over the last 40 trunk commits, it finds three patches:
+
+  $ libexec/mail/applied.sh upstream/trunk~40..upstream/trunk
+  147a4ac4...1791648499.git.claude@p7x.dev 1fe9623246c6...
+  68c95d87...1791648499.git.claude@p7x.dev bdfce20e096a...
+  355ffbc8...1791624124.git.claude@p7x.dev 745d74621709...
+
+"[PATCH] zib: Add hello-lab-devel" still matches although its
+message was reworded on the way in.  "Reply to all in
+process-email" was edited before it was applied, so it does not.
+It takes about 0.2s for the 43 patches on the list.
+
+ libexec/mail/applied.sh | 74 +++++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 74 insertions(+)
+ create mode 100755 libexec/mail/applied.sh
+
+diff --git a/libexec/mail/applied.sh b/libexec/mail/applied.sh
+new file mode 100755
+index 0000000..b42584b
+--- /dev/null
++++ b/libexec/mail/applied.sh
+@@ -0,0 +1,74 @@
++#!/bin/sh
++#
++# applied.sh -- find the patches on the list that a range of commits applied.
++#
++#     applied.sh <revision range> [notmuch query]
++#
++# Prints one line per patch whose diff a commit in the range carries:
++#
++#     <message-id> <commit>
++#
++# A patch and its commit match when git patch-id --stable gives them
++# the same id.  That id hashes the diff alone, ignoring whitespace,
++# line numbers, and the commit message, so a patch still matches after
++# git am, a rebase, or a reworded message.  A patch edited before it
++# was applied gets a new id and does not match.
++#
++# The change id cannot tie them instead: git am drops it, and the
++# applied commit gets a new one.
++#
++# The range is git's, e.g. upstream/trunk~20..upstream/trunk.  The
++# query picks the messages to check, all patches on the list by
++# default.  A cover letter carries no diff and never matches.
++
++set -eu
++set -o pipefail
++
++readonly PROGNAME="${0##*/}"
++
++commits=""
++
++err() {
++	echo "${PROGNAME}: ${*}" >&2
++}
++
++die() {
++	err "${@}"
++	exit 1
++}
++
++usage() {
++	die "usage: ${PROGNAME} <revision range> [notmuch query]"
++}
++
++main() {
++	local range query
++	[ "${#}" -ge 1 ] && [ "${#}" -le 2 ] || usage
++	range="${1}"
++	query="${2:-subject:\"[PATCH\"}"
++
++	commits="$(mktemp "${TMPDIR:-/tmp}/${PROGNAME}.XXXXXX")"
++	trap 'rm -f "${commits}"' EXIT
++
++	git log --no-merges --no-color -p "${range}" -- |
++	    git patch-id --stable | LC_ALL=C sort >"${commits}"
++
++	patch_ids "${query}" | LC_ALL=C sort |
++	    LC_ALL=C join -o 1.2,2.2 - "${commits}"
++}
++
++# "<patch-id> <message-id>" for each message the query matches that
++# carries a diff.
++patch_ids() {
++	local query id pid
++	query="${1}"
++
++	notmuch search --output=messages "${query}" | while read -r id; do
++		pid="$(notmuch show --format=raw "${id}" |
++		    git patch-id --stable | cut -d' ' -f1)"
++		[ -n "${pid}" ] || continue
++		echo "${pid} ${id#id:}"
++	done
++}
++
++main "${@}"
+
+base-commit: adfead7e79604b57c15a09626b0895d6028e97bf
+-- 
+2.56.0
+
