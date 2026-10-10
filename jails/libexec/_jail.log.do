@@ -14,9 +14,9 @@ fi
 
 readonly jailsdir=$(realpath $(dirname $(realpath ${0}))/..)
 
-redo-ifchange instance.conf ${jailsdir}/libexec/jail.subr
 . instance.conf
 . ${jailsdir}/libexec/jail.subr
+redo-ifchange instance.conf ${jailsdir}/libexec/jail.subr ${extra_deps:-}
 readonly PKGBASE_CONF="${jailsdir}/share/pkgbase.conf"
 readonly PKGBASE_PACKAGES="${pkgbase_sets:-FreeBSD-set-base-jail} ${pkgbase_extras:-}"
 readonly PACKAGES="${packages:-}"
@@ -31,6 +31,7 @@ main() {
 	_jail_start
 	create_groups
 	create_users
+	install_login_conf
 	# clone_repo
 	# bootstrap
 	# ready
@@ -124,6 +125,26 @@ add_user() {
 		echo "making new user: ${username} with uid: ${uid}"
 		_jail_exec pw user add -n ${username} -u ${uid} -g ${username} -m -s sh
 	fi
+}
+
+# Install the instance's login_conf as every user's ~/.login_conf,
+# which login(1) and jexec -l apply regardless of shell.
+install_login_conf() {
+	local _username _uid _gid _rest
+
+	if [ ! -f login_conf ]; then
+		return
+	fi
+
+	while IFS=: read -r _username _uid _gid _rest; do
+		if [ -n "${_username}" ] && [ -n "${_uid}" ] && [ -n "${_gid}" ]; then
+			echo "installing login_conf for ${_username}"
+			doas install -o ${_uid} -g ${_gid} -m 0644 login_conf \
+			    ${rootdir}/home/${_username}/.login_conf
+		fi
+	done <<EOF
+${users:-}
+EOF
 }
 
 clone_repo() {

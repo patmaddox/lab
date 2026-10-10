@@ -1,0 +1,32 @@
+# Installed as ~/.login_conf for each jail user; see login.conf(5).
+#
+# Matches what dotfiles/emacs/lisp/claude-code/claude-jail.sh forwards,
+# so Claude behaves the same however it starts.
+#
+# BUN_JSC_useConcurrentGC=0 works around a kernel bug that freezes
+# Claude Code:
+# https://bugs.freebsd.org/bugzilla/show_bug.cgi?id=298878
+# https://bugs.freebsd.org/bugzilla/show_bug.cgi?id=299200
+#
+# getcap(3) does not allow comments inside a record, so they all
+# live up here.
+
+me:\
+	:setenv=\
+	BUN_JSC_useConcurrentGC=0,\
+	CLAUDE_CODE_DISABLE_ALTERNATE_SCREEN=1,\
+	CLAUDE_CODE_DISABLE_AGENT_VIEW=1,\
+	CLAUDE_AX_SCREEN_READER=1,\
+	CLAUDE_CODE_DISABLE_AUTO_MEMORY=1,\
+	CLAUDE_CODE_DISABLE_BG_EXIT_HANDOFF=1,\
+	CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1,\
+	DO_NOT_TRACK=1,\
+	DISABLE_UPDATES=1,\
+	DISABLE_EXTRA_USAGE_COMMAND=1,\
+	CLAUDE_CODE_DISABLE_MOUSE=1,\
+	CLAUDE_CODE_DISABLE_TERMINAL_TITLE=1,\
+	CLAUDE_CODE_DISABLE_VIRTUAL_SCROLL=1,\
+	CLAUDE_CODE_ENABLE_PROMPT_SUGGESTION=false,\
+	CLAUDE_CODE_GLOB_NO_IGNORE=false,\
+	CLAUDE_CODE_NATIVE_CURSOR=1,\
+	USE_BUILTIN_RIPGREP=0:
