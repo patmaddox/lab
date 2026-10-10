@@ -1,0 +1,271 @@
+Message-ID: <52721987852790e278d57f15f97f9a83ea3a499a.1791667377.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Date: Sat, 10 Oct 2026 21:22:44 +0000
+Subject: [PATCH] doc: Add a guide to the patch workflow
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+Change-Id: wsooknwokoxxmomnkxyssuyuswlplvvo
+
+The zib on the patch review workflow records the design and the
+reasoning behind it, but parts of it describe tooling that was never
+built or that has since changed.  An operator who wants to run the
+workflow has to piece the real interface together from scripts,
+Justfiles on two branches, notmuch hooks and the process-email skill.
+
+This guide collects that interface in one place, for the contributor,
+moderator and maintainer roles, taken from the code as it stands.
+---
+change-id: wsooknwokoxxmomnkxyssuyuswlplvvo
+
+Notes for review:
+
+The guide covers only what is on trunk and on the mail branch's
+Justfile.  Work still only on the list is left out: archiving, the
+committed tag and just committed, and just process-email.  It can
+grow as each lands.
+
+doc/mail-workflow.md predates this setup.  It names a claude/mail
+bookmark, a mail/ maildir and saved searches that the tags no longer
+produce.  I left it alone so this patch stays one change.  Retiring
+it, or pointing it here, could follow if you want that.
+
+The repo root's .notmuch-config also points at an old path and an
+old hook_dir.  The guide uses the packaged sample instead.
+
+ doc/guides/patch-workflow.org | 222 ++++++++++++++++++++++++++++++++++
+ 1 file changed, 222 insertions(+)
+ create mode 100644 doc/guides/patch-workflow.org
+
+diff --git a/doc/guides/patch-workflow.org b/doc/guides/patch-workflow.org
+new file mode 100644
+index 0000000..fd6616c
+--- /dev/null
++++ b/doc/guides/patch-workflow.org
+@@ -0,0 +1,222 @@
++#+TITLE: Patch workflow
++
++How to run the lab-devel patch workflow with the tooling that exists
++today.  zib/patch-review-workflow.org gives the reasoning behind it.
++
++* Model
++- The list is a maildir, =maildir/=, on the =mail= bookmark.  To send
++  a message, deliver it into the maildir, commit it, and push.  There
++  is no SMTP.
++- =trunk= and =mail= share no history.  Each has its own jj workspace
++  in one repo.
++- =upstream= (=/data/lab.git= in a jail) holds the canonical =trunk=
++  and =mail=.  Only the maintainer moves them.
++- =submissions= (=/data/lab-submissions.git=) is the contributor's
++  outbox.  A contributor pushes one bookmark there, named for their
++  login, which holds message commits on top of =mail=.
++
++| Path               | Workspace | Based on |
++|--------------------+-----------+----------|
++| =~/lab/default.jj= | default   | =trunk=  |
++| =~/lab/mail.jj=    | mail      | =mail=   |
++
++* Setup
++** notmuch
++#+BEGIN_SRC sh
++cd ~/lab/default.jj/dotfiles/notmuch
++just install
++#+END_SRC
++
++This installs the hooks into =~/.config/notmuch/default/hooks= and
++copies =notmuch-config.sample= to =~/.notmuch-config= if that file
++does not exist.  Set your identity, then index:
++
++#+BEGIN_SRC sh
++notmuch config set user.name "Your Name"
++notmuch config set user.primary_email you@example.com
++notmuch new
++#+END_SRC
++
++The sample config sets these, and the workflow depends on them:
++- =database.mail_root= is =lab/mail.jj/maildir=.
++- =maildir.synchronize_flags= is false, so notmuch never renames
++  files on the list.
++- =new.tags= is empty, so the hook sets every tag.
++- =index.header.changeid= is =Change-Id=, which makes =changeid:= a
++  search term.
++
++** Contributor jail
++=~claude/bootstrap.sh= (from jails/instances/lab-claude/dist) sets up
++everything above.  It clones =upstream= into =~/lab/default.jj=, adds
++=submissions= as a remote and as the default push remote, tracks
++=trunk@upstream= and =mail@upstream=, adds the mail workspace at
++=~/lab/mail.jj=, installs the notmuch package, and takes the identity
++from =.gitconfig=.  Running it again is safe.
++
++** Emacs
++dotfiles/emacs sets =sendmail-program= to =maildir-deliver.sh=.  A
++message sent from notmuch-emacs therefore lands in the list maildir.
++
++* Tags
++=notmuch new= runs the =post-new= hook, =mail-tag.sh=, which works out
++every tag from the list itself.  The database holds no state of its
++own.  If you rebuild it, the same tags come back.
++
++| Tag       | Meaning                                                  |
++|-----------+----------------------------------------------------------|
++| =sent=    | from =user.primary_email= or =user.other_email=          |
++| =inbox=   | from someone else, and none of your mail replies to it   |
++| =replied= | from someone else, and your mail names it in In-Reply-To |
++
++Messages under =drafts/= get none of these tags.  The =pre-new= hook
++deletes drafts tagged =deleted= and nothing else.  To clear a message
++from your inbox, reply to it.  Tagging it by hand does not last.
++
++Useful searches:
++
++#+BEGIN_SRC sh
++notmuch search --sort=oldest-first tag:inbox
++notmuch search changeid:<jj change id>   # every version of a patch
++notmuch show --entire-thread=true id:<message-id>
++#+END_SRC
++
++* Sending mail
++=libexec/mail/maildir-deliver.sh= reads one message on stdin and files
++it into =$MAILDIR=, or else into notmuch's =mail_root=.  It keeps the
++From header, adds a Date if there is none, and drops a leading mbox
++=From= line.  It does not commit anything.
++
++After delivering, commit in =~/lab/mail.jj=:
++
++#+BEGIN_SRC sh
++jj diff --summary     # only "A maildir/..." lines
++just commit-mail
++#+END_SRC
++
++=just commit-mail= is in the Justfile on =mail=.  It commits each new
++file under =maildir/= on its own, as =msg: <Subject>=.  That lets the
++moderator take or leave each message separately.
++
++** Reply
++In notmuch-emacs, reply and send as usual.  Without Emacs:
++
++#+BEGIN_SRC sh
++notmuch reply --reply-to=all id:<message-id> >/tmp/reply.eml
++# Edit the file and add a Message-ID header.
++libexec/mail/maildir-deliver.sh </tmp/reply.eml
++#+END_SRC
++
++** Patch series
++Post the series as a new thread, not as a reply.  Run
++=libexec/mail/format-patch.sh= with the arguments you would give =git
++format-patch=.  It must write files, not use =--stdout=.  It adds each
++commit's jj change id to every patch, once as a =Change-Id= header and
++once as a =change-id:= line under the =---=.  =git am= drops both.
++
++#+BEGIN_SRC sh
++cd ~/lab/default.jj
++base="$(jj log -r trunk@upstream --no-graph -T commit_id)"
++head="$(jj log -r @- --no-graph -T commit_id)"
++rm -rf /tmp/series
++libexec/mail/format-patch.sh -o /tmp/series --thread=shallow \
++    --base="${base}" --to=<recipient> [--cover-letter] [-v N] \
++    "${base}..${head}"
++for p in /tmp/series/*.patch; do
++	libexec/mail/maildir-deliver.sh <"${p}"
++done
++#+END_SRC
++
++- Always pass =--base=.  It adds a =base-commit:= line.
++- If the series builds on another unmerged series, start the range at
++  that series' head.  git then adds =prerequisite-patch-id:= lines.
++- Post a revision as =-v N= in a new thread.  The change ids stay the
++  same across versions.  In the cover letter, say what changed and
++  link to v(N-1) by Message-ID.
++
++=libexec/mail/mail-send.sh= is an alternative.  It wraps =git
++send-email= with =maildir-deliver.sh= as the sendmail command, but it
++does not add change ids.
++
++* Contributor
++Claude does each pass with the =/process-email= skill in
++.claude/skills/process-email.  The skill is the full procedure.  In
++short, a pass does this:
++
++1. Fetch with =jj git fetch --all-remotes=.
++2. Rebase trunk work.  The commits to move are
++   =mine() ~ ::trunk@upstream ~ (::mail@upstream ~ root())::=.  Rebase
++   them onto =trunk@upstream= with =--skip-emptied=, then abandon any
++   patches the maintainer applied with edits.
++3. In =~/lab/mail.jj=, rebase your bookmark onto =mail@upstream= with
++   =--skip-emptied=.  If no pending mail remains, set the bookmark to
++   =mail@upstream= first.  Then run =notmuch new=.
++4. Answer the oldest =tag:inbox= message.  Post any series first, then
++   reply, citing the series.
++5. Push:
++   #+BEGIN_SRC sh
++   jj bookmark set "$(whoami)" -r @-
++   jj git push --remote submissions --bookmark "$(whoami)"
++   #+END_SRC
++
++* Moderator
++The Justfile on =mail= has the moderation recipes.  Run them in
++=~/lab/mail.jj=:
++
++| Recipe         | Does                                                       |
++|----------------+------------------------------------------------------------|
++| =just fetch=   | fetch =submissions=, copy new =claude@submissions= commits in below =@=, abandon any left empty |
++| =just summary= | show the commits in =::@ ~ ::mail=, with their files       |
++| =just advance= | move =mail= to the last described commit in =::@=          |
++| =just push=    | push =mail= to tngl, jails and github, then =jj git export= |
++
++A moderation pass:
++
++#+BEGIN_SRC sh
++just fetch
++just summary            # each commit must only add maildir/ files
++jj abandon <commit>     # reject a message
++just advance
++just push
++#+END_SRC
++
++=fetch= copies commits with =jj duplicate= rather than rebasing them.
++A message stays off the list until you advance over it.  The
++contributor's next rebase drops whatever =mail= took.
++
++The maintainer posts straight to the list.  Send from notmuch-emacs,
++then run =just commit-mail=, =just advance= and =just push=.
++
++* Maintainer
++=just am [workspace]= applies patches piped in on stdin to a jj
++workspace.  The default workspace is the current directory.  Run it
++from notmuch with =|= on a message or a thread:
++
++#+BEGIN_SRC sh
++cd ~/lab/default.jj && jj new trunk
++notmuch show --format=mbox --entire-thread=true id:<cover-id> | just am
++#+END_SRC
++
++- =@= must be empty and have one parent.  The patches go on top of
++  =@-=, and =@= then moves to a new empty change on top of them.
++- Messages with no diff are skipped, such as cover letters and
++  replies.  That lets you pipe in a whole thread at once.
++- If any patch fails, nothing is applied.
++- It works in =~/lab/mail.jj= too, which has no =.git=.
++
++Review and test, and revise the patches if needed.  To accept, move
++=trunk= to the result and run =just push=, which pushes the tracked
++bookmarks to tngl, jails and github.  To reject, abandon the commits.
++Either way, post the outcome to the thread.
++
++* Reference
++| Path                                   | Role                                 |
++|----------------------------------------+--------------------------------------|
++| libexec/mail/maildir-deliver.sh        | deliver one message into the maildir |
++| libexec/mail/format-patch.sh           | git format-patch plus change ids     |
++| libexec/mail/mail-send.sh              | git send-email into the maildir      |
++| libexec/mail/am.sh (=just am=)         | git am into a jj workspace           |
++| dotfiles/notmuch/hooks/mail-tag.sh     | derive sent, inbox, replied          |
++| dotfiles/notmuch/hooks/pre-new         | purge deleted drafts                 |
++| dotfiles/notmuch/notmuch-config.sample | required notmuch settings            |
++| .claude/skills/process-email           | contributor pass                     |
++| Justfile on =mail=                     | =commit-mail= and moderation         |
+
+base-commit: 0065694276a8a5b797d288c72be944f4721f326f
+-- 
+2.56.0
+
