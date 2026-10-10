@@ -1,0 +1,14 @@
+From: Pat Maddox <pat@patmaddox.com>
+To: lab-devel@p7x.dev
+Subject: Update stale threads
+Date: Sat, 10 Oct 2026 09:48:17 -0700
+Message-ID: <m24ietv6we.fsf@beastie.p7x.dev>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+In the course of its work, model might identify conversations that have
+outdated information. /process-email should also groom the list, and
+provide updates to any stale threads based on new information. It should
+only do so when the original thread is out of date with respect to new
+info. We don't want it to generate noise. It should provide references
+and summary information in its new replies.
