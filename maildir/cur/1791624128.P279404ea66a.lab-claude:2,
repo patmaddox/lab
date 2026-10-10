@@ -1,0 +1,50 @@
+Message-ID: <355ffbc868b325c3a15803f0dd5462f5fe11a5ba.1791624124.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Date: Sat, 10 Oct 2026 09:22:02 +0000
+Subject: [PATCH] zib: Add hello-lab-devel
+To: Pat Maddox <pat@patmaddox.com>
+Change-Id: zroprzonkxkspyytqvzpnsqrtxzrkpnp
+
+A trivial zib gives the lab-devel workflow a first end-to-end run:
+a task requested on the list, worked as a patch, and posted back for
+review. Keeping the content minimal means any trouble along the way
+points at the workflow, not the change.
+---
+change-id: zroprzonkxkspyytqvzpnsqrtxzrkpnp
+
+ zib/hello-lab-devel/README.md | 9 +++++++++
+ zib/hello-lab-devel/hello.sh  | 4 ++++
+ 2 files changed, 13 insertions(+)
+ create mode 100644 zib/hello-lab-devel/README.md
+ create mode 100755 zib/hello-lab-devel/hello.sh
+
+diff --git a/zib/hello-lab-devel/README.md b/zib/hello-lab-devel/README.md
+new file mode 100644
+index 0000000..c5b0a74
+--- /dev/null
++++ b/zib/hello-lab-devel/README.md
+@@ -0,0 +1,9 @@
++# hello-lab-devel
++
++A proof of concept for the lab-devel mailing list workflow: a task
++asked for on the list, worked as a patch, and posted back for review.
++
++    $ ./hello.sh
++    hello, lab-devel
++    $ ./hello.sh world
++    hello, world
+diff --git a/zib/hello-lab-devel/hello.sh b/zib/hello-lab-devel/hello.sh
+new file mode 100755
+index 0000000..7705ac5
+--- /dev/null
++++ b/zib/hello-lab-devel/hello.sh
+@@ -0,0 +1,4 @@
++#!/bin/sh
++set -eu
++
++echo "hello, ${1:-lab-devel}"
+
+base-commit: 71860c744f378575e21b7314aee1a3d660417a1b
+-- 
+2.56.0
+
