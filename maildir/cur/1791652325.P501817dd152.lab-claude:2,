@@ -1,0 +1,74 @@
+Message-ID: <aebdd150bfe012de3141bbf35f9e0d2524af1412.1791652315.git.claude@p7x.dev>
+In-Reply-To: <cover.1791652315.git.claude@p7x.dev>
+References: <cover.1791652315.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Date: Sat, 10 Oct 2026 15:41:22 +0000
+Subject: [PATCH v2 1/2] notmuch: Tag messages under archive/ as archived
+To: Pat Maddox <pat@patmaddox.com>
+Change-Id: stkvtnvrmywyxwmxzqnrxowmrytruwow
+
+A thread on the list never closes on its own. Someone always has the
+last word, so the other side keeps an inbox message that needs no
+answer: a patch applied without a reply, a question already settled.
+Replying just to clear the inbox adds noise and moves the open message
+to the other side.
+
+When the moderator files a message's file, unchanged, into the shared
+archive/ maildir, it closes for everyone. Because the tag comes from
+where the file lives, it lives in the mail branch like every other
+derived tag. A rebuilt database gets it back from notmuch new alone,
+and moving the file back out undoes it.
+---
+change-id: stkvtnvrmywyxwmxzqnrxowmrytruwow
+
+ dotfiles/notmuch/hooks/mail-tag.sh | 14 ++++++++++----
+ 1 file changed, 10 insertions(+), 4 deletions(-)
+
+diff --git a/dotfiles/notmuch/hooks/mail-tag.sh b/dotfiles/notmuch/hooks/mail-tag.sh
+index 269caaf..44ef44e 100755
+--- a/dotfiles/notmuch/hooks/mail-tag.sh
++++ b/dotfiles/notmuch/hooks/mail-tag.sh
+@@ -2,16 +2,19 @@
+ #
+ # mail-tag.sh -- derive notmuch tags from the contents of the list.
+ #
+-# The sent, inbox and replied tags are recomputed from the messages on
+-# every run, so the database holds no state of its own: rebuild it from
+-# the maildir and the same tags come back.
++# The sent, inbox, replied and archived tags are recomputed from the
++# messages on every run, so the database holds no state of its own:
++# rebuild it from the maildir and the same tags come back.
+ #
+ #   sent     from the user (notmuch user.primary_email or other_email)
+ #   inbox    from someone else, and the user has not replied to it
+ #   replied  from someone else, and the user has replied to it
++#   archived filed under archive/ by the moderator; never in the inbox
+ #
+ # "Replied to" means a message from the user names it in In-Reply-To.
+-# Drafts get none of these tags.
++# The moderator archives by moving a message's file, unchanged, into
++# the shared archive/ maildir, and moving it back undoes it.  Drafts
++# get none of these tags.
+ #
+ # Runs from the notmuch post-new hook, so notmuch new applies it.
+ 
+@@ -19,6 +22,7 @@ set -eu
+ set -o pipefail
+ 
+ readonly drafts='path:drafts/**'
++readonly archive='path:archive/**'
+ 
+ main() {
+ 	local me id
+@@ -31,6 +35,8 @@ main() {
+ 		replied_ids "${me}" | while read -r id; do
+ 			echo "+replied -inbox -- id:\"${id}\" and not (${me}) and not ${drafts}"
+ 		done
++		echo "-archived -- not ${archive}"
++		echo "+archived -inbox -- ${archive}"
+ 	} | notmuch tag --batch
+ }
+ 
+-- 
+2.56.0
+

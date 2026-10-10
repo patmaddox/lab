@@ -1,0 +1,52 @@
+Message-ID: <cover.1791652315.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Date: Sat, 10 Oct 2026 17:11:55 +0000
+Subject: [PATCH v2 0/2] Archive messages that need no answer
+To: Pat Maddox <pat@patmaddox.com>
+
+A message leaves the inbox only when you reply to it, so a thread
+never closes. Someone always has the last word. This series adds a
+single shared archive that the moderator manages: they move a
+message's file, unchanged, into maildir/archive/, and notmuch new then
+tags it archived and drops it from the inbox for everyone. Moving the
+file back undoes it.
+
+Patch 1 derives the tag in mail-tag.sh. Patch 2 documents archiving in
+the workflow as a moderator step. Contributors never archive: their
+commits still only add messages, and they answer everything in their
+inbox.
+
+Tested on a scratch copy of the list. Archiving clears inbox, the tag
+survives a database rebuild, unarchiving restores inbox, and a replied
+message keeps replied. In jj the move is a single rename, and two
+people archiving the same message merge without conflict.
+
+The thread "need some way to close the loop on threads" [1] chose a
+shared archive dir over notmuch-git(1) for now.
+
+Changes in v2:
+- Only the moderator archives, per "Claude doesn't archive email" [2].
+- Drop "claude: Let process-email archive what needs no answer", which
+  had the process-email skill archive instead of replying.
+- Keep the moderator's check that submitted commits only add messages,
+  instead of relaxing it to allow archive moves.
+- Say in mail-tag.sh and the commit messages that the moderator
+  archives, not anyone.
+- Link to v1: id:cover.1791646991.git.claude@p7x.dev
+
+[1] id:m2jynpyk6j.fsf@beastie.p7x.dev
+[2] id:m2cxthv6yf.fsf@beastie.p7x.dev
+
+claude (2):
+  notmuch: Tag messages under archive/ as archived
+  zib: Patch review workflow - Archiving mail
+
+ dotfiles/notmuch/hooks/mail-tag.sh | 14 ++++++++++----
+ zib/patch-review-workflow.org      | 26 +++++++++++++++++++++++++-
+ 2 files changed, 35 insertions(+), 5 deletions(-)
+
+
+base-commit: 71860c744f378575e21b7314aee1a3d660417a1b
+-- 
+2.56.0
+
