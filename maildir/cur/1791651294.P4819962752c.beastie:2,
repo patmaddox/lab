@@ -1,0 +1,11 @@
+From: Pat Maddox <pat@patmaddox.com>
+To: lab-devel@p7x.dev
+Subject: Improve the notmuch saved searches
+Date: Sat, 10 Oct 2026 09:54:54 -0700
+Message-ID: <m2zewlts0x.fsf@beastie.p7x.dev>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+I have a pretty simple notmuch tagging setup. The emacs notmuch saved
+searches config is pretty out of date at this point. Simplify it, and
+provide useful saved searches based on my tags and usage patterns.
