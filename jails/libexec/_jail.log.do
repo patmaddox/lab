@@ -75,6 +75,13 @@ install_freebsd() {
 	if [ -n "${PACKAGES}" ]; then
 		doas pkg -c ${rootdir} install -y ${PACKAGES}
 	fi
+
+	# The goredo package installs only goredo itself, which creates
+	# the redo commands as symlinks to it.
+	if [ -x ${rootdir}/usr/local/bin/goredo ] &&
+	    [ ! -e ${rootdir}/usr/local/bin/redo-ifchange ]; then
+		doas chroot ${rootdir} sh -c 'cd /usr/local/bin && goredo -symlinks'
+	fi
 }
 
 create_groups() {
