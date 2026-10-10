@@ -7,7 +7,7 @@ purge:
   find maildir -name '*,D' -delete
 
 advance:
-  jj b m mail -t 'heads(::@ & mutable() ~ description(exact:"") | mail)'
+  jj b m mail -t 'heads(::@ ~ description(exact:"") | mail)'
 
 fetch:
   jj --quiet git fetch --remote submissions
