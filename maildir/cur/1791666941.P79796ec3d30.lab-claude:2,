@@ -1,0 +1,97 @@
+From: claude <claude@p7x.dev>
+Subject: Re: Need some way of automatically marking patches as committed
+To: Pat Maddox <pat@patmaddox.com>, lab-devel@p7x.dev
+In-Reply-To: <m233udqns6.fsf@beastie.p7x.dev>
+References: <m2wlrpqs6t.fsf@beastie.p7x.dev>
+	<1791660975.12b441032675@p7x.dev> <m233udqns6.fsf@beastie.p7x.dev>
+Message-ID: <1791666936.691fc2143c82@p7x.dev>
+Date: Sat, 10 Oct 2026 21:15:41 +0000
+
+On Sat, 10 Oct 2026 13:54:49 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+> Let's focus on doing this deterministically first. That's the core
+> concept of this repo: deterministic entrypoints, with determinstic
+> behavior as much as possible. Delegate to inference when needed, and let
+> the model use the deterministic tools.
+
+Agreed. Both patches below are deterministic, with no inference
+anywhere. A patch edited before it lands is still missed, and I've
+left that for later.
+
+> What I'd like to do for this functionality is review the open patches on
+> the list. We can then calculate their change IDs, and look for a commit
+> with the same change ID.
+
+I checked this again on today's trunk, and the change id doesn't
+survive. "[PATCH v3] mail: Add just am to apply patches in any
+workspace" [1] carries change id mylnzmrtzvww, but the commit it
+became has yrowpvsnsvxz. git am never writes jj's change-id header,
+so jj assigns a new one.
+
+git patch-id --stable does the job the change id would have. It is
+computed from a patch's diff, and the commit the patch became gets
+the same id, even after a reworded message or a rebase. So it's the
+same lookup you describe, just with a different id.
+
+> Here's a question... if we apply the commit, will it apply as empty
+> because it's already been applied before? So we could just apply open
+> patches to a temporary branch, and if it's empty then it's considered
+> applied?
+
+I tried it with that same patch on trunk. Plain git am fails with
+"Patch failed at 0001". git am -3 does say "No changes -- Patch
+already applied." But that only works while no later commit has
+touched the same lines. After that it conflicts, and you can't tell
+that from a patch that was never applied. It also needs a worktree
+for every patch. Patch-id compares each patch directly against the
+commit that took it, so anything that landed later doesn't matter.
+
+> I'm not quite sure how to handle it. What I want to avoid is focusing
+> on only the N most recent commits, and thus potentially missing
+> things. In theory we are doing a graph query - we want to see if the
+> change represented by a patch is in ::trunk.
+
+That's what it does now. It hashes every commit in ::trunk, with no
+range: 1203 commits in 0.17s. Then it looks up every patch on the
+list in that set.
+
+> Also I think to do this more deterministically, we want to use a
+> header. So if a message reports a patch as being closed, it includes a
+> header referencing the patch message ID. Then scripts can look for those
+> headers and add the committed tag to those patches.
+
+Done. Each report is a reply to all on the patch, and it carries
+
+    Committed: <message-id of the patch>
+
+with the commit's hash and subject in the body. On the next run, a
+patch already named in a Committed header is skipped, so running it
+twice doesn't post anything twice.
+
+mail-tag.sh now tags committed every message that a Committed header
+names. It recomputes the tag on each run, like replied, so the tag
+goes away if the report does. That's "[PATCH] notmuch: Tag patches
+reported committed" [2]. It's on trunk because the hook lives in
+dotfiles.
+
+> This task should go in the mail branch, and only moderator will run it
+> for now.
+
+It's "[PATCH] mail: Add just committed to report patches trunk took"
+[3], against mail@upstream. From the mail workspace:
+
+    just committed          # checks ::trunk
+    just commit-mail        # one commit per report
+
+The reports come from your notmuch identity. I tested it on a scratch
+copy of the list with its own notmuch database, so nothing went to
+the real list. It reported the four patches trunk took unchanged, and
+a second run reported nothing.
+
+This replaces "[PATCH] mail: Add applied.sh to find patches trunk
+applied" [4], which only searched a range and printed its results.
+Please drop that one.
+
+[1] id:731ffa79a3b50ecc56149dc307005625476380e3.1791663844.git.claude@p7x.dev
+[2] id:e38adbdc9cafc8f70ff53e025c9763e9c41e7a72.1791666882.git.claude@p7x.dev
+[3] id:7c4aedaf56fa38f6f2b38ae562ae0d9639dbde52.1791666895.git.claude@p7x.dev
+[4] id:2c8b7070791728684174b6d28323c100302da4f2.1791660948.git.claude@p7x.dev
