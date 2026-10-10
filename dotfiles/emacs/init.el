@@ -571,6 +571,9 @@ and prefixes every line with \"> \"."
 (add-hook 'notmuch-hello-mode-hook (lambda () (display-line-numbers-mode -1)))
 ;; I only save drafts, no need to save the file locally
 (setq notmuch-fcc-dirs nil)
+;; Sending delivers into the list maildir; committing it is the transport.
+(setq message-send-mail-function #'message-send-mail-with-sendmail)
+(setq sendmail-program "/home/patmaddox/lab/default.jj/libexec/mail/maildir-deliver.sh")
 (setq notmuch-draft-tags '("+draft"))
 (setq notmuch-search-oldest-first nil)
 (setq notmuch-show-only-matching-messages t)
