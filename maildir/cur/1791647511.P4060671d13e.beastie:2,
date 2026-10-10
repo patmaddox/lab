@@ -1,0 +1,22 @@
+From: Pat Maddox <pat@patmaddox.com>
+To: lab-devel@freebsd.org
+Subject: jails: mount the claude dir and config file
+Date: Sat, 10 Oct 2026 08:51:51 -0700
+Message-ID: <m28q45wo2w.fsf@beastie.p7x.dev>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+Right now, ~claude/.claude/ is on the jail root dataset and is destroyed
+with a `just clean`. I want the claude dir to persist across jail setup.
+
+Update lab-claude jail.conf to mount /jails/data/lab-claude/dot-claude/
+to ~claude/.claude/.
+
+There's an additional question of the ~claude/.claude.json file. We can
+do the same mechanism, mounting /jails/data/lab-claude/dot-claude.json
+into place. However I think it would be more useful if we could store
+the config in a dir and just mount that, and set the config file with an
+env var.
+
+Research the .claude.json file, see if it can be moved elsewhere, and if
+there are any issues with including it in .claude/ itself.
