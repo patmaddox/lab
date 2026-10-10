@@ -15,19 +15,6 @@ after errors. Never run `just promote` or `promote.sh`.
 Only modify `mutable()` commits. Always use `--git` with `jj diff`
 and `jj show`.
 
-### Concurrency lock
-
-Multiple Claude sessions share the same working copy. Wrap all jj
-commands for a turn in a single lockf invocation:
-
-    lockf -k "$(jj root)/.jj/claude.lock" sh -c '
-      jj squash --into foo
-      jj log -r ..@ --no-graph -n 5
-    '
-
-Scripted sessions use `libexec/just/claude-run.sh` which handles
-locking automatically.
-
 ### Commit messages
 
 FreeBSD style. Subject ~50 chars, imperative mood, prefixed with
@@ -57,8 +44,7 @@ outbox). `inbox` is yours to push freely - the maintainer only reads
 from it and merges what they accept - so publishing your `claude/*`
 bookmarks there is expected and never needs approval:
 
-    lockf -k "$(jj root)/.jj/claude.lock" \
-        jj git push --remote inbox --bookmark claude/mail
+    jj git push --remote inbox --bookmark claude
 
 To act on the list, use the `check-mail` skill (`claude-mail-run` is
 the headless equivalent). One pass takes the single most important
