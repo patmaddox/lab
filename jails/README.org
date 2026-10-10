@@ -3,8 +3,8 @@
 "I'm sorry HAL, I'm afraid you can't do that." -Dave
 * setup
 #+BEGIN_EXAMPLE
-/hal/data/patmaddox/lab.git
-/hal/data/patmaddox/lab-submissions.git
+/jails/share/lab.git
+/jails/share/lab-submissions.git
 #+END_EXAMPLE
 
 Install the shared jail defaults once, before building or running any

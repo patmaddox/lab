@@ -1,5 +1,5 @@
 readonly name=$(basename $(pwd))
-readonly zroot="zroot/hal"
+readonly zroot="zroot/jails"
 readonly wroot="${zroot}/instances/${name}"
 
 # service(8) finds a jail's config by name in /etc/jail.conf.d.
