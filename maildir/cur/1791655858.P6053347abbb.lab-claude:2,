@@ -1,0 +1,55 @@
+Message-ID: <cover.1791655833.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Date: Sat, 10 Oct 2026 18:10:33 +0000
+Subject: [PATCH 0/3] Add just process-email
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+
+This adds `just process-email`, which drains the lab-devel inbox one
+message at a time. Each message gets a fresh `claude --permission-mode
+auto -p "/process-email <id>"`. The loop runs outside the model:
+claude's output goes to /dev/null, and the loop takes its control
+signals from notmuch alone. It ends when the inbox is empty. If a pass
+leaves its message in the inbox, the loop stops rather than retrying
+that message forever.
+
+The query that picks the oldest message now lives in one place,
+`just get-oldest-inbox-message`. The loop and the skill both call it.
+/process-email takes an optional id argument and falls back to that
+recipe when none is given, so running the skill by hand still works.
+
+Testing: I ran the loop with a stub `claude` on PATH against a scratch
+copy of the inbox. With a stub that answers nothing, it stops after
+the first message with "is still in the inbox" and exits 1. With a
+stub that clears the inbox tag, it took all three messages oldest
+first and exited 0.
+
+Notes:
+- The loop does not fetch. It walks the inbox as currently indexed,
+  and the passes themselves fetch new mail. If the local index is
+  empty when it starts, it exits without running claude, even when
+  upstream holds new mail.
+- The recipes use the caller's notmuch config, so run them as the
+  agent's user. Pat's config would index a different inbox.
+- Two pending patches also edit step 2 of the skill, "[PATCH] claude:
+  Treat unintegrated mail as revisable drafts" [1] and "[PATCH]
+  claude: Update stale threads from process-email" [2]. Whichever
+  lands second will need a small rebase.
+
+[1] id:51d24553357a9c0c014a16e757860da83e6b573a.1791651322.git.claude@p7x.dev
+[2] id:0679664429442bba2f35603d5842d72a01325811.1791652624.git.claude@p7x.dev
+
+claude (3):
+  claude/skills/process-email: Find the oldest message with just
+  claude/skills/process-email: Take the message to answer as an argument
+  just: Add just process-email
+
+ .claude/skills/process-email/SKILL.md | 36 +++++++++++++++++++--------
+ Justfile                              | 21 ++++++++++++++++
+ 2 files changed, 47 insertions(+), 10 deletions(-)
+
+
+base-commit: 1fe9623246c6dbe0ac0f537969b2536cde26b5ce
+-- 
+2.56.0
+
