@@ -1,0 +1,100 @@
+From: claude <claude@p7x.dev>
+Subject: Re: need some way to close the loop on threads
+To: Pat Maddox <pat@patmaddox.com>
+In-Reply-To: <m21p9xyjnb.fsf@beastie.p7x.dev>
+References: <m2jynpyk6j.fsf@beastie.p7x.dev>
+	<1791624953.28bc56c3e2bb@p7x.dev> <m21p9xyjnb.fsf@beastie.p7x.dev>
+Message-ID: <1791625669.208d76cef9dd@p7x.dev>
+Date: Sat, 10 Oct 2026 09:47:54 +0000
+
+On Sat, 10 Oct 2026 02:44:40 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+> - How does it work when a thread has multiple levels to it? Say there's
+>   a first message, and then two separate replies to it. Then replies
+>   each of those replies - so essentially two branches. Does adding this
+>   header kill the entire thread, or just the branch?
+
+As I described it, the whole thread, since notmuch tags by thread. But
+your question shows that's the wrong scope. It works better per
+message. A close header would only mean "this message needs no reply".
+Its parent is already answered by the closing message itself, so
+nothing else needs to change. Each branch then ends on its own, and a
+sibling branch stays open until someone ends it.
+
+At that scope, the header and your archive dir do the same job from
+opposite ends. The header lets the sender mark a message as needing no
+reply. The archive lets the recipient decide it needs none. More on
+that below.
+
+> - Is it possible to just add a header to an existing message? The files
+>   are in version control, so we could modify the files instead of
+>   posting a new message. Essentially we're adding metadata to existing
+>   files.
+
+It's possible, but I'd avoid it, for three reasons:
+
+- The archive would no longer match what was sent. Every message is
+  byte-for-byte what its author delivered, and a patch's headers are
+  what git am reads. Editing them in place turns the list from a
+  record into mutable state.
+
+- Two people editing the same file's headers conflict in jj. A file
+  only gets added or moved, and that merges cleanly.
+
+- notmuch won't see the edit. I tried it on a scratch copy of the
+  list: after adding a header to a file in cur/, notmuch new reported
+  "No new mail" and the header was not searchable until notmuch
+  reindex. notmuch tracks files by name, not content. mail-tag.sh
+  could read the files directly, as it does for In-Reply-To, but
+  that's working around notmuch rather than with it.
+
+Moving a file keeps the metadata in the repo without touching the
+message. That's your archive idea.
+
+> No I don't think we need this, at least not right now. I'd like to try
+> to keep things as simple as possible and derive the list state from the
+> mail branch.
+
+Agreed, dropping it.
+
+> Another idea I had was an archive dir, and so mute a thread by moving
+> messages into the archive dir. This can be done on a per-message basis,
+> and doesn't change any of the existing rules. i.e. if claude sends the
+> last message, and I archive it, it will no longer show up in my inbox
+> but claude doesn't see it as something as needing to be
+> responded. Archived messages would add the archived tag and remove inbox
+> tag.
+
+I like this better than the header, and I'd go with it alone. It
+covers both of your cases with no new message. It works per message,
+so it answers the branch question directly. It doesn't touch the
+existing rules. It's derived from the mail branch, since the path is
+part of the commit. And it covers my side too: when you reply
+"applied, thanks", I archive that message on my bookmark and push it,
+instead of answering with a reply that lands in your inbox.
+
+I checked the mechanics on the scratch copy. With maildir/archive/
+{cur,new,tmp}, moving a file there makes notmuch new report "Detected 1
+file rename". The message keeps its id and thread, and
+path:archive/** matches it. In mail-tag.sh it's one more line after
+the replied ones:
+
+    +archived -inbox -- path:archive/**
+
+One thing to decide: the archive is shared. With just the two of us
+that doesn't matter, because a message is only ever in one inbox.
+Yours holds my mail and mine holds yours. With a third participant, a
+message from you to the list sits in both our inboxes, and whoever
+archives it archives it for both. Per-user dirs (archive/pat/,
+archive/claude/) don't fix that, because a file can only be in one of
+them. Per-user state would need something like a per-user list of
+archived Message-IDs. I'd start with one shared archive/ and only
+revisit if a third person joins.
+
+If that works for you, I'll send a series that:
+
+  - adds the archived tag to dotfiles/notmuch/hooks/mail-tag.sh,
+  - updates "Indexing mail" in zib/patch-review-workflow.org, and
+  - changes the process-email skill so a message that needs no answer
+    is archived rather than replied to. The skill currently insists
+    every inbox message gets a reply, which is what keeps these
+    threads alive.
