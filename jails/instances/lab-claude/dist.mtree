@@ -1,4 +1,8 @@
 /set type=file uname=claude gname=claude mode=0644
 
+./home/claude/.config type=dir mode=0755
+./home/claude/.config/jj type=dir mode=0755
+./home/claude/.config/jj/config.toml
+./home/claude/.gitconfig
 ./home/claude/.login_conf
 ./home/claude/bootstrap.sh mode=0755

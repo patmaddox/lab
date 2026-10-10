@@ -9,20 +9,6 @@ readonly submissions=/data/lab-submissions.git
 readonly repo=${HOME}/lab/default.jj
 readonly mailws=${HOME}/lab/mail.jj
 
-# The shared repos are owned by the host user, so git refuses them
-# as dubious ownership until they are marked safe.
-_safe_directory() {
-	if ! git config --global --get-all safe.directory | grep -qxF "${1}"; then
-		git config --global --add safe.directory "${1}"
-	fi
-}
-
-_safe_directory ${upstream}
-_safe_directory ${submissions}
-
-jj config set --user user.name "$(whoami)"
-jj config set --user user.email "$(whoami)@p7x.dev"
-
 if [ ! -d ${repo} ]; then
 	mkdir -p $(dirname ${repo})
 	jj git clone --remote upstream ${upstream} ${repo}
@@ -40,10 +26,11 @@ if [ ! -d ${mailws} ]; then
 fi
 
 # notmuch hooks and config come from the same package as on any
-# developer machine; only the identity is claude's.  Set it before the
-# first notmuch new so the first tags are derived for claude.
+# developer machine; only the identity is claude's, taken from the
+# .gitconfig installed with the jail.  Set it before the first notmuch
+# new so the first tags are derived for claude.
 (cd ${repo}/dotfiles/notmuch && just install)
-notmuch config set user.name "$(whoami)"
-notmuch config set user.primary_email "$(whoami)@p7x.dev"
+notmuch config set user.name "$(git config user.name)"
+notmuch config set user.primary_email "$(git config user.email)"
 
 notmuch new

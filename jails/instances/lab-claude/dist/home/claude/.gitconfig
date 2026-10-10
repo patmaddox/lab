@@ -1,0 +1,8 @@
+[user]
+	name = claude
+	email = claude@p7x.dev
+[safe]
+	# The shared repos are owned by the host user, so git refuses them
+	# as dubious ownership unless they are marked safe.
+	directory = /data/lab.git
+	directory = /data/lab-submissions.git
