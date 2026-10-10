@@ -1,0 +1,168 @@
+Message-ID: <620e09d8430b065db2d4afbd206865350d844627.1791663019.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Date: Sat, 10 Oct 2026 19:23:03 +0000
+Subject: [PATCH v2] mail: Add just am to apply patches in any workspace
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+Change-Id: mylnzmrtzvwwzusstlqttzxtpkuumwrl
+
+Some patches on the list target the mail branch, and they belong in
+the mail workspace, which is a jj workspace with no .git of its own.
+git am needs a repo, so a patch piped from notmuch there fails.
+
+Pointing git am at the trunk workspace's .git does not help. It
+commits on top of that repo's HEAD, with trunk's tree under the
+patch, and jj then moves the trunk workspace onto those commits.
+Checking out mail in the trunk workspace instead is slow and drags
+along the build output trunk leaves behind.
+
+just am does what git am does, in the jj workspace it is given, the
+current directory by default, so a message piped from notmuch can be
+applied to either workspace from the trunk checkout. git still parses
+the mail and applies the diff, since neither needs a repo, and jj
+records each patch as a change with its author, date, and message.
+Like git am, it prints nothing when it succeeds.
+---
+change-id: mylnzmrtzvwwzusstlqttzxtpkuumwrl
+
+Usage, from the trunk checkout or a notmuch | pipe:
+
+    just am                # the current directory
+    just am ../mail.jj     # the mail workspace
+
+Tested on a scratch colocated repo with a second workspace that has
+no .git. A series thread piped as one mbox (cover letter, two
+patches) applied the two patches as two changes carrying each
+patch's author and date, printing nothing. A missing directory, or
+a non-empty @, failed with an error before anything was applied.
+
+Changes in v2:
+- Run as `just am <workspace>=.`, with the workspace given rather
+  than found from the current directory, and check that it exists
+  before applying.
+- Print nothing on success, like git am.
+- Link to v1: id:be047ef8efe89f617064a9eab24727255d5e4e0e.1791660238.git.claude@p7x.dev
+
+ Justfile           |  5 +++
+ libexec/mail/am.sh | 91 ++++++++++++++++++++++++++++++++++++++++++++++
+ 2 files changed, 96 insertions(+)
+ create mode 100755 libexec/mail/am.sh
+
+diff --git a/Justfile b/Justfile
+index a7ef001..5c96fac 100644
+--- a/Justfile
++++ b/Justfile
+@@ -60,6 +60,11 @@ dev:
+ jj-authorme revset:
+   jj metaedit --update-author -r '{{revset}}'
+ 
++# apply the patches on stdin to a jj workspace, like git am
++[no-cd]
++am workspace='.':
++  @{{justfile_directory()}}/libexec/mail/am.sh "{{workspace}}"
++
+ # purge deleted tag emails from notmuch database
+ claude-mail-purge:
+   NOTMUCH_CONFIG=$(realpath .notmuch-config) notmuch search --output=files 'tag:deleted' | xargs rm
+diff --git a/libexec/mail/am.sh b/libexec/mail/am.sh
+new file mode 100755
+index 0000000..011e1f2
+--- /dev/null
++++ b/libexec/mail/am.sh
+@@ -0,0 +1,91 @@
++#!/bin/sh
++#
++# am.sh -- git am for a jj workspace, with or without a git repo.
++#
++#     am.sh <workspace>
++#
++# Reads one message or an mbox of patches on stdin and applies each to
++# the jj workspace rooted at <workspace>, as its own change with the
++# patch's author, date, and message.  The workspace needs no .git, so
++# it works in ~/lab/mail.jj as well as ~/lab/default.jj.  It is run as
++# `just am`, which notmuch can pipe a message into.
++#
++# A message without a diff, such as a cover letter or a review reply, is
++# skipped, so a whole series thread can be piped at once.
++#
++# Each patch goes into @, which must be empty, and a new empty change is
++# started on top, the way git am leaves HEAD on the last patch with a
++# clean tree.  A patch that does not apply changes nothing, and am.sh
++# stops there; the patches before it stay applied.
++#
++# git does the mail parsing and patching; neither needs a repo.
++
++set -eu
++set -o pipefail
++
++readonly PROGNAME="${0##*/}"
++
++err() {
++	echo "${PROGNAME}: ${*}" >&2
++}
++
++die() {
++	err "${@}"
++	exit 1
++}
++
++tmp=""
++
++main() {
++	local mail
++
++	[ "${#}" -eq 1 ] || die "usage: ${PROGNAME} <workspace>"
++	[ -d "${1}" ] || die "${1}: no such directory"
++	cd "${1}"
++
++	tmp="$(mktemp -d "${TMPDIR:-/tmp}/am.XXXXXX")"
++	trap 'rm -rf "${tmp}"' EXIT
++
++	mkdir "${tmp}/mail"
++	git mailsplit -b -o"${tmp}/mail" >/dev/null ||
++	    die "no messages on stdin"
++
++	for mail in "${tmp}"/mail/*; do
++		apply "${mail}"
++	done
++}
++
++# Apply one message as a change in @.
++apply() {
++	local mail subject author email date
++	mail="${1}"
++
++	[ "$(jj log --no-graph -r @ -T empty)" = true ] ||
++	    die "@ is not empty; run jj new first"
++
++	git mailinfo "${tmp}/msg" "${tmp}/patch" <"${mail}" >"${tmp}/info"
++	[ -s "${tmp}/patch" ] || return 0
++
++	subject="$(sed -n 's/^Subject: //p' "${tmp}/info")"
++	author="$(sed -n 's/^Author: //p' "${tmp}/info")"
++	email="$(sed -n 's/^Email: //p' "${tmp}/info")"
++	date="$(sed -n 's/^Date: //p' "${tmp}/info")"
++
++	git apply "${tmp}/patch" || die "${subject}: does not apply"
++
++	{
++		echo "${subject}"
++		if [ -s "${tmp}/msg" ]; then
++			echo
++			cat "${tmp}/msg"
++		fi
++	} >"${tmp}/desc"
++
++	jj metaedit --quiet \
++	    -m "$(cat "${tmp}/desc")" \
++	    --author "${author} <${email}>" \
++	    --author-timestamp "${date}"
++	jj new --quiet
++}
++
++main "${@}"
+
+base-commit: adfead7e79604b57c15a09626b0895d6028e97bf
+-- 
+2.56.0
+
