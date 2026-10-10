@@ -1,0 +1,25 @@
+From: Pat Maddox <pat@patmaddox.com>
+To: lab-devel@p7x.dev
+Subject: just process-email
+Date: Sat, 10 Oct 2026 10:21:15 -0700
+Message-ID: <m25wz9tqt0.fsf@beastie.p7x.dev>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+Add a just process-email task. It deterministically iterates over each
+of the emails tagged with inbox and runs `claude --permission-mode auto
+-p "/process-email"` on them one at a time.
+
+If there are no more inbox messages found, the loop ends.
+
+The loop itself should be fully deterministic in terms of finding the
+oldest inbox message to process. The skill needs to be updated to take a
+message id as an argument.
+
+I'm unsure if whether the skill should be allowed to be independent, so
+it can also identify a message to process if none is provided. Perhaps
+there's a `just get-oldest-inbox-message` task that does that, that
+`just process-email` and /process-email can both reference? I'd like to
+keep that logic in one place. I think it's probably for useful for
+/process-email to work without args, in which case it should look it up
+using the same tool as `just process-email`.
