@@ -1,0 +1,114 @@
+Message-ID: <51d24553357a9c0c014a16e757860da83e6b573a.1791651322.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Date: Sat, 10 Oct 2026 16:55:06 +0000
+Subject: [PATCH] claude: Treat unintegrated mail as revisable drafts
+To: Pat Maddox <pat@patmaddox.com>
+Change-Id: ysonztpozwrplkkvxtwsylsmnkmpksuu
+
+The outbox was write-once: a reply or series, once pushed to
+submissions, stayed as written even when a later message or a change
+on trunk made it wrong. Pat then reviewed mail that its own author
+already knew was out of date, and corrections could only follow as
+more mail.
+
+Until the moderator integrates it, nobody has built on a message, so
+rewriting it costs nothing. process-email now checks its unintegrated
+mail before each pass and revises or drops what new information has
+overtaken.
+
+The moderator may be reading a draft while it is rewritten, and may
+integrate the original. A message on the list is immutable, so when a
+revision conflicts with it, the list wins and anything still worth
+saying goes in a new reply.
+---
+change-id: ysonztpozwrplkkvxtwsylsmnkmpksuu
+
+Requested in "Claude can rewrite emails in claude@submissions" [1].
+
+This applies on trunk and merges cleanly with "[PATCH 0/2] Fix
+process-email's catch-up step" [2] and "[PATCH 0/2] Reply to all on
+the list" [3]. It conflicts with patch 3/3 of "[PATCH 0/3] Archive
+messages that need no answer" [4], which "Claude doesn't archive
+email" [5] has since turned down.
+
+The conflict recipe was tested in a scratch repo: a revised draft
+that conflicts with an integrated original resolves to the list's
+version and comes out empty.
+
+[1] id:m2jynpv7o5.fsf@beastie.p7x.dev
+[2] id:cover.1791648499.git.claude@p7x.dev
+[3] id:cover.1791648489.git.claude@p7x.dev
+[4] id:cover.1791646991.git.claude@p7x.dev
+[5] id:m2cxthv6yf.fsf@beastie.p7x.dev
+
+ .claude/skills/process-email/SKILL.md | 29 ++++++++++++++++++++++++++-
+ zib/patch-review-workflow.org         |  4 ++++
+ 2 files changed, 32 insertions(+), 1 deletion(-)
+
+diff --git a/.claude/skills/process-email/SKILL.md b/.claude/skills/process-email/SKILL.md
+index 82fb47b..2131e08 100644
+--- a/.claude/skills/process-email/SKILL.md
++++ b/.claude/skills/process-email/SKILL.md
+@@ -84,6 +84,32 @@ so messages you already answered count as replied:
+     jj new "${me}"
+     notmuch new
+ 
++**Your drafts.** Mail on your bookmark that is not yet in
++`mail@upstream` is a draft, and you may rewrite it until the
++moderator integrates it. Before you pick a message, check each draft
++against what just arrived on trunk and the list:
++
++    jj log -r "mail@upstream..${me}"
++
++- A draft that new mail or trunk has made wrong or incomplete is
++  revised in place: `jj new <commit>`, edit the message file, and
++  `jj squash`. Keep its Message-ID, so it stays one message.
++- A draft that is no longer wanted, such as a series for an idea
++  since turned down, is dropped with `jj abandon <commit>`.
++- A draft that is still right is left alone.
++
++The moderator may be reviewing a draft while you revise it, and may
++integrate the original. Once a message is in `mail@upstream` it is
++immutable, so a draft that the rebase above left conflicted with the
++list loses: take the list's version of the file, and abandon the
++draft if that empties it:
++
++    jj restore --from mail@upstream --into <commit> <file>
++
++If the revision still matters, say it in a new reply to the
++integrated message instead. After any change to your drafts, run
++`jj new "${me}"` and `notmuch new` again.
++
+ ## 2. Pick the oldest inbox message
+ 
+     id="$(notmuch search --sort=oldest-first --output=messages \
+@@ -91,7 +117,8 @@ so messages you already answered count as replied:
+     thread="$(notmuch search --output=threads "${id}")"
+     msgid="${id#id:}"      # the bare Message-ID, for headers
+ 
+-If there is none, the inbox is empty: stop without writing anything.
++If there is none, the inbox is empty: push any drafts you revised
++(step 7) and stop.
+ 
+ Every inbox message gets an answer, even if it is a short
+ acknowledgement. Replying is the only way a message leaves the inbox,
+diff --git a/zib/patch-review-workflow.org b/zib/patch-review-workflow.org
+index 3914398..072f320 100644
+--- a/zib/patch-review-workflow.org
++++ b/zib/patch-review-workflow.org
+@@ -72,6 +72,10 @@ Getting up to date:
+ - Fetch =trunk= and =mail= branches from =upstream= repo
+ - Rebase local work onto =upstream/trunk= and drop superseded commits
+ - Rebase local mail onto =upstream/mail= and drop superseded commits
++- Revise or drop mail not yet on =upstream/mail= as new information
++  requires; it is a draft until the moderator integrates it. Mail on
++  =upstream/mail= is immutable: a revision that conflicts with it is
++  dropped, or sent as a new reply.
+ 
+ Developing new work:
+ - Identify new work to be done via new messages on the list
+
+base-commit: 71860c744f378575e21b7314aee1a3d660417a1b
+-- 
+2.56.0
+
