@@ -24,5 +24,10 @@ tags=
 [search]
 exclude_tags=deleted
 
+# Patches carry their commit's jj change id in a Change-Id header, the
+# same across every version of a patch.  changeid:<id> finds them all.
+[index]
+header.changeid=Change-Id
+
 [maildir]
 synchronize_flags=false
