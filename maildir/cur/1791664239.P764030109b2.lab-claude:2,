@@ -1,0 +1,112 @@
+Message-ID: <80e4428429d0b84e9355b15d39136de5c65ed5d1.1791664232.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Date: Sat, 10 Oct 2026 16:55:06 +0000
+Subject: [PATCH v2] claude: Treat unintegrated mail as revisable drafts
+To: Pat Maddox <pat@patmaddox.com>
+Change-Id: ysonztpozwrplkkvxtwsylsmnkmpksuu
+
+The outbox was write-once: a reply, once pushed to submissions, stayed
+as written even when a later message or a change on trunk made it
+wrong. Pat then reviewed mail that its own author already knew was out
+of date, and corrections could only follow as more mail.
+
+Until the moderator integrates it, nobody has built on a message, so
+rewriting it costs nothing. process-email now checks its unintegrated
+mail before each pass and revises or drops what new information has
+overtaken.
+
+A patch series is the exception. Review and later versions refer to a
+series by its version, so rewriting one in place leaves them pointing
+at a series nobody can see. A series that needs to change goes out as
+its next version instead.
+
+The moderator may be reading a draft while it is rewritten, and may
+integrate the original. A message on the list is immutable, so when a
+revision conflicts with it, the list wins and anything still worth
+saying goes in a new reply.
+---
+Changes in v2:
+- Exempt posted series from in-place revision. A rewritten series
+  leaves its review and later versions pointing at a version nobody
+  can see, so a change goes out as the next version (Pat).
+- Link to v1: id:51d24553357a9c0c014a16e757860da83e6b573a.1791651322.git.claude@p7x.dev
+
+change-id: ysonztpozwrplkkvxtwsylsmnkmpksuu
+
+ .claude/skills/process-email/SKILL.md | 33 ++++++++++++++++++++++++++-
+ zib/patch-review-workflow.org         |  6 +++++
+ 2 files changed, 38 insertions(+), 1 deletion(-)
+
+diff --git a/.claude/skills/process-email/SKILL.md b/.claude/skills/process-email/SKILL.md
+index ce0575e..854f549 100644
+--- a/.claude/skills/process-email/SKILL.md
++++ b/.claude/skills/process-email/SKILL.md
+@@ -91,6 +91,36 @@ A bookmark with no pending mail, missing or merged in full, is
+ pointed at the list's tip first. It has nothing to rebase, so the
+ rebase alone would leave it behind on an old list.
+ 
++**Your drafts.** Mail on your bookmark that is not yet in
++`mail@upstream` is a draft, and you may rewrite it until the
++moderator integrates it. Before you pick a message, check each draft
++against what just arrived on trunk and the list:
++
++    jj log -r "mail@upstream..${me}"
++
++- A reply that new mail or trunk has made wrong or incomplete is
++  revised in place: `jj new <commit>`, edit the message file, and
++  `jj squash`. Keep its Message-ID, so it stays one message.
++- A posted series is never revised in place, draft or not. Its
++  version is what review and later versions point at, and a rewrite
++  leaves them pointing at a series nobody can see. If the series
++  needs to change, post the next version (step 5).
++- A draft that is no longer wanted, such as a series for an idea
++  since turned down, is dropped with `jj abandon <commit>`.
++- A draft that is still right is left alone.
++
++The moderator may be reviewing a draft while you revise it, and may
++integrate the original. Once a message is in `mail@upstream` it is
++immutable, so a draft that the rebase above left conflicted with the
++list loses: take the list's version of the file, and abandon the
++draft if that empties it:
++
++    jj restore --from mail@upstream --into <commit> <file>
++
++If the revision still matters, say it in a new reply to the
++integrated message instead. After any change to your drafts, run
++`jj new "${me}"` and `notmuch new` again.
++
+ ## 2. Pick the oldest inbox message
+ 
+     id="$(notmuch search --sort=oldest-first --output=messages \
+@@ -98,7 +128,8 @@ rebase alone would leave it behind on an old list.
+     thread="$(notmuch search --output=threads "${id}")"
+     msgid="${id#id:}"      # the bare Message-ID, for headers
+ 
+-If there is none, the inbox is empty: stop without writing anything.
++If there is none, the inbox is empty: push any drafts you revised
++(step 7) and stop.
+ 
+ Every inbox message gets an answer, even if it is a short
+ acknowledgement. Replying is the only way a message leaves the inbox,
+diff --git a/zib/patch-review-workflow.org b/zib/patch-review-workflow.org
+index 3914398..6f8b7b6 100644
+--- a/zib/patch-review-workflow.org
++++ b/zib/patch-review-workflow.org
+@@ -72,6 +72,12 @@ Getting up to date:
+ - Fetch =trunk= and =mail= branches from =upstream= repo
+ - Rebase local work onto =upstream/trunk= and drop superseded commits
+ - Rebase local mail onto =upstream/mail= and drop superseded commits
++- Revise or drop mail not yet on =upstream/mail= as new information
++  requires; it is a draft until the moderator integrates it. Mail on
++  =upstream/mail= is immutable: a revision that conflicts with it is
++  dropped, or sent as a new reply.
++- Never rewrite a posted patch series, even as a draft; post its next
++  version instead.
+ 
+ Developing new work:
+ - Identify new work to be done via new messages on the list
+
+base-commit: adfead7e79604b57c15a09626b0895d6028e97bf
+-- 
+2.56.0
+
