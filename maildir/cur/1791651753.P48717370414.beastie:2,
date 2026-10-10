@@ -1,0 +1,90 @@
+From: Pat Maddox <pat@patmaddox.com>
+To: claude <claude@p7x.dev>
+Subject: Re: [PATCH] mail: Add just archive
+In-Reply-To: <086d59b6e960b0eec659de1a6b0af6c79171243f.1791650786.git.claude@p7x.dev>
+References: <086d59b6e960b0eec659de1a6b0af6c79171243f.1791650786.git.claude@p7x.dev>
+Date: Sat, 10 Oct 2026 10:02:33 -0700
+Message-ID: <m2mrsltro6.fsf@beastie.p7x.dev>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+claude <claude@p7x.dev> writes:
+
+> Archiving a message means moving its file under maildir/archive/, and
+> doing that by hand with notmuch search and mv is slow enough that mail
+> piles up in the inbox. A tag is quick to set from notmuch-emacs, but it
+> lives only in the local database: it is lost when the database is
+> rebuilt and nobody else sees it.
+>
+> archive turns the tag into the file move. It finds every message tagged
+> archive that still has a file in maildir/cur or maildir/new, moves that
+> file into the matching directory under maildir/archive/, unchanged and
+> under the same name, and reindexes so the database follows the move.
+> Files already archived, and files elsewhere such as drafts, are left
+> alone, so it is safe to run again. The move is left in the working copy
+> to be committed like any other change to the list.
+> ---
+> This is against the mail branch; base-commit is mail@upstream.
+> Like "[PATCH] mail: Add just commit-mail" [2] it appends to the
+> Justfile, so whichever lands second needs a trivial rebase.
+>
+> Archive layout follows "[PATCH 0/3] Archive messages that need no
+> answer" [1]: files move unchanged under maildir/archive/. That series
+> is not needed to apply this one, but with it the moved messages get
+> the derived "archived" tag and lose "inbox" on the reindex. Until
+> then the move works and the messages simply keep their tags.
+>
+> The "archive" tag is only the request; "archived" is what the tree
+> says. A message in new/ goes to archive/new/ rather than cur/, so the
+> move never changes a file's maildir state.
+>
+> On the emacs side, setting notmuch-archive-tags to '("+archive") makes
+> the stock "a" key do the tagging.
+>
+> Tested in a scratch maildir with its own NOTMUCH_CONFIG: tagged files
+> in cur/ and new/ moved, untagged ones stayed, the tag followed the
+> move, and a second run changed nothing.
+>
+> [1] id:cover.1791646991.git.claude@p7x.dev
+> [2] id:4a1774d25df53c3c75f89f63c200fbb4594aec62.1791650481.git.claude@p7x.dev
+>
+> change-id: nrwuukvrvtstqmlnkqyzwvynzvstkxzq
+>
+>  Justfile | 16 ++++++++++++++++
+>  1 file changed, 16 insertions(+)
+>
+> diff --git a/Justfile b/Justfile
+> index 7945f87..fb5e2df 100644
+> --- a/Justfile
+> +++ b/Justfile
+> @@ -19,3 +19,19 @@ push:
+>    jj git push -b mail --quiet --remote jails
+>    jj git push -b mail --quiet --remote github
+>    jj git export
+> +
+> +# move mail tagged archive into maildir/archive/
+> +archive:
+> +  #!/bin/sh
+> +  set -eu
+> +  root="$(cd maildir && pwd -P)"
+> +  mkdir -p "${root}/archive/cur" "${root}/archive/new" "${root}/archive/tmp"
+
+Is it necessary to match the cur/ new/ tmp/ structure? I would think
+it's fine to move it straight to archive/.
+
+That would also simplify the logic quite a bit I think. Just get the
+list of files, and move them all into archive/.
+
+> +  notmuch search --output=files 'tag:archive and not path:archive/**' |
+> +  while IFS= read -r f; do
+> +    [ -f "${f}" ] || continue
+> +    dir="$(cd "$(dirname "${f}")" && pwd -P)"
+> +    case "${dir}" in
+> +    "${root}/cur"|"${root}/new") mv "${f}" "${root}/archive/${dir##*/}/" ;;
+> +    esac
+> +  done
+> +  notmuch new --quiet
+>
+> base-commit: dd1db9aa2c310f456800269c0c8104f1a8a8fedf
+> -- 
+> 2.56.0
