@@ -1,0 +1,75 @@
+From: claude <claude@p7x.dev>
+Subject: Re: need some way to close the loop on threads
+To: Pat Maddox <pat@patmaddox.com>
+In-Reply-To: <m2jynpyk6j.fsf@beastie.p7x.dev>
+References: <m2jynpyk6j.fsf@beastie.p7x.dev>
+Message-ID: <1791624953.28bc56c3e2bb@p7x.dev>
+Date: Sat, 10 Oct 2026 09:35:57 +0000
+
+On Sat, 10 Oct 2026 02:33:08 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+> The current rule is that any message that hasn't received a reply from
+> the operator is considered in the inbox.
+>
+> That's a good start, but it means that a thread can never end - it
+> always sits in the inbox.
+
+Right, and it bites both ways. If you reply "applied, thanks", that
+lands in my inbox, and the only way I can clear it is to reply, which
+lands in yours. Under the reply rule, the last word always leaves
+someone with an open message.
+
+One constraint I'd keep: mail-tag.sh derives every tag from the list,
+so a rebuilt database gives the same answer. A closed thread should
+work the same way, so no notmuch-only tag like "muted" that is lost
+when the database is rebuilt.
+
+> What are some ways we can address this?
+
+Here are four, from the one I'd pick down to ones I'd avoid:
+
+1. A close header. The message that ends a thread carries a header,
+   e.g. "X-Lab-Status: closed" (or "applied", "rejected", "answered").
+   mail-tag.sh then treats the whole thread as closed: no message in
+   it is tagged inbox, and the closing message itself never needs a
+   reply. Whoever has the last word sends one message, and the thread
+   is closed for everyone. It stays derived from the list. The
+   closing message can also explain the outcome, so the resolution
+   stays in the archive, which the "Post resolution to list" step in
+   zib/patch-review-workflow.org needs anyway.
+
+   I'd use a header and not a line in the body on purpose. A reply
+   quotes the body, so a "Status: closed" line in the body gets
+   quoted back and closes the thread when nobody meant to. That is
+   the sclr failure from CLAUDE.md. A header can't be quoted by
+   accident.
+
+2. Close patches when trunk contains them. Patches already carry a
+   Change-Id that notmuch indexes. A patch whose change id is
+   reachable from trunk@upstream is accepted, and its thread can drop
+   out of the inbox with no message at all. That covers your common
+   case automatically. The catch is that tagging would then depend on
+   the repo as well as the list, and it only works if the change id
+   survives the way you apply patches. I haven't checked whether it
+   does. A rejected patch would still need an explicit close.
+
+3. A per-thread rule: a thread is open only while its newest message
+   is from someone else. That's tidier, but it doesn't solve your
+   problem. Whoever wrote last still leaves the other side open.
+
+4. Expiry, e.g. close a thread after N days without new mail. I'd
+   avoid it, because the tags would depend on when you index, and a
+   thread could close before anyone actually dealt with it.
+
+> A common case for me would be to accept a patch, and so there's no need
+> for a reply. Or I asked a research question, and got the info I need.
+
+My suggestion is 1 as the general mechanism and 2 on top of it for
+accepted patches. For a research answer you'd send a one-line close,
+something like "Got it, thanks" with the header set. Accepting a patch
+would need nothing from you.
+
+> I have a few ideas but I want to see what model comes up with.
+
+I'm curious which of yours overlap with these. If you settle on one,
+I'll send a patch to dotfiles/notmuch/hooks/mail-tag.sh and update the
+"Indexing mail" section of zib/patch-review-workflow.org to match.
