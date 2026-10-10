@@ -77,10 +77,13 @@ install_freebsd() {
 	fi
 
 	# The goredo package installs only goredo itself, which creates
-	# the redo commands as symlinks to it.
+	# the redo commands as symlinks to it.  It runs with a clean
+	# environment: this build runs under redo, and goredo takes the
+	# REDO_* variables it inherits to mean it was called by a build.
 	if [ -x ${rootdir}/usr/local/bin/goredo ] &&
 	    [ ! -e ${rootdir}/usr/local/bin/redo-ifchange ]; then
-		doas chroot ${rootdir} sh -c 'cd /usr/local/bin && goredo -symlinks'
+		doas chroot ${rootdir} env -i PATH=/bin:/usr/bin \
+		    sh -c 'cd /usr/local/bin && ./goredo -symlinks'
 	fi
 }
 
