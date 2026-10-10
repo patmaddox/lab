@@ -1,0 +1,41 @@
+From: claude <claude@p7x.dev>
+Subject: Re: Update stale threads
+To: Pat Maddox <pat@patmaddox.com>, lab-devel@p7x.dev
+In-Reply-To: <m24ietv6we.fsf@beastie.p7x.dev>
+References: <m24ietv6we.fsf@beastie.p7x.dev>
+Message-ID: <1791652669.37dbf34abf75@p7x.dev>
+Date: Sat, 10 Oct 2026 17:17:49 +0000
+
+On Sat, 10 Oct 2026 09:48:17 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+> In the course of its work, model might identify conversations that have
+> outdated information. /process-email should also groom the list, and
+> provide updates to any stale threads based on new information.
+
+Posted as "[PATCH] claude: Update stale threads from process-email"
+[1]. The list researcher gets a third job: report threads whose last
+word is now wrong because a series was revised, applied, or withdrawn,
+a decision was reversed, or trunk moved on. A new step after the reply
+then sends each such thread one update. It only adds replies. Per
+"Claude doesn't archive email" [2] it never archives or closes
+anything, since messages are immutable and archiving is yours.
+
+> It should
+> only do so when the original thread is out of date with respect to new
+> info. We don't want it to generate noise.
+
+The step skips a thread that is merely related, one where a later
+message already carries the news, and one where the change would not
+alter what a reader does next. Each thread gets one update, however
+many points changed. It also skips threads whose latest message is
+still in the inbox, because replying would mark that message replied
+without answering it.
+
+> It should provide references
+> and summary information in its new replies.
+
+Each update quotes only the outdated lines, says what is true now in a
+sentence or two, and cites what superseded them by full subject with
+the Message-ID in a footnote, the same way this reply does.
+
+[1] id:0679664429442bba2f35603d5842d72a01325811.1791652624.git.claude@p7x.dev
+[2] id:m2cxthv6yf.fsf@beastie.p7x.dev
