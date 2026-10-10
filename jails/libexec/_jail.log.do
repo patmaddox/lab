@@ -14,9 +14,14 @@ fi
 
 readonly jailsdir=$(realpath $(dirname $(realpath ${0}))/..)
 
+distfiles=""
+if [ -d dist ]; then
+	distfiles="dist.mtree $(jj file list dist)"
+fi
+
+redo-ifchange instance.conf ${jailsdir}/libexec/jail.subr ${distfiles}
 . instance.conf
 . ${jailsdir}/libexec/jail.subr
-redo-ifchange instance.conf ${jailsdir}/libexec/jail.subr ${extra_deps:-}
 readonly PKGBASE_CONF="${jailsdir}/share/pkgbase.conf"
 readonly PKGBASE_PACKAGES="${pkgbase_sets:-FreeBSD-set-base-jail} ${pkgbase_extras:-}"
 readonly PACKAGES="${packages:-}"
@@ -31,7 +36,7 @@ main() {
 	_jail_start
 	create_groups
 	create_users
-	install_login_conf
+	install_dist
 	# clone_repo
 	# bootstrap
 	# ready
@@ -127,24 +132,19 @@ add_user() {
 	fi
 }
 
-# Install the instance's login_conf as every user's ~/.login_conf,
-# which login(1) and jexec -l apply regardless of shell.
-install_login_conf() {
-	local _username _uid _gid _rest
+# Copy the instance's dist tree into the jail root.  tar extracts
+# inside a chroot so dist.mtree owner names resolve against the jail's
+# users, not the host's.
+install_dist() {
+	local distmtree
 
-	if [ ! -f login_conf ]; then
+	if [ ! -d dist ]; then
 		return
 	fi
 
-	while IFS=: read -r _username _uid _gid _rest; do
-		if [ -n "${_username}" ] && [ -n "${_uid}" ] && [ -n "${_gid}" ]; then
-			echo "installing login_conf for ${_username}"
-			doas install -o ${_uid} -g ${_gid} -m 0644 login_conf \
-			    ${rootdir}/home/${_username}/.login_conf
-		fi
-	done <<EOF
-${users:-}
-EOF
+	distmtree=$(realpath dist.mtree)
+	tar -c -C dist @${distmtree} |
+	    doas chroot ${rootdir} tar -x -C / -f -
 }
 
 clone_repo() {

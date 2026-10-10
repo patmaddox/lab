@@ -1,4 +1,4 @@
-# Installed as ~/.login_conf for each jail user; see login.conf(5).
+# Login environment for the claude user; see login.conf(5).
 #
 # Matches what dotfiles/emacs/lisp/claude-code/claude-jail.sh forwards,
 # so Claude behaves the same however it starts.
