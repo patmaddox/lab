@@ -1,0 +1,4 @@
+#+TITLE: lab-devel mailing list
+
+This is the =lab-devel= mailing list, which supports sharing patches
+via email. All mail is delivered to the =maildir/= subdir.
