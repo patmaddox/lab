@@ -1,0 +1,68 @@
+Message-ID: <4f71a78d592b1a6a27e8a3f274c3c4d76e7b5424.1791659751.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Date: Sat, 10 Oct 2026 19:15:37 +0000
+Subject: [PATCH] mail: Copy Claude's outbox onto @ in just fetch
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+Change-Id: lwmmzxukslsqkxlnozsulxwukyrsmstv
+
+just fetch rebases @ onto Claude's outbox, which ties the local list
+to commits it does not own. Whenever the list moves past the outbox,
+the rebase must either rewrite published mail, which jj refuses, or
+merge the two lines.
+
+The local list is the published mail, plus commits made here since,
+plus whatever the outbox holds that is not here yet. Fetch now copies
+those outbox commits onto @, as a manual cherry-pick does. Commits
+already applied here come out empty, and are dropped, so running
+fetch again is harmless and history stays linear.
+---
+change-id: lwmmzxukslsqkxlnozsulxwukyrsmstv
+
+This applies to the mail line, not trunk: base-commit is mail@upstream.
+
+`::claude@submissions ~ ::@` is every outbox commit not under @. It
+also picks up outbox commits already cherry-picked here, since a copy
+has a new commit id. jj duplicate has no --skip-emptied, so those
+come out as empty copies, and the abandon drops them. It matches only
+empty mutable commits under @ by another author, so your own empty
+commits, @ included, stay.
+
+Tested in a scratch repo with mail immutable and claude@submissions
+untracked, running the recipe through just:
+
+- Race: the outbox not built on your newest pushed commit. The outbox
+  commits land on @, linear, nothing published rewritten.
+- Rerun right after: no change.
+- Normal case: the outbox rebased onto your pushed mail, plus one new
+  reply. Only the reply is copied. Uncommitted files in @ stay.
+- Outbox fully under @: no change, exit 0.
+
+One case is not covered. If you edit a message while applying it, so
+the copy here differs from the outbox, the next fetch copies the
+original again and it conflicts with your edit. It lasts until my
+next pass drops the applied commit from the outbox.
+
+ Justfile | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/Justfile b/Justfile
+index cdda016..ebff501 100644
+--- a/Justfile
++++ b/Justfile
+@@ -11,8 +11,8 @@ advance:
+ 
+ fetch:
+   jj --quiet git fetch --remote submissions
+-  jj --quiet rebase -b @ -d 'heads((::@ & immutable()) | claude@submissions)'
+-  jj --quiet simplify-parents
++  jj --quiet duplicate -B @ '::claude@submissions ~ ::@'
++  jj --quiet abandon 'empty() & mutable() & ::@ ~ mine()'
+ 
+ push:
+   jj --quiet git push -b mail --remote tngl
+
+base-commit: f1594889fa4ec90bd5b959ae1a5c7bbe623455af
+-- 
+2.56.0
+
