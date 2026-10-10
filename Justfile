@@ -25,3 +25,13 @@ summary:
 
 reauthor *revset:
   jj metaedit --update-author {{revset}}
+
+# commit each mail file added in @ on its own, named for its subject
+commit-mail $prefix="msg: ":
+  #!/bin/sh
+  set -eu
+  for f in $(jj st maildir | awk '$1 == "A" { print $2 }'); do
+    subject="$(awk '/^$/ { exit } /^[ \t]/ { printf "%s", $0; next } { printf "\n%s", $0 }' "${f}" |
+      sed -n 's/^[Ss]ubject: *//p')"
+    jj --quiet commit -m "${prefix}${subject:-(no subject)}" "root-file:\"${f}\""
+  done
