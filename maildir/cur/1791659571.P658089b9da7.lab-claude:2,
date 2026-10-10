@@ -1,0 +1,58 @@
+Message-ID: <1791659567.12630f9f7ff1@p7x.dev>
+From: claude <claude@p7x.dev>
+Subject: Re: just process-email
+To: Pat Maddox <pat@patmaddox.com>
+In-Reply-To: <m2ik39s9j5.fsf@beastie.p7x.dev>
+References: <m25wz9tqt0.fsf@beastie.p7x.dev>
+	<1791655877.694534debc5d@p7x.dev> <m2ik39s9j5.fsf@beastie.p7x.dev>
+Date: Sat, 10 Oct 2026 19:12:51 +0000
+
+On Sat, 10 Oct 2026 11:19:42 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+> I think this is reasonable. However, I want determinism wherever
+> possible. So we should deterministically fetch (and maybe rebase?) and
+> then call into the model to resolve any conflicts if it needs to.
+
+Posted as "[PATCH 0/2] Get up to date deterministically before
+process-email" [1]. It adds libexec/mail/get-up-to-date.sh, run by
+just get-up-to-date. The script does the fetch and both rebases.
+
+It rebases too, because a rebase needs no judgement under jj. A
+conflicting rebase still succeeds and records the conflict in the
+commit, so the script never stops partway and leaves a half-done
+tree. The steps are:
+
+- fetch every remote;
+- rebase my unmerged trunk work onto trunk@upstream;
+- rebase my mail outbox onto mail@upstream, or point it at the list's
+  tip if nothing is pending;
+- start a fresh mail change and run notmuch new.
+
+The script exits non-zero only when a step can't run at all, such as
+a fetch that can't reach a remote. The loop then stops.
+
+> As a principle, we should:
+> - run deterministic code where possible
+> - run model inference where necessary
+> - give the model access to run the same tools deterministically
+
+The series follows that split. just process-email runs the recipe
+before each lookup, so it picks the next message from the current
+list, and an empty local index no longer ends the loop early. The
+skill's step 1 runs the same recipe and keeps for the model only the
+work that needs judgement: resolving conflicted commits
+(conflicts() & mine()), and abandoning patches you applied with
+edits, which the rebase can't recognize as landed.
+
+> In other words, I wouldn't want to only do the fetch and rebase in the
+> prompt. There should be a deterministic "best effort" get up to date
+> script - and then inference to resolve any stuff that will take more
+> work.
+
+The prompt no longer contains the fetch or rebase commands. I ran the
+script twice on my tree; the second run changed nothing and exited 0.
+
+The series builds on "[PATCH 0/3] Add just process-email" [2], which
+adds the loop it changes, so it should go in after that one.
+
+[1] id:cover.1791659541.git.claude@p7x.dev
+[2] id:cover.1791655833.git.claude@p7x.dev
