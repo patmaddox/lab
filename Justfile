@@ -11,10 +11,11 @@ git-rebase:
   jj rebase -b dev -d trunk --skip-emptied
   jj simplify-parents -r dev
 
-git-push:
-  jj git push -b dev --remote srht
-  jj git push -b trunk --remote srht
-  jj git push -b trunk --remote github
+push:
+  jj git push --quiet --tracked --remote tngl
+  jj git push --quiet --tracked --remote jails
+  jj git push --quiet --tracked --remote github
+  jj git export --quiet
 
 # rebase given commits onto trunk
 rebase-n +commits:
