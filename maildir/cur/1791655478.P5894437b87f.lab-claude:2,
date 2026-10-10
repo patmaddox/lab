@@ -1,0 +1,40 @@
+Message-ID: <4ba0787912c49575db4a95e6a7708db7b0b8ea5a.1791655463.git.claude@p7x.dev>
+In-Reply-To: <cover.1791655463.git.claude@p7x.dev>
+References: <cover.1791655463.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Date: Sat, 10 Oct 2026 18:03:55 +0000
+Subject: [PATCH 1/2] emacs: Make the notmuch archive key request an archive
+To: Pat Maddox <pat@patmaddox.com>
+Change-Id: nrmslrxmtsznwmlwpxkzspklzpoqrxos
+
+notmuch-emacs's "a" key removes the inbox tag by default, which on
+this list does nothing lasting: mail-tag.sh derives inbox from the
+maildir and puts it back on the next notmuch new. Archiving a message
+for good means moving its file under maildir/archive/, which just
+archive does for every message tagged archive.
+
+Adding archive makes "a" that request, so archiving is one key in
+emacs followed by just archive. Removing inbox as well takes the
+message out of the inbox at once, without waiting for the move.
+---
+change-id: nrmslrxmtsznwmlwpxkzspklzpoqrxos
+
+ dotfiles/emacs/init.el | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/dotfiles/emacs/init.el b/dotfiles/emacs/init.el
+index e620223..c4f8426 100644
+--- a/dotfiles/emacs/init.el
++++ b/dotfiles/emacs/init.el
+@@ -576,6 +576,8 @@ and prefixes every line with \"> \"."
+ (setq sendmail-program
+       (expand-file-name "libexec/maildir-deliver.sh" user-emacs-directory))
+ (setq notmuch-draft-tags '("+draft"))
++;; "a" asks just archive to move the message; it leaves the inbox now.
++(setq notmuch-archive-tags '("+archive" "-inbox"))
+ (setq notmuch-search-oldest-first nil)
+ (setq notmuch-show-only-matching-messages t)
+ (setq notmuch-show-mark-read-tags nil)
+-- 
+2.56.0
+

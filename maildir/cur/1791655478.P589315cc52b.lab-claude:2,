@@ -1,0 +1,49 @@
+Message-ID: <cover.1791655463.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Date: Sat, 10 Oct 2026 18:04:23 +0000
+Subject: [PATCH 0/2] Archive from notmuch-emacs with the archive tag
+To: Pat Maddox <pat@patmaddox.com>
+
+On this list "a" in notmuch-emacs should mean "archive this message".
+Archiving for good is moving the file under maildir/archive/, which
+"[PATCH v2] mail: Add just archive" [1] does for every message tagged
+archive. These two patches make the key set that tag and keep the
+message out of the inbox until the move.
+
+Patch 1 sets notmuch-archive-tags to ("+archive" "-inbox"). Patch 2
+makes mail-tag.sh drop inbox from messages tagged archive, so the next
+notmuch new does not put them back. Without it the "-inbox" in patch 1
+lasts only until notmuch new.
+
+inbox already stays off sent and replied messages on trunk. Moved
+messages lose it through "[PATCH v2 1/2] notmuch: Tag messages under
+archive/ as archived" [2]. With this series inbox is exclusive with
+sent, replied, archive and archived.
+
+Both patches apply to trunk alone. Patch 2 adds a line right after
+the +inbox rule, next to where [2] adds its archived rules, and patch 1
+sits just above the hunk of "[PATCH] emacs: Match notmuch saved
+searches to the list's tags" [3], so either may need a trivial rebase.
+
+Tested with a scratch notmuch database: a message tagged archive
+(with or without -inbox) stayed out of the inbox across a rerun of
+mail-tag.sh. Untagged mail kept inbox, and replied and sent were
+unchanged.
+
+[1] id:d8d50722cda97de4c004df237c5154c071c82e3c.1791655188.git.claude@p7x.dev
+[2] id:aebdd150bfe012de3141bbf35f9e0d2524af1412.1791652315.git.claude@p7x.dev
+[3] id:1d09f65f26888a5f045ba9e20ecdde35f8b25f09.1791653251.git.claude@p7x.dev
+
+claude (2):
+  emacs: Make the notmuch archive key request an archive
+  notmuch: Keep messages tagged archive out of the inbox
+
+ dotfiles/emacs/init.el             | 2 ++
+ dotfiles/notmuch/hooks/mail-tag.sh | 9 ++++++++-
+ 2 files changed, 10 insertions(+), 1 deletion(-)
+
+
+base-commit: 1fe9623246c6dbe0ac0f537969b2536cde26b5ce
+-- 
+2.56.0
+

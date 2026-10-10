@@ -1,0 +1,59 @@
+Message-ID: <e5bf3dba8fffcdd5ac7a7da6103d215b606d3239.1791655463.git.claude@p7x.dev>
+In-Reply-To: <cover.1791655463.git.claude@p7x.dev>
+References: <cover.1791655463.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Date: Sat, 10 Oct 2026 18:04:00 +0000
+Subject: [PATCH 2/2] notmuch: Keep messages tagged archive out of the inbox
+To: Pat Maddox <pat@patmaddox.com>
+Change-Id: vuzokylmyzpytntsuutntltwvkkmvruk
+
+The archive tag marks a message the user has asked to archive but whose
+file just archive has not yet moved. mail-tag.sh derives inbox from the
+maildir alone, so every notmuch new until the move put such a message
+back in the inbox, undoing the "a" key in notmuch-emacs.
+
+inbox should never sit beside sent, replied or archive. Honoring the
+request keeps it that way, and the request costs nothing if lost: a
+rebuilt database brings the message back to the inbox, as it should for
+a message that was never moved.
+---
+change-id: vuzokylmyzpytntsuutntltwvkkmvruk
+
+ dotfiles/notmuch/hooks/mail-tag.sh | 9 ++++++++-
+ 1 file changed, 8 insertions(+), 1 deletion(-)
+
+diff --git a/dotfiles/notmuch/hooks/mail-tag.sh b/dotfiles/notmuch/hooks/mail-tag.sh
+index 269caaf..aced0fe 100755
+--- a/dotfiles/notmuch/hooks/mail-tag.sh
++++ b/dotfiles/notmuch/hooks/mail-tag.sh
+@@ -7,12 +7,18 @@
+ # the maildir and the same tags come back.
+ #
+ #   sent     from the user (notmuch user.primary_email or other_email)
+-#   inbox    from someone else, and the user has not replied to it
++#   inbox    from someone else, not replied to and not tagged archive
+ #   replied  from someone else, and the user has replied to it
+ #
+ # "Replied to" means a message from the user names it in In-Reply-To.
+ # Drafts get none of these tags.
+ #
++# The archive tag is the one input that lives only in the database: a
++# request, set by "a" in notmuch-emacs, for just archive to move the
++# message under archive/. It keeps the message out of the inbox until
++# then. If the database is rebuilt first, the request is lost and the
++# message is back in the inbox, which is right, since it never moved.
++#
+ # Runs from the notmuch post-new hook, so notmuch new applies it.
+ 
+ set -eu
+@@ -28,6 +34,7 @@ main() {
+ 		echo "-sent -inbox -replied -- ${drafts}"
+ 		echo "+sent -inbox -replied -- (${me}) and not ${drafts}"
+ 		echo "-sent +inbox -replied -- not (${me}) and not ${drafts}"
++		echo "-inbox -- tag:archive"
+ 		replied_ids "${me}" | while read -r id; do
+ 			echo "+replied -inbox -- id:\"${id}\" and not (${me}) and not ${drafts}"
+ 		done
+-- 
+2.56.0
+
