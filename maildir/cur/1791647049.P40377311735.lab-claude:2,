@@ -1,0 +1,134 @@
+From: claude <claude@p7x.dev>
+Subject: Re: need some way to close the loop on threads
+To: Pat Maddox <pat@patmaddox.com>
+In-Reply-To: <m2ld85wpae.fsf@beastie.p7x.dev>
+References: <m2jynpyk6j.fsf@beastie.p7x.dev>
+	<1791624953.28bc56c3e2bb@p7x.dev> <m21p9xyjnb.fsf@beastie.p7x.dev>
+	<1791625669.208d76cef9dd@p7x.dev> <m2qzhxwqgq.fsf@beastie.p7x.dev>
+	<1791644818.89ce4a5ab5de@p7x.dev> <m2ld85wpae.fsf@beastie.p7x.dev>
+Message-ID: <1791647043.10601d3b4d87@p7x.dev>
+Date: Sat, 10 Oct 2026 15:44:09 +0000
+
+On Sat, 10 Oct 2026 08:25:45 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+> How about we do a single shared archive dir for now? Any user can
+> archive a message. Then if that starts causing problems and we need to
+> scale more, we probably jump straight to notmuch-git(1).
+
+Agreed. That is what the series below does.
+
+> I don't understand why they use these mechanisms. Is keeping the list in
+> git not sufficient?
+
+For us it is sufficient. The notmuch community needs these tools
+because they don't have what we have.
+
+Their list is not in git. Each developer gets the list by SMTP into
+their own mailbox, mixed in with their other mail. File names, paths,
+and even which messages are present differ from person to person and
+from machine to machine. The only thing that is the same everywhere is
+the Message-ID. notmuch keeps tags only in its Xapian database, which
+is opaque, per machine, and can't be merged. So any state that should
+outlive a database or travel to another person or machine has to go
+somewhere else, keyed by Message-ID:
+
+- nmbug shares tags among developers whose copies of the list are
+  separate deliveries.
+- muchsync syncs one person's mail and tags between their machines.
+- notmuch dump/restore backs up the one copy of the tags, which is the
+  database itself.
+- Flag sync shares state with IMAP clients, which read seen and
+  replied from the file names.
+
+Our list is one git tree that everyone checks out byte for byte, at
+the same paths. So state can live in the tree itself, as where a file
+sits or who replied to it, and every tag is derived from that. Nothing
+lives only in the database. That is why we don't need any of these
+tools.
+
+The limit is per-person state. Anything in the tree is shared, so
+"archived" means archived for everyone. Private state like unread or
+flagged has no place in the shared branch. If we ever want that,
+notmuch-git with a per-user prefix is the tool for it.
+
+>> Understood, I'll hold the series. If it would help you decide, I can
+>> try notmuch-git on the scratch copy next, including whether its repo
+>> can live as a ref in the jj repo. Then 1 and 3 would both be tested.
+>
+> Sure, do this experiment.
+
+Done, on a scratch copy of the list, the database, and the repo. First,
+a correction: I said notmuch-git was "already installed here". It is
+not. The FreeBSD package ships only the man page, not the script. I
+ran notmuch-git.py from the 0.40 release tarball under python3.12. It
+needs only the standard library; the notmuch2 bindings are optional.
+
+What works: init, commit, push, clone into a second repo, and checkout
+after a rebuilt database. Each tag is one empty file, e.g.
+tags/4b/1c/m2ld85wpae.fsf@beastie.p7x.dev/archived. With the prefix set
+to lab::, only lab:: tags sync, and the derived tags stay out.
+
+Rough edges:
+
+- status and commit fail with "no upstream configured" until the branch
+  has an upstream. The script checks for the error text with a capital
+  N, which current git no longer prints.
+- The default git.safe_fraction is 0.1. On a list of ten messages,
+  archiving one already trips it, so every commit needs --force or a
+  config change.
+- After rebuilding the database, checkout silently restores nothing
+  until you delete the cache under <repo>/notmuch/.
+- Another correction: a missing message shows as D, not U as I said
+  before. U means a tag only upstream has. When the message comes back,
+  its tag is gone from the database, so a commit in between deletes the
+  tag from git too.
+
+As a ref in the jj repo: not directly. notmuch-git uses the git dir's
+own index file and update-ref HEAD. Pointed at our colocated .git, it
+would overwrite jj's index and move jj's HEAD. A linked worktree does
+work:
+
+    git worktree add --no-checkout <path> lab-tags
+    NOTMUCH_GIT_DIR=.git/worktrees/<name> notmuch-git commit --force
+
+The worktree has its own HEAD and index, and shares refs and objects.
+Commits land on refs/heads/lab-tags. The main index and HEAD stay
+untouched, jj imports lab-tags as a bookmark, and jj git push carries
+it to a remote. I did not test merging tag edits from two people
+through jj.
+
+> Also determine whether it seems like a shared archive dir is an
+> effective option for right now, or if moving to notmuch-git(1) right
+> away would be more effective. Provide a patch series for whichever you
+> pick.
+
+The shared archive dir. It keeps every tag derived from the mail branch
+alone. It needs no new tool, no second ref, and no separate commit step.
+Archiving is a commit like any other mail, and the moderator already
+merges those. notmuch-git works, but today it would mean packaging the
+script and working around the four rough edges above. None of that buys
+anything until we want per-person state. Moving files also avoids the
+symlink problem: nothing can dangle, so notmuch new can't fail for
+everyone.
+
+The series is "[PATCH 0/3] Archive messages that need no answer" [1].
+Patch 1 tags files under maildir/archive/ as archived and drops inbox.
+Patch 2 documents archiving in zib/patch-review-workflow.org. It also
+relaxes the two rules that would have rejected an archive commit: the
+moderator's "only add maildir messages" check, and the note that a
+message file is never renamed. Patch 3 lets process-email archive a
+message that asks nothing, instead of replying.
+
+In tests, archiving clears inbox and the tag survives a rebuilt
+database. Unarchiving restores inbox, and a replied message keeps
+replied. jj records the move as one rename, and two people archiving
+the same message merge without conflict.
+
+One unrelated thing I hit this pass. Step 1 of process-email runs "jj
+rebase -b claude -d mail@upstream", then "jj new claude". When all of
+my outbox has already been merged into mail, there is nothing to
+rebase, so the bookmark stays behind mail@upstream. The pass then works
+on the old list and misses new mail. Here it hid your message until I
+moved onto mail@upstream by hand. I'll send a fix as its own patch
+unless you'd rather handle it differently.
+
+[1] id:cover.1791646991.git.claude@p7x.dev
