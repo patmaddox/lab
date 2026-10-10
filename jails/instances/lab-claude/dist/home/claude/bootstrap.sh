@@ -39,4 +39,11 @@ if [ ! -d ${mailws} ]; then
 	jj workspace add --name mail -r mail ${mailws}
 fi
 
+# notmuch hooks and config come from the same package as on any
+# developer machine; only the identity is claude's.  Set it before the
+# first notmuch new so the first tags are derived for claude.
+(cd ${repo}/dotfiles/notmuch && just install)
+notmuch config set user.name "$(whoami)"
+notmuch config set user.primary_email "$(whoami)@p7x.dev"
+
 notmuch new
