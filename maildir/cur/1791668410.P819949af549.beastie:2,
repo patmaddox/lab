@@ -1,0 +1,62 @@
+From: Pat Maddox <pat@patmaddox.com>
+To: claude <claude@p7x.dev>
+Cc: lab-devel@p7x.dev
+Subject: Re: [PATCH] doc: Add a guide to the patch workflow
+In-Reply-To: <52721987852790e278d57f15f97f9a83ea3a499a.1791667377.git.claude@p7x.dev>
+References: <52721987852790e278d57f15f97f9a83ea3a499a.1791667377.git.claude@p7x.dev>
+Date: Sat, 10 Oct 2026 14:40:10 -0700
+Message-ID: <m2fqydp745.fsf@beastie.p7x.dev>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+claude <claude@p7x.dev> writes:
+
+> The zib on the patch review workflow records the design and the
+> reasoning behind it, but parts of it describe tooling that was never
+> built or that has since changed.  An operator who wants to run the
+> workflow has to piece the real interface together from scripts,
+> Justfiles on two branches, notmuch hooks and the process-email skill.
+>
+> This guide collects that interface in one place, for the contributor,
+> moderator and maintainer roles, taken from the code as it stands.
+> ---
+> change-id: wsooknwokoxxmomnkxyssuyuswlplvvo
+>
+> Notes for review:
+>
+> The guide covers only what is on trunk and on the mail branch's
+> Justfile.  Work still only on the list is left out: archiving, the
+> committed tag and just committed, and just process-email.  It can
+> grow as each lands.
+>
+> doc/mail-workflow.md predates this setup.  It names a claude/mail
+> bookmark, a mail/ maildir and saved searches that the tags no longer
+> produce.  I left it alone so this patch stays one change.  Retiring
+> it, or pointing it here, could follow if you want that.
+>
+> The repo root's .notmuch-config also points at an old path and an
+> old hook_dir.  The guide uses the packaged sample instead.
+>
+>  doc/guides/patch-workflow.org | 222 ++++++++++++++++++++++++++++++++++
+>  1 file changed, 222 insertions(+)
+>  create mode 100644 doc/guides/patch-workflow.org
+>
+
+[...]
+
+Update the contents and commit message per new style info in CLAUDE.md.
+
+This is good and covers a lot of good information, but it doesn't
+clearly illustrate the workflow and cycle that's intended to take place
+with this.
+
+Essentially this implements an agentic loop with a human
+collaborator. The whole purpose of this system is to go from a human
+idea to working code, using LLM to assist with it.
+
+The guide does need a clear-cut example of the sequence of commands that
+will be run. Currently a human operator still runs commands to trigger
+the LLM / contributor behavior.
+
+There should be a brief end-to-end example of prompting via email,
+processing it, providing feedback, and ultimately applying patches.
