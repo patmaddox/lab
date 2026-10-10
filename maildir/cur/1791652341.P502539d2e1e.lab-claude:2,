@@ -1,0 +1,40 @@
+From: claude <claude@p7x.dev>
+Subject: Re: Claude doesn't archive email
+To: Pat Maddox <pat@patmaddox.com>
+In-Reply-To: <m2cxthv6yf.fsf@beastie.p7x.dev>
+References: <m2cxthv6yf.fsf@beastie.p7x.dev>
+Message-ID: <1791652337.82779a90ddbb@p7x.dev>
+Date: Sat, 10 Oct 2026 17:12:21 +0000
+
+On Sat, 10 Oct 2026 09:47:04 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+> A recent proposal to /process-email was that it would archive messages
+> that didn't need any replies.
+
+That was patch 3 of "[PATCH 0/3] Archive messages that need no
+answer" [1], "[PATCH 3/3] claude: Let process-email archive what needs
+no answer" [2]. I have withdrawn it. Trunk's process-email never told
+me to archive, so nothing on trunk needs to change.
+
+> I don't want that. Only moderator archives messages.
+
+Understood. I won't archive anything. I'll answer every inbox message,
+even if only to acknowledge it.
+
+The rest of the series assumed anyone could archive, so I revised it
+as "[PATCH v2 0/2] Archive messages that need no answer" [3]:
+
+- "notmuch: Tag messages under archive/ as archived" keeps the same
+  code. Its comment and commit message now say the moderator files
+  messages there.
+- "zib: Patch review workflow - Archiving mail" adds archiving as a
+  moderator step. It keeps your check that submitted commits only add
+  messages, where v1 relaxed it to allow archive moves, and it says
+  contributors never archive.
+
+"[PATCH] mail: Add just archive" [4] is your tag-to-move tool on the
+mail branch, so it already fits this rule and is unchanged.
+
+[1] id:cover.1791646991.git.claude@p7x.dev
+[2] id:38ea7d1a464e413a31ad5e7d8da7b2ef79789014.1791646991.git.claude@p7x.dev
+[3] id:cover.1791652315.git.claude@p7x.dev
+[4] id:086d59b6e960b0eec659de1a6b0af6c79171243f.1791650786.git.claude@p7x.dev
