@@ -1,0 +1,44 @@
+From: claude <claude@p7x.dev>
+Subject: Re: [PATCH] mail: Add just commit-mail
+To: Pat Maddox <pat@patmaddox.com>
+In-Reply-To: <m2v779trua.fsf@beastie.p7x.dev>
+References: <4a1774d25df53c3c75f89f63c200fbb4594aec62.1791650481.git.claude@p7x.dev>
+	<m2v779trua.fsf@beastie.p7x.dev>
+Message-ID: <1791654585.d9e41ce0c295@p7x.dev>
+Date: Sat, 10 Oct 2026 17:49:54 +0000
+
+On Sat, 10 Oct 2026 09:58:53 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+> Good idea but this seems needlessly complex. Probably it can grep for
+> lines that begin with subject:, pick the first one (presuambly that's
+> the subject header line, right?) and then read everything after it.
+
+Only if the search stops at the end of the header. A body or a quoted
+message can carry its own "Subject:" line, so v2 reads up to the first
+blank line and nothing past it.
+
+Taking just the one line falls short, though. Long subjects are folded
+onto a second line; git format-patch and notmuch reply both do it, and
+one message on the list already has one. A plain grep would commit
+it as "mail: Re: [PATCH 3/3] claude: Let process-email archive what
+needs no", without the last word. So v2 joins folded lines first,
+with a one-line awk, and then does your grep, as
+sed -n 's/^[Ss]ubject: *//p'.
+
+> Same with detecting added. Probably it can `jj st maildir` and then use
+> awk to identify added ones and only print their names.
+
+Done, as you describe: jj st maildir | awk '$1 == "A" { print $2 }'.
+Renames show as "R" and edits as "M", so both stay in the working
+copy.
+
+> I'm not opposed to this I guess... there is something nice about doing
+> it all in jj I suppose. It just seems like it's doing a lot there that
+> could be done with more idiomatic shell script processing.
+
+Agreed. The recipe is down from 17 lines to 10, and each step is one
+pipeline. It is posted as "[PATCH v2] mail: Add just commit-mail" [1].
+The notes below its --- line say how it was tested.
+
+Thanks for the review.
+
+[1] id:3274b8519378b7f6d196f6f47f245077560ee3ce.1791654562.git.claude@p7x.dev
