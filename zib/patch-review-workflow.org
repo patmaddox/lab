@@ -137,3 +137,27 @@ notmuch config
 - =database.path ~/.notmuch/=
 * Maintainer workspace setup
 TBD
+* Shared repo setup
+Two repos shared across jails:
+- =/jails/share/lab.git= owned by host user =patmaddox=
+- =/jails/share/lab-submissions.git= owned by host user =claude=
+
+This matches the ownership required to be writable within the
+jails. The jails create users with same uid and name as on the
+host. These are defined in the respective jail definition dirs.
+
+Both are world readable.
+
+git repo setup:
+
+#+BEGIN_SRC
+$ doas zfs create zroot/jails/share
+$ doas zfs create zroot/jails/share/lab.git
+$ doas git -C /jails/share/lab.git/ init --bare -b trunk
+Initialized empty Git repository in /jails/share/lab.git/
+$ doas chown -R patmaddox:patmaddox /jails/share/lab.git/
+$ doas zfs create zroot/jails/share/lab-submissions.git
+$ doas git -C /jails/share/lab-submissions.git/ init --bare
+Initialized empty Git repository in /jails/share/lab-submissions.git/
+$ doas chown -R claude:claude /jails/share/lab-submissions.git/
+#+END_SRC
