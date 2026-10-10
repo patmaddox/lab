@@ -5,3 +5,6 @@
 # catches up on the next notmuch new.
 notmuch search --format=text0 --output=files 'tag:deleted and path:drafts/**' \
   | xargs -0 rm -f
+
+# Derive sent, inbox and replied from the list's contents.
+"$(dirname "$0")/mail-tag.sh"
