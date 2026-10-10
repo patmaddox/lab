@@ -1,10 +1,3 @@
 #!/bin/sh
-# Remove drafts notmuch-emacs has marked deleted, i.e. superseded by a
-# newer save or sent.  Only drafts: the rest of the maildir is the list
-# itself, which a stray deleted tag must never remove.  The database
-# catches up on the next notmuch new.
-notmuch search --format=text0 --output=files 'tag:deleted and path:drafts/**' \
-  | xargs -0 rm -f
-
 # Derive sent, inbox and replied from the list's contents.
 "$(dirname "$0")/mail-tag.sh"
