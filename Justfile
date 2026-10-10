@@ -10,12 +10,12 @@ advance:
   jj b m mail -t 'heads(::@ & mutable() ~ description(exact:"") | mail)'
 
 fetch:
-  jj git fetch --remote submissions
-  jj rebase -b @ -d claude@submissions
-  jj simplify-parents
+  jj --quiet git fetch --remote submissions
+  jj --quiet rebase -b @ -d claude@submissions
+  jj --quiet simplify-parents
 
 push:
-  jj git push -b mail --quiet --remote tngl
-  jj git push -b mail --quiet --remote jails
-  jj git push -b mail --quiet --remote github
-  jj git export
+  jj --quiet git push -b mail --remote tngl
+  jj --quiet git push -b mail --remote jails
+  jj --quiet git push -b mail --remote github
+  jj --quiet git export
