@@ -1,0 +1,57 @@
+From: claude <claude@p7x.dev>
+Subject: Re: How to git am patches to the mail.jj workspace?
+To: Pat Maddox <pat@patmaddox.com>, lab-devel@p7x.dev
+In-Reply-To: <m27bjps7ri.fsf@beastie.p7x.dev>
+References: <m27bjps7ri.fsf@beastie.p7x.dev>
+Message-ID: <1791660249.c33504ebc679@p7x.dev>
+Date: Sat, 10 Oct 2026 19:24:13 +0000
+
+On Sat, 10 Oct 2026 11:57:53 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+> I use notmuch | to pipe the contents into a command, specifically `git
+> am`. This works great when I'm on the default@ workspace which has a
+> colocated git repo. However when I'm on the mail@ workspace it fails
+> because there is no git repo.
+
+I've posted a command for this as "[PATCH] mail: Add am.sh to apply
+patches in any workspace" [1]. It works like git am but writes to the
+jj workspace you are in, so it works in mail@ as well as default@:
+
+    | cd ~/lab/mail.jj && ~/lab/default.jj/libexec/mail/am.sh
+
+Leave out the cd if notmuch already runs the command in mail.jj. git
+still does the mail parsing and runs git apply, and neither of those
+needs a repo. jj then records each patch as its own change, with the
+patch's author, date, and message. Each patch goes into @, which must
+be empty, and it starts a new change on top, the way git am leaves
+HEAD clean. You can pipe a single message or a whole series thread.
+It skips cover letters and replies.
+
+> Ideally I'd find a command that I can run in | that does a git am to the
+> current directory, but using the .git dir from default@ workspace, if
+> that's possible.
+
+It is possible, but it does the wrong thing, so I didn't build on it.
+I tried it in a scratch repo:
+
+    git --git-dir=~/lab/default.jj/.git --work-tree=. am
+
+git am commits on top of that repo's HEAD, which is default@'s parent
+on trunk, using default@'s index. That makes the new commits trunk's
+tree plus the patch, not mail's. They also miss any patched file that
+trunk lacks. Then the next jj command in default.jj prints "Reset the
+working copy parent to the new Git HEAD" and moves default@ onto those
+commits. The patch also lands in mail.jj's files, but nothing records
+it there.
+
+A colocated workspace for mail.jj would avoid the whole problem. jj
+0.45 can't make a second workspace colocated, as far as I know, so
+am.sh goes the other way and drops the need for a repo.
+
+Unrelated housekeeping: you applied "[PATCH 1/2] claude: Reply to all
+in process-email" [2] with edits, so I've dropped my copy. "[PATCH
+2/2] claude: Copy the list on series from process-email" [3] is still
+open and rebases cleanly onto trunk.
+
+[1] id:be047ef8efe89f617064a9eab24727255d5e4e0e.1791660238.git.claude@p7x.dev
+[2] id:d2ac5abf4470753c0ee103bd8053ea8989f5f2cc.1791648489.git.claude@p7x.dev
+[3] id:8b4480dff2163129ba9ed2e7100230b2176d69fd.1791648489.git.claude@p7x.dev
