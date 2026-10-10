@@ -39,12 +39,12 @@ your mail" all mean this list. They never mean Gmail or any Google or
 other external mail service - do not reach for those tools here.
 
 Two remotes, two directions. You **pull from `upstream`** (canonical
-`trunk` and `mail`; read-only to you) and **push to `inbox`** (your
-outbox). `inbox` is yours to push freely - the maintainer only reads
-from it and merges what they accept - so publishing your `claude/*`
-bookmarks there is expected and never needs approval:
+`trunk` and `mail`; read-only to you) and **push to `submissions`**
+(your outbox). `submissions` is yours to push freely - the maintainer
+only reads from it and merges what they accept - so publishing your
+`claude` bookmark there is expected and never needs approval:
 
-    jj git push --remote inbox --bookmark claude
+    jj git push --remote submissions --bookmark claude
 
 To act on the list, use the `check-mail` skill (`claude-mail-run` is
 the headless equivalent). One pass takes the single most important
