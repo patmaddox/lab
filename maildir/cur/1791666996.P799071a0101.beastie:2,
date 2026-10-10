@@ -1,0 +1,18 @@
+From: Pat Maddox <pat@patmaddox.com>
+To: lab-devel@p7x.dev
+Subject: [doc] Need a guide for basic operation of the patch workflow
+Date: Sat, 10 Oct 2026 14:16:36 -0700
+Message-ID: <m2qzhxp87f.fsf@beastie.p7x.dev>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+I've described general functionality in a zib about patch workflow, and
+developed some tooling around it.
+
+Now I want to take stock of what's actually here, and document the real
+usage.
+
+Add doc/guides/patch-workflow.org with concise documentation for how to
+use the system. Base the interface off the code that has been committed,
+not the descriptions or notes. This is documentation intended for a
+skilled operator, based on the reality of the current implementation.
