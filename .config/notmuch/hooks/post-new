@@ -1,5 +1,7 @@
 #!/bin/sh
-# Purge messages tagged deleted from disk.
-# The database catches up on the next notmuch-new run.
-notmuch search --format=text0 --output=files tag:deleted \
+# Remove drafts notmuch-emacs has marked deleted, i.e. superseded by a
+# newer save or sent.  Only drafts: the rest of the maildir is the list
+# itself, which a stray deleted tag must never remove.  The database
+# catches up on the next notmuch new.
+notmuch search --format=text0 --output=files 'tag:deleted and path:drafts/**' \
   | xargs -0 rm -f
