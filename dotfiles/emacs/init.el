@@ -573,7 +573,8 @@ and prefixes every line with \"> \"."
 (setq notmuch-fcc-dirs nil)
 ;; Sending delivers into the list maildir; committing it is the transport.
 (setq message-send-mail-function #'message-send-mail-with-sendmail)
-(setq sendmail-program "/home/patmaddox/lab/default.jj/libexec/mail/maildir-deliver.sh")
+(setq sendmail-program
+      (expand-file-name "libexec/maildir-deliver.sh" user-emacs-directory))
 (setq notmuch-draft-tags '("+draft"))
 (setq notmuch-search-oldest-first nil)
 (setq notmuch-show-only-matching-messages t)

@@ -10,7 +10,7 @@ version="0.0.0"
 prefix="/.emacs.d"
 srcdir="."
 
-elfiles="init.el $(jj file list lisp contrib vendor)"
+elfiles="init.el $(jj file list lisp contrib vendor libexec)"
 redo-ifchange ${elfiles}
 
 # Stage files

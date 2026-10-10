@@ -1,0 +1,1 @@
+../../../libexec/mail/maildir-deliver.sh
