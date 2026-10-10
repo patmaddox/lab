@@ -1,4 +1,5 @@
 /set type=file uname=claude gname=claude mode=0644
 
 ./home/claude/.login_conf
+./home/claude/.notmuch-config
 ./home/claude/bootstrap.sh mode=0755

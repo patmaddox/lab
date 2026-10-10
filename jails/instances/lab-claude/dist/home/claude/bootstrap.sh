@@ -38,3 +38,5 @@ jj bookmark track trunk@upstream mail@upstream
 if [ ! -d ${mailws} ]; then
 	jj workspace add --name mail -r mail ${mailws}
 fi
+
+notmuch new
