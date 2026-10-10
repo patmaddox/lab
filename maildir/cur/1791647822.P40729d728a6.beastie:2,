@@ -1,0 +1,28 @@
+From: Pat Maddox <pat@patmaddox.com>
+To: lab-devel@p7x.dev
+Subject: claude: self-improve skill
+Date: Sat, 10 Oct 2026 08:57:02 -0700
+Message-ID: <m2zewlv99t.fsf@beastie.p7x.dev>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+Let's design a self-improve skill.
+
+When claude works, it often makes observations about workarounds it had
+to do, that could be incorporated into procedures (scripts, skills,
+agents, workflow, etc).
+
+/self-improve should review the claude logs for any of these conditions,
+and look for opportunities to add / update / refactor / delete
+components in this repo.
+
+The point is that this repo and the toolset used to work with it should
+continue to improve over time, and claude should be looking for ways to
+do this.
+
+If we do eventually make a skill from this (which I think is likely)
+then it should be invokable by the user only.
+
+Sketch a brief spec of what this could look like. Additionally, research
+to see what existing skills or techniques exist already, that we can use
+off-the-shelf, or learn from and incorporate into a custom component.
