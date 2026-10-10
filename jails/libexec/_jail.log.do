@@ -17,7 +17,7 @@ readonly jailsdir=$(realpath $(dirname $(realpath ${0}))/..)
 redo-ifchange instance.conf ${jailsdir}/libexec/jail.subr
 . instance.conf
 . ${jailsdir}/libexec/jail.subr
-readonly PKGBASE_CONF="${jailsdir}/share/pkgbase-150.conf"
+readonly PKGBASE_CONF="${jailsdir}/share/pkgbase.conf"
 readonly PKGBASE_PACKAGES="${pkgbase_sets:-FreeBSD-set-base-jail} ${pkgbase_extras:-}"
 readonly PACKAGES="${packages:-}"
 
@@ -56,8 +56,10 @@ install_freebsd() {
 		exit 1
 	fi
 
-	doas mkdir -p ${rootdir}/usr/share/keys/pkgbase-15
-	tar -C /usr/share/keys/pkgbase-15 -cf - . | doas tar -C ${rootdir}/usr/share/keys/pkgbase-15 -xf -
+	local keys="/usr/share/keys/pkgbase-$(freebsd-version -u | cut -d. -f1)"
+
+	doas mkdir -p ${rootdir}${keys}
+	tar -C ${keys} -cf - . | doas tar -C ${rootdir}${keys} -xf -
 	doas pkg -r ${rootdir} -C ${PKGBASE_CONF} install -r FreeBSD-base -y ${PKGBASE_PACKAGES}
 
 	if [ ! -f ${rootdir}/etc/resolv.conf ]; then
