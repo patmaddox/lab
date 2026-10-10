@@ -13,3 +13,8 @@ fetch:
   jj git fetch --remote submissions
   jj rebase -b @ -d mail -d claude@submissions
   jj simplify-parents
+
+push:
+  jj git push -b mail --quiet --remote tngl
+  jj git push -b mail --quiet --remote jails
+  jj git push -b mail --quiet --remote github
