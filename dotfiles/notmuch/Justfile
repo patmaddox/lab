@@ -1,0 +1,8 @@
+help:
+  just -l
+
+pkg:
+  redo-ifchange patmaddox-notmuch.pkg
+
+install: pkg
+  INSTALL_AS_USER=yes REPOS_DIR=/dev/null pkg -r ~ install -y -U $(realpath patmaddox-notmuch.pkg)

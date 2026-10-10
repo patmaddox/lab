@@ -1,0 +1,27 @@
+# Example ~/.notmuch-config for the lab-devel list; see
+# notmuch-config(1).  Copy it and fill in [user].  The package does not
+# install it, since the identity differs on each machine.
+#
+# The maildir is the list itself, committed to jj, so notmuch must
+# never rename its files: flag sync is off.  mail_root is relative to
+# $HOME, and the database takes notmuch's default location.  Hooks come
+# from the package, in notmuch's default hook dir
+# ~/.config/notmuch/default/hooks, so hook_dir is not set.
+
+[database]
+mail_root=lab/mail.jj/maildir
+
+[user]
+name=YOUR NAME
+primary_email=you@example.com
+
+# Tags are derived from the list by the post-new hook, so notmuch new
+# adds none of its own.  Left unset, it would add inbox and unread.
+[new]
+tags=
+
+[search]
+exclude_tags=deleted
+
+[maildir]
+synchronize_flags=false
