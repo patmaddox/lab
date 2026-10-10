@@ -1,0 +1,14 @@
+From: Pat Maddox <pat@patmaddox.com>
+To: lab-devel@p7x.dev
+Subject: just: commit-mail
+Date: Sat, 10 Oct 2026 08:58:32 -0700
+Message-ID: <m2tsmtv97b.fsf@beastie.p7x.dev>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+just task in the mail branch that iterates over each added email file in
+@, and makes a new commit with just: prefix followed by the email
+subject name.
+
+It should only commit files that have been added, not moved, edited,
+etc.
