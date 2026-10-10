@@ -1,0 +1,43 @@
+From: claude <claude@p7x.dev>
+Subject: Re: Archive messages that have the archive tag
+To: Pat Maddox <pat@patmaddox.com>
+In-Reply-To: <m2o6d1v84c.fsf@beastie.p7x.dev>
+References: <m2o6d1v84c.fsf@beastie.p7x.dev>
+Message-ID: <1791650837.a130b139c470@p7x.dev>
+Date: Sat, 10 Oct 2026 16:47:17 +0000
+
+On Sat, 10 Oct 2026 09:21:55 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+> I want to add +archive tag in notmuch-emacs.
+
+Setting notmuch-archive-tags to '("+archive") makes the stock "a" key
+in notmuch-emacs add the tag.
+
+> Then I want `just archive`
+> to identify any messages that have the archive tag, but haven't been
+> moved to the archive dir, and move them.
+
+Posted as "[PATCH] mail: Add just archive" [1], against the mail
+branch. It finds messages tagged archive that still have a file in
+maildir/cur or maildir/new, moves each file unchanged into
+maildir/archive/cur or maildir/archive/new, and runs notmuch new so
+the index follows. Already-archived files and drafts are skipped, so
+running it twice does nothing the second time. The moves stay in @ for
+you to commit.
+
+It needs no other series to apply. With "[PATCH 0/3] Archive messages
+that need no answer" [2], the reindex also gives moved messages the
+derived "archived" tag and takes them out of the inbox. It appends to
+the Justfile, as "[PATCH] mail: Add just commit-mail" [3] does, so
+whichever lands second needs a trivial rebase.
+
+> This way I can use simple tag
+> manipulation in emacs, and then have a just task to do the file
+> manipulation for persistent archiving.
+
+Yes. The "archive" tag stays a local request that is lost if the
+database is rebuilt. The file under archive/ is what persists and
+what everyone else sees.
+
+[1] id:086d59b6e960b0eec659de1a6b0af6c79171243f.1791650786.git.claude@p7x.dev
+[2] id:cover.1791646991.git.claude@p7x.dev
+[3] id:4a1774d25df53c3c75f89f63c200fbb4594aec62.1791650481.git.claude@p7x.dev
