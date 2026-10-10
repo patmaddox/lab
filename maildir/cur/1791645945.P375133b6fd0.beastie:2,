@@ -1,0 +1,113 @@
+From: Pat Maddox <pat@patmaddox.com>
+To: claude <claude@p7x.dev>
+Subject: Re: need some way to close the loop on threads
+In-Reply-To: <1791644818.89ce4a5ab5de@p7x.dev>
+References: <m2jynpyk6j.fsf@beastie.p7x.dev>
+ <1791624953.28bc56c3e2bb@p7x.dev> <m21p9xyjnb.fsf@beastie.p7x.dev>
+ <1791625669.208d76cef9dd@p7x.dev> <m2qzhxwqgq.fsf@beastie.p7x.dev>
+ <1791644818.89ce4a5ab5de@p7x.dev>
+Date: Sat, 10 Oct 2026 08:25:45 -0700
+Message-ID: <m2ld85wpae.fsf@beastie.p7x.dev>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+claude <claude@p7x.dev> writes:
+
+> On Sat, 10 Oct 2026 08:00:21 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+>> Also want to think if there are any other ways - obviously that approach
+>> wouldn't scale to many users. In that case, there'd need to be some
+>> other mechanism, perhaps everyone maintains a separate fork / branch
+>> with their own archiving setup. I don't want to get too hung up on it,
+>> but I'd at least like to think through how to make the process scale to
+>> more users.
+>
+> Three shapes, roughly in order of scale:
+>
+> 1. Per-user link dirs on the shared mail branch, as above. Adds never
+>    conflict, because each person writes only in their own dir. The
+>    cost grows with users times archived messages. Everyone carries
+>    everyone's archive state, every message gains a filename per
+>    person who archived it, the moderator merges everyone's
+>    archiving, and one person's dangling link breaks everyone's
+>    indexing. That's fine for a handful of people.
+>
+> 2. The same links, but on a per-user branch. Each person's archive/
+>    lives on their own bookmark and is never merged into mail. Their
+>    workspace is a merge of mail@upstream and their archive branch.
+>    The shared branch stays pure list, and a broken link only hurts
+>    its owner. The cost is a merge in every pull. This is your
+>    separate fork idea, and it needs no new tool.
+>
+> 3. Tags in git, keyed by Message-ID, with no links at all. This is
+>    what the notmuch project itself does, with notmuch-git (nmbug).
+>    It's already installed here: man notmuch-git. A bare git repo
+>    holds one empty file per message and tag,
+>    tags/<hash>/<hash>/<msgid>/<tag>, and only tags under a chosen
+>    prefix are synced. notmuch git commit/push/pull/checkout move
+>    them between the database and the repo. Because every tag is its
+>    own file, merges are effectively conflict-free. Since it's keyed
+>    by id, a missing message is reported as status "U" rather than
+>    breaking notmuch new. For per-user state you give each person
+>    their own repo or branch, or a per-user prefix (pat::archived).
+>    mail-tag.sh would then need one line, "-inbox -- tag:archived",
+>    and a rebuild becomes notmuch new followed by notmuch git
+>    checkout.
+>
+>    The catch is your earlier constraint. The state no longer lives in
+>    the mail branch alone, but in a second git repo next to it. I
+>    haven't checked whether that repo could be a ref in the same jj
+>    repo, which would bring it closer.
+>
+> My take: 1 is enough for now and is tested. 3 is the one built for
+> many users, and the notmuch community already runs it. The mailbox
+> format stays the same under all three, so starting with 1 doesn't
+> rule out moving to 2 or 3 later.
+
+How about we do a single shared archive dir for now? Any user can
+archive a message. Then if that starts causing problems and we need to
+scale more, we probably jump straight to notmuch-git(1).
+
+>
+>> Also maybe research how people in notmuch community do stuff like this?
+>> Both for personal databases, and shared ones. I know notmuch itself is
+>> storing their mailing list in git if I remember correctly.
+>
+> Close: it's their tags that live in git, not the list.
+>
+> Shared: nmbug, as in 3 above. Developers clone
+> https://nmbug.notmuchmail.org/git/nmbug-tags.git and share tags like
+> notmuch::patch, notmuch::pushed, and notmuch::obsolete to track
+> patches on the list. The tags are shared, not per-user. Anyone with
+> push access edits the same set. The list itself is on Mailman
+> pipermail, plus a maildir tarball at
+> https://nmbug.notmuchmail.org/archive/notmuch-list.tar.xz. There's an
+> unofficial public-inbox mirror at https://yhetil.org/notmuch/.
+> public-inbox is the git-backed one: one message per commit in a
+> single file "m", with deletes recorded as a "d" commit. notmuch can't
+> index it directly, though.
+>
+> Personal: the usual "done" is just -inbox, or +archived. Emacs binds
+> "a" to it. Some people move files into an archive maildir, e.g. afew's
+> MailMover. notmuch sees the rename and keeps the tags. Muting a thread
+> is a "muted" tag plus a post-new rule that keeps new messages in that
+> thread out of the inbox. To carry tags between machines, people use
+> muchsync (mail and tags over ssh), notmuch dump/restore kept in git,
+> or maildir flag sync, which renames files. All of these keep state
+> outside the messages, which matches "movable, but immutable".
+
+I don't understand why they use these mechanisms. Is keeping the list in
+git not sufficient?
+
+>> That all sounds good. I don't want to do it just yet though - I want to
+>> think through the ideas that I brought up here.
+>
+> Understood, I'll hold the series. If it would help you decide, I can
+> try notmuch-git on the scratch copy next, including whether its repo
+> can live as a ref in the jj repo. Then 1 and 3 would both be tested.
+
+Sure, do this experiment.
+
+Also determine whether it seems like a shared archive dir is an
+effective option for right now, or if moving to notmuch-git(1) right
+away would be more effective. Provide a patch series for whichever you
+pick.
