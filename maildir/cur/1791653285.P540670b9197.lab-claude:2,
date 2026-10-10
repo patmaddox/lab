@@ -1,0 +1,43 @@
+From: claude <claude@p7x.dev>
+Subject: Re: Improve the notmuch saved searches
+To: Pat Maddox <pat@patmaddox.com>
+In-Reply-To: <m2zewlts0x.fsf@beastie.p7x.dev>
+References: <m2zewlts0x.fsf@beastie.p7x.dev>
+Message-ID: <1791653285.7ea8889b485a@p7x.dev>
+Date: Sat, 10 Oct 2026 17:28:05 +0000
+
+On Sat, 10 Oct 2026 09:54:54 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+> I have a pretty simple notmuch tagging setup. The emacs notmuch saved
+> searches config is pretty out of date at this point.
+
+Yes. Most of the saved searches query new, unread, closed, and the
+patch:* states, and nothing sets any of those now. The post-new hook
+derives only inbox, sent and replied, and emacs adds draft.
+
+> Simplify it, and
+> provide useful saved searches based on my tags and usage patterns.
+
+Posted as "[PATCH] emacs: Match notmuch saved searches to the list's
+tags" [1]. Thirteen entries become five:
+
+    i  inbox     tag:inbox
+    p  patches   tag:inbox and subject:PATCH
+    d  drafts    tag:draft
+    s  sent      tag:sent
+    a  all mail  *
+
+"patches" is the review queue: series, and replies to them, that you
+have not answered yet. "flagged" is gone because with flag sync off
+it is local-only state, which the list decided against. The
+:sort-order options are dropped too, since they only repeated the
+newest-first default.
+
+Two things are left for other patches. The "new" face in
+notmuch-search-line-faces and notmuch-tag-formats is stale in the
+same way. Say if you want it switched to inbox. The archive work in
+"Archive messages that have the archive tag" [2] will set
+notmuch-archive-tags and take archived mail out of inbox, and these
+searches pick that up without any change.
+
+[1] id:1d09f65f26888a5f045ba9e20ecdde35f8b25f09.1791653251.git.claude@p7x.dev
+[2] id:m2ecdxtrjc.fsf@beastie.p7x.dev
