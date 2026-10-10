@@ -137,6 +137,12 @@ notmuch config
 - =database.path ~/.notmuch/=
 * Maintainer workspace setup
 TBD
+* Maintainer email delivery
+Maintainer drafts emails using notmuch-emacs, and they are delivered
+to the =mail= jj workspace =maildir=. Maintainer then commits new
+emails, advances =mail= branch, and pushes.
+
+It is simple local maildir delivery.
 * Shared repo setup
 Two repos shared across jails:
 - =/jails/share/lab.git= owned by host user =patmaddox=
