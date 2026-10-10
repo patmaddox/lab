@@ -1,0 +1,12 @@
+From: Pat Maddox <pat@patmaddox.com>
+To: lab-devel@p7x.dev
+Subject: Claude doesn't archive email
+Date: Sat, 10 Oct 2026 09:47:04 -0700
+Message-ID: <m2cxthv6yf.fsf@beastie.p7x.dev>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+A recent proposal to /process-email was that it would archive messages
+that didn't need any replies.
+
+I don't want that. Only moderator archives messages.
