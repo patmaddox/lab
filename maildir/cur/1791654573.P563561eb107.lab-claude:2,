@@ -1,0 +1,84 @@
+Message-ID: <3274b8519378b7f6d196f6f47f245077560ee3ce.1791654562.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Date: Sat, 10 Oct 2026 16:41:05 +0000
+Subject: [PATCH v2] mail: Add just commit-mail
+To: Pat Maddox <pat@patmaddox.com>
+Change-Id: ppvulnkkwnrpxzusskntwqrloyrlnllu
+
+Mail delivered into the maildir lands in the working copy alongside
+flag renames and edits, and each new message is committed on its own
+by hand as "mail: <subject>". Copying subjects by hand is slow and
+lets stray characters slip into the log.
+
+commit-mail takes every file added under maildir/ in @ and commits it
+alone, named for its Subject header, so a batch of new mail becomes
+one reviewable commit per message. Renamed and edited files stay in
+the working copy, since a flag change or an archive move is not a new
+message. The prefix defaults to the "mail: " every message commit
+carries today and can be given as an argument:
+
+    just commit-mail 'just: '
+
+The subject is read from the header only, after joining folded lines.
+Long subjects are folded onto a second line, as git format-patch and
+notmuch reply both do, and taking only the first line would cut the
+commit subject short. Stopping at the blank line that ends the header
+keeps a "Subject:" line in a body or a quoted message from being
+taken instead.
+---
+This applies to the mail branch, not trunk; base-commit is
+mail@upstream. Like "[PATCH] mail: Add just archive" [1] it appends to
+the Justfile, so whichever lands second needs a trivial rebase.
+
+Tested in a scratch jj repo: three added files (a plain message, a
+copy of a list message whose Subject is folded onto two lines, and
+one whose only "Subject:" line is in the body) became three commits
+named "mail: plain one", the full unfolded subject, and "mail: (no
+subject)". A rename and an edit in the same working copy stayed
+uncommitted. A prefix given as an argument, run from maildir/, was
+used as given.
+
+Changes in v2:
+- Find added files with `jj st maildir` and awk instead of a jj diff
+  template, as Pat asked.
+- Read the subject with sed from an unfolded header instead of one
+  awk program that both parses and joins. A grep for the first
+  "subject:" line alone would truncate folded subjects, which occur
+  on the list.
+- Drop CR handling; maildir-deliver.sh writes LF line endings and no
+  message on the list has a CR.
+- Quiet the jj commit in the recipe, to match the other recipes in
+  "mail: Quiet the just tasks"; the recipe now prints nothing on
+  success.
+- Link to v1: id:4a1774d25df53c3c75f89f63c200fbb4594aec62.1791650481.git.claude@p7x.dev
+
+[1] id:086d59b6e960b0eec659de1a6b0af6c79171243f.1791650786.git.claude@p7x.dev
+
+change-id: ppvulnkkwnrpxzusskntwqrloyrlnllu
+
+ Justfile | 10 ++++++++++
+ 1 file changed, 10 insertions(+)
+
+diff --git a/Justfile b/Justfile
+index 1e637a8..804f656 100644
+--- a/Justfile
++++ b/Justfile
+@@ -19,3 +19,13 @@ push:
+   jj --quiet git push -b mail --remote jails
+   jj --quiet git push -b mail --remote github
+   jj --quiet git export
++
++# commit each mail file added in @ on its own, named for its subject
++commit-mail $prefix="mail: ":
++  #!/bin/sh
++  set -eu
++  for f in $(jj st maildir | awk '$1 == "A" { print $2 }'); do
++    subject="$(awk '/^$/ { exit } /^[ \t]/ { printf "%s", $0; next } { printf "\n%s", $0 }' "${f}" |
++      sed -n 's/^[Ss]ubject: *//p')"
++    jj --quiet commit -m "${prefix}${subject:-(no subject)}" "root-file:\"${f}\""
++  done
+
+base-commit: 17716c277c29d3771d641d254cc36d78b084f429
+-- 
+2.56.0
+
