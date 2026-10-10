@@ -1,0 +1,83 @@
+Message-ID: <d8d50722cda97de4c004df237c5154c071c82e3c.1791655188.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Date: Sat, 10 Oct 2026 16:45:52 +0000
+Subject: [PATCH v2] mail: Add just archive
+To: Pat Maddox <pat@patmaddox.com>
+Change-Id: nrwuukvrvtstqmlnkqyzwvynzvstkxzq
+
+Archiving a message means moving its file under maildir/archive/, and
+doing that by hand with notmuch search and mv is slow enough that mail
+piles up in the inbox. A tag is quick to set from notmuch-emacs, but it
+lives only in the local database: it is lost when the database is
+rebuilt and nobody else sees it.
+
+archive turns the tag into the file move. It moves every file of a
+message tagged archive that is not already under maildir/archive/
+straight into that directory, unchanged and under the same name, and
+reindexes so the database follows the move. Running it again moves
+nothing. The move is left in the working copy to be committed like any
+other change to the list.
+
+maildir/archive/ is a plain directory, not a maildir with its own
+cur/, new/ and tmp/. notmuch indexes any file under the database root,
+and with maildir.synchronize_flags off no tag depends on which maildir
+subdirectory a file sits in, so the extra layout would buy nothing.
+---
+This is against the mail branch; base-commit is mail@upstream. Like
+"[PATCH v2] mail: Add just commit-mail" [1] it appends to the
+Justfile, so whichever lands second needs a trivial rebase.
+
+With "[PATCH v2 1/2] notmuch: Tag messages under archive/ as
+archived" [2], moved messages get the derived "archived" tag on the
+reindex; its path:archive/** rule matches the flat directory as it
+did archive/cur/. "[PATCH v2 2/2] zib: Patch review workflow -
+Archiving mail" [3] still says files move to maildir/archive/cur/,
+so it needs a one-line v3 if this lands.
+
+Tested in a scratch maildir with its own NOTMUCH_CONFIG: tagged
+files in cur/ and new/ moved into archive/, untagged ones stayed,
+the tag followed the move, path:archive/** matched the moved
+messages, and a second run changed nothing.
+
+Changes in v2:
+- Move files straight into maildir/archive/ instead of mirroring
+  cur/ and new/ under it, as Pat asked. Nothing reads the maildir
+  subdirectory, and the recipe drops from 16 lines to 11.
+- Drop the check that a file sits in cur/ or new/. The list has no
+  other directory a message could be in, and the search already
+  skips archive/.
+- Link to v1: id:086d59b6e960b0eec659de1a6b0af6c79171243f.1791650786.git.claude@p7x.dev
+
+[1] id:3274b8519378b7f6d196f6f47f245077560ee3ce.1791654562.git.claude@p7x.dev
+[2] id:aebdd150bfe012de3141bbf35f9e0d2524af1412.1791652315.git.claude@p7x.dev
+[3] id:1d6e8e2aaf9f8f119bfc3ade8ff5187343115b27.1791652315.git.claude@p7x.dev
+
+change-id: nrwuukvrvtstqmlnkqyzwvynzvstkxzq
+
+ Justfile | 11 +++++++++++
+ 1 file changed, 11 insertions(+)
+
+diff --git a/Justfile b/Justfile
+index 1e637a8..88cdcde 100644
+--- a/Justfile
++++ b/Justfile
+@@ -19,3 +19,14 @@ push:
+   jj --quiet git push -b mail --remote jails
+   jj --quiet git push -b mail --remote github
+   jj --quiet git export
++
++# move mail tagged archive into maildir/archive/
++archive:
++  #!/bin/sh
++  set -eu
++  mkdir -p maildir/archive
++  notmuch search --output=files 'tag:archive and not path:archive/**' |
++  while IFS= read -r f; do
++    mv "${f}" maildir/archive/
++  done
++  notmuch new --quiet
+
+base-commit: 17716c277c29d3771d641d254cc36d78b084f429
+-- 
+2.56.0
+
