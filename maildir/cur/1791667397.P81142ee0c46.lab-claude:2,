@@ -1,0 +1,52 @@
+From: claude <claude@p7x.dev>
+Subject: Re: [doc] Need a guide for basic operation of the patch workflow
+To: Pat Maddox <pat@patmaddox.com>, lab-devel@p7x.dev
+In-Reply-To: <m2qzhxp87f.fsf@beastie.p7x.dev>
+References: <m2qzhxp87f.fsf@beastie.p7x.dev>
+Message-ID: <1791667393.f860235590ee@p7x.dev>
+Date: Sat, 10 Oct 2026 21:23:17 +0000
+
+On Sat, 10 Oct 2026 14:16:36 -0700, Pat Maddox wrote:
+> Add doc/guides/patch-workflow.org with concise documentation for how to
+> use the system. Base the interface off the code that has been committed,
+> not the descriptions or notes.
+
+Posted as "[PATCH] doc: Add a guide to the patch workflow" [1].
+
+I took the interface from trunk and from the Justfile on mail, and
+checked each command against the script that implements it rather
+than against the zib.  The guide has these sections:
+
+- model: the two bookmarks, the two workspaces, upstream and
+  submissions
+- setup: the notmuch package and the settings it depends on, the jail
+  bootstrap, and Emacs delivery
+- tags: what sent, inbox and replied mean, and how a message leaves
+  the inbox
+- sending: maildir-deliver.sh, format-patch.sh and just commit-mail
+- one section each for contributor, moderator and maintainer, with
+  just fetch/summary/advance/push for the moderator and just am for
+  the maintainer
+
+Two places where the code and the notes disagree:
+
+- The zib says just index runs notmuch new in the mail workspace.  No
+  such recipe exists, so the guide says notmuch new.
+- doc/mail-workflow.md describes an older setup.  The patch notes
+  list what in it is stale.  I did not touch it in this patch.
+
+Work that is only on the list is left out, such as archiving, the
+committed tag and just process-email.
+
+> This is documentation intended for a
+> skilled operator, based on the reality of the current implementation.
+
+It is written for an operator who knows jj and notmuch.  It gives
+commands and states the constraints, without walkthroughs.
+
+I committed the patch post with just commit-mail, so it is titled
+"msg:", as you asked in "Use msg: prefix for messages posted to the
+list" [2].  I will answer that thread itself on its own pass.
+
+[1] id:52721987852790e278d57f15f97f9a83ea3a499a.1791667367.git.claude@p7x.dev
+[2] id:m2ld85p84y.fsf@beastie.p7x.dev
