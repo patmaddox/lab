@@ -1,0 +1,68 @@
+From: claude <claude@p7x.dev>
+Subject: Re: Archive messages that have the archive tag
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+In-Reply-To: <m233uds7bh.fsf@beastie.p7x.dev>
+References: <m2o6d1v84c.fsf@beastie.p7x.dev>
+	<1791650837.a130b139c470@p7x.dev> <m2ecdxtrjc.fsf@beastie.p7x.dev>
+	<1791655490.ec096047ba38@p7x.dev> <m233uds7bh.fsf@beastie.p7x.dev>
+Message-ID: <1791660643.32109c47b7f6@p7x.dev>
+Date: Sat, 10 Oct 2026 19:31:13 +0000
+
+On Sat, 10 Oct 2026 12:07:30 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+> Can we simplify this? I don't think I want a `just archive` task that I
+> have to run manually.
+>
+> I would like to automatically move the file into the archive dir if I
+> apply the archive tag.
+
+Yes. Posted as "[PATCH] emacs: Archive notmuch mail by moving its
+file" [1]. There is no just task and no separate request tag any more.
+The archived tag is the operation.
+
+notmuch-archive-tags is now ("-inbox" "+archived"). A function on
+notmuch-after-tag-hook watches for archived being added or removed.
+Adding it moves the message's file from cur/ or new/ into
+maildir/archive/. Removing it moves the file back to cur/. Either way
+the function then runs notmuch new, so mail-tag.sh re-derives the tags
+from where the file now lives.
+
+> Essentially I want two operations to run in notmuch-emacs: archive and
+> unarchive. archive moves the file into the archive dir, and unarchive
+> moves it out.
+>
+> I don't know if this is best done by just applying the tag, or by
+> having a dedicated operation.
+
+I went with the tag. "a" archives and C-u a unarchives, the stock
+notmuch-emacs keys and their prefix convention. Because the hook fires
+on every tag change made through notmuch-emacs, it covers "a" on a
+single message, "A" on a thread, "a" on a search result or region, and
+"+archived" or "-archived" by hand. A dedicated command would have to
+re-implement each of those.
+
+> I am making an intentional action to archive or unarchive, and that
+> should have the effect of files being moved to the appropriate location
+> and being tagged correctly.
+
+The file moves when you press the key, and the tags come from the
+reindex that follows. If a tag change can't match a move, such as on a
+draft, notmuch new reverts it, so the database never disagrees with the
+maildir. You commit the moves in mail.jj as before.
+
+The patch needs "notmuch: Tag messages under archive/ as archived" [2]
+for the derived tags. It replaces "[PATCH v2] mail: Add just
+archive" [3] and "[PATCH 0/2] Archive from notmuch-emacs with the
+archive tag" [4], so please drop both. That also drops the drafts fix I
+promised for a v3 of [3], since the just task is gone.
+
+Patch 2 of "[PATCH v2 0/2] Archive messages that need no answer" [5]
+still documents a manual mv into maildir/archive/cur/. That is stale
+twice over, since the layout is flat and archiving now happens in
+emacs. I'll revise it if you want that series kept.
+
+[1] id:42a305bfe3b8b6eb570642a6ba258aafcabf240d.1791660619.git.claude@p7x.dev
+[2] id:aebdd150bfe012de3141bbf35f9e0d2524af1412.1791652315.git.claude@p7x.dev
+[3] id:d8d50722cda97de4c004df237c5154c071c82e3c.1791655188.git.claude@p7x.dev
+[4] id:cover.1791655463.git.claude@p7x.dev
+[5] id:cover.1791652315.git.claude@p7x.dev
