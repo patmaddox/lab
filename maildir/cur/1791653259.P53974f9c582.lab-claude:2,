@@ -1,0 +1,77 @@
+Message-ID: <1d09f65f26888a5f045ba9e20ecdde35f8b25f09.1791653251.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Date: Sat, 10 Oct 2026 17:27:08 +0000
+Subject: [PATCH] emacs: Match notmuch saved searches to the list's tags
+To: Pat Maddox <pat@patmaddox.com>
+Change-Id: xzqvuqtxztrsmnmutsxrzvuululuxsvp
+
+The saved searches query tags from an older setup: new, unread,
+closed, and the patch:* review states. Nothing sets those any more.
+The post-new hook derives only inbox, sent and replied from the list,
+and emacs adds draft, so most of the hello screen shows empty counts
+and the useful searches are buried.
+
+Keep one search per tag that exists, plus a review queue: inbox
+patches, i.e. series and replies to them that have not been answered
+yet. The searches no longer pass :sort-order, which only repeated the
+newest-first default that notmuch-search-oldest-first already sets.
+---
+Asked for in "Improve the notmuch saved searches" [1].
+
+Dropped "flagged": synchronize_flags is off, so the tag lives only in
+the local database, and the list has settled on deriving every tag
+from the mail branch. The "new" entries in notmuch-search-line-faces
+and notmuch-tag-formats are just as stale. They are left for a
+separate patch, so this one stays to the saved searches.
+
+Once "[PATCH v2 0/2] Archive messages that need no answer" [2] lands,
+archived mail drops out of inbox, so these searches need no change.
+
+Tested by reading init.el back in emacs --batch, and by running both
+inbox queries through notmuch-saved-search-count against the list:
+5 and 2. kyua tests in dotfiles/emacs fail here on unmodified trunk
+too (0/25), so they say nothing about this
+patch.
+
+[1] id:m2zewlts0x.fsf@beastie.p7x.dev
+[2] id:cover.1791652315.git.claude@p7x.dev
+
+change-id: xzqvuqtxztrsmnmutsxrzvuululuxsvp
+
+ dotfiles/emacs/init.el | 18 +++++-------------
+ 1 file changed, 5 insertions(+), 13 deletions(-)
+
+diff --git a/dotfiles/emacs/init.el b/dotfiles/emacs/init.el
+index e620223..fb3a24b 100644
+--- a/dotfiles/emacs/init.el
++++ b/dotfiles/emacs/init.el
+@@ -585,19 +585,11 @@ and prefixes every line with \"> \"."
+         ("flagged" (propertize tag 'face 'notmuch-tag-flagged)
+          (notmuch-tag-format-image-data tag (notmuch-tag-star-icon)))))
+ (setq notmuch-saved-searches
+-      '((:name "unread" :query "tag:unread not tag:draft" :key "u" :sort-order newest-first)
+-        ;;(:name "my inbox" :query "tag:new not tag:patch not tag:flagged not to:claude" :key "i")
+-        (:name "claude inbox" :query "tag:new and to:claude not tag:draft" :key "c")
+-        (:name "flagged" :query "tag:flagged" :key "f" :sort-order newest-first)
+-        (:name "patches - new" :query "tag:patch not tag:patch:applied not tag:patch:dropped not tag:patch:review not tag:patch:waiting" :key "p" :sort-order newest-first)
+-        (:name "patches - review" :query "tag:patch and tag:patch:review" :key "r" :sort-order newest-first)
+-        (:name "patches - waiting" :query "tag:patch and tag:patch:waiting" :key "w" :sort-order newest-first)
+-        (:name "drafts" :query "tag:draft" :key "d" :sort-order newest-first)
+-        (:name "patches - closed" :query "tag:patch:applied or tag:patch:dropped" :sort-order newest-first)
+-        (:name "open" :query "not tag:closed" :key "o" :sort-order newest-first)
+-        ;;(:name "unread" :query "tag:unread" :key "u" :sort-order newest-first)
+-        (:name "sent" :query "tag:sent" :key "s" :sort-order newest-first)
+-        (:name "all mail" :query "*" :key "a" :sort-order newest-first)))
++      '((:name "inbox" :query "tag:inbox" :key "i")
++        (:name "patches" :query "tag:inbox and subject:PATCH" :key "p")
++        (:name "drafts" :query "tag:draft" :key "d")
++        (:name "sent" :query "tag:sent" :key "s")
++        (:name "all mail" :query "*" :key "a")))
+ (advice-add 'notmuch-show--build-buffer :after
+             (lambda (&rest _)
+               (notmuch-show-mapc
+
+base-commit: 71860c744f378575e21b7314aee1a3d660417a1b
+-- 
+2.56.0
+
