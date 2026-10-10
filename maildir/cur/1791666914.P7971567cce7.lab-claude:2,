@@ -1,0 +1,210 @@
+Message-ID: <7c4aedaf56fa38f6f2b38ae562ae0d9639dbde52.1791666895.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Date: Sat, 10 Oct 2026 21:13:12 +0000
+Subject: [PATCH] mail: Add just committed to report patches trunk took
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+Change-Id: spvykvtxplmuntnoppyqtzuxrluqyyyw
+
+Patches are applied from the list without a reply, so nothing on the
+list says which ones landed, and the review queue cannot be cleared
+without checking trunk by hand.
+
+The change id cannot link a patch to its commit, because git am drops
+it.  The diff survives: git patch-id --stable gives a patch and the
+commit it became the same id after git am, a rebase, or a reworded
+message.  Hashing every commit in ::trunk makes the check a query on
+trunk's whole history rather than its last few commits, and it takes
+a fraction of a second on today's 1200 commits.  The answer depends
+only on trunk and the list, so every run gives the same one.
+
+Each match gets a reply carrying a Committed header that names the
+patch's Message-ID.  Scripts can tag from that header without
+parsing prose, and a patch already named in one is skipped, so a
+second run is a no-op.  A patch edited before it was applied has a
+new patch-id and is not found.
+---
+This applies to the mail branch; base-commit is mail@upstream.  It
+supersedes "[PATCH] mail: Add applied.sh to find patches trunk
+applied" [1], which searched only a given range of trunk and printed
+its matches instead of reporting them.  "[PATCH] notmuch: Tag patches
+reported committed" [2], on trunk, turns the Committed header into a
+committed tag.
+
+Patch-id rather than applying each open patch to trunk and checking
+for an empty result: plain git am fails on an applied patch rather
+than coming out empty, and git am -3 reports "already applied" only
+while no later commit has touched the same lines.  Patch-id compares
+each patch with the commit that took it, whatever came after.
+
+Tested on a scratch copy of the list with its own notmuch database,
+with trunk@upstream as the revision.  It delivered four replies, one
+for each patch trunk took unchanged, threaded to the patch and
+addressed to everyone on it.  A second run delivered none.  A patch
+trunk took with edits, "[PATCH 1/2] claude: Reply to all in
+process-email", was not reported.
+
+just committed mail checks the mail branch the same way.  It finds
+nothing today: the one patch the mail branch took, "[PATCH v2] mail:
+Add just commit-mail", landed with edits.
+
+[1] id:2c8b7070791728684174b6d28323c100302da4f2.1791660948.git.claude@p7x.dev
+[2] id:e38adbdc9cafc8f70ff53e025c9763e9c41e7a72.1791666882.git.claude@p7x.dev
+
+change-id: spvykvtxplmuntnoppyqtzuxrluqyyyw
+
+ Justfile             |   4 ++
+ libexec/committed.sh | 127 +++++++++++++++++++++++++++++++++++++++++++
+ 2 files changed, 131 insertions(+)
+ create mode 100755 libexec/committed.sh
+
+diff --git a/Justfile b/Justfile
+index d1cd15f..3f30d2c 100644
+--- a/Justfile
++++ b/Justfile
+@@ -35,3 +35,7 @@ commit-mail $prefix="msg: ":
+       sed -n 's/^[Ss]ubject: *//p')"
+     jj --quiet commit -m "${prefix}${subject:-(no subject)}" "root-file:\"${f}\""
+   done
++
++# reply to each patch on the list that trunk has committed
++committed rev="trunk":
++  libexec/committed.sh "{{rev}}"
+diff --git a/libexec/committed.sh b/libexec/committed.sh
+new file mode 100755
+index 0000000..ffaa98f
+--- /dev/null
++++ b/libexec/committed.sh
+@@ -0,0 +1,127 @@
++#!/bin/sh
++#
++# committed.sh -- report on the list each patch that trunk committed.
++#
++#     committed.sh [revision]
++#
++# A patch is committed when a commit in ::<revision>, trunk by default,
++# carries the same diff: git patch-id --stable gives both the same id.
++# The id hashes the diff alone, so a patch still matches after git am,
++# a rebase, or a reworded message.  All of trunk's history is searched,
++# so a patch is found however long ago it landed.  A patch edited
++# before it was committed gets a new id and is not found.
++#
++# Each committed patch gets a reply in maildir/, to everyone on the
++# patch, naming the commit in its body and the patch in a header:
++#
++#     Committed: <message-id of the patch>
++#
++# A patch that any message on the list already names in a Committed
++# header is skipped, so running this again delivers nothing new.
++# Commit the replies with just commit-mail.
++#
++# Run it from the mail workspace, with notmuch indexing that
++# workspace's maildir.
++
++set -eu
++set -o pipefail
++
++readonly PROGNAME="${0##*/}"
++
++gitdir=""
++rev=""
++tmp=""
++
++err() {
++	echo "${PROGNAME}: ${*}" >&2
++}
++
++die() {
++	err "${@}"
++	exit 1
++}
++
++main() {
++	local head id commit
++	[ "${#}" -le 1 ] || die "usage: ${PROGNAME} [revision]"
++	rev="${1:-trunk}"
++
++	head="$(jj log --no-graph -r "${rev}" -T 'commit_id ++ "\n"')"
++	[ "$(printf '%s\n' "${head}" | wc -l)" -eq 1 ] ||
++	    die "${rev}: not a single commit"
++	gitdir="$(jj git root)"
++
++	tmp="$(mktemp -d "${TMPDIR:-/tmp}/${PROGNAME}.XXXXXX")"
++	trap 'rm -rf "${tmp}"' EXIT
++
++	notmuch new --quiet
++	git --git-dir="${gitdir}" log --no-merges --no-color -p "${head}" -- |
++	    git patch-id --stable | LC_ALL=C sort >"${tmp}/commits"
++	reported | LC_ALL=C sort -u >"${tmp}/reported"
++
++	patch_ids | LC_ALL=C sort |
++	    LC_ALL=C join -o 1.2,2.2 - "${tmp}/commits" |
++	    awk '!seen[$1]++' |
++	    while read -r id commit; do
++		grep -qxF "${id}" "${tmp}/reported" && continue
++		reply "${id}" "${commit}" | deliver
++	done
++}
++
++# "<patch-id> <message-id>" for each patch on the list that carries a
++# diff.  A cover letter has none and is left out.
++patch_ids() {
++	local id pid
++	notmuch search --output=messages \
++	    'subject:"[PATCH" and not path:drafts/**' | while read -r id; do
++		pid="$(notmuch show --format=raw "${id}" |
++		    git patch-id --stable | cut -d' ' -f1)"
++		[ -n "${pid}" ] || continue
++		echo "${pid} ${id#id:}"
++	done
++}
++
++# Message-IDs named in a Committed header anywhere on the list.
++reported() {
++	notmuch search --output=files --format=text0 '*' |
++	    xargs -0 -r awk '
++		FNR == 1 { in_header = 1 }
++		!in_header { next }
++		/^$/ { in_header = 0; next }
++		tolower($0) ~ /^committed:/ && match($0, /<[^>]+>/) {
++			print substr($0, RSTART + 1, RLENGTH - 2)
++		}
++	'
++}
++
++# A reply to all on patch <id>, reporting it committed as <commit>.
++# notmuch reply supplies the addresses and threading; its quote of the
++# patch is dropped.
++reply() {
++	local id commit email
++	id="${1}"
++	commit="${2}"
++	email="$(notmuch config get user.primary_email)"
++
++	notmuch reply --reply-to=all "id:${id}" | awk '/^$/ { exit } 1'
++	echo "Date: $(LC_ALL=C date '+%a, %d %b %Y %H:%M:%S %z')"
++	echo "Message-ID: <$(date +%s).$(openssl rand -hex 6)@${email#*@}>"
++	echo "Committed: <${id}>"
++	echo
++	echo "Committed to ${rev} as:"
++	echo
++	git --git-dir="${gitdir}" log -1 --format='    %H%n    %s' "${commit}"
++}
++
++# Deliver the message on stdin into ${MAILDIR}, maildir/ by default, by
++# way of tmp/ so a reader never sees part of it.
++deliver() {
++	local maildir name
++	maildir="${MAILDIR:-maildir}"
++	name="$(date +%s).P$$R$(openssl rand -hex 4).$(hostname -s)"
++	mkdir -p "${maildir}/tmp" "${maildir}/cur" "${maildir}/new"
++	cat >"${maildir}/tmp/${name}"
++	mv "${maildir}/tmp/${name}" "${maildir}/cur/${name}:2,"
++}
++
++main "${@}"
+
+base-commit: ab834aa71fe5421895c3c52c7cac7661b2900aff
+-- 
+2.56.0
+
