@@ -1,0 +1,20 @@
+From: Pat Maddox <pat@patmaddox.com>
+To: lab-devel@p7x.dev
+Subject: need some way to close the loop on threads
+Date: Sat, 10 Oct 2026 02:33:08 -0700
+Message-ID: <m2jynpyk6j.fsf@beastie.p7x.dev>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+The current rule is that any message that hasn't received a reply from
+the operator is considered in the inbox.
+
+That's a good start, but it means that a thread can never end - it
+always sits in the inbox.
+
+What are some ways we can address this?
+
+A common case for me would be to accept a patch, and so there's no need
+for a reply. Or I asked a research question, and got the info I need.
+
+I have a few ideas but I want to see what model comes up with.
