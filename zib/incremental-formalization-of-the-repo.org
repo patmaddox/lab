@@ -1,0 +1,13 @@
+#+TITLE: incremental formalization of the repo
+
+The basic purpose of this repo is for me to experiment and iterate. As
+such, it needs to support quickly adding new material to the repo, and
+incrementally formalizing it.
+
+Simple example:
+
+- =hello.sh=
+- =hello(1)=
+- unit tests
+- C implementation
+- package and install
