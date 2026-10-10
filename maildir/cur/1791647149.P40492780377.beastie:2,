@@ -1,0 +1,15 @@
+From: Pat Maddox <pat@patmaddox.com>
+To: lab-devel@p7x.dev
+Subject: reply all / reply to list
+Date: Sat, 10 Oct 2026 08:45:49 -0700
+Message-ID: <m2fqydwocy.fsf@beastie.p7x.dev>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+I address messages to lab-devel@p7x.dev. Model replies should follow
+mailing list convention, which as I understand it is to reply all. It
+replies to the list, CCes the sender, and CCes anyone already on CC
+list.
+
+Research some open source projects and verify that that's the
+convention. Assuming so, update process-email skill to reply all.
