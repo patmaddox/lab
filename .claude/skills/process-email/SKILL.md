@@ -222,10 +222,15 @@ and commit the series on its own:
 
 Every pass ends with a reply to the message, even a short
 acknowledgement, since replying is what moves it out of your inbox.
-Start from notmuch's reply, which sets From, To, Subject, In-Reply-To,
-and References, and quotes the message with an attribution line:
+Start from notmuch's reply, which sets From, To, Cc, Subject,
+In-Reply-To, and References, and quotes the message with an
+attribution line:
 
-    notmuch reply --reply-to=sender "${id}" > /tmp/reply.eml
+    notmuch reply --reply-to=all "${id}" > /tmp/reply.eml
+
+Reply to all, as on any open-source list: the sender, the list, and
+everyone already copied. The list is the record of the work, so a
+reply that leaves it out is lost to everyone else.
 
 Add a Message-ID header, e.g.
 `Message-ID: <$(date +%s).$(openssl rand -hex 6)@p7x.dev>`. Write the
