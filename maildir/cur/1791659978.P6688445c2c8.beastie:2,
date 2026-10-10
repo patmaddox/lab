@@ -1,0 +1,22 @@
+From: Pat Maddox <pat@patmaddox.com>
+To: lab-devel@p7x.dev
+Subject: Need some way of automatically marking patches as committed
+Date: Sat, 10 Oct 2026 12:19:38 -0700
+Message-ID: <m2wlrpqs6t.fsf@beastie.p7x.dev>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+I apply commits from the list, but I don't want to have to respond to
+them to say they've been applied.
+
+Probably we can detect when patches have been applied, and respond with
+the specific SHA they've been applied as. This mirrors the FreeBSD
+practice of updating PRs with a message like "a commit in main
+references this bug."
+
+Is this something we can do deterministically and/or with inference? I
+would prefer to not have to reference the message ID in every commit I
+make.
+
+The goal is to clearly indicate on the list which patches have been
+committed, so I can take them out of the review queue automatically.
