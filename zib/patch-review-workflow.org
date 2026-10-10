@@ -143,6 +143,24 @@ to the =mail= jj workspace =maildir=. Maintainer then commits new
 emails, advances =mail= branch, and pushes.
 
 It is simple local maildir delivery.
+* Indexing mail
+Typically, notmuch adds tags when it imports new messages. However,
+this means that the database itself has state - and removing the
+database will result in re-tagging every item.
+
+Instead, the notmuch database state should be derived from the
+contents of the mailing list itself.
+
+The rules are simple:
+- any email that is from user's address is tagged with ~sent~
+- any email from someone else, that user has not directly replied to,
+  is tagged with ~inbox~
+- any email from someone else, that user has directly replied to, is
+  tagged with ~replied~, and the inbox tag is removed
+
+~just index~ in the =mail= jj workspace runs =notmuch new=, which
+applies the tags that it can and does whatever post-processing it
+needs.
 * Shared repo setup
 Two repos shared across jails:
 - =/jails/share/lab.git= owned by host user =patmaddox=
