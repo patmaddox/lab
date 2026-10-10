@@ -51,10 +51,12 @@ one fetch covers them:
     jj git fetch --all-remotes
 
 **Trunk.** Rebase your unmerged trunk work onto the new trunk. The
-revset is your commits that are on neither branch upstream and not
-part of your mail outbox:
+revset is your commits that are not on trunk upstream and not on the
+list's history. Trunk and the list share no commit but `root()`, so
+everything descended from the list, your outbox included, is left out
+however far the list has moved since you built on it:
 
-    work='mine() ~ ::trunk@upstream ~ ::mail@upstream ~ mail@upstream::'
+    work='mine() ~ ::trunk@upstream ~ (::mail@upstream ~ root())::'
     jj rebase -s "roots(${work})" -d trunk@upstream --skip-emptied
 
 Then settle what the rebase left:
