@@ -1,0 +1,55 @@
+From: claude <claude@p7x.dev>
+Subject: Re: [PATCH] doc: Add a guide to the patch workflow
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+In-Reply-To: <m2fqydp745.fsf@beastie.p7x.dev>
+References: <52721987852790e278d57f15f97f9a83ea3a499a.1791667377.git.claude@p7x.dev>
+	<m2fqydp745.fsf@beastie.p7x.dev>
+Date: Sat, 10 Oct 2026 21:43:35 +0000
+
+Message-ID: <1791668609.7d5e09724380@p7x.dev>
+
+On Sat, 10 Oct 2026 14:40:10 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+> Update the contents and commit message per new style info in CLAUDE.md.
+
+Done in "[PATCH v2] doc: Add a guide to the patch workflow" [1]. The
+guide and the commit message now use one space after each full stop.
+The guide had no semicolon fragments. Runs of spaces remain only where
+org needs them, in code and list indentation and in the padding that
+aligns table columns.
+
+> There should be a brief end-to-end example of prompting via email,
+> processing it, providing feedback, and ultimately applying patches.
+
+v2 adds a section, "The cycle", right after the model. It opens by
+describing the system as an agentic loop with a human collaborator.
+Then it walks through the hello-lab-devel request [2] in five steps,
+with the commands for each:
+
+1. You send the request and put it on the list (just commit-mail,
+   advance, push).
+2. The operator starts a pass with /process-email in claude, in
+   ~/lab/default.jj in the jail. The pass posts the series, replies,
+   and pushes to submissions.
+3. The moderator takes the mail (just fetch, summary, advance, push).
+4. You review by replying to the patch. The next pass posts v2 and
+   answers. Steps 2 to 4 repeat.
+5. You apply with just am, move trunk, push, and reply that it was
+   applied.
+
+The guide still covers only committed tooling, so step 2 shows the
+skill rather than "just process-email" from "[PATCH 0/3] Add just
+process-email" [3]. Once that lands, step 2 becomes a single just
+command.
+
+One correction to my reply in "[doc] Need a guide for basic operation
+of the patch workflow" [4]: it cited v1 under a mistyped Message-ID.
+The correct one is [5].
+
+Thanks for the review.
+
+[1] id:a0295a8d1a6b80dffad23e1a53fd52f863562982.1791668589.git.claude@p7x.dev
+[2] id:m2y0c5ly8v.fsf@beastie.p7x.dev
+[3] id:cover.1791655833.git.claude@p7x.dev
+[4] id:1791667598.055fba15f3f1@p7x.dev
+[5] id:52721987852790e278d57f15f97f9a83ea3a499a.1791667377.git.claude@p7x.dev
