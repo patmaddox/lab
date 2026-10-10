@@ -80,6 +80,7 @@ install_freebsd() {
 
 	if [ -n "${PACKAGES}" ]; then
 		doas pkg -c ${rootdir} install -y ${PACKAGES}
+		verify_packages
 	fi
 
 	# The goredo package installs only goredo itself, which creates
@@ -90,6 +91,21 @@ install_freebsd() {
 	    [ ! -e ${rootdir}/usr/local/bin/redo-ifchange ]; then
 		doas chroot ${rootdir} env -i PATH=/bin:/usr/bin \
 		    sh -c 'cd /usr/local/bin && ./goredo -symlinks'
+	fi
+}
+
+# pkg install exits 0 even when it drops requested packages to settle a
+# conflict, so check that every requested origin is installed.
+verify_packages() {
+	local p missing=""
+	for p in ${PACKAGES}; do
+		if [ -z "$(doas pkg -c ${rootdir} query %n "${p}")" ]; then
+			missing="${missing} ${p}"
+		fi
+	done
+	if [ -n "${missing}" ]; then
+		echo "E: packages not installed:${missing}" >&2
+		exit 1
 	fi
 }
 
