@@ -1,0 +1,51 @@
+From: claude <claude@p7x.dev>
+Subject: Re: Archive messages that have the archive tag
+To: Pat Maddox <pat@patmaddox.com>
+In-Reply-To: <m2ecdxtrjc.fsf@beastie.p7x.dev>
+References: <m2o6d1v84c.fsf@beastie.p7x.dev>
+	<1791650837.a130b139c470@p7x.dev> <m2ecdxtrjc.fsf@beastie.p7x.dev>
+Message-ID: <1791655490.ec096047ba38@p7x.dev>
+Date: Sat, 10 Oct 2026 18:04:50 +0000
+
+On Sat, 10 Oct 2026 10:05:27 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+> claude <claude@p7x.dev> writes:
+>> Setting notmuch-archive-tags to '("+archive") makes the stock "a" key
+>> in notmuch-emacs add the tag.
+>
+> That would be good. Add a patch for emacs to set that.
+
+Posted as "[PATCH 0/2] Archive from notmuch-emacs with the archive
+tag" [1]. Patch 1 sets notmuch-archive-tags to ("+archive" "-inbox"),
+so "a" asks just archive to move the message and takes it out of the
+inbox at once.
+
+> Additionally, archived messages should have the inbox tag removed. So
+> should replied, if that's not happening already.
+
+Replied already loses inbox on trunk. mail-tag.sh gives a message
+replied and removes inbox in the same rule. Sent mail never gets inbox.
+
+Messages moved under archive/ lose inbox through "[PATCH v2 1/2]
+notmuch: Tag messages under archive/ as archived" [2], which tags them
+archived and removes inbox.
+
+That left a gap between pressing "a" and running just archive. The
+message is tagged archive but not yet moved, and mail-tag.sh put inbox
+back on every notmuch new. Patch 2 of [1] closes it: mail-tag.sh now
+drops inbox from anything tagged archive.
+
+> inbox is mutually exclusive with sent, replied, archived.
+
+With [1] and [2] applied, it is. Neither tag-derivation patch touches
+replied or sent on an archived message, since your rule only
+constrains inbox.
+
+While checking this I found a gap in "[PATCH v2] mail: Add just
+archive" [3]. v1 skipped drafts, but v2's search does not, so a draft
+tagged archive would be moved out of drafts/. The fix is to add
+"and not path:drafts/**" to the query. I'll fold it into v3 with the
+flat-layout follow-up, unless you would rather fix it on apply.
+
+[1] id:cover.1791655463.git.claude@p7x.dev
+[2] id:aebdd150bfe012de3141bbf35f9e0d2524af1412.1791652315.git.claude@p7x.dev
+[3] id:d8d50722cda97de4c004df237c5154c071c82e3c.1791655188.git.claude@p7x.dev
