@@ -1,6 +1,7 @@
-# Example ~/.notmuch-config for the lab-devel list; see
-# notmuch-config(1).  Copy it and fill in [user].  The package does not
-# install it, since the identity differs on each machine.
+# ~/.notmuch-config for the lab-devel list; see notmuch-config(1).
+# The package installs this as ~/.notmuch-config only if that file does
+# not exist, and never overwrites it.  Fill in [user]; the identity
+# differs on each machine.
 #
 # The maildir is the list itself, committed to jj, so notmuch must
 # never rename its files: flag sync is off.  mail_root is relative to
