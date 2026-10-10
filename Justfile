@@ -11,7 +11,7 @@ advance:
 
 fetch:
   jj git fetch --remote submissions
-  jj rebase -b @ -d mail -d claude@submissions
+  jj rebase -b @ -d claude@submissions
   jj simplify-parents
 
 push:
