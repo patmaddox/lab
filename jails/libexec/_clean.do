@@ -2,9 +2,9 @@
 set -eu
 set -o pipefail
 
-readonly HALROOT=${HALROOT:-$(realpath $(dirname $(realpath ${0}))/..)}
-. hal.instance.conf
-. ${HALROOT}/libexec/hal.subr
+readonly jailsdir=$(realpath $(dirname $(realpath ${0}))/..)
+. instance.conf
+. ${jailsdir}/libexec/jail.subr
 
 exec >&2
 

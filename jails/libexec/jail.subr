@@ -12,7 +12,7 @@ _is_running() {
 }
 
 # Copy the instance config into /etc/jail.conf.d so service(8) can find
-# it by name. hal writes nothing else: the shared defaults are the
+# it by name. Nothing else is written: the shared defaults are the
 # operator's, in ${confdir}/defaults.conf, and each jail.conf includes
 # them itself.
 _jail_install() {
@@ -20,7 +20,7 @@ _jail_install() {
 }
 
 # onestart and onestop drive the jail without jail_enable in rc.conf,
-# so hal runs a jail whether or not the operator lists it for boot.
+# so a jail runs whether or not the operator lists it for boot.
 _jail_start() {
 	doas service jail onestart ${name}
 }

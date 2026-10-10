@@ -1,4 +1,4 @@
-#+TITLE: hal
+#+TITLE: jails
 
 "I'm sorry HAL, I'm afraid you can't do that." -Dave
 * setup
@@ -14,8 +14,8 @@ cp share/jail.defaults.conf /etc/jail.conf.d/defaults.conf
 #+END_EXAMPLE
 
 * operate
-hal drives a jail through service(8), which finds its config by name in
-=/etc/jail.conf.d=:
+The Justfile drives a jail through service(8), which finds its config by
+name in =/etc/jail.conf.d=:
 #+BEGIN_EXAMPLE
 just install   # copy jail.conf to /etc/jail.conf.d/<name>.conf
 just start     # service jail onestart <name>

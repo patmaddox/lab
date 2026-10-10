@@ -12,12 +12,12 @@ if [ "${#}" -gt 0 ]; then
 	exit 1
 fi
 
-readonly HALROOT=${HALROOT:-$(realpath $(dirname $(realpath ${0}))/..)}
+readonly jailsdir=$(realpath $(dirname $(realpath ${0}))/..)
 
-redo-ifchange hal.instance.conf ${HALROOT}/libexec/hal.subr
-. hal.instance.conf
-. ${HALROOT}/libexec/hal.subr
-readonly PKGBASE_CONF="${HALROOT}/share/pkgbase-150.conf"
+redo-ifchange instance.conf ${jailsdir}/libexec/jail.subr
+. instance.conf
+. ${jailsdir}/libexec/jail.subr
+readonly PKGBASE_CONF="${jailsdir}/share/pkgbase-150.conf"
 readonly PKGBASE_PACKAGES="${pkgbase_sets:-FreeBSD-set-base-jail} ${pkgbase_extras:-}"
 readonly PACKAGES="${packages:-}"
 
@@ -25,7 +25,7 @@ readonly PACKAGES="${packages:-}"
 # rootdir
 
 main() {
-	verify_hal
+	verify_zroot
 	create_jail_root
 	install_freebsd
 	_jail_start
@@ -36,7 +36,7 @@ main() {
 	# ready
 }
 
-verify_hal() {
+verify_zroot() {
 	if ! zfs list ${zroot}/instances >/dev/null 2>&1; then
 		echo "E: missing ${zroot}/instances" >&2
 		exit 1

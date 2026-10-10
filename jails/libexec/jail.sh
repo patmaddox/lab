@@ -2,9 +2,9 @@
 set -eu
 set -o pipefail
 
-readonly HALROOT=${HALROOT:-$(realpath $(dirname $(realpath ${0}))/..)}
-. hal.instance.conf
-. ${HALROOT}/libexec/hal.subr
+readonly jailsdir=$(realpath $(dirname $(realpath ${0}))/..)
+. instance.conf
+. ${jailsdir}/libexec/jail.subr
 
 if [ -z "${name}" ]; then
 	echo "E: name was not set" >&2

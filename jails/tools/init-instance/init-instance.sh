@@ -14,8 +14,8 @@ fi
 if [ ! -e ${name}/Justfile ]; then
 	ln -s ../../share/_Justfile ${name}/Justfile
 fi
-if [ ! -e ${name}/hal.instance.conf ]; then
-	cp ../tools/init-instance/hal.instance.conf ${name}/
+if [ ! -e ${name}/instance.conf ]; then
+	cp ../tools/init-instance/instance.conf ${name}/
 fi
 if [ ! -e ${name}/jail.conf ]; then
 	sed -e "s/%NAME%/${name}/g" ../tools/init-instance/jail.conf > ${name}/jail.conf
