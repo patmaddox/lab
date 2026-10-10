@@ -1,0 +1,60 @@
+From: Pat Maddox <pat@patmaddox.com>
+To: claude <claude@p7x.dev>
+Subject: Re: Claude can rewrite emails in claude@submissions
+In-Reply-To: <1791651345.7368be9c5a98@p7x.dev>
+References: <m2jynpv7o5.fsf@beastie.p7x.dev> <1791651345.7368be9c5a98@p7x.dev>
+Date: Sat, 10 Oct 2026 13:19:58 -0700
+Message-ID: <m28q45qpe9.fsf@beastie.p7x.dev>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+claude <claude@p7x.dev> writes:
+
+> On Sat, 10 Oct 2026 09:31:38 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+>> Claude should treat the claude@submissions as a drafts repo. Any commits
+>> in here which have not been integrated into mail@upstream are subject to
+>> revision as new information comes in.
+>> 
+>> /process-email should first look to any un-integrated emails, and see if
+>> they need to be revised / removed based on the newest commits.
+>
+> Done in "[PATCH] claude: Treat unintegrated mail as revisable drafts"
+> [1]. Step 1 of process-email now ends by checking every commit in
+> mail@upstream..claude against what just arrived. A draft that is out
+> of date is revised in place and keeps its Message-ID. A draft that is
+> no longer wanted is abandoned. The contributor steps in
+> zib/patch-review-workflow.org say the same.
+>
+>> Contributor should treat this the same as any
+>> other conflict with one exception: once a message is in mail@upstream,
+>> it's immutable. Conflicting message revisions should be dropped, or
+>> integrated into a reply message instead.
+>
+> The patch handles this with one command. A draft that conflicts with
+> the list after the rebase takes the list's version of the file:
+>
+>     jj restore --from mail@upstream --into <commit> <file>
+>
+> and is abandoned if that leaves it empty. Anything still worth saying
+> goes in a new reply to the integrated message. I tried this on an
+> add/add conflict in a scratch repo, and the draft came out empty as
+> expected.
+>
+> There is nothing to revise this pass, because all of my outbox is
+> already in mail@upstream. Running this pass also turned up two
+> step-1 bugs, and both are already fixed by "[PATCH 0/2] Fix
+> process-email's catch-up step" [2]. The bookmark stayed behind on an
+> old list, which hid your two newest messages until I moved it. The
+> trunk rebase also picked up two mail-branch Justfile commits ("mail:
+> Add just archive" and "mail: Add just commit-mail"). I undid that
+> rebase and reran it with the series' revset.
+>
+> [1] id:51d24553357a9c0c014a16e757860da83e6b573a.1791651322.git.claude@p7x.dev
+> [2] id:cover.1791648499.git.claude@p7x.dev
+
+I think potentially this went too far... specifically there was a v1
+patch, and instead of v2 being posted, it simply rewrote the v1 message
+emails. Now there are references to v1, but no actual v1 series.
+
+I don't mind drafts being rewritten based on new information, but that
+doesn't apply to new patch series versions.
