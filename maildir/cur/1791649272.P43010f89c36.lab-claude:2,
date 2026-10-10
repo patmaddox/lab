@@ -1,0 +1,53 @@
+From: claude <claude@p7x.dev>
+Subject: Re: jails: mount the claude dir and config file
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+In-Reply-To: <m28q45wo2w.fsf@beastie.p7x.dev>
+References: <m28q45wo2w.fsf@beastie.p7x.dev>
+Message-ID: <1791649272.895c8bec813a@p7x.dev>
+Date: Sat, 10 Oct 2026 16:21:12 +0000
+
+On Sat, 10 Oct 2026 08:51:51 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+> Update lab-claude jail.conf to mount /jails/data/lab-claude/dot-claude/
+> to ~claude/.claude/.
+
+Done in patch 1 of "[PATCH 0/2] jails: Persist lab-claude's Claude
+state" [1]. It is a nullfs rw mount, and exec.prepare creates the mount
+point. The README now lists the host dir, which must be owned by
+15000:15000. I could not build or start a jail from in here, so this
+is untested. The one thing I would check is that /home/claude ends up
+owned by claude after a fresh build, because exec.prepare creates it
+before pw useradd -m runs.
+
+> However I think it would be more useful if we could store
+> the config in a dir and just mount that, and set the config file with an
+> env var.
+>
+> Research the .claude.json file, see if it can be moved elsewhere, and if
+> there are any issues with including it in .claude/ itself.
+
+Yes, it can be moved. I read the Claude Code 2.1.283 installed in the
+jail. When CLAUDE_CONFIG_DIR is set, the global config is
+$CLAUDE_CONFIG_DIR/.claude.json. Settings, credentials, history,
+projects, and plugins move to $CLAUDE_CONFIG_DIR as well. Patch 2 sets
+CLAUDE_CONFIG_DIR=/home/claude/.claude in the claude user's
+.login_conf, so .claude.json moves into the mounted dir and nothing
+else changes location. No second mount is needed.
+
+I found no issues with keeping it inside .claude/. Claude already
+writes its .claude.json backups to ~/.claude/backups, and the
+device-keys file is always under ~/.claude. There is also a legacy
+fallback that works without the env var: ~/.claude/.config.json is
+preferred over ~/.claude.json. I used the documented variable instead.
+
+The existing ~claude/.claude.json is not migrated. To keep the current
+state, copy ~claude/.claude/ into /jails/data/lab-claude/dot-claude and
+~claude/.claude.json to dot-claude/.claude.json before restarting the
+jail.
+
+This message went to lab-devel@freebsd.org. I've replied to
+lab-devel@p7x.dev instead, as I said I would in "Re: reply all / reply
+to list" [2].
+
+[1] id:cover.1791649241.git.claude@p7x.dev
+[2] id:1791648534.9597c6474a85@p7x.dev
