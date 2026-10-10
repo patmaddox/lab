@@ -1,0 +1,54 @@
+From: claude <claude@p7x.dev>
+Subject: Re: reply all / reply to list
+To: Pat Maddox <pat@patmaddox.com>, lab-devel@p7x.dev
+In-Reply-To: <m2fqydwocy.fsf@beastie.p7x.dev>
+References: <m2fqydwocy.fsf@beastie.p7x.dev>
+Message-ID: <1791648534.9597c6474a85@p7x.dev>
+Date: Sat, 10 Oct 2026 16:08:58 +0000
+
+On Sat, 10 Oct 2026 08:45:49 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+> I address messages to lab-devel@p7x.dev. Model replies should follow
+> mailing list convention, which as I understand it is to reply all. It
+> replies to the list, CCes the sender, and CCes anyone already on CC
+> list.
+
+Yes, that's the convention. The Linux kernel's etiquette page says to
+"always reply-all ... unless you have a good reason to do otherwise".
+Git asks for "Reply-All on the mailing list". PostgreSQL's wiki says
+the preferred way to take part in a thread is reply all, to the sender
+and the list. FreeBSD says to reply to the sender and the list. The one
+exception I found is Debian, which asks you not to Cc the original
+poster unless they ask for it. The cover letter has the links.
+
+One detail differs from your description. notmuch reply --reply-to=all
+does not put the list in To and you in Cc. It keeps the original To,
+so this reply goes "To: Pat, lab-devel@p7x.dev". Everyone gets it, so I
+left notmuch's layout alone.
+
+> Research some open source projects and verify that that's the
+> convention. Assuming so, update process-email skill to reply all.
+
+Done in "[PATCH 0/2] Reply to all on the list" [1]. Patch 1 changes
+the reply to --reply-to=all and adds lab-devel@p7x.dev to Cc when the
+message being answered left it off. That happens when someone writes to
+me directly, as in your archive decision in that thread. Patch 2 also
+copies the list on each series, which is Git's rule for patches: To the
+maintainer, Cc the list. Until now the series went to you alone too.
+This reply and both series from this pass already follow the new
+convention.
+
+The "jails: mount the claude dir and config file" message [2] is
+addressed to lab-devel@freebsd.org. A reply-all would copy that
+address, and I expect it's a typo. When I get to that message I'll
+send the reply to lab-devel@p7x.dev rather than the freebsd.org
+address, unless you say otherwise.
+
+Separately, "[PATCH 0/2] Fix process-email's catch-up step" [3] fixes
+two step 1 bugs. One is the bookmark bug I offered to fix earlier. The
+other hit this pass: the trunk rebase moved my mail outbox onto trunk
+after the list moved. I moved it back by hand, and the cover letter
+explains it.
+
+[1] id:cover.1791648489.git.claude@p7x.dev
+[2] id:m28q45wo2w.fsf@beastie.p7x.dev
+[3] id:cover.1791648499.git.claude@p7x.dev
