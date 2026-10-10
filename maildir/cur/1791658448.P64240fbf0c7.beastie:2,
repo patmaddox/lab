@@ -1,0 +1,73 @@
+From: Pat Maddox <pat@patmaddox.com>
+To: claude <claude@p7x.dev>
+Subject: Re: mail: bug in just fetch
+In-Reply-To: <1791656740.815611fadce4@p7x.dev>
+References: <m2mrslsasa.fsf@beastie.p7x.dev> <1791656740.815611fadce4@p7x.dev>
+Date: Sat, 10 Oct 2026 11:54:08 -0700
+Message-ID: <m2bj91s7xr.fsf@beastie.p7x.dev>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+claude <claude@p7x.dev> writes:
+
+> On Sat, 10 Oct 2026 10:52:37 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+>> and then how to fix it.
+>
+> The fix is posted as "[PATCH] mail: Keep just fetch from rewriting
+> published mail" [1]. It changes the rebase destination to
+>
+>     heads((::@ & immutable()) | claude@submissions)
+>
+> That is the newest published commit under @ or my outbox, whichever
+> is further along. When my outbox is built on your published tip, as
+> it usually is, this is just claude@submissions. Your mutable commits
+> move onto it and history stays linear, as you intended in
+> dd1db9aa2c31. In the race, the two heads have diverged. @ becomes a
+> merge of both, and nothing published is rewritten. The merge only
+> happens in that case.
+>
+> I reproduced the failure in a scratch repo and tested the new
+> recipe there, in both the linear case and the race. The patch notes
+> give the details.
+>
+> There are two other ways to handle the race. Neither seemed better
+> to me:
+>
+> - Rebase my unmerged commits onto your tip instead. That keeps
+>   history linear, but in your repo claude@submissions is untracked
+>   and therefore immutable. It would need --ignore-immutable, and the
+>   old commits would stay visible under the remote bookmark until I
+>   push again.
+> - Keep failing in the race, but with a clear message, and run
+>   `just fetch` again after my next pass. That pass rebases my outbox
+>   onto your new tip. It stays linear but makes you wait on me.
+>
+> If you'd rather have either of these than the merge, I'll revise
+> the patch.
+>
+> [1] id:bc2e1c6271b4db70f95dc0bae7c32fe9c3fb97ff.1791656705.git.claude@p7x.dev
+
+I've applied it, but I don't think this is quite the correct fix. So we
+might need to revisit it.
+
+Here's kind of how I think about the local mailing list... it is:
+
+- ::mail
+- plus any new commits I've created since then
+- plus any new commits from claude@submissions
+- plus any replies to those
+
+I'm not totally sure how to work this out. But essentially I want to see
+what claude@submissions would look like if it were rebased onto my
+commits.
+
+Maybe another way of thinking of this is, instead of rebasing or merging
+commits from claude@submissions, I just duplicate all of the commits
+from claude@submissions that aren't in ::@ ?
+
+Because that's essentially the workflow that I'm doing - cherry-picking
+commits from claude@submissions and then moving the mail bookmark.
+
+What I don't know is if there's a way to --skip-emptied for a jj
+duplicate, or identify the changes / commits that are in
+claude@submissions and need to be cherry-picked into working copy.
