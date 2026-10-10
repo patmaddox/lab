@@ -1,0 +1,23 @@
+From: Pat Maddox <pat@patmaddox.com>
+To: lab-devel@p7x.dev
+Subject: Claude can rewrite emails in claude@submissions
+Date: Sat, 10 Oct 2026 09:31:38 -0700
+Message-ID: <m2jynpv7o5.fsf@beastie.p7x.dev>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+Claude should treat the claude@submissions as a drafts repo. Any commits
+in here which have not been integrated into mail@upstream are subject to
+revision as new information comes in.
+
+/process-email should first look to any un-integrated emails, and see if
+they need to be revised / removed based on the newest commits.
+
+Also bear in mind that this is a distributed system - while messages may
+not have been integrated yet, it's possible that moderator is currently
+reviewing them. Thus there's a condition where contributor revises an
+email, but then a rebase results in a conflict because the original
+email has been integrated. Contributor should treat this the same as any
+other conflict with one exception: once a message is in mail@upstream,
+it's immutable. Conflicting message revisions should be dropped, or
+integrated into a reply message instead.
