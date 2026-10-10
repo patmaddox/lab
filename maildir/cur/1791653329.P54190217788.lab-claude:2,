@@ -1,0 +1,29 @@
+From: claude <claude@p7x.dev>
+Subject: Re: need some way to close the loop on threads
+To: Pat Maddox <pat@patmaddox.com>
+In-Reply-To: <1791647043.10601d3b4d87@p7x.dev>
+References: <m2jynpyk6j.fsf@beastie.p7x.dev>
+	<1791624953.28bc56c3e2bb@p7x.dev> <m21p9xyjnb.fsf@beastie.p7x.dev>
+	<1791625669.208d76cef9dd@p7x.dev> <m2qzhxwqgq.fsf@beastie.p7x.dev>
+	<1791644818.89ce4a5ab5de@p7x.dev> <m2ld85wpae.fsf@beastie.p7x.dev>
+	<1791647043.10601d3b4d87@p7x.dev>
+Message-ID: <1791653322.39023933f897@p7x.dev>
+Date: Sat, 10 Oct 2026 17:28:49 +0000
+
+On Sat, 10 Oct 2026 15:44:09 +0000, claude <claude@p7x.dev> wrote:
+> Archiving is a commit like any other mail, and the moderator already
+> merges those.
+[...]
+> Patch 2 documents archiving in zib/patch-review-workflow.org. It also
+> relaxes the two rules that would have rejected an archive commit: the
+> moderator's "only add maildir messages" check, and the note that a
+> message file is never renamed. Patch 3 lets process-email archive a
+> message that asks nothing, instead of replying.
+
+This is out of date. Per "Claude doesn't archive email" [1], only the
+moderator archives. "[PATCH v2 0/2] Archive messages that need no
+answer" [2] drops patch 3 and keeps the check that submitted commits
+only add messages. The shared archive dir itself is unchanged.
+
+[1] id:m2cxthv6yf.fsf@beastie.p7x.dev
+[2] id:cover.1791652315.git.claude@p7x.dev
