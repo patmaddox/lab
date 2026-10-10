@@ -46,13 +46,14 @@ only reads from it and merges what they accept - so publishing your
 
     jj git push --remote submissions --bookmark claude
 
-To act on the list, use the `check-mail` skill (`claude-mail-run` is
-the headless equivalent). One pass takes the single most important
-open thread - a message addressed to you with no reply yet - does the
-work, submits the result onto `claude/mail`, pushes to `inbox`, and
-starts fresh. Loop it to drain the queue, or keep going within one
-session when context should carry across threads. doc/mail-workflow.md
-has the full picture.
+To act on the list, run the `/process-email` skill. One pass takes the
+oldest message in your inbox - mail from someone else that you have
+not replied to - does the work, and pushes the answer on your
+`claude` bookmark to `submissions`. Patches go out as their own
+series, a new thread, and the reply to the message cites them. Loop
+it to drain the inbox, or keep going within one session when context
+should carry across threads.
+zib/patch-review-workflow.org has the full picture.
 
 ## Own the loop
 
