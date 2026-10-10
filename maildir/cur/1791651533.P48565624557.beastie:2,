@@ -1,0 +1,75 @@
+From: Pat Maddox <pat@patmaddox.com>
+To: claude <claude@p7x.dev>
+Subject: Re: [PATCH] mail: Add just commit-mail
+In-Reply-To: <4a1774d25df53c3c75f89f63c200fbb4594aec62.1791650481.git.claude@p7x.dev>
+References: <4a1774d25df53c3c75f89f63c200fbb4594aec62.1791650481.git.claude@p7x.dev>
+Date: Sat, 10 Oct 2026 09:58:53 -0700
+Message-ID: <m2v779trua.fsf@beastie.p7x.dev>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+claude <claude@p7x.dev> writes:
+
+> Mail delivered into the maildir lands in the working copy alongside
+> flag renames and edits, and each new message is committed on its own
+> by hand as "mail: <subject>". Copying subjects by hand is slow and
+> lets stray characters slip into the log.
+>
+> commit-mail takes every file added under maildir/ in @ and commits it
+> alone, named for its Subject header, so a batch of new mail becomes
+> one reviewable commit per message. Renamed and edited files stay in
+> the working copy, since a flag change or an archive move is not a new
+> message. The prefix defaults to the "mail: " every message commit
+> carries today and can be given as an argument:
+>
+>     just commit-mail 'just: '
+> ---
+> This applies to the mail branch, not trunk; base-commit is mail@upstream.
+> Encoded (RFC 2047) subjects are kept as written; none are on the list
+> yet.
+>
+> change-id: ppvulnkkwnrpxzusskntwqrloyrlnllu
+>
+>  Justfile | 17 +++++++++++++++++
+>  1 file changed, 17 insertions(+)
+>
+> diff --git a/Justfile b/Justfile
+> index 7945f87..7e65109 100644
+> --- a/Justfile
+> +++ b/Justfile
+> @@ -19,3 +19,20 @@ push:
+>    jj git push -b mail --quiet --remote jails
+>    jj git push -b mail --quiet --remote github
+>    jj git export
+> +
+> +# commit each mail file added in @ on its own, named for its subject
+> +commit-mail $prefix="mail: ":
+> +  #!/bin/sh
+> +  set -eu
+> +  added="$(jj diff -r @ -T 'if(self.status() == "added", self.path() ++ "\n")' 'root:maildir')"
+> +  printf '%s\n' "${added}" | while IFS= read -r f; do
+> +    [ -n "${f}" ] || continue
+> +    subject="$(awk '
+> +      /^\r?$/ { exit }
+> +      insub && /^[ \t]/ { sub(/^[ \t]+/, " "); s = s $0; next }
+> +      insub { exit }
+> +      tolower($0) ~ /^subject:/ { sub(/^[^:]*:[ \t]*/, ""); s = $0; insub = 1 }
+> +      END { sub(/\r$/, "", s); print s }
+> +    ' "${f}")"
+> +    jj commit -m "${prefix}${subject:-(no subject)}" "root-file:\"${f}\""
+> +  done
+>
+> base-commit: dd1db9aa2c310f456800269c0c8104f1a8a8fedf
+> -- 
+> 2.56.0
+
+Good idea but this seems needlessly complex. Probably it can grep for
+lines that begin with subject:, pick the first one (presuambly that's
+the subject header line, right?) and then read everything after it.
+
+Same with detecting added. Probably it can `jj st maildir` and then use
+awk to identify added ones and only print their names.
+
+I'm not opposed to this I guess... there is something nice about doing
+it all in jj I suppose. It just seems like it's doing a lot there that
+could be done with more idiomatic shell script processing.
