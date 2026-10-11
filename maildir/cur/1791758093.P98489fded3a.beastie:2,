@@ -1,0 +1,95 @@
+From: Pat Maddox <pat@patmaddox.com>
+To: claude <claude@p7x.dev>, lab-devel@p7x.dev
+Subject: Re: New claude skill freebsd-port
+In-Reply-To: <1791757526.f3114e6f001c@p7x.dev>
+References: <m2a4ojq3oh.fsf@beastie.p7x.dev> <1791757526.f3114e6f001c@p7x.dev>
+Date: Sun, 11 Oct 2026 15:34:53 -0700
+Message-ID: <m21p9vq31u.fsf@beastie.p7x.dev>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+claude <claude@p7x.dev> writes:
+
+> On Sun, 11 Oct 2026 15:21:18 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+>> Review it and determine if it's ready to implement. If so, post a
+>> patch. If not, request info necessary to get it ready.
+>
+> It is not ready yet. The workflow in the spec is clear, but three of
+> its steps depend on things lab-claude does not have, and one depends
+> on a convention we have not set. Each question below has a proposed
+> answer. A plain "yes" to all of them is enough for me to post a patch.
+>
+> I read the spec (claude-skill-freebsd-port, e535c216), src/portia/
+> spec.org, and oss/freebsd-ports/CLAUDE.md and Justfile. I also checked
+> the lab-claude jail, and I searched the list, which has nothing on
+> ports yet.
+>
+> 1. Ports tree ("base work off an up-to-date copy of ports tree")
+>
+>    The jail has no /usr/ports and no clone. The oss/freebsd-ports
+>    clone recipe uses git@github.com:patmaddox/freebsd-ports.git over
+>    ssh, and I have no ssh key. Proposal: the skill keeps its own jj
+>    clone of https://github.com/freebsd/freebsd-ports.git at
+>    ~/lab/freebsd-ports.jj, cloning it on first use. Each run does
+>    "jj git fetch" and works on "jj new main@origin". Is that
+>    location right, or would you rather mount a tree from the host
+>    (it is about 1 GB)?
+
+Updated in spec. I want the spec to be self-contained, not have some of
+the information be in the spec and on the list.
+
+> 2. Linters ("run all the linters")
+>
+>    portlint and portfmt (which provides portclippy) are not
+>    installed in the jail. Proposal: I send a jails patch adding
+>    devel/portlint and ports-mgmt/portfmt to lab-claude's packages,
+>    as its own series ahead of the skill. The skill then runs the
+>    same set as "just lint" in oss/freebsd-ports: portclippy,
+>    "portfmt -D" (report a diff, never rewrite in place), and
+>    "PORTSDIR=<tree> portlint -A". Is that the full set you want?
+
+Installed
+
+> 3. Distfiles and "do not build"
+>
+>    A port is not complete without distinfo, which "make makesum"
+>    writes by fetching the distfiles. Proposal: fetching and makesum
+>    are allowed, with DISTDIR under /tmp. Anything that extracts,
+>    patches, or compiles is not. "make check-plist" needs a build,
+>    so pkg-plist is drafted from the upstream install rules and
+>    marked unverified in the patch notes for poudriere to confirm.
+
+Updated spec
+
+> 4. Posting ("post patch to list with [freebsd-ports] prefix")
+>
+>    format-patch.sh and process-email assume lab trunk as the base.
+>    Proposal: the subject prefix is "[freebsd-ports PATCH]", so the
+>    mail stays a patch to the notmuch rules and "just am". The patch
+>    goes To: you, Cc: lab-devel@p7x.dev, with base-commit naming the
+>    ports tree commit. One port per patch, and related ports form a
+>    series. Commit messages follow oss/freebsd-ports/CLAUDE.md:
+>    "category/port: COMMENT" with pkg-descr and a WWW: trailer for
+>    new ports, and "Update X => Y" with changelog links for updates.
+>    There is no PR yet, so the PR: trailer is left out and you add it
+>    when you open the bug. Is that right?
+
+Updated spec
+
+> 5. Relation to portia
+>
+>    src/portia already specifies new and update, plus lore.org with
+>    porting conventions. Proposal: the skill replaces portia's new
+>    and update paths. I fold the useful parts of lore.org into the
+>    skill's reference files and leave portia untouched. Or should
+>    the skill call portia instead?
+
+Updated spec
+
+> Two smaller points I will settle in the patch unless you object.
+> "User invokable only" becomes "disable-model-invocation: true" in
+> SKILL.md. "Latest good version" means the newest tagged release that
+> upstream has not yanked or marked as a pre-release, checked against
+> the release page or the registry and not only the tags.
+
+Updated spec
