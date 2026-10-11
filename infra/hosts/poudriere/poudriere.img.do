@@ -4,15 +4,12 @@ set -o pipefail
 
 exec >&2
 
-config=current
+ABI=FreeBSD:16:amd64
+
 redo-ifchange \
     dist.mtree \
     $(jj file list dist) \
-    ../../../oss/freebsd-src/targets/${config}/pkgbase
+    scripts/build.sh \
+    repos/FreeBSD.conf
 
-# not using export, because
-# export FOO=$(cmd that fails)
-# exits 0!
-ABI=FreeBSD:16:amd64
-PKGBASE_DIR=$(realpath ../../../oss/freebsd-src/_build/${config}/pkgbase/${ABI}/latest)
-ABI=${ABI} PKGBASE_DIR=${PKGBASE_DIR} ./scripts/build.sh ${3}
+ABI=${ABI} ./scripts/build.sh ${3}

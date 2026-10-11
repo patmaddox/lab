@@ -3,11 +3,8 @@ set -eu
 set -o pipefail
 
 : ${ABI}
-: ${PKGBASE_DIR}
 
-DOAS=doas
 outfile=${1}; shift
-major_version=$(echo "${ABI}" | cut -d ':' -f 2)
 
 main() {
     prepare_disk
@@ -22,7 +19,8 @@ prepare_disk() {
     bootdir=${rootdir}-boot
     mkdir ${bootdir}
 
-    pkg_cmd="doas env ABI=${ABI} IGNORE_OSVERSION=yes pkg -r ${rootdir}"
+    pkgbase_cmd="doas env ABI=${ABI} IGNORE_OSVERSION=yes pkg -r ${rootdir} -R $(realpath repos)"
+    pkg_cmd="doas env ABI=${ABI} IGNORE_OSVERSION=yes pkg -c ${rootdir}"
 
     truncate -s 2500m ${outfile}
     md=$(doas mdconfig -a -f ${outfile})
@@ -57,18 +55,26 @@ prepare_zpool() {
 }
 
 install_base() {
-    ${pkg_cmd} add ${PKGBASE_DIR}/FreeBSD-set-base-${major_version}.*.pkg
-    ${pkg_cmd} add ${PKGBASE_DIR}/FreeBSD-set-kernels-${major_version}.*.pkg
-    ${pkg_cmd} add ${PKGBASE_DIR}/FreeBSD-set-tests-${major_version}.*.pkg
-    ${pkg_cmd} install -r FreeBSD -y \
-        deskutils/just \
-        net/rsync \
-        ports-mgmt/pkg \
-        ports-mgmt/poudriere-devel \
-        sysutils/htop \
-        sysutils/tmux \
-        www/nginx
-    doas zfs snapshot -r poudriere--zroot@base
+	doas mkdir ${rootdir}/etc/
+	echo "nameserver 8.8.8.8" | doas tee ${rootdir}/etc/resolv.conf >/dev/null
+
+	doas mkdir -p ${rootdir}/usr/share/keys/pkg/trusted/
+	doas fetch -q -o ${rootdir}/usr/share/keys/pkg/trusted/ https://cgit.freebsd.org/src/plain/share/keys/pkg/trusted/pkg.freebsd.org.2013102301
+
+	${pkgbase_cmd} install -r FreeBSD-base -y \
+	    FreeBSD-set-base \
+	    FreeBSD-set-kernels \
+	    FreeBSD-set-tests
+
+	${pkg_cmd} install -r FreeBSD-ports -y \
+            deskutils/just \
+            net/rsync \
+            ports-mgmt/pkg \
+            ports-mgmt/poudriere-devel \
+            sysutils/htop \
+            sysutils/tmux \
+            www/nginx
+	doas zfs snapshot -r poudriere--zroot@base
 }
 
 install_config() {
