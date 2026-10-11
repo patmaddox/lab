@@ -24,7 +24,7 @@ prepare_disk() {
 
     pkg_cmd="doas env ABI=${ABI} IGNORE_OSVERSION=yes pkg -r ${rootdir}"
 
-    truncate -s 1300m ${outfile}
+    truncate -s 2500m ${outfile}
     md=$(doas mdconfig -a -f ${outfile})
     mdid=$(echo ${md} | grep -o '[[:digit:]]*')
     mdev=/dev/${md}
