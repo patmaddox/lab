@@ -206,3 +206,8 @@ are how each of them earns trust.
 
 - Do not use double spaces anywhere (content or commit messages)
 - Prefer complete sentences over fragments using semicolons
+
+## Dependencies
+- Do not install dependencies.
+- If you get blocked on a missing dependency, report to user the
+  dependencies that need to be installed.

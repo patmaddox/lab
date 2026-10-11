@@ -278,3 +278,9 @@ the commits differ, the push failed. Fix it before stopping.
 
 - One pass: answer the oldest inbox message, then stop.
 - Loop: repeat until step 2 finds an empty inbox.
+
+## Missing dependencies
+- Do not install missing dependencies
+- Submit a patch declaring the dependencies you need to proceed
+- Try to identify all dependencies you will need upfront to complete
+  the task, to minimize the number of patches required.
