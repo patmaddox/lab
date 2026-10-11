@@ -1,0 +1,12 @@
+From: Pat Maddox <pat@patmaddox.com>
+To: lab-devel@p7x.dev
+Subject: New claude skill freebsd-port
+Date: Sun, 11 Oct 2026 15:21:18 -0700
+Message-ID: <m2a4ojq3oh.fsf@beastie.p7x.dev>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+I wrote a spec in bookmark claude-skill-freebsd-port.
+
+Review it and determine if it's ready to implement. If so, post a
+patch. If not, request info necessary to get it ready.
