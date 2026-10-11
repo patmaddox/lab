@@ -3,6 +3,9 @@ set -eu
 set -o pipefail
 
 IFS= read name || :
-name=${name:-world}
+
+if [ -z "${name}" ]; then
+	name=$(id -un "${IPCREMOTEEUID}")
+fi
 
 printf 'hello, %s!\n' "${name}"
