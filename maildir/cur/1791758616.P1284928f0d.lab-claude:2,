@@ -1,0 +1,251 @@
+Message-ID: <2ca81dbd565278c3d7cf433259f39dba0729015c.1791758599.git.claude@p7x.dev>
+In-Reply-To: <cover.1791758599.git.claude@p7x.dev>
+References: <cover.1791758599.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Date: Sun, 11 Oct 2026 22:43:06 +0000
+Subject: [PATCH 2/2] claude/skills/freebsd-port: Implement the skill
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+Change-Id: ztuqkrlkrrsqrtvokoqulpzpqrolxtqv
+
+spec.org describes what the skill must do, but Claude needs concrete
+steps to carry it out in lab-claude, which has no ports tree and no
+root.
+
+The tree is a blobless git clone so the first run stays small while
+the port history used for changelogs and conventions remains
+reachable. make runs with its distfiles, work directory, and options
+database under /var/tmp, since the defaults are root-owned and the
+port would otherwise fail in the config step before fetching. The
+patch is made with plain git format-patch because it is applied with
+git am to a ports tree, where lab's change ids mean nothing.
+
+The commit conventions are the ones oss/freebsd-ports/CLAUDE.md
+reviews against, less the PR: trailer, which cannot exist before
+Pat files the bug.
+---
+change-id: ztuqkrlkrrsqrtvokoqulpzpqrolxtqv
+
+ .claude/skills/freebsd-port/SKILL.md | 210 +++++++++++++++++++++++++++
+ 1 file changed, 210 insertions(+)
+ create mode 100644 .claude/skills/freebsd-port/SKILL.md
+
+diff --git a/.claude/skills/freebsd-port/SKILL.md b/.claude/skills/freebsd-port/SKILL.md
+new file mode 100644
+index 0000000..96d47cb
+--- /dev/null
++++ b/.claude/skills/freebsd-port/SKILL.md
+@@ -0,0 +1,210 @@
++---
++name: freebsd-port
++description: >-
++  Create a new FreeBSD port or update an existing one in a fresh clone
++  of the public ports tree, lint it, and post it to lab-devel as a
++  [freebsd-ports PATCH] for review. Prepares the patch only; the port
++  is never built.
++disable-model-invocation: true
++argument-hint: <category/port> [version, home page, repository, ...]
++---
++
++# freebsd-port
++
++Create or update one FreeBSD port, as asked:
++
++    $ARGUMENTS
++
++The arguments name the port's origin, `category/port`, and may add
++free-form detail such as the version, home page, or upstream
++repository. If the origin exists in the tree, the job is an update;
++otherwise it is a new port. If they do not name an origin, or give too
++little to find the software, ask before starting.
++
++The result is a patch on lab-devel. Pat builds it with poudriere and
++takes it upstream, so this skill prepares the patch and nothing more.
++spec.org beside this file is the specification; this file is how to
++carry it out.
++
++## 1. Check the tools
++
++    for t in git portclippy portfmt portlint; do
++        command -v "${t}" >/dev/null || echo "missing: ${t}"
++    done
++
++portclippy and portfmt come from ports-mgmt/portfmt, portlint from
++ports-mgmt/portlint. If any is missing, stop and say so. A patch that
++has not been linted is not ready to post.
++
++## 2. Get an up-to-date ports tree
++
++The tree is a git clone of the public upstream, kept in /var/tmp
++between runs. A blobless clone fetches file history only when it is
++read, which keeps the first clone small:
++
++    tree=/var/tmp/freebsd-ports
++    origin="category/port"
++    if [ ! -d "${tree}/.git" ]; then
++        git clone --filter=blob:none \
++            https://github.com/freebsd/freebsd-ports.git "${tree}"
++    fi
++    cd "${tree}"
++    git fetch -q origin
++    git reset -q --hard
++    git clean -fdq
++    git switch -q -C "$(echo "${origin}" | tr / -)" origin/main
++
++The tree is scratch space that belongs to this skill. The list is the
++record of the work, so anything an earlier run left behind is either
++posted already or abandoned, and is discarded.
++
++## 3. Research
++
++The ports tree is thousands of working examples, and any problem the
++port raises has almost certainly been solved in it already. Use the
++framework; do not invent. It is better to stop with a question than to
++post a solution the ports community will reject.
++
++- For an update, read the port's files and its history,
++  `git log -p -- "${origin}"`. Earlier commits show the port's
++  conventions and where its changelogs live.
++- Find ports built the same way (the same `USES`, the same language
++  ecosystem) and follow them. Where the tree offers several mechanisms
++  for one task, dependencies especially, count how many comparable
++  ports use each and follow the one most use now. A mechanism only a
++  handful of ports still use is a warning sign, not a template. When
++  the standard mechanism hits an obstacle, find how other ports on it
++  solved the same obstacle before falling back.
++- The Porter's Handbook is the reference:
++  https://docs.freebsd.org/en/books/porters-handbook/
++
++src/portia/lore.org records lessons from earlier porting work, such
++as the Go port that broke on a mechanism the tree had abandoned. Read
++it when a choice is not obvious.
++
++## 4. Choose the latest good version
++
++Use the newest released version, checked against upstream's release
++page or the language registry (PyPI, crates.io, Hex, npm), not only
++the repository's tags. A tag is not a release.
++
++- Exclude yanked versions. Registries call it yank, retract, unlist,
++  unpublish, or retire; a withdrawn version still fetches, so check
++  its status.
++- Exclude pre-releases: alpha, beta, rc, dev, and anything upstream
++  marks as a pre-release.
++
++For an update, collect the changelog link of every version between the
++port's version and the new one. If the port is already at the latest
++good version, stop and say so; there is nothing to post.
++
++## 5. Write the port
++
++A port is `Makefile`, `distinfo`, `pkg-descr`, and a plist
++(`pkg-plist`, `PLIST_FILES`, or one the framework generates). Keep the
++Makefile in the order the handbook gives.
++
++- Take dependency bounds from upstream's own list (`Cargo.toml`,
++  `go.mod`, `pyproject.toml`, `mix.exs`) and express them in
++  `*_DEPENDS`. Where the tree cannot satisfy a bound, loosen it to what
++  the tree provides and say so in the commit message.
++- If upstream ships tests, hook them into the `test` target with the
++  knob the port's `USES` provides (`CARGO_TEST`, `GO_TESTTARGET`,
++  `USE_PYTHON=pytest`, `USES=cmake:testing`, `TEST_TARGET`). A
++  hand-written `do-test` silently replaces the framework's. Test-only
++  dependencies go in `TEST_DEPENDS`.
++- For an update, reset `PORTREVISION` and regenerate `distinfo`.
++
++Do not build; it takes too long, and poudriere checks the build. Reading
++metadata is fine. Fetch, extract, and the framework's metadata targets
++are allowed; configure, build, stage, install, and check-plist are
++not. Keep distfiles, work directories, and saved options out of the
++tree and out of the root-owned defaults, and take default options
++without prompting:
++
++    portmake() {
++        make -C "${tree}/${origin}" PORTSDIR="${tree}" BATCH=yes \
++            DISTDIR=/var/tmp/freebsd-ports-distfiles \
++            WRKDIRPREFIX=/var/tmp/freebsd-ports-work \
++            PORT_DBDIR=/var/tmp/freebsd-ports-db "${@}"
++    }
++    portmake makesum # writes distinfo from the fetched distfiles
++    portmake extract # to read upstream's sources
++    portmake cargo-crates # or gomod-vendor, as the framework requires
++
++Never write a checksum by hand. Without a build the plist cannot be
++checked, so draft it from upstream's install rules and say in the patch
++notes that it is unverified.
++
++## 6. Lint
++
++    cd "${tree}/${origin}"
++    portclippy Makefile
++    portfmt -D Makefile
++    PORTSDIR="${tree}" portlint -A
++
++`portfmt -D` prints the diff it would apply; make the changes it
++suggests by hand. Fix every finding, or explain in the patch notes why
++it stays.
++
++## 7. Commit
++
++One port per commit. Related ports, such as a new dependency and the
++port that needs it, form a series with the dependency first.
++
++    cd "${tree}"
++    git add -A "${origin}"
++    git commit -q -F /tmp/freebsd-port.msg
++
++Write the message to that file first, following the ports tree's
++conventions, with lines wrapped at 72 columns. A new port:
++
++    category/port: <COMMENT from the Makefile>
++
++    <pkg-descr, edited to fit>
++
++    WWW: <WWW from the Makefile>
++
++An update:
++
++    category/port: Update 1.0 => 1.2
++
++    Changelogs:
++    https://example.org/1.1
++    https://example.org/1.2
++
++Leave out the `PR:` trailer. No bug exists yet; Pat adds it when he
++files one.
++
++## 8. Post
++
++The patch is applied with `git am` in a ports tree, not with lab's
++`just am`, so it is formatted with plain git and carries the
++`[freebsd-ports PATCH]` prefix:
++
++    base="$(git rev-parse origin/main)"
++    rm -rf /tmp/freebsd-port
++    git format-patch -o /tmp/freebsd-port --thread=shallow \
++        --subject-prefix="freebsd-ports PATCH" --base="${base}" \
++        --to="Pat Maddox <pat@patmaddox.com>" --cc="lab-devel@p7x.dev" \
++        origin/main..HEAD
++
++For more than one patch add `--cover-letter` and fill it in. Below the
++`---` of a single patch, or in the cover letter, write the notes for
++review: the ports you followed, what was checked (lint, makesum), what
++was not (the build, the plist), and any loosened dependency bound.
++
++Deliver the series into the mail workspace and push it, as
++zib/patch-review-workflow.org describes:
++
++    for p in /tmp/freebsd-port/*.patch; do
++        ~/lab/default.jj/libexec/mail/maildir-deliver.sh < "${p}"
++    done
++    cd ~/lab/mail.jj
++    jj diff --summary # only "A maildir/..." lines
++    jj commit -m "msg: [freebsd-ports PATCH] <subject>"
++    jj bookmark set "$(whoami)" -r @-
++    jj git push --remote submissions --bookmark "$(whoami)"
++
++When a list message asked for the port, reply to it and cite the patch
++by its full subject, with its Message-ID in a footnote.
+-- 
+2.56.0
+

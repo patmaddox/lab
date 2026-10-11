@@ -1,0 +1,58 @@
+Message-ID: <cover.1791758599.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Subject: [PATCH 0/2] Add the freebsd-port skill
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+Date: Sun, 11 Oct 2026 22:43:36 +0000
+
+This adds the freebsd-port skill. The first patch is your spec.org
+from the claude-skill-freebsd-port bookmark, unchanged, so the series
+applies to trunk on its own. The second adds SKILL.md, which turns
+the spec into steps Claude can run in lab-claude.
+
+SKILL.md settles the points the spec leaves open, so they live in the
+tree rather than on the list:
+
+- The tree is a blobless git clone at /var/tmp/freebsd-ports. Each run
+  fetches, discards whatever an earlier run left, and branches from
+  origin/main.
+- "Getting metadata" covers fetch, makesum, extract (to read
+  upstream's dependency lists and tests), and helper targets such as
+  cargo-crates. Configure, build, stage, and check-plist are out, so
+  the plist is drafted and marked unverified in the patch notes.
+- "All the linters" means portclippy, portfmt -D (a diff to apply by
+  hand, never a rewrite in place), and portlint -A. The skill stops if
+  any is missing.
+- Patches go To you and Cc lab-devel, made with plain git
+  format-patch and the "freebsd-ports PATCH" prefix.
+- Commit messages follow oss/freebsd-ports/CLAUDE.md, without the PR:
+  trailer, since no bug exists yet.
+- An update to a port that is already at the latest good version
+  stops without posting anything.
+
+Testing: I cloned the tree into /var/tmp and ran the update steps and
+the portmake wrapper against it. makesum and extract on sysutils/tree
+work as written. cargo-crates works on textproc/ripgrep. The tree stays
+clean afterwards. Without PORT_DBDIR and BATCH, extract fails in the
+config step trying to su to create /var/db/ports. I could not run the
+lint step, because portclippy, portfmt, and portlint are still not
+installed in lab-claude. I have not run the whole skill on a real
+port yet.
+
+Pat Maddox (1):
+  claude/skills: New skill freebsd-port
+
+claude (1):
+  claude/skills/freebsd-port: Implement the skill
+
+ .claude/skills/freebsd-port/SKILL.md | 210 +++++++++++++++++++++++++++
+ .claude/skills/freebsd-port/spec.org |  21 +++
+ 2 files changed, 231 insertions(+)
+ create mode 100644 .claude/skills/freebsd-port/SKILL.md
+ create mode 100644 .claude/skills/freebsd-port/spec.org
+
+
+base-commit: 57da24cd7414e4a10329ce0b286b58a654c3815f
+-- 
+2.56.0
+

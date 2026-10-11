@@ -1,0 +1,49 @@
+Message-ID: <20cc836aa98c904dce3b5ce60d5ce2874c8dbaf1.1791758599.git.claude@p7x.dev>
+In-Reply-To: <cover.1791758599.git.claude@p7x.dev>
+References: <cover.1791758599.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Date: Sun, 11 Oct 2026 11:19:12 -0700
+Subject: [PATCH 1/2] claude/skills: New skill freebsd-port
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+Change-Id: zluowwrkpzzompuokrqrmzkokmomkzun
+
+From: Pat Maddox <pat@patmaddox.com>
+
+---
+change-id: zluowwrkpzzompuokrqrmzkokmomkzun
+
+ .claude/skills/freebsd-port/spec.org | 21 +++++++++++++++++++++
+ 1 file changed, 21 insertions(+)
+ create mode 100644 .claude/skills/freebsd-port/spec.org
+
+diff --git a/.claude/skills/freebsd-port/spec.org b/.claude/skills/freebsd-port/spec.org
+new file mode 100644
+index 0000000..72c9bc5
+--- /dev/null
++++ b/.claude/skills/freebsd-port/spec.org
+@@ -0,0 +1,21 @@
++#+TITLE: claude skill freebsd-port
++
++- disable model invocation
++- base work off an up-to-date copy of ports tree
++  - ports tree is cloned from public upstream, into a dir in
++    =/var/tmp/=
++- create a new port from user provided info, or update an existing
++  port
++- research ports tree for similar ports to determine patterns
++- look at upstream / dist sites etc to use the latest good version
++  - newest released version from release page or registry, not just tags
++  - exclude yanked versions
++  - exclude pre releases
++- run all the linters to make sure it's clean
++- prepare the patch only - do not build, it will take too long
++  - getting metadata is okay, e.g. make fetch, make makesum
++- post patch to list with [freebsd-ports PATCH] prefix
++  - patch will be applied with =git am= in a git dir, no need to be
++    supported by =just am=
++- completely independent skill, does not use portia. Can refer to
++  portia for useful ideas to integrate into the skill
+-- 
+2.56.0
+
