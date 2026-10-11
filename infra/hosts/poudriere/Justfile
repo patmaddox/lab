@@ -3,3 +3,21 @@ help:
 
 upload-certs:
   ./scripts/upload-certs.sh
+
+build:
+  redo-ifchange poudriere.img
+
+mount:
+  #!/bin/sh
+  if zpool status poudriere_zroot >/dev/null 2>&1; then return; fi
+  md=$(doas mdconfig -a -f poudriere.img)
+  #doas mdid=$(echo ${md} | grep -o '[[:digit:]]*')
+  doas zpool import -d /dev/${md}p2 -R /mnt/poudriere -t zroot poudriere_zroot
+
+umount:
+  #!/bin/sh
+  if ! zpool status poudriere_zroot >/dev/null 2>&1; then return; fi
+  doas zpool export poudriere_zroot
+  md=$(doas mdconfig -l -v | awk -v img_file=$(realpath poudriere.img) '$4 == img_file {print $1}')
+  mdid=$(echo ${md} | grep -o '[[:digit:]]*')
+  doas mdconfig -d -u ${mdid}
