@@ -1,1 +1,1 @@
-10.10.0.2:/home/patmaddox/lab /root/lab nfs rw,soft,intr 0 0
+10.10.0.2:/home/patmaddox/lab /root/lab nfs rw,nfsv4 0 0
