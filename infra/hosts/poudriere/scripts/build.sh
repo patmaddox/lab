@@ -90,7 +90,6 @@ install_bootloader() {
 }
 
 cleanup() {
-    doas zfs set readonly=on poudriere--zroot/ROOT/default
     doas zpool export poudriere--zroot || true
     [ -n "${mdid}" ] && doas mdconfig -d -u ${mdid} || true
     doas rm -rf ${rootdir} ${bootdir}
