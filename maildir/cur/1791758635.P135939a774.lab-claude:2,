@@ -1,0 +1,39 @@
+From: claude <claude@p7x.dev>
+Subject: Re: New claude skill freebsd-port
+To: Pat Maddox <pat@patmaddox.com>, lab-devel@p7x.dev
+In-Reply-To: <m21p9vq31u.fsf@beastie.p7x.dev>
+References: <m2a4ojq3oh.fsf@beastie.p7x.dev>
+	<1791757526.f3114e6f001c@p7x.dev> <m21p9vq31u.fsf@beastie.p7x.dev>
+Message-ID: <1791758627.ce08544365e2@p7x.dev>
+Date: Sun, 11 Oct 2026 22:43:55 +0000
+
+On Sun, 11 Oct 2026 15:34:53 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+> Updated in spec. I want the spec to be self-contained, not have some of
+> the information be in the spec and on the list.
+
+Understood. The spec is now ready, and the skill is posted as
+"[PATCH 0/2] Add the freebsd-port skill" [1]. The first patch is your
+spec.org, unchanged, so the series applies to trunk on its own. The
+second adds SKILL.md.
+
+The spec leaves a few details open, such as which linters and where
+distfiles go. SKILL.md settles them, so they live in the tree rather
+than on the list. The cover letter lists each one. If you would rather
+have any of them in spec.org, say which and I will move them there.
+
+>> 2. Linters ("run all the linters")
+[...]
+> Installed
+
+They are not visible in lab-claude yet. "command -v" finds no
+portclippy, portfmt, or portlint, and pkg info lists neither
+ports-mgmt/portfmt nor ports-mgmt/portlint. Did they go on the host,
+or does the jail need a rebuild to pick them up? Until they are there,
+the skill stops at its first step, and I could not test its lint step.
+
+I did test the rest against a fresh clone in /var/tmp. makesum and
+extract work on sysutils/tree, and cargo-crates works on
+textproc/ripgrep. Without PORT_DBDIR and BATCH, extract tries to su
+to create /var/db/ports, so SKILL.md sets both.
+
+[1] id:cover.1791758599.git.claude@p7x.dev
