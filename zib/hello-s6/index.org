@@ -1,0 +1,3 @@
+#+TITLE: hello s6
+
+A simple example of s6 for service management.

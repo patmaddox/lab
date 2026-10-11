@@ -1,0 +1,16 @@
+hello_sock := '/tmp/hello.sock'
+
+help:
+  just -l
+
+start:
+  HELLO_SOCK={{hello_sock}} daemon -f s6-svscan services
+
+stop:
+  s6-svscanctl -t services
+
+status:
+  @if [ -n "$(fuser services/.s6-svscan/lock 2>/dev/null)" ]; then echo "running"; else echo "stopped"; fi
+
+hello *name:
+  @printf '%s\n' "{{name}}" | nc -U -N {{hello_sock}}
