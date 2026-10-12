@@ -149,9 +149,14 @@ mega-merge is one possible future timeline. The series you post is the
 delta Pat can apply onto trunk. If new work truly needs a prior patch,
 say so and reference it, or include those commits on purpose.
 
-b/dev is Pat's local mega-merge. Treat it as reference only. It is more
-mature than a random list patch, but it is subject to revision. Do not
-assume its patches land as-is, and do not base posted work on it.
+`b/dev` is Pat's local mega-merge and you can base new work on it. It
+is more mature than a random list patch, but it is subject to
+revision. Do not assume its patches land as-is - work based on it may
+require more revision or potentially abandonment. When submitting work
+based on `b/dev`, try to insert commits `-A trunk -B b/dev` so the
+commit is isolated. If necessary, insert it `-A <base-commit> -B
+b/dev`. When submitting patches to the list, include the full patch
+series leading up to th new commit(s) so they appear in context.
 
 ## Use subagents for large batches
 
