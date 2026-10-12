@@ -1,0 +1,191 @@
+Message-ID: <39d3485eae9d7901ce7e09985c0cd3065eac4c6d.1791832016.git.claude@p7x.dev>
+In-Reply-To: <cover.1791832016.git.claude@p7x.dev>
+References: <cover.1791832016.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Date: Mon, 12 Oct 2026 18:35:21 +0000
+Subject: [PATCH v3 3/4] claude/skills/spec-report: Add the spec-report skill
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+Change-Id: vrpzwzzpzrwxpnnvstlynoyqyqwkywql
+
+A spec-driven workflow needs a way to see how far the implementation
+has come against a spec, and what the spec must still say before the
+rest can be planned. Writing that report by hand is slow and its shape
+drifts from one report to the next.
+
+The skill gives every spec the same report next to it, with evidence
+for each claim, refreshed and committed as the work moves. It keeps
+an existing sclr report.org from being overwritten.
+---
+change-id: vrpzwzzpzrwxpnnvstlynoyqyqwkywql
+
+ .claude/skills/spec-report/SKILL.md | 157 ++++++++++++++++++++++++++++
+ 1 file changed, 157 insertions(+)
+ create mode 100644 .claude/skills/spec-report/SKILL.md
+
+diff --git a/.claude/skills/spec-report/SKILL.md b/.claude/skills/spec-report/SKILL.md
+new file mode 100644
+index 0000000..9c5c6d2
+--- /dev/null
++++ b/.claude/skills/spec-report/SKILL.md
+@@ -0,0 +1,157 @@
++---
++name: spec-report
++description: >-
++  Report how well the working copy implements a spec file. Read the
++  spec, analyze the implementation, documentation, and history, and
++  commit a sibling report giving the status, conflicts, gaps, and
++  what is done, with evidence for each claim.
++disable-model-invocation: true
++argument-hint: <path to spec.org, SPEC.md, spec--<name>.org, or SPEC--<name>.md>
++---
++
++# spec-report
++
++Report on the spec at:
++
++    $ARGUMENTS
++
++The report is a gap analysis, refreshed whenever the implementation
++changes. It tells the spec's author how well the repo satisfies the
++spec, and what the spec must still say before the rest can be planned.
++It never contains a plan. spec.org beside this file is the
++specification; this file is how to carry it out.
++
++## 1. Resolve the spec and its report
++
++The basename of the spec must be one of `spec.org`, `SPEC.md`,
++`spec--<name>.org`, or `SPEC--<name>.md`. If it is not, or the file does
++not exist, stop and say so.
++
++The report is the sibling file named by replacing the leading `spec`
++with `report`, keeping its case:
++
++    dir="$(dirname "${spec}")"
++    base="$(basename "${spec}")"
++    report="${dir}/$(echo "${base}" | sed -e 's/^spec/report/' \
++        -e 's/^SPEC/REPORT/')"
++
++So `spec.org` gives `report.org`, `SPEC--cli.md` gives
++`REPORT--cli.md`. Write the report in the spec's format: org for an
++org spec, markdown for a markdown spec.
++
++## 2. Move a sclr report aside
++
++sclr writes its own `report.org` next to the spec, with a different
++shape. A sibling `lore.org` marks a sclr directory. If `${dir}/lore.org`
++exists and `${report}` is `report.org` and exists, move it out of the
++way in its own preparatory commit, so this report does not overwrite
++sclr's account:
++
++    mv "${dir}/report.org" "${dir}/sclr-report.org"
++    jj commit -m "<area>: Move the sclr report to sclr-report.org" \
++        "${dir}/report.org" "${dir}/sclr-report.org"
++
++The body says why: the spec report now owns `report.org`.
++
++## 3. Read the spec and its history
++
++Read the whole spec. Number its requirements as you go, with the line
++numbers each covers, so every claim in the report can cite them.
++
++Collect the headings whose text begins with `conflict plan:`, such as
++`* conflict plan: <conflict>` in org or `## conflict plan: <conflict>`
++in markdown. Each is the author's plan for resolving one conflict
++between the spec and the implementation.
++
++Read the history of the spec and of the paths it governs:
++
++    jj log -r 'files("'"${dir}"'")'
++    jj log -p --git -r 'files("'"${spec}"'")'
++
++History shows how the spec and the implementation evolved, which way
++they are heading, and what was decided along the way. Use it for
++context and as evidence; the working copy is what the report judges.
++
++## 4. Analyze the working copy
++
++Judge the working copy, as checked out, not trunk. Base each finding
++on two kinds of file:
++
++- **Implementation**: code, scripts, configuration, skills, and
++  anything else that produces the behavior.
++- **Documentation**: text that documents the implementation, such as
++  a README, a SKILL.md, or a man page.
++
++Notes are context, never evidence that a requirement is met. Notes are
++files such as those under `zib/`, and any text-only file that is not
++clearly part of the implementation or documenting it, such as
++`lore.org`, `research.org`, `todo.org`, or an earlier report.
++
++Be thorough: follow each requirement to the code that would carry it
++out, and run read-only commands where that settles a question. For a
++large spec, fan out one read-only subagent per group of requirements.
++Give each the requirement text and line numbers, and have it return,
++for each requirement, a verdict (implemented, partial, missing, or
++conflicting) with evidence. Do not let subagents write files.
++
++Classify each requirement:
++
++- **Implemented**: the working copy does what the spec says.
++- **Conflict**: the working copy does something the spec contradicts.
++  Note whether a `conflict plan:` heading covers this specific
++  conflict.
++- **Not implemented**: nothing does it yet, or only part of it.
++
++Then check each `conflict plan:` heading against the conflicts found.
++A plan whose conflict no longer exists can be removed from the spec.
++
++For each requirement not implemented, decide whether the spec and the
++current implementation together give enough detail to plan the work.
++If so, it is "ready to implement". If not, it is "not ready to
++implement", and list the questions the author must answer in the spec
++before it can be planned. Each question cites the spec lines it
++concerns and the evidence that leaves it open.
++
++## 5. Write the report
++
++Overwrite `${report}` in full. It has these sections, in order:
++
++1. **Status**: a concise summary. How much of the spec is done, any
++   conflicts, and whether the rest is ready to implement. No evidence
++   is needed here.
++2. **Conflicts**: each conflict, the spec lines it contradicts, the
++   behavior that contradicts them, and whether the spec has a
++   `conflict plan:` heading for it. "None" if there are none.
++3. **Conflict plans that can be removed**: each `conflict plan:`
++   heading whose conflict is resolved, with the evidence. "None" if
++   there are none.
++4. **Not implemented**: each gap, "ready to implement" or "not ready
++   to implement", and for the latter the questions for the spec.
++5. **Implemented**: each requirement that is met.
++
++Every section but the status gives evidence for its claims: spec
++lines, `path:line` references into the working copy, commits by short
++id and subject, and the output of commands run. A claim without
++evidence does not belong in the report.
++
++Do not include an implementation plan. The report shows only what the
++spec still needs, so the author can improve it.
++
++## 6. Commit the report
++
++Commit the report alone, after the work succeeds:
++
++    jj commit -m "<area>: Refresh the spec report" "${report}"
++
++`<area>` is the spec's directory, as used in that directory's commit
++history (for example, `claude/skills/spec-report` for
++`.claude/skills/spec-report`). The body says, in a sentence or two,
++where the implementation stands against the spec and what changed
++since the last report.
++
++Then check the outcome from outside, not from what you printed:
++
++    jj log -r @- --no-graph -T 'description.first_line()'
++    jj diff -r @- --summary     # only the report
++
++If the commit does not contain the report, fix it before stopping.
+-- 
+2.56.0
+

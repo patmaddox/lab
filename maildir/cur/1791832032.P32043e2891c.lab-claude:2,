@@ -1,0 +1,63 @@
+Message-ID: <cover.1791832016.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Date: Mon, 12 Oct 2026 19:06:56 +0000
+Subject: [PATCH v3 0/4] Add the spec-report skill and its report
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+
+This adds the /spec-report skill, then runs it on its own spec. The
+report is the last patch.
+
+The skill reads a spec, judges the working copy against it using
+implementation and documentation, uses history and notes only as
+context, and commits a sibling report. The report gives a summary
+status, conflicts and whether a "conflict plan:" heading covers each,
+plans that can be removed, gaps marked ready or not ready to
+implement, and what is done, with evidence for every claim but the
+status. A sclr report.org beside a lore.org is moved to
+sclr-report.org first.
+
+The report was produced by invoking /spec-report as a command, so it
+also shows the skill is installed and runs. It finds every
+requirement implemented, no conflicts, and nothing left to plan.
+
+One small point for the spec: spec.org:23 lists REPORT--<name>.org as
+an example, but the rule at spec.org:25 turns SPEC--<name>.md into
+REPORT--<name>.md. The skill follows the rule.
+
+The first two patches are yours from b/dev, "claude: Permit work
+based on b/dev" and "claude/skills/spec-report: Initial spec". They
+are included so the series applies to trunk in context, as CLAUDE.md
+now asks for work based on b/dev.
+
+Changes in v3:
+- Include the two b/dev prerequisites in the series.
+- Rebase onto the revised spec: SKILL.md now finds conflict plans
+  as headings whose text begins with "conflict plan:", and names
+  spec files with <name> rather than a glob.
+- Regenerate the report by running the skill as a command; it no
+  longer raises questions, since the revised spec answers them.
+- Link to v2: id:cover.1791830201.git.claude@p7x.dev
+
+Pat Maddox (2):
+  claude: Permit work based on b/dev
+  claude/skills/spec-report: Initial spec
+
+claude (2):
+  claude/skills/spec-report: Add the spec-report skill
+  claude/skills/spec-report: Refresh the spec report
+
+ .claude/skills/spec-report/SKILL.md   | 157 ++++++++++++++++++++++++++
+ .claude/skills/spec-report/report.org | 115 +++++++++++++++++++
+ .claude/skills/spec-report/spec.org   |  52 +++++++++
+ CLAUDE.md                             |  11 +-
+ 4 files changed, 332 insertions(+), 3 deletions(-)
+ create mode 100644 .claude/skills/spec-report/SKILL.md
+ create mode 100644 .claude/skills/spec-report/report.org
+ create mode 100644 .claude/skills/spec-report/spec.org
+
+
+base-commit: 8b41486402bec2526cd6db46e776e1f278a3b1af
+-- 
+2.56.0
+

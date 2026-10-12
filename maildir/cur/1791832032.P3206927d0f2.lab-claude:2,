@@ -1,0 +1,78 @@
+Message-ID: <d080e5edab3c431e8cd59ba892b97a3dedb5d2f0.1791832016.git.claude@p7x.dev>
+In-Reply-To: <cover.1791832016.git.claude@p7x.dev>
+References: <cover.1791832016.git.claude@p7x.dev>
+From: Pat Maddox <pat@patmaddox.com>
+Date: Mon, 12 Oct 2026 10:17:04 -0700
+Subject: [PATCH v3 2/4] claude/skills/spec-report: Initial spec
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+Change-Id: smuknszloxotxnupzmsoztuyqkztnoov
+
+---
+change-id: smuknszloxotxnupzmsoztuyqkztnoov
+
+ .claude/skills/spec-report/spec.org | 52 +++++++++++++++++++++++++++++
+ 1 file changed, 52 insertions(+)
+ create mode 100644 .claude/skills/spec-report/spec.org
+
+diff --git a/.claude/skills/spec-report/spec.org b/.claude/skills/spec-report/spec.org
+new file mode 100644
+index 0000000..12e3299
+--- /dev/null
++++ b/.claude/skills/spec-report/spec.org
+@@ -0,0 +1,52 @@
++#+TITLE: /spec-report skill to report status of a spec
++
++artifact: a claude skill in this dir, and the report
++disable-model-invocation
++
++implementation note: because this skill produces its own =report.org=,
++do not commit a hand-made report. Use it to bootstrap the skill, but
++then remove it and apply the skill to produce the report.
++
++skill:
++- Read the spec file provided by args (=spec.org=, =SPEC.md=,
++  =spec--<name>.org=, =SPEC--<name>.md=)
++- Thoroughly analyze the working copy, to understand how well the repo
++  behavior implements the spec. Base this analysis on implementation
++  and documentation.
++- You can reference notes for context, but they are not part of the
++  spec implementation. Notes are typically things like =zib= files and
++  any text-only that isn't clearly part of the implementation, or
++  documenting the implementation.
++- Refer to commit history for additional context, evolution,
++  direction, and decisions made.
++- Produce a sibling report file (e.g. =report.org=, =REPORT.md=,
++  =report--<name>.org=, =REPORT--<name>.org=) corresponding to the
++  spec file
++  - report file name is produced by =s/^spec/report/ <spec>=
++  - indicate:
++    - concise summary status
++    - conflicts - any implemented behavior that contradicts the spec
++      - conflict resolution plan is a heading in the spec prefixed
++        with =conflict plan:=
++      - indicate whether or not spec includes a conflict resolution plan
++	for this specific conflict
++    - indicate any conflict resolution plans that can be removed from
++      spec, because the conflict has since been resolved
++    - what has not been implemented
++      - evaluate whether the spec and current implementation have enough
++	detail to produce a viable plan to implement it. If so, indicate
++	"ready to implement." If not, indicate "not ready to implement"
++	and provide a list of questions that user will need to answer in
++	the spec to support a plan.
++      - do not include the plan in the report - it is only a gap
++	analysis used identify necessary spec improvements.
++    - what has been implemented
++    - for all sections other than summary status, provide evidence
++      supporting the claims
++- commit the report, overwriting the existing report. The intent is to
++  refresh the report over time as the implementation changes. It
++  supports a spec-driven workflow, where the report describes how well
++  the implementation satisfies the spec.
++- in case of a sclr =report.org= (indicated by presence of a sibling
++  =lore.org=), move the sclr =report.org= to =sclr-report.org= in a
++  preparatory commit.
+-- 
+2.56.0
+
