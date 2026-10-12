@@ -3,14 +3,25 @@ hello_sock := '/tmp/hello.sock'
 help:
   just -l
 
-start:
+# start the supervision tree
+sup-start:
   HELLO_SOCK={{hello_sock}} daemon -f s6-svscan services
 
-stop:
+# stop the supervision tree
+sup-stop:
   s6-svscanctl -t services
 
+list:
+  ls services/*/run | cut -d '/' -f 2
+
+start service:
+  s6-svc -u services/{{service}}
+
+stop service:
+  s6-svc -d services/{{service}}
+
 status:
-  @if [ -n "$(fuser services/.s6-svscan/lock 2>/dev/null)" ]; then echo "running"; else echo "stopped"; fi
+  ./status.sh
 
 hello *name:
   @printf '%s\n' "{{name}}" | nc -U -N {{hello_sock}}
