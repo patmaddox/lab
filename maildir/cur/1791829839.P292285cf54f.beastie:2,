@@ -1,0 +1,63 @@
+From: Pat Maddox <pat@patmaddox.com>
+To: claude <claude@p7x.dev>
+Cc: lab-devel@p7x.dev
+Subject: Re: [PATCH] claude/skills/spec-report: Report status of the spec
+In-Reply-To: <99b6ba1b1449403336a4a47f726cfd12002037da.1791828849.git.claude@p7x.dev>
+References: <99b6ba1b1449403336a4a47f726cfd12002037da.1791828849.git.claude@p7x.dev>
+Date: Mon, 12 Oct 2026 11:30:39 -0700
+Message-ID: <m2wlrmojow.fsf@beastie.p7x.dev>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+claude <claude@p7x.dev> writes:
+
+> The spec describes a skill that does not exist yet. A gap analysis
+> shows which questions the spec must answer before the skill can be
+> planned, chiefly report naming for spec--*.org and how a spec marks
+> a conflict resolution plan.
+> ---
+> change-id: wzqtswmxuzszxorpzrosoyntolnlloqy
+>
+> This needs "claude/skills/spec-report: Initial spec" (3d0fecae on
+> b/dev), which adds the spec.org this report is measured against. That
+> commit is not on trunk or the list, so it is not included here. The
+> patch applies cleanly to trunk without it, since report.org is a new
+> file.
+>
+> The questions under "not implemented" are what the spec needs to
+> answer before the skill can be planned. Answers to them in the spec,
+> or on the list, are enough for me to write SKILL.md.
+>
+>  .claude/skills/spec-report/report.org | 75 +++++++++++++++++++++++++++
+>  1 file changed, 75 insertions(+)
+>  create mode 100644 .claude/skills/spec-report/report.org
+
+[...]
+
+> +Questions for the spec:
+> +1. What is the report name for =spec--NAME.org= and =SPEC--NAME.md=?
+> +   Is it =report--NAME.org= and =REPORT--NAME.md=? spec.org:15 gives
+> +   only =report.org= and =REPORT.md= as examples, and two specs in one
+> +   directory would otherwise write the same report.
+> +2. How does a spec mark a conflict resolution plan, so the skill can
+> +   say whether one exists for a conflict (spec.org:19-22)? No spec in
+> +   the repo has such a section to copy. For example, is it a heading
+> +   such as =* conflicts= with one entry per conflict?
+> +3. What counts as "notes" as opposed to implementation and
+> +   documentation (spec.org:11-12)? Candidates in the repo include
+> +   =zib/=, =research.org=, =lore.org=, =collab.org=, and =todo.org=.
+> +4. Which tree is the implementation measured against: trunk, or the
+> +   working copy? The working copy here sits on =b/dev=, Pat's
+> +   mega-merge. The spec commit itself (3d0fecae) is on =b/dev= but not
+> +   on trunk, so the two answers can differ.
+> +5. Should the skill commit the report, and should it overwrite an
+> +   existing one? =CLAUDE.md= says to commit after successful work.
+> +   =src/sclr/agent.org= commits =report.org= alongside the work.
+> +6. =src/sclr= also writes =report.org= next to a spec, but with a
+> +   different shape (an account of the result rather than a gap
+> +   analysis). May both tools write to the same file, or should one of
+> +   them use another name?
+> +7. Should =disable-model-invocation= be set, as for =freebsd-port=?
+> +   Or may the model run the skill on its own?
+
+Good questions, spec is updated and I believe addresses them all.
