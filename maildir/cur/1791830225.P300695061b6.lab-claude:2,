@@ -1,0 +1,150 @@
+Message-ID: <73e41ffcf43147572cb5ef30a9df491bfc1041bd.1791830201.git.claude@p7x.dev>
+In-Reply-To: <cover.1791830201.git.claude@p7x.dev>
+References: <cover.1791830201.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Date: Mon, 12 Oct 2026 17:57:26 +0000
+Subject: [PATCH v2 2/2] claude/skills/spec-report: Refresh the spec report
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+Change-Id: wzqtswmxuzszxorpzrosoyntolnlloqy
+
+SKILL.md now covers every requirement in the spec, with no conflicts.
+Two questions remain for the spec: how a markdown spec marks a
+conflict resolution plan, and whether the SPEC--*.md example should
+name REPORT--*.md as the naming rule does.
+---
+change-id: wzqtswmxuzszxorpzrosoyntolnlloqy
+
+ .claude/skills/spec-report/report.org | 120 ++++++++++++++++++++++++++
+ 1 file changed, 120 insertions(+)
+ create mode 100644 .claude/skills/spec-report/report.org
+
+diff --git a/.claude/skills/spec-report/report.org b/.claude/skills/spec-report/report.org
+new file mode 100644
+index 0000000..a60c1ba
+--- /dev/null
++++ b/.claude/skills/spec-report/report.org
+@@ -0,0 +1,120 @@
++#+TITLE: /spec-report report
++
++* status
++Implemented. SKILL.md covers every requirement in the spec, and
++nothing in the repo contradicts it. Two details for markdown specs
++rest on assumptions SKILL.md makes, which the spec could confirm.
++
++* conflicts
++None. The spec has no =:conflict-plan:= headings.
++
++Evidence:
++- Each requirement below maps to a section of SKILL.md that does what
++  it says, and none of them does anything the spec rules out.
++- =grep -rln conflict-plan= over the repo's org and md files finds
++  only spec.org, at spec.org:25, where the tag is defined.
++
++* conflict plans that can be removed
++None. The spec contains no =:conflict-plan:= headings to remove.
++
++Evidence: spec.org has no headings at all; its only org markup above
++the list is =#+TITLE= (spec.org:1).
++
++* not implemented
++Nothing the spec requires is missing. Two details are implemented on
++assumptions, since the spec does not settle them.
++
++** conflict plans in markdown specs
++Implemented on an assumption; ready to implement once confirmed.
++
++spec.org:24-25 defines a conflict resolution plan as a heading
++"tagged with =:conflict-plan:=". Heading tags are an org feature, but
++spec.org:7-8 also accepts =SPEC.md= and =SPEC--*.md=. SKILL.md:61-64
++assumes a markdown plan is a heading whose text ends with
++=:conflict-plan:=.
++
++Question for the spec:
++1. How does a markdown spec mark a conflict resolution plan? Is a
++   heading ending in =:conflict-plan:= right?
++
++** report name for =SPEC--*.md=
++Implemented by the rule; the example disagrees.
++
++spec.org:20 gives the rule =s/^spec/report/=, which SKILL.md:31-36
++applies with case kept, so =SPEC--NAME.md= gives =REPORT--NAME.md=.
++The examples at spec.org:18-19 list =REPORT--*.org= instead, and
++=report--**.org= with a doubled star. Running the naming command from
++SKILL.md:33-36 on each spec form gives:
++
++#+begin_example
++spec.org -> report.org
++SPEC.md -> REPORT.md
++spec--cli.org -> report--cli.org
++SPEC--cli.md -> REPORT--cli.md
++#+end_example
++
++Question for the spec:
++2. Should spec.org:19 read =report--*.org= and =REPORT--*.md=, to
++   match the rule at spec.org:20?
++
++* implemented
++** the skill (spec.org:3-4)
++=.claude/skills/spec-report/SKILL.md= exists, added in b3c3d63d
++"claude/skills/spec-report: Add the spec-report skill". It sets
++=disable-model-invocation: true= (SKILL.md:8).
++
++** the report (spec.org:3)
++This file, written by following SKILL.md against spec.org and
++committed as SKILL.md:140-157 describes.
++
++** reading the spec from args (spec.org:7-8)
++SKILL.md:14-16 takes the spec path from =$ARGUMENTS=. SKILL.md:26-28
++accepts the four basename forms from spec.org:7-8 and stops on any
++other.
++
++** analysis of the working copy (spec.org:9-11)
++SKILL.md:77-83 judges the working copy as checked out, not trunk, and
++bases findings on implementation and documentation. SKILL.md:90-95
++asks for each requirement to be followed to the code that carries it
++out, with read-only subagents for a large spec.
++
++** notes as context only (spec.org:12-15)
++SKILL.md:85-88 treats notes as context and never as evidence, naming
++=zib/= and text-only files that neither implement nor document the
++behavior.
++
++** commit history (spec.org:16-17)
++SKILL.md:66-73 reads the history of the spec and its directory with
++=jj log=, for context, direction, and decisions.
++
++** sibling report and its name (spec.org:18-20)
++SKILL.md:30-40 names the report by =s/^spec/report/=, keeping case,
++in the spec's directory and format. See the naming output above.
++
++** report sections (spec.org:21-38)
++SKILL.md:117-130 lists the five sections in the order the spec gives
++them: status, conflicts with whether a plan covers each, removable
++plans, what is not implemented, and what is implemented.
++SKILL.md:97-113 defines the classification, the check of each
++=:conflict-plan:= against the conflicts found, and the "ready to
++implement" and "not ready to implement" verdicts with questions.
++
++** no plan in the report (spec.org:36-37)
++SKILL.md:21 and SKILL.md:137-138 forbid an implementation plan in the
++report.
++
++** evidence (spec.org:39-40)
++SKILL.md:132-135 requires evidence for every claim outside the status
++section: spec lines, =path:line= references, commits, and command
++output. SKILL.md:120-121 exempts the status.
++
++** commit, overwriting the report (spec.org:41-44)
++SKILL.md:117 overwrites the report in full, and SKILL.md:142-150
++commits it alone, then checks the commit from outside
++(SKILL.md:152-157).
++
++** sclr reports (spec.org:45-47)
++SKILL.md:42-54 moves an existing =report.org= to =sclr-report.org=
++in its own commit when a sibling =lore.org= exists. =src/portia= and
++=src/cell= both have a =lore.org= beside their =spec.org=, so this
++applies to them.
+-- 
+2.56.0
+

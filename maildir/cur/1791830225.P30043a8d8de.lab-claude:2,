@@ -1,0 +1,62 @@
+Message-ID: <cover.1791830201.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Date: Mon, 12 Oct 2026 18:36:41 +0000
+Subject: [PATCH v2 0/2] Add the spec-report skill and its report
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+
+This adds the /spec-report skill, then runs it on its own spec. The
+report is the second patch.
+
+The skill reads a spec, judges the working copy against it using
+implementation and documentation, uses history and notes only as
+context, and commits a sibling report. The report gives a summary
+status, conflicts and their :conflict-plan: headings, plans that can
+be removed, gaps marked ready or not ready to implement, and what is
+done, with evidence for every claim but the status. A sclr report.org
+beside a lore.org is moved to sclr-report.org first.
+
+The report finds the spec fully covered, and leaves two questions for
+the spec, both about markdown specs:
+
+1. How does a markdown spec mark a :conflict-plan: heading? SKILL.md
+   assumes a heading whose text ends with ":conflict-plan:".
+2. spec.org:19 lists REPORT--*.org and report--**.org, but the rule
+   s/^spec/report/ at spec.org:20 turns SPEC--*.md into REPORT--*.md.
+   The skill follows the rule.
+
+The series needs "claude/skills/spec-report: Initial spec" (3119a70b
+on b/dev), which adds the spec. It is not on trunk or the list, so it
+is not included; the prerequisite-patch-id lines below cover b/dev.
+Both patches add new files, so they also apply to trunk without it.
+
+The report was written by following SKILL.md by hand. /spec-report
+was not available as a command in this session, so the skill has
+not yet been run as a command.
+
+Changes in v2:
+- Add SKILL.md, since the updated spec answers the questions the
+  v1 report raised.
+- Replace the hand-written report with the one the skill produces.
+- Link to v1: id:99b6ba1b1449403336a4a47f726cfd12002037da.1791828849.git.claude@p7x.dev
+
+claude (2):
+  claude/skills/spec-report: Add the spec-report skill
+  claude/skills/spec-report: Refresh the spec report
+
+ .claude/skills/spec-report/SKILL.md   | 157 ++++++++++++++++++++++++++
+ .claude/skills/spec-report/report.org | 120 ++++++++++++++++++++
+ 2 files changed, 277 insertions(+)
+ create mode 100644 .claude/skills/spec-report/SKILL.md
+ create mode 100644 .claude/skills/spec-report/report.org
+
+
+base-commit: 8b41486402bec2526cd6db46e776e1f278a3b1af
+prerequisite-patch-id: 5dd643a1b21d0fe2f09f8b6212d872579327e7b6
+prerequisite-patch-id: 05ddbb0bf9f58a3ef835503d7d105827ea63ab2e
+prerequisite-patch-id: 04cc74b078a8b73e5a28532cb8d28ce8b8721da6
+prerequisite-patch-id: 7c0dfc3013300207fa68191dc584de84f4dfebdd
+prerequisite-patch-id: b0476fe46448cbbc9d513c3ef1fc6371a0a9a9bd
+-- 
+2.56.0
+
