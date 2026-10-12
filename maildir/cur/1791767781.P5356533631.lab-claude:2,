@@ -1,0 +1,167 @@
+Message-ID: <938450fc4615e93305090e0774d1ab24f0f23f12.1791767766.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Date: Mon, 12 Oct 2026 01:16:03 +0000
+Subject: [freebsd-ports PATCH] mail/resend-cli: Command line interface for the
+ Resend email API
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+
+Resend CLI is the official command line interface for Resend, an email
+API for developers. It sends and schedules email, and manages domains,
+API keys, contacts, segments, broadcasts, templates, and webhooks. It is
+built for interactive use as well as for scripts, CI pipelines, and AI
+agents, with JSON output for machine consumption.
+
+The npm package ships a self-contained bundle, so the port installs it
+as is. Its esbuild dependency is used only to render React Email
+templates and is not packaged; pkg-message says so.
+
+WWW: https://resend.com/docs/cli
+---
+Notes for review:
+
+Version: 2.23.0 is the newest release on npm and GitHub. Later npm
+uploads are 2.22.0-preview-inboxes.* pre-releases, and no version is
+deprecated.
+
+Mechanism: the published tarball's dist/cli.cjs is an esbuild bundle
+that requires only node: builtins, except for esbuild itself (checked
+with grep for require calls). So the port follows devel/spago: fetch
+the registry tarball and install the bundle, with no node_modules. The
+14 ports on Tools/scripts/npmjs-fetch-with-dependencies.sh install a
+full dependency tree instead. Here that would duplicate the bundle, and
+npm would pull a host-specific @esbuild/<platform> binary into a
+NO_ARCH package. The cost is that "--react-email" fails because esbuild
+cannot be loaded; pkg-message says so. If that feature is wanted, the
+fetch script is the alternative.
+
+Wrapper: bin/resend follows www/immich-cli (SUB_FILES, explicit node).
+It defaults RESEND_NO_UPDATE_NOTIFIER=1, which is upstream's own knob.
+Otherwise the CLI polls the GitHub releases API and tells pkg users to
+upgrade from GitHub.
+
+Dependencies: package.json says engines node >=22. USES=nodejs:run
+resolves to the default (lts, node24), as in 28 other ports. A user who
+sets the default to 20 would get an unsupported Node.
+
+pkg-message: telemetry is on by default (PostHog) with DO_NOT_TRACK or
+RESEND_TELEMETRY_DISABLED to opt out. Secure credential storage
+supports only darwin, linux, and win32, so FreeBSD falls back to
+~/.config/resend/credentials.json. Both were checked in the bundle.
+
+Checked: portclippy, portfmt -D, and portlint -A are clean. makesum
+fetched the distfile, and its sha1 matches the registry's shasum.
+Not checked: the build, stage, and plist. Node is not installed here,
+so the CLI was not run.
+
+ mail/resend-cli/Makefile        | 33 +++++++++++++++++++++++++++++++++
+ mail/resend-cli/distinfo        |  3 +++
+ mail/resend-cli/files/resend.in |  6 ++++++
+ mail/resend-cli/pkg-descr       |  5 +++++
+ mail/resend-cli/pkg-message     | 17 +++++++++++++++++
+ 5 files changed, 64 insertions(+)
+ create mode 100644 mail/resend-cli/Makefile
+ create mode 100644 mail/resend-cli/distinfo
+ create mode 100644 mail/resend-cli/files/resend.in
+ create mode 100644 mail/resend-cli/pkg-descr
+ create mode 100644 mail/resend-cli/pkg-message
+
+diff --git a/mail/resend-cli/Makefile b/mail/resend-cli/Makefile
+new file mode 100644
+index 000000000000..96a1c6da54cd
+--- /dev/null
++++ b/mail/resend-cli/Makefile
+@@ -0,0 +1,33 @@
++PORTNAME=	resend-cli
++DISTVERSION=	2.23.0
++CATEGORIES=	mail
++MASTER_SITES=	https://registry.npmjs.org/${PORTNAME}/-/
++
++MAINTAINER=	patmaddox@FreeBSD.org
++COMMENT=	Command line interface for the Resend email API
++WWW=		https://resend.com/docs/cli \
++		https://github.com/resend/resend-cli
++
++LICENSE=	MIT
++LICENSE_FILE=	${WRKSRC}/LICENSE
++
++USES=		nodejs:run tar:tgz
++
++NO_ARCH=	yes
++NO_BUILD=	yes
++
++SUB_FILES=	resend
++SUB_LIST=	NODE=${LOCALBASE}/bin/node
++
++WRKSRC=		${WRKDIR}/package
++
++PLIST_FILES=	bin/resend \
++		libexec/${PORTNAME}/cli.cjs
++
++do-install:
++	${MKDIR} ${STAGEDIR}${PREFIX}/libexec/${PORTNAME}
++	${INSTALL_DATA} ${WRKSRC}/dist/cli.cjs \
++		${STAGEDIR}${PREFIX}/libexec/${PORTNAME}
++	${INSTALL_SCRIPT} ${WRKDIR}/resend ${STAGEDIR}${PREFIX}/bin
++
++.include <bsd.port.mk>
+diff --git a/mail/resend-cli/distinfo b/mail/resend-cli/distinfo
+new file mode 100644
+index 000000000000..18f130d5c091
+--- /dev/null
++++ b/mail/resend-cli/distinfo
+@@ -0,0 +1,3 @@
++TIMESTAMP = 1791767753
++SHA256 (resend-cli-2.23.0.tgz) = cb2bf0715287d48cea663a823f52069007733f981802493ca4e8590109528135
++SIZE (resend-cli-2.23.0.tgz) = 205315
+diff --git a/mail/resend-cli/files/resend.in b/mail/resend-cli/files/resend.in
+new file mode 100644
+index 000000000000..0a60c4f3b2dd
+--- /dev/null
++++ b/mail/resend-cli/files/resend.in
+@@ -0,0 +1,6 @@
++#!/bin/sh
++# Updates come from the package, not from the upstream installer that
++# the CLI's update notice recommends.
++: ${RESEND_NO_UPDATE_NOTIFIER:=1}
++export RESEND_NO_UPDATE_NOTIFIER
++exec %%NODE%% %%PREFIX%%/libexec/resend-cli/cli.cjs "$@"
+diff --git a/mail/resend-cli/pkg-descr b/mail/resend-cli/pkg-descr
+new file mode 100644
+index 000000000000..ac78d68fec43
+--- /dev/null
++++ b/mail/resend-cli/pkg-descr
+@@ -0,0 +1,5 @@
++Resend CLI is the official command line interface for Resend, an email
++API for developers. It sends and schedules email, and manages domains,
++API keys, contacts, segments, broadcasts, templates, and webhooks. It is
++built for interactive use as well as for scripts, CI pipelines, and AI
++agents, with JSON output for machine consumption.
+diff --git a/mail/resend-cli/pkg-message b/mail/resend-cli/pkg-message
+new file mode 100644
+index 000000000000..25d2abb1d443
+--- /dev/null
++++ b/mail/resend-cli/pkg-message
+@@ -0,0 +1,17 @@
++[
++{ type: install
++  message: <<EOM
++resend sends anonymous usage telemetry to Resend by default. To disable
++it, set DO_NOT_TRACK=1 or RESEND_TELEMETRY_DISABLED=1 in the
++environment.
++
++On FreeBSD, credentials saved with "resend login" are stored in a
++plaintext file under the user's home directory; the secure storage
++backends support only macOS, Linux, and Windows. Set RESEND_API_KEY in
++the environment instead to avoid storing the key on disk.
++
++Rendering React Email templates (--react-email) requires the esbuild
++Node.js module, which this package does not provide.
++EOM
++}
++]
+
+base-commit: 67dee8ffebb96d422e85b411245de0519994f046
+-- 
+2.56.0
+
