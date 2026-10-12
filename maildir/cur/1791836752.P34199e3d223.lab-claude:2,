@@ -1,0 +1,207 @@
+Message-ID: <c062483854160226354c9958f43d683a83220371.1791836741.git.claude@p7x.dev>
+In-Reply-To: <cover.1791836741.git.claude@p7x.dev>
+References: <cover.1791836741.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Date: Mon, 12 Oct 2026 20:24:58 +0000
+Subject: [PATCH 2/2] lazy-jail: Refresh the spec report
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+Change-Id: ltmmpxvzmszkwxppyvlozxnvmovzpuox
+
+None of the spec is implemented yet, and none of it is ready to plan.
+This first report lists the questions the spec must answer first,
+drawing on jails/instances as the spec asks: the config format and
+location, the jail lifecycle, and whether lj should exist apart from
+jexec and service jail at all.
+---
+change-id: ltmmpxvzmszkwxppyvlozxnvmovzpuox
+
+ src/lazy-jail/report.org | 176 +++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 176 insertions(+)
+ create mode 100644 src/lazy-jail/report.org
+
+diff --git a/src/lazy-jail/report.org b/src/lazy-jail/report.org
+new file mode 100644
+index 0000000..5d4ab10
+--- /dev/null
++++ b/src/lazy-jail/report.org
+@@ -0,0 +1,176 @@
++#+TITLE: lazy-jail: spec report
++
++Gap analysis of =src/lazy-jail/spec.org= against the working copy. It
++is refreshed whenever the implementation changes.
++
++* Requirements
++
++Numbered here so the sections below can cite them. Lines are lines of
++=spec.org=. Lines 3-9 direct this report, and lines 32-40 hold the
++author's open questions; neither is a requirement.
++
++- R1 (line 12): a CLI utility for managing jails from source trees
++- R2 (lines 13-14): the jail config is checked in, giving a dev jail
++  for a repo
++- R3 (lines 15-16): the jail config is not centralized
++- R4 (lines 17-18): jails live in a known location, e.g.
++  =zroot/lj/instances=
++- R5 (line 20): =lj start <jail>=
++- R6 (line 21): =lj stop <jail>=
++- R7 (lines 22-24): =lj login <jail> [user]=, default user from the
++  config file
++- R8 (line 25): =lj list= lists running jails
++- R9 (lines 28-30): jail =meta= subkeys track lj jails, queryable from
++  any directory
++
++* Status
++
++Nothing in the spec is implemented yet. There are no conflicts and no
++conflict plans. None of the requirements is ready to implement. The
++spec names the four commands and the =meta= idea, but it does not say
++what a jail config contains, where it lives in a source tree, or what
++=start= and =stop= do to a jail's dataset. Its own closing question
++(lines 32-40), whether =lj= should exist as its own tool or be a thin
++layer over =jexec= and =service jail=, decides most of the others and
++should be settled first.
++
++* Conflicts
++
++None. Nothing implements the spec, so nothing can contradict it.
++
++=jails/instances= is a related design, but it is not an
++implementation of this spec, and lines 4-9 say not to treat it as one.
++Its differences from the spec are used below only as evidence for open
++questions.
++
++* Conflict plans that can be removed
++
++None. The spec has no =conflict plan:= headings:
++
++#+BEGIN_EXAMPLE
++$ grep -c 'conflict plan:' src/lazy-jail/spec.org
++0
++#+END_EXAMPLE
++
++* Not implemented
++
++Evidence that nothing implements R1-R9: =src/lazy-jail/= holds only
++=spec.org=, and nothing else in the tree names =lj=, sets a jail
++=meta= key, or uses =zroot/lj=. A search for =\blj\b=, =meta\.=,
++=meta== and =zroot/lj= outside =.jj= and =dotfiles/nvim= matches only
++=spec.org= itself. The history of =src/lazy-jail= is a single commit,
++9de42dab "lazy-jail: Initial spec".
++
++All nine requirements are *not ready to implement*. The questions are
++grouped by the requirements they block. Several groups depend on Q1.
++
++** Q1: should =lj= exist as its own tool? (R1, R5-R8)
++
++The spec asks this itself, at lines 32-40: keep the =jails/instances=
++approach and rely on =jexec=, or make =lj= a thin layer over =jexec=
++and =service jail=. The answer decides what =start=, =stop= and
++=login= mean, so it has to come first.
++
++- If =lj= is a thin layer, does it drive =service jail= (which needs
++  the config installed in =/etc/jail.conf.d=, as
++  =jails/libexec/jail.subr:5-8= and =:18-20= do) or does it call
++  =jail -c -f <config>= straight from the source tree? Lines 15-16
++  ("not centralized") point to the second, and lines 36-37 ("=service
++  jail= commands") point to the first.
++
++** Q2: the config file (R2, R3, R7)
++
++The spec says the config is checked in to a repo (lines 13-14) and
++holds a default user (lines 23-24). It does not say anything else
++about it.
++
++- What is the file's name, and where does it sit in a source tree?
++  Can one repo define more than one jail?
++- What format is it? =jails/instances= uses two files: jail(8)
++  parameters in =jail.conf= (=jails/instances/lab-devel/jail.conf:1-12=)
++  and sh variables for the default user, users and packages in
++  =instance.conf= (=jails/instances/lab-devel/instance.conf:1-12=). Is
++  the lj config =jail.conf(5)= syntax, sh, or something else?
++- Which settings does it carry beyond the default user: users with
++  uid/gid, packages, pkgbase sets, files to install into the jail?
++  =jails/instances= supports all of these
++  (=jails/libexec/_jail.log.do:26-29=, =:112-180=).
++- If the config does not name a default user, does =lj login= fall
++  back to root, as =jails/libexec/jail.sh:15= does, or fail?
++
++** Q3: naming and lookup (R5-R9)
++
++- Is =<jail>= a jail name, a path to a source tree, or a path to a
++  config file? =jails/instances= derives the name from the current
++  directory (=jails/libexec/jail.subr:1=); the spec instead takes it
++  as an argument.
++- Must =lj start= run from inside the source tree, or can it find the
++  config from anywhere? Lines 28-30 say the other commands should work
++  from any directory; the spec does not say the same for =start=.
++- What happens when two repos define jails with the same name?
++
++** Q4: the source tree inside the jail (R1, R2)
++
++"A dev jail for a given repo" (lines 13-14) suggests the repo is
++reachable inside the jail, but the spec does not say how.
++
++- Is the source tree mounted into the jail (nullfs, read-write or
++  read-only), cloned into it, or not provided at all?
++- At what path inside the jail? =jails/instances= mounts shared git
++  repos at =${path}/data/= (=jails/instances/lab-devel/jail.conf:7-11=),
++  and its clone step is still a stub
++  (=jails/libexec/_jail.log.do:182-186=).
++
++** Q5: the known location and the jail's lifecycle (R4, R5, R6)
++
++Lines 17-18 give =zroot/lj/instances= only as an example ("e.g.").
++
++- Is the dataset fixed, or set by the operator (pool, parent dataset,
++  mountpoint)? =jails/instances= hard-codes =zroot/jails/instances=
++  (=jails/libexec/jail.subr:2-3=) and the path
++  =/jails/instances/<name>= in each =jail.conf=.
++- Does =lj= create the parent dataset, or fail when it is missing as
++  =jails/libexec/_jail.log.do:47-52= does?
++- Does =lj start= build the jail root (pkgbase, users, packages) when
++  it does not exist? =jails/instances= keeps building (=just build=,
++  =jails/share/_Justfile:4-5=) separate from starting (=just start=,
++  =:13-14=).
++- When the checked-in config changes, does =lj start= rebuild or
++  update the jail, or use what is already there?
++- Does =lj stop= only stop the jail, or also destroy its dataset? The
++  "lazy" in the name could mean either a jail kept between runs or one
++  made on demand. Is there a command to destroy a jail, like
++  =jails/libexec/_clean.do:16-18=?
++- How does =lj= get privilege: is it run as root, or does it call
++  =doas= the way =jails/libexec/jail.subr:19-29= does?
++
++** Q6: =lj list= (R8)
++
++- Does it list every running jail, or only the ones =lj= manages? If
++  only those, it depends on the =meta= key in Q7 to tell them apart.
++- What does it print for each jail: name, source tree, path, default
++  user?
++
++** Q7: =meta= keys (R9)
++
++The host supports the parameter: on FreeBSD 15.1-RELEASE-p4 =jls -n=
++lists both =meta= and =env=, and jail(8) describes them as sets of
++=key=value= strings settable as =meta.keyname=value=.
++
++- Which keys does =lj= write: source tree path, config path, default
++  user, a marker that =lj= manages the jail?
++- Lines 23-24 take the default user from the config file, but lines
++  28-30 want commands to work outside the source tree. Should
++  =lj login= read the default user from =meta= instead?
++- =meta= or =env=? jail(8) says =meta= is hidden from inside the jail,
++  and =env= is readable there through =security.jail.env=.
++
++** Q8: packaging (R1)
++
++- What is the tool written in, and how is =lj= installed on a host?
++  The directory is =src/lazy-jail= and the command is =lj=; is that
++  the intended pairing?
++
++* Implemented
++
++None.
+-- 
+2.56.0
+

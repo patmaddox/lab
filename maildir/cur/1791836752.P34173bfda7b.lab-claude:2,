@@ -1,0 +1,55 @@
+Message-ID: <cover.1791836741.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Date: Mon, 12 Oct 2026 20:25:41 +0000
+Subject: [PATCH 0/2] Add the lazy-jail spec report
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+
+This runs /spec-report on src/lazy-jail/spec.org and commits the
+first report.
+
+Nothing in the spec is implemented yet, so the report finds no
+conflicts and nothing done. None of the nine requirements is ready
+to plan. As the spec asks, the report draws on jails/instances to
+find the questions the spec still has to answer. They come in eight
+groups:
+
+1. Should lj exist as its own tool, or be a thin layer over jexec
+   and service jail? This is the spec's own question at lines 32-40.
+   Most of the other questions depend on it.
+2. What does the checked-in config contain, what is it called, and
+   where does it sit in a source tree?
+3. Is <jail> a name or a path, and must lj start run from inside the
+   tree?
+4. How does the source tree reach the inside of the jail?
+5. Is zroot/lj/instances fixed or configurable? Does start build the
+   jail root, and does stop destroy it?
+6. Does lj list show every running jail or only lj's own?
+7. Which meta keys does lj write? Should login take the default user
+   from meta when run outside the tree?
+8. What is lj written in, and how is it installed?
+
+The host supports the plan in the implementation notes: FreeBSD
+15.1's jls -n lists both meta and env.
+
+The first patch is yours from b/dev, "lazy-jail: Initial spec". It is
+included so the report applies in context, as CLAUDE.md asks for
+work based on b/dev.
+
+Pat Maddox (1):
+  lazy-jail: Initial spec
+
+claude (1):
+  lazy-jail: Refresh the spec report
+
+ src/lazy-jail/report.org | 176 +++++++++++++++++++++++++++++++++++++++
+ src/lazy-jail/spec.org   |  40 +++++++++
+ 2 files changed, 216 insertions(+)
+ create mode 100644 src/lazy-jail/report.org
+ create mode 100644 src/lazy-jail/spec.org
+
+
+base-commit: 8b41486402bec2526cd6db46e776e1f278a3b1af
+-- 
+2.56.0
+

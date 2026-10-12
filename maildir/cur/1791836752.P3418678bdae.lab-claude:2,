@@ -1,0 +1,66 @@
+Message-ID: <9de42dab499c58261e7537f8c921851f6c1488fe.1791836741.git.claude@p7x.dev>
+In-Reply-To: <cover.1791836741.git.claude@p7x.dev>
+References: <cover.1791836741.git.claude@p7x.dev>
+From: Pat Maddox <pat@patmaddox.com>
+Date: Mon, 12 Oct 2026 11:28:52 -0700
+Subject: [PATCH 1/2] lazy-jail: Initial spec
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+Change-Id: vvvrnuvuwmyxsqsmytnkqqwlurtsksoq
+
+---
+change-id: vvvrnuvuwmyxsqsmytnkqqwlurtsksoq
+
+ src/lazy-jail/spec.org | 40 ++++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 40 insertions(+)
+ create mode 100644 src/lazy-jail/spec.org
+
+diff --git a/src/lazy-jail/spec.org b/src/lazy-jail/spec.org
+new file mode 100644
+index 0000000..9952f8c
+--- /dev/null
++++ b/src/lazy-jail/spec.org
+@@ -0,0 +1,40 @@
++#+TITLE: lazy-jail
++
++plan-report notes:
++- ~jails/instances~ has an example of a similar approach that I've
++  developed, but is based more along long-running jails managed via
++  =service jail=. Refer to it for ideas when doing the gap
++  analysis. Don't treat it as spec to be merge in here - the spec
++  needs to be self-contained. But it will bring up questions to be
++  addressed in the first version of the report.
++
++spec:
++- CLI utility for managing jails from source trees
++- intent is to check in the jail config to produce a dev jail for a
++  given repo
++- unlike ~jail.conf.d~, bastille, etc the jail config is not
++  centralized
++- jail implementation does go to a known location though,
++  e.g. ~zroot/lj/instances~ etc
++- interface
++  - =lj start <jail>=
++  - =lj stop <jail>=
++  - =lj login <jail> [user]=
++    - with no =[user]= arg, logs in as the default user defined in the
++      config file
++  - =lj list= - list running jails
++
++implementation notes:
++- write info jail =meta= subkeys to track information. This ensures
++  that we can query the lj-managed jails without having to run it from
++  a dir with a specific config.
++
++questions:
++- is this actually a useful approach? maybe we want to keep something
++  like the =jails/instances= approach after all. and just rely on
++  operator usage to know something like =doas jexec -l my-jail login
++  -f my-user=. or potentially =lj= is a really thin layer over =jexec=
++  and =service jail= commands. I kind of like the idea of not having a
++  totally distinct interface, where we can still use the basic tools
++  we know and love. Then =lj= just provides some convenience
++  functions.
+-- 
+2.56.0
+
