@@ -1,0 +1,115 @@
+Message-ID: <99b6ba1b1449403336a4a47f726cfd12002037da.1791828849.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Date: Mon, 12 Oct 2026 17:57:26 +0000
+Subject: [PATCH] claude/skills/spec-report: Report status of the spec
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+Change-Id: wzqtswmxuzszxorpzrosoyntolnlloqy
+
+The spec describes a skill that does not exist yet. A gap analysis
+shows which questions the spec must answer before the skill can be
+planned, chiefly report naming for spec--*.org and how a spec marks
+a conflict resolution plan.
+---
+change-id: wzqtswmxuzszxorpzrosoyntolnlloqy
+
+This needs "claude/skills/spec-report: Initial spec" (3d0fecae on
+b/dev), which adds the spec.org this report is measured against. That
+commit is not on trunk or the list, so it is not included here. The
+patch applies cleanly to trunk without it, since report.org is a new
+file.
+
+The questions under "not implemented" are what the spec needs to
+answer before the skill can be planned. Answers to them in the spec,
+or on the list, are enough for me to write SKILL.md.
+
+ .claude/skills/spec-report/report.org | 75 +++++++++++++++++++++++++++
+ 1 file changed, 75 insertions(+)
+ create mode 100644 .claude/skills/spec-report/report.org
+
+diff --git a/.claude/skills/spec-report/report.org b/.claude/skills/spec-report/report.org
+new file mode 100644
+index 0000000..68abcdc
+--- /dev/null
++++ b/.claude/skills/spec-report/report.org
+@@ -0,0 +1,75 @@
++#+TITLE: /spec-report report
++
++* status
++Not implemented. The spec exists, but the skill does not, and no
++behavior in the repo contradicts the spec. It is not ready to
++implement yet. Most of the spec is concrete, but it leaves open how a
++=spec--*= spec maps to its report name and how a spec marks a
++conflict resolution plan.
++
++This report was written by hand against the spec, because the skill
++it describes does not exist yet.
++
++* conflicts
++None. Nothing implements the spec, so nothing can contradict it.
++
++* conflict resolution plans that can be removed
++None. The spec contains no conflict resolution plans.
++
++* not implemented
++** the skill itself (spec.org:3, spec.org:5-33)
++Not ready to implement, because of the questions below. Everything
++else is concrete enough to plan.
++
++Evidence:
++- =.claude/skills/spec-report/= holds only =spec.org=; there is no
++  =SKILL.md=. The sibling skills =freebsd-port=, =patch-triage=, and
++  =process-email= each have one.
++- Invoking =/spec-report= in a session reports that no such command
++  is available.
++- =jj log -r 'files(".claude/skills/spec-report")'= shows a single
++  commit, 3d0fecae "claude/skills/spec-report: Initial spec".
++
++The existing work gives a pattern to follow:
++- =freebsd-port= pairs =spec.org= with a =SKILL.md= that says
++  "spec.org beside this file is the specification; this file is how
++  to carry it out" (=.claude/skills/freebsd-port/SKILL.md:26-27=).
++- =src/sclr/agent.org= already defines a =report.org= written next to
++  the spec, and the "Own the loop" section of =CLAUDE.md= names
++  "report.org exists" as a trustworthy completion signal.
++
++Questions for the spec:
++1. What is the report name for =spec--NAME.org= and =SPEC--NAME.md=?
++   Is it =report--NAME.org= and =REPORT--NAME.md=? spec.org:15 gives
++   only =report.org= and =REPORT.md= as examples, and two specs in one
++   directory would otherwise write the same report.
++2. How does a spec mark a conflict resolution plan, so the skill can
++   say whether one exists for a conflict (spec.org:19-22)? No spec in
++   the repo has such a section to copy. For example, is it a heading
++   such as =* conflicts= with one entry per conflict?
++3. What counts as "notes" as opposed to implementation and
++   documentation (spec.org:11-12)? Candidates in the repo include
++   =zib/=, =research.org=, =lore.org=, =collab.org=, and =todo.org=.
++4. Which tree is the implementation measured against: trunk, or the
++   working copy? The working copy here sits on =b/dev=, Pat's
++   mega-merge. The spec commit itself (3d0fecae) is on =b/dev= but not
++   on trunk, so the two answers can differ.
++5. Should the skill commit the report, and should it overwrite an
++   existing one? =CLAUDE.md= says to commit after successful work.
++   =src/sclr/agent.org= commits =report.org= alongside the work.
++6. =src/sclr= also writes =report.org= next to a spec, but with a
++   different shape (an account of the result rather than a gap
++   analysis). May both tools write to the same file, or should one of
++   them use another name?
++7. Should =disable-model-invocation= be set, as for =freebsd-port=?
++   Or may the model run the skill on its own?
++
++** the report as an artifact (spec.org:3)
++Not produced by the skill. This file follows the spec's report shape,
++but it was written by hand, so it does not show that the skill works.
++
++* implemented
++** the spec
++=.claude/skills/spec-report/spec.org= exists, added in 3d0fecae
++"claude/skills/spec-report: Initial spec". Nothing else in the spec is
++implemented.
+
+base-commit: 8b41486402bec2526cd6db46e776e1f278a3b1af
+-- 
+2.56.0
+
