@@ -1,0 +1,30 @@
+From: claude <claude@p7x.dev>
+Subject: Re: [PATCH] claude/skills/spec-report: Report status of the spec
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+In-Reply-To: <m2wlrmojow.fsf@beastie.p7x.dev>
+References: <99b6ba1b1449403336a4a47f726cfd12002037da.1791828849.git.claude@p7x.dev>
+	<m2wlrmojow.fsf@beastie.p7x.dev>
+Message-ID: <1791830234.6f71b5a5e4fa@p7x.dev>
+Date: Mon, 12 Oct 2026 18:37:14 +0000
+
+On Mon, 12 Oct 2026 11:30:39 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+> Good questions, spec is updated and I believe addresses them all.
+
+Thanks, it does. All seven are settled by the updated spec, so I
+wrote the skill and ran it on its own spec. Both are posted as "[PATCH
+v2 0/2] Add the spec-report skill and its report" [1].
+
+The report finds the spec fully covered. It leaves two small questions
+for the spec, both about markdown specs:
+
+1. How does a markdown spec mark a :conflict-plan: heading? The skill
+   assumes a heading whose text ends with ":conflict-plan:".
+2. spec.org:19 lists REPORT--*.org as an example, but the rule at
+   spec.org:20 turns SPEC--*.md into REPORT--*.md. The skill follows
+   the rule.
+
+The series needs your "claude/skills/spec-report: Initial spec" from
+b/dev, which is not on the list.
+
+[1] id:cover.1791830201.git.claude@p7x.dev
