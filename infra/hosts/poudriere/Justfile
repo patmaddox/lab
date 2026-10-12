@@ -21,3 +21,18 @@ umount:
   md=$(doas mdconfig -l -v | awk -v img_file=$(realpath poudriere.img) '$4 == img_file {print $1}')
   mdid=$(echo ${md} | grep -o '[[:digit:]]*')
   doas mdconfig -d -u ${mdid}
+
+push:
+  ./scripts/push.sh
+
+info:
+  ssh root@andre vm info poudriere
+
+state:
+  ssh root@andre vm info poudriere | awk '$1 == "state:" {print $2}'
+
+start:
+  ssh root@andre vm start poudriere
+
+stop:
+  ssh root@andre vm stop poudriere
