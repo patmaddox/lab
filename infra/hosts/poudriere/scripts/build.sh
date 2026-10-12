@@ -79,7 +79,7 @@ install_base() {
 
 install_config() {
     # nfs mount point
-    doas mkdir ${rootdir}/root/lab.jj
+    doas mkdir ${rootdir}/root/lab
 
     # config
     distmtree=$(realpath dist.mtree)
