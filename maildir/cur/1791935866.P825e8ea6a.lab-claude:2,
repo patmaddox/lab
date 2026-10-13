@@ -1,0 +1,75 @@
+From: claude <claude@p7x.dev>
+Subject: Re: [PATCH] claude/skills/spec-report: Report status of the spec
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+In-Reply-To: <m2se2aoip3.fsf@beastie.p7x.dev>
+References: <99b6ba1b1449403336a4a47f726cfd12002037da.1791828849.git.claude@p7x.dev>
+	<m2wlrmojow.fsf@beastie.p7x.dev> <1791830234.6f71b5a5e4fa@p7x.dev>
+	<m2se2aoip3.fsf@beastie.p7x.dev>
+Message-ID: <1791935861.47bd75b6e63a@p7x.dev>
+Date: Tue, 13 Oct 2026 23:57:46 +0000
+
+On Mon, 12 Oct 2026 11:52:08 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+>> 1. How does a markdown spec mark a :conflict-plan: heading? The skill
+>>    assumes a heading whose text ends with ":conflict-plan:".
+>
+> This should now be addressed in the spec.
+
+It is. A plan is now a heading prefixed with "conflict plan:", which
+works the same in org and markdown. The skill on b/dev, in
+"claude/skills/spec-report: New skill", already looks for
+"* conflict plan: ..." in org and "## conflict plan: ..." in markdown.
+
+>> 2. spec.org:19 lists REPORT--*.org as an example, but the rule at
+>>    spec.org:20 turns SPEC--*.md into REPORT--*.md. The skill follows
+>>    the rule.
+>
+> I don't understand what the issue is. I've updated the spec to hopefully
+> be more clear. Review those changes, and if there are still issues,
+> provide clear examples of the confusing scenario so I can update the
+> spec to prevent it.
+
+I reviewed the updated spec. The example worked through in "Re:
+[PATCH v3 2/4] claude/skills/spec-report: Initial spec" [1] still
+applies, now at spec.org:22-25:
+
+    - Produce a sibling report file (e.g. =report.org=, =REPORT.md=,
+      =report--<name>.org=, =REPORT--<name>.org=) corresponding to the
+      spec file
+      - report file name is produced by =s/^spec/report/ <spec>=
+
+There are two issues.
+
+First, the extension. The spec forms at spec.org:11-12 are spec.org,
+SPEC.md, spec--<name>.org, and SPEC--<name>.md. None of them produces
+REPORT--<name>.org. A reader matching the examples one to one expects
+SPEC--cli.md to give REPORT--cli.org, but the rule gives
+REPORT--cli.md. Changing the fourth example to =REPORT--<name>.md=
+makes the two agree.
+
+Second, the case. Read literally, s/^spec/report/ is case-sensitive,
+so it does nothing to the upper-case forms:
+
+    $ for f in spec.org SPEC.md spec--cli.org SPEC--cli.md; do
+    >     printf '%s -> %s\n' "$f" "$(echo "$f" | sed 's/^spec/report/')"
+    > done
+    spec.org -> report.org
+    SPEC.md -> SPEC.md
+    spec--cli.org -> report--cli.org
+    SPEC--cli.md -> SPEC--cli.md
+
+An implementation that follows the rule to the letter names the
+report of SPEC.md "SPEC.md", and the report overwrites the spec. The
+examples REPORT.md and REPORT--<name>.* show that you meant to keep
+the case, and the skill does that with a second substitution,
+s/^SPEC/REPORT/. A rule that names both cases would close the gap,
+e.g. "replace the leading spec with report, keeping its case (SPEC
+becomes REPORT)", or =s/^spec/report/; s/^SPEC/REPORT/=.
+
+Neither issue changes what the skill does today. Both are in your
+commit on b/dev, so I have left the wording to you rather than post a
+patch. I'll send one if you would like.
+
+Thanks.
+
+[1] id:1791934935.01ba79e6b668@p7x.dev
