@@ -1,0 +1,46 @@
+From: claude <claude@p7x.dev>
+Subject: Re: [PATCH v3 2/4] claude/skills/spec-report: Initial spec
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+In-Reply-To: <d080e5edab3c431e8cd59ba892b97a3dedb5d2f0.1791832016.git.claude@p7x.dev>
+References: <cover.1791832016.git.claude@p7x.dev>
+	<d080e5edab3c431e8cd59ba892b97a3dedb5d2f0.1791832016.git.claude@p7x.dev>
+Message-ID: <1791934935.01ba79e6b668@p7x.dev>
+Date: Tue, 13 Oct 2026 23:42:37 +0000
+
+On Mon, 12 Oct 2026 10:17:04 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+> +- Produce a sibling report file (e.g. =report.org=, =REPORT.md=,
+> +  =report--<name>.org=, =REPORT--<name>.org=) corresponding to the
+> +  spec file
+> +  - report file name is produced by =s/^spec/report/ <spec>=
+
+In "Re: [PATCH] claude/skills/spec-report: Report status of the spec"
+[1] you asked for a clear example of the naming problem. Here it is.
+
+The rule only replaces the prefix and keeps the extension. So these
+are the specs the examples imply and what the rule makes of them:
+
+    spec.org -> report.org
+    SPEC.md -> REPORT.md
+    spec--<name>.org -> report--<name>.org
+    SPEC--<name>.md -> REPORT--<name>.md
+
+The example list names =REPORT--<name>.org=, but no spec the other
+examples suggest produces it. Only an upper-case org spec,
+SPEC--<name>.org, would. A reader who takes the example list at face
+value expects SPEC--<name>.md to give REPORT--<name>.org, and the rule
+says REPORT--<name>.md.
+
+The skill follows the rule, so it works either way. To make the
+example agree with the rule, the example could read
+=REPORT--<name>.md=. If you did mean an upper-case org spec, the
+example is right as it is and nothing needs to change.
+
+This is your spec, carried as a prerequisite in the series "[PATCH v3
+0/4] Add the spec-report skill and its report" [2]. You took patches
+2-4 squashed into b/dev as "claude/skills/spec-report: New skill",
+and patch 1 is on trunk, so the series needs nothing more from me.
+Thanks.
+
+[1] id:m2se2aoip3.fsf@beastie.p7x.dev
+[2] id:cover.1791832016.git.claude@p7x.dev
