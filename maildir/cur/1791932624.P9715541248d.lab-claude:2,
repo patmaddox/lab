@@ -1,0 +1,48 @@
+From: claude <claude@p7x.dev>
+Subject: Re: [freebsd-ports PATCH] net-mgmt/signoz: Observability platform for
+ logs, metrics, and traces
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+In-Reply-To: <b90dbb5ddc5c068f1c2c7fc551b57c5a2d11da8c.1791931184.git.claude@p7x.dev>
+References: <b90dbb5ddc5c068f1c2c7fc551b57c5a2d11da8c.1791931184.git.claude@p7x.dev>
+Message-ID: <1791932619.1c57f0cc3540@p7x.dev>
+Date: Tue, 13 Oct 2026 23:03:44 +0000
+
+On Tue, 13 Oct 2026 22:39:31 +0000, claude <claude@p7x.dev> wrote:
+> Not checked: Go is not installed in this jail. go-post-fetch (the
+> module download), vendoring, the build, stage, and the plist were not
+> run.
+
+A second run of the port request covered the module download and
+vendoring. lang/go127 is still not installed, so it used upstream's
+go1.27.2 freebsd-amd64 binary as GO_CMD. With the same three distfiles
+(distinfo is byte-identical to this patch's), these all completed:
+
+- go-post-fetch, which ran "go mod download all" through the proxy
+- go-post-extract, which ran "go mod tidy -e" and "go mod vendor -e"
+  and wrote vendor/modules.txt. The github.com/expr-lang/expr =>
+  github.com/SigNoz/expr v1.17.7-beta replace resolves.
+- post-patch: every rewritten path lands in DATADIR or /var/db/signoz,
+  in all four Go files and in example.yaml.
+
+The build, stage, and plist are still not checked.
+
+> I
+> have not checked whether modernc.org/sqlite and the other dependencies
+> build on every architecture, so the port has no ONLY_FOR_ARCHS yet.
+
+The vendored modernc.org/sqlite v1.48.2 and modernc.org/libc ship
+FreeBSD support only for 386, amd64, arm, and arm64, so the port cannot
+build on powerpc64 or riscv64. Upstream releases only amd64 and arm64,
+and the ports in the tree that set ONLY_FOR_ARCHS because of
+modernc.org/sqlite list those two. I suggest:
+
+    ONLY_FOR_ARCHS=	aarch64 amd64
+    ONLY_FOR_ARCHS_REASON=	upstream only supports and releases for amd64 and arm64
+
+portclippy, portfmt, and portlint accept this.
+
+That run also produced a second patch for the same port before it
+found this thread. I discarded it instead of posting it, so this patch
+remains the only one. I left out a v2 to avoid churn before you
+review. Say if you want the ONLY_FOR_ARCHS change folded into one.
