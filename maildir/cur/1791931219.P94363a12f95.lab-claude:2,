@@ -1,0 +1,381 @@
+Message-ID: <b90dbb5ddc5c068f1c2c7fc551b57c5a2d11da8c.1791931184.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Date: Tue, 13 Oct 2026 22:39:31 +0000
+Subject: [freebsd-ports PATCH] net-mgmt/signoz: Observability platform for
+ logs, metrics, and traces
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+
+SigNoz is an open source observability platform. It brings logs,
+metrics, and traces together in one application, with dashboards,
+alerts, exceptions, and service maps. It is native to OpenTelemetry and
+stores its data in ClickHouse.
+
+This is the Community Edition of the query service and web interface.
+Telemetry reaches ClickHouse through the SigNoz distribution of the
+OpenTelemetry Collector, which is packaged separately.
+
+WWW: https://signoz.io/
+---
+Notes for review:
+
+Version: v0.145.0 is the newest GitHub release and is not marked as a
+pre-release. Upstream publishes no registry release other than the Go
+module proxy, which has the same tag.
+
+Edition: the port builds ./cmd/community, which is MIT. The source
+also carries ee/ and cmd/enterprise/ under a separate license. The
+community command imports nothing from ee/, so LICENSE=MIT holds for
+what is built and installed.
+
+Mechanism: USES=go:modules with GO_MODULE from the module proxy, the
+way about 440 of the 559 GO_MODULE ports fetch. The web interface is a
+pnpm and Vite build with no offline path in the tree, so the port
+takes the prebuilt web/ from upstream's community release tarball,
+following www/grafana, www/opengist, and net-mgmt/prometheus3. That
+tarball is 70 MB and also holds a Linux binary, which is not used.
+Only the linux_amd64 asset is fetched; web/ is identical across
+architectures. Its name has no version, but go.mk puts every distfile
+in a per-version DIST_SUBDIR, as for www/adguardhome. Its sha256
+matches upstream's signoz-community_0.145.0_checksums.txt.
+
+Plist: web/ is about 4,200 files with content hashes in their names,
+so post-install appends it to TMPPLIST, as www/grafana does. Source
+maps (*.map, 31 MB of the 54 MB) are left out; the UI does not need
+them.
+
+Paths: the binary's built-in defaults point at /etc/signoz/web,
+/root/templates, and /var/lib/signoz. post-patch rewrites them to
+DATADIR and /var/db/signoz, so "signoz server" runs with no config
+file. conf/example.yaml gets the same rewrite and is installed to
+DATADIR as the reference for all settings. portlint warns about the
+absolute /var/db path; net-mgmt/prometheus3 does the same for its
+database directory.
+
+rc.d: modeled on net-mgmt/prometheus3's script. Configuration is the
+upstream style of SIGNOZ_* environment variables through signoz_env,
+with signoz_config optional. pkg-message points out that pprof (6060)
+and metrics (9090, the Prometheus default) listen on all interfaces
+by default, and how to change that.
+
+UIDs/GIDs: signoz takes 404, the lowest number free in both files.
+
+Runtime dependencies: none. ClickHouse may be remote, so it is not a
+RUN_DEPENDS; pkg-message names databases/clickhouse. The schema
+migrator and the collector belong to the separate otel collector port.
+
+Version stamping: ldflags set variant, version, and the short commit
+hash (GIT_HASH), as upstream's Makefile does. Build time and branch
+are left unset so the build is reproducible.
+
+Checked: portclippy and portfmt -D are clean. portlint -A has only
+the /var/db warning above. makesum fetched all three distfiles; patch
+ran, and each REINPLACE changed its target. The rc.d script passes
+sh -n.
+
+Not checked: Go is not installed in this jail. go-post-fetch (the
+module download), vendoring, the build, stage, and the plist were not
+run. makesum ran with NO_DEPENDS=yes and GO_CMD=/usr/bin/true, which
+skips only the module download; distinfo does not cover modules. I
+have not checked whether modernc.org/sqlite and the other dependencies
+build on every architecture, so the port has no ONLY_FOR_ARCHS yet.
+SigNoz was not run.
+
+ GIDs                                 |  2 +-
+ UIDs                                 |  2 +-
+ net-mgmt/Makefile                    |  1 +
+ net-mgmt/signoz/Makefile             | 66 +++++++++++++++++++++
+ net-mgmt/signoz/distinfo             |  7 +++
+ net-mgmt/signoz/files/pkg-message.in | 27 +++++++++
+ net-mgmt/signoz/files/signoz.in      | 88 ++++++++++++++++++++++++++++
+ net-mgmt/signoz/pkg-descr            |  8 +++
+ net-mgmt/signoz/pkg-plist            |  6 ++
+ 9 files changed, 205 insertions(+), 2 deletions(-)
+ create mode 100644 net-mgmt/signoz/Makefile
+ create mode 100644 net-mgmt/signoz/distinfo
+ create mode 100644 net-mgmt/signoz/files/pkg-message.in
+ create mode 100644 net-mgmt/signoz/files/signoz.in
+ create mode 100644 net-mgmt/signoz/pkg-descr
+ create mode 100644 net-mgmt/signoz/pkg-plist
+
+diff --git a/GIDs b/GIDs
+index 8a7121f4d4db..d902d9eed301 100644
+--- a/GIDs
++++ b/GIDs
+@@ -345,7 +345,7 @@ evcc:*:400:
+ spectrumknx:*:401:
+ lid_switchd:*:402:
+ airplane_radiosd:*:403:
+-# free: 404
++signoz:*:404:
+ # free: 405
+ # free: 406
+ # free: 407
+diff --git a/UIDs b/UIDs
+index d47676ab8c8c..99abecb55699 100644
+--- a/UIDs
++++ b/UIDs
+@@ -350,7 +350,7 @@ evcc:*:400:400::0:0:evcc Daemon:/nonexistent:/usr/sbin/nologin
+ spectrumknx:*:401:401::0:0:SpectrumKNX Daemon:/var/db/spectrumknx:/usr/sbin/nologin
+ # free: 402
+ # free: 403
+-# free: 404
++signoz:*:404:404::0:0:SigNoz Daemon:/var/db/signoz:/usr/sbin/nologin
+ # free: 405
+ # free: 406
+ # free: 407
+diff --git a/net-mgmt/Makefile b/net-mgmt/Makefile
+index de8e4c7e83ed..8f7c5c41183d 100644
+--- a/net-mgmt/Makefile
++++ b/net-mgmt/Makefile
+@@ -391,6 +391,7 @@
+     SUBDIR += seafile-gui
+     SUBDIR += semaphore
+     SUBDIR += sendip
++    SUBDIR += signoz
+     SUBDIR += simplomon
+     SUBDIR += sipcalc
+     SUBDIR += sjitter
+diff --git a/net-mgmt/signoz/Makefile b/net-mgmt/signoz/Makefile
+new file mode 100644
+index 000000000000..433725d63c1e
+--- /dev/null
++++ b/net-mgmt/signoz/Makefile
+@@ -0,0 +1,66 @@
++PORTNAME=	signoz
++DISTVERSIONPREFIX=	v
++DISTVERSION=	0.145.0
++CATEGORIES=	net-mgmt
++# prebuilt web frontend; only web/ is installed from it
++MASTER_SITES+=	https://github.com/SigNoz/${PORTNAME}/releases/download/${DISTVERSIONFULL}/:web
++DISTFILES+=	${PORTNAME}-community_linux_amd64${EXTRACT_SUFX}:web
++
++MAINTAINER=	patmaddox@FreeBSD.org
++COMMENT=	Observability platform for logs, metrics, and traces
++WWW=		https://signoz.io/ \
++		https://github.com/SigNoz/signoz
++
++LICENSE=	MIT
++LICENSE_FILE=	${WRKSRC}/LICENSE
++
++USES=		go:modules
++USE_RC_SUBR=	${PORTNAME}
++
++GO_MODULE=	github.com/SigNoz/signoz
++GO_TARGET=	./cmd/community:${PORTNAME}
++GO_BUILDFLAGS=	-ldflags "-s -w \
++		-X ${GO_MODULE}/pkg/version.variant=community \
++		-X ${GO_MODULE}/pkg/version.version=${DISTVERSIONFULL} \
++		-X ${GO_MODULE}/pkg/version.hash=${GIT_HASH}"
++
++SUB_FILES=	pkg-message
++SUB_LIST=	SIGNOZ_DBDIR=${SIGNOZ_DBDIR} \
++		SIGNOZ_GROUP=${SIGNOZ_GROUP} \
++		SIGNOZ_USER=${SIGNOZ_USER}
++
++USERS=		${SIGNOZ_USER}
++GROUPS=		${SIGNOZ_GROUP}
++
++PLIST_SUB=	SIGNOZ_DBDIR=${SIGNOZ_DBDIR} \
++		SIGNOZ_GROUP=${SIGNOZ_GROUP} \
++		SIGNOZ_USER=${SIGNOZ_USER}
++
++GIT_HASH=	0aeef0d
++SIGNOZ_DBDIR=	/var/db/${PORTNAME}
++SIGNOZ_GROUP=	${PORTNAME}
++SIGNOZ_USER=	${PORTNAME}
++
++post-patch:
++	${REINPLACE_CMD} -e 's|/etc/signoz/web|${DATADIR}/web|' \
++		${WRKSRC}/pkg/web/config.go
++	${REINPLACE_CMD} -e 's|/root/templates|${DATADIR}/templates|' \
++		${WRKSRC}/pkg/alertmanager/alertmanagerserver/config.go \
++		${WRKSRC}/pkg/emailing/config.go
++	${REINPLACE_CMD} -e 's|/var/lib/signoz|${SIGNOZ_DBDIR}|' \
++		${WRKSRC}/pkg/sqlstore/config.go
++	${REINPLACE_CMD} -e 's|/etc/signoz/web|${DATADIR}/web|' \
++		-e 's|/opt/signoz/conf/templates|${DATADIR}/templates|' \
++		-e 's|/var/lib/signoz|${SIGNOZ_DBDIR}|' \
++		${WRKSRC}/conf/example.yaml
++
++post-install:
++	${MKDIR} ${STAGEDIR}${DATADIR} ${STAGEDIR}${SIGNOZ_DBDIR}
++	(cd ${WRKSRC} && ${COPYTREE_SHARE} templates ${STAGEDIR}${DATADIR})
++	${INSTALL_DATA} ${WRKSRC}/conf/example.yaml ${STAGEDIR}${DATADIR}
++	(cd ${WRKDIR}/${PORTNAME}-community_linux_amd64 && \
++		${COPYTREE_SHARE} web ${STAGEDIR}${DATADIR} "! -name *.map")
++	${FIND} ${STAGEDIR}${DATADIR}/web -type f | \
++		${SED} -e 's|^${STAGEDIR}${PREFIX}/||' >> ${TMPPLIST}
++
++.include <bsd.port.mk>
+diff --git a/net-mgmt/signoz/distinfo b/net-mgmt/signoz/distinfo
+new file mode 100644
+index 000000000000..e05c87e3ce4d
+--- /dev/null
++++ b/net-mgmt/signoz/distinfo
+@@ -0,0 +1,7 @@
++TIMESTAMP = 1791931143
++SHA256 (go/net-mgmt_signoz/signoz-v0.145.0/signoz-community_linux_amd64.tar.gz) = 6e0ab5ab34427feffac57523c136508f6b19e25517987a9b51e44e0c93f088e2
++SIZE (go/net-mgmt_signoz/signoz-v0.145.0/signoz-community_linux_amd64.tar.gz) = 69694238
++SHA256 (go/net-mgmt_signoz/signoz-v0.145.0/v0.145.0.mod) = 1094fa6359fa7dc7824f18f706f0e2c3675fa4464c21b1473fe16609c96de3d1
++SIZE (go/net-mgmt_signoz/signoz-v0.145.0/v0.145.0.mod) = 20296
++SHA256 (go/net-mgmt_signoz/signoz-v0.145.0/v0.145.0.zip) = a3fcd82b1d06929e2e8e7efab8be8b83cfad2e282fb93398de73025722cd8557
++SIZE (go/net-mgmt_signoz/signoz-v0.145.0/v0.145.0.zip) = 21100973
+diff --git a/net-mgmt/signoz/files/pkg-message.in b/net-mgmt/signoz/files/pkg-message.in
+new file mode 100644
+index 000000000000..f708b3629b3b
+--- /dev/null
++++ b/net-mgmt/signoz/files/pkg-message.in
+@@ -0,0 +1,27 @@
++[
++{ type: install
++  message: <<EOM
++SigNoz stores telemetry in ClickHouse (databases/clickhouse), which may
++run on another host. Before the first start, ClickHouse needs a cluster
++named "cluster" and the SigNoz schema. The schema is created by the
++schema migrator of the SigNoz OpenTelemetry Collector, which also
++ingests the telemetry and is packaged separately.
++
++Settings come from built-in defaults, from an optional YAML file set in
++signoz_config, and from SIGNOZ_* variables set in signoz_env. A nested
++key is joined with "_", so telemetrystore.clickhouse.dsn is
++SIGNOZ_TELEMETRYSTORE_CLICKHOUSE_DSN. The reference configuration is
++installed as %%DATADIR%%/example.yaml.
++
++By default SigNoz listens on all interfaces: the web interface and API
++on port 8080, its Prometheus metrics on port 9090, and pprof on port
++6060. Port 9090 is also the Prometheus default. To keep pprof off the
++network and move the metrics, set for example:
++
++  sysrc signoz_env="SIGNOZ_PPROF_ENABLED=false \
++SIGNOZ_INSTRUMENTATION_METRICS_READERS_PULL_EXPORTER_PROMETHEUS_PORT=9464"
++
++The SQLite metadata store is kept in %%SIGNOZ_DBDIR%%.
++EOM
++}
++]
+diff --git a/net-mgmt/signoz/files/signoz.in b/net-mgmt/signoz/files/signoz.in
+new file mode 100644
+index 000000000000..cd32f742163a
+--- /dev/null
++++ b/net-mgmt/signoz/files/signoz.in
+@@ -0,0 +1,88 @@
++#!/bin/sh
++
++# PROVIDE: signoz
++# REQUIRE: LOGIN
++# KEYWORD: shutdown
++#
++# Add the following lines to /etc/rc.conf.local or /etc/rc.conf
++# to enable this service:
++#
++# signoz_enable (bool)
++#     Set it to YES to enable signoz
++#     Set to NO by default
++# signoz_user (string)
++#     Set user that signoz will run under
++#     Default is "%%SIGNOZ_USER%%"
++# signoz_group (string)
++#     Set group that owns signoz files
++#     Default is "%%SIGNOZ_GROUP%%"
++# signoz_config (string)
++#     Set full path to a YAML config file
++#     Default is "", which uses built-in defaults and signoz_env
++# signoz_pidfile (string)
++#     Set full path to pid file
++#     Default is "/var/run/signoz.pid"
++# signoz_syslog_output_enable (bool)
++#     Set it to NO to disable syslog output
++#     Set to YES by default
++# signoz_syslog_output_tag (str)
++#     Set syslog tag if syslog enabled
++#     Default is "signoz"
++# signoz_syslog_output_priority (string)
++#     Set syslog priority if syslog enabled
++#     Default is "info"
++# signoz_syslog_output_facility (string)
++#     Set syslog facility if syslog enabled
++#     Default is "daemon"
++# signoz_env (string)
++#     Set environment variables used with signoz, e.g.
++#     "SIGNOZ_TELEMETRYSTORE_CLICKHOUSE_DSN=tcp://db:9000"
++#     Default is ""
++# signoz_args (string)
++#     Set additional command line arguments
++#     Default is ""
++
++. /etc/rc.subr
++
++name=signoz
++rcvar=signoz_enable
++
++load_rc_config $name
++
++: ${signoz_enable:="NO"}
++: ${signoz_user:="%%SIGNOZ_USER%%"}
++: ${signoz_group:="%%SIGNOZ_GROUP%%"}
++: ${signoz_config:=""}
++: ${signoz_pidfile:="/var/run/signoz.pid"}
++: ${signoz_syslog_output_enable:="YES"}
++: ${signoz_syslog_output_priority:="info"}
++: ${signoz_syslog_output_facility:="daemon"}
++
++if checkyesno signoz_syslog_output_enable; then
++	signoz_syslog_output_flags="-T ${signoz_syslog_output_tag:-${name}} \
++	    -s ${signoz_syslog_output_priority} \
++	    -l ${signoz_syslog_output_facility}"
++fi
++
++if [ -n "${signoz_config}" ]; then
++	required_files="${signoz_config}"
++	signoz_config_flags="--config ${signoz_config}"
++fi
++
++pidfile="${signoz_pidfile}"
++procname="%%PREFIX%%/bin/signoz"
++command="/usr/sbin/daemon"
++command_args="-f ${signoz_syslog_output_flags} -p ${pidfile} -t ${name} \
++	/usr/bin/env ${signoz_env} ${procname} server \
++	${signoz_config_flags} ${signoz_args}"
++
++start_precmd="signoz_start_precmd"
++
++signoz_start_precmd()
++{
++	if [ ! -e "${pidfile}" ]; then
++		install -m 0600 -o "${signoz_user}" -g "${signoz_group}" /dev/null "${pidfile}"
++	fi
++}
++
++run_rc_command "$1"
+diff --git a/net-mgmt/signoz/pkg-descr b/net-mgmt/signoz/pkg-descr
+new file mode 100644
+index 000000000000..951ff383d910
+--- /dev/null
++++ b/net-mgmt/signoz/pkg-descr
+@@ -0,0 +1,8 @@
++SigNoz is an open source observability platform. It brings logs,
++metrics, and traces together in one application, with dashboards,
++alerts, exceptions, and service maps. It is native to OpenTelemetry and
++stores its data in ClickHouse.
++
++This is the Community Edition of the query service and web interface.
++Telemetry reaches ClickHouse through the SigNoz distribution of the
++OpenTelemetry Collector, which is packaged separately.
+diff --git a/net-mgmt/signoz/pkg-plist b/net-mgmt/signoz/pkg-plist
+new file mode 100644
+index 000000000000..df5eafd4c876
+--- /dev/null
++++ b/net-mgmt/signoz/pkg-plist
+@@ -0,0 +1,6 @@
++bin/signoz
++%%DATADIR%%/example.yaml
++%%DATADIR%%/templates/alertmanager/email.gotmpl
++%%DATADIR%%/templates/email/invitation.gotmpl
++%%DATADIR%%/templates/email/reset_password.gotmpl
++@dir(%%SIGNOZ_USER%%,%%SIGNOZ_GROUP%%,750) %%SIGNOZ_DBDIR%%
+
+base-commit: c831483f5f07ab3c0af6d4aec695d7b801fec2d6
+-- 
+2.56.0
+
