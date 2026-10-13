@@ -1,0 +1,34 @@
+Message-ID: <a7d3f68494ce00167e3fe0a08c86fc57f439c7de.1791935358.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Date: Tue, 13 Oct 2026 23:49:15 +0000
+Subject: [PATCH] claude: Fix a typo in the b/dev guidance
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+Change-Id: nokrpwsypylxkyzwpyymszyqqwwnvkvn
+
+"th" reads as a slip for "the" and makes an agent pause over the
+sentence that tells it to post the full series in context.
+---
+change-id: nokrpwsypylxkyzwpyymszyqqwwnvkvn
+
+ CLAUDE.md | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/CLAUDE.md b/CLAUDE.md
+index b4d76c5..0c54af6 100644
+--- a/CLAUDE.md
++++ b/CLAUDE.md
+@@ -156,7 +156,7 @@ require more revision or potentially abandonment. When submitting work
+ based on `b/dev`, try to insert commits `-A trunk -B b/dev` so the
+ commit is isolated. If necessary, insert it `-A <base-commit> -B
+ b/dev`. When submitting patches to the list, include the full patch
+-series leading up to th new commit(s) so they appear in context.
++series leading up to the new commit(s) so they appear in context.
+ 
+ ## Use subagents for large batches
+ 
+
+base-commit: 23c5779575deee14b294b1a99db19ebecef4fd69
+-- 
+2.56.0
+
