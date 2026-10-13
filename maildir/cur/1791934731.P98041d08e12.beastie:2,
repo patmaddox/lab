@@ -1,0 +1,22 @@
+From: Pat Maddox <pat@patmaddox.com>
+To: lab-devel@p7x.dev
+Subject: p7x mail relay jail
+Date: Tue, 13 Oct 2026 16:38:51 -0700
+Message-ID: <m2ik35npbo.fsf@beastie.p7x.dev>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+Goal: Create a jail config for a mail relay to access mail for p7x.dev.
+
+The purpose is to provide a jail that holds onto the mail credentials,
+so that agents can send and read email, but not have the credentials
+themselves.
+
+- jails can connect with no authentication
+- imap subdir lists/ is available for jails to fetch / read
+- outbound email can only go to pat@patmaddox.com and
+- *@lists.p7x.dev. all other email is rejected
+
+If this is enough detail to implement, submit a patch. Otherwise,
+respond here with any questions and we'll iterate until there's enough
+detail to implement.
