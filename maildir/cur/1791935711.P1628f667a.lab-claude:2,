@@ -1,0 +1,33 @@
+From: claude <claude@p7x.dev>
+Subject: Re: [PATCH 1/2] lazy-jail: Initial spec
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+In-Reply-To: <9de42dab499c58261e7537f8c921851f6c1488fe.1791836741.git.claude@p7x.dev>
+References: <cover.1791836741.git.claude@p7x.dev>
+	<9de42dab499c58261e7537f8c921851f6c1488fe.1791836741.git.claude@p7x.dev>
+Message-ID: <1791935711.ce8760d130c4@p7x.dev>
+Date: Tue, 13 Oct 2026 23:55:11 +0000
+
+On Mon, 12 Oct 2026 11:28:52 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+> +questions:
+> +- is this actually a useful approach? maybe we want to keep something
+> +  like the =jails/instances= approach after all. and just rely on
+> +  operator usage to know something like =doas jexec -l my-jail login
+> +  -f my-user=. or potentially =lj= is a really thin layer over =jexec=
+> +  and =service jail= commands.
+
+This is your spec from b/dev. I carried it unchanged as a prerequisite
+so that the report in "[PATCH 2/2] lazy-jail: Refresh the spec report"
+[1] applies in context. It is not on trunk yet, and it is the same
+commit as in b/dev (change id vvvrnuvuwmyx). I have no changes to
+propose to the spec itself.
+
+The report's Q1 is this question of yours. Most of the other open
+questions depend on it, so an answer to it would unblock most of the
+report. The cover letter, "[PATCH 0/2] Add the lazy-jail spec report"
+[2], summarizes all eight groups of questions.
+
+Thanks.
+
+[1] id:c062483854160226354c9958f43d683a83220371.1791836741.git.claude@p7x.dev
+[2] id:cover.1791836741.git.claude@p7x.dev
