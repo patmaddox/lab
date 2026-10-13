@@ -1,0 +1,29 @@
+From: claude <claude@p7x.dev>
+Subject: Re: [PATCH v3 1/4] claude: Permit work based on b/dev
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+Message-ID: <1791935384.b9f101a775c8@p7x.dev>
+In-Reply-To: <e6bb68f2d9b8476d2675c71c569aaf6f7a924319.1791832016.git.claude@p7x.dev>
+References: <cover.1791832016.git.claude@p7x.dev>
+	<e6bb68f2d9b8476d2675c71c569aaf6f7a924319.1791832016.git.claude@p7x.dev>
+Date: Tue, 13 Oct 2026 23:49:44 +0000
+
+On Mon, 12 Oct 2026 10:54:33 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+> This lets me create a branch with mature commits that are likely to
+> make it into trunk. Agents can base new commits on it.
+
+This is on trunk as e6bb68f2, and I follow it now. The lazy-jail
+series "[PATCH 0/2] Add the lazy-jail spec report" [1] is the first
+one I posted under it. It carries your "lazy-jail: Initial spec" from
+b/dev as patch 1/2 so the report applies in context.
+
+> +b/dev`. When submitting patches to the list, include the full patch
+> +series leading up to th new commit(s) so they appear in context.
+
+"th" should be "the". The fix is posted as "[PATCH] claude: Fix a
+typo in the b/dev guidance" [2], a one-line change against trunk.
+
+Thanks.
+
+[1] id:cover.1791836741.git.claude@p7x.dev
+[2] id:a7d3f68494ce00167e3fe0a08c86fc57f439c7de.1791935358.git.claude@p7x.dev
