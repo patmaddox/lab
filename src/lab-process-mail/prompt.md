@@ -25,7 +25,10 @@ each pass, from whether the message left the inbox.
 
 ## Layout
 
-- `~/lab/default.jj` - trunk workspace, where patches are developed.
+- `${ws}` - your workspace, named near the end of this prompt. The
+  pass starts there, and you develop patches in it.
+- `~/lab/default.jj` - the operator's trunk workspace. Leave its
+  working copy alone.
 - `~/lab/mail.jj` - mail workspace; its `maildir/` is the list.
 - `upstream` - canonical `trunk` and `mail`. Read-only to you.
 - `submissions` - your outbox. Push your bookmark, named for your
@@ -122,9 +125,9 @@ list may already settle the question or redefine the task.
 
 Decide whether the message needs code changes, or only a reply.
 
-For code changes, work in the trunk workspace on a fresh change:
+For code changes, work in your workspace on a fresh change:
 
-    cd ~/lab/default.jj
+    cd "${ws}"
     jj new trunk@upstream
 
 Follow CLAUDE.md for commit messages and patch scope: one logical
@@ -140,16 +143,16 @@ Skip this step if the work produced no commits.
 A patch series is its own thread on the list, never a reply to the
 message that asked for it. It follows the Linux kernel's conventions,
 less the archive links. Format it with
-`~/lab/default.jj/libexec/mail/format-patch.sh`, which runs git
+`${ws}/libexec/mail/format-patch.sh`, which runs git
 format-patch and gives each patch its commit's jj change id, as a
 Change-Id header and a `change-id:` line under the `---`. The patches
 come from the commit author, your address:
 
-    cd ~/lab/default.jj
+    cd "${ws}"
     base="$(jj log -r trunk@upstream --no-graph -T commit_id)"
     head="$(jj log -r @- --no-graph -T commit_id)"
     rm -rf /tmp/series
-    ~/lab/default.jj/libexec/mail/format-patch.sh -o /tmp/series \
+    "${ws}"/libexec/mail/format-patch.sh -o /tmp/series \
         --thread=shallow --base="${base}" \
         --to="<sender's From>" "${base}..${head}"
 
@@ -189,7 +192,7 @@ workspace's maildir, which keeps the From as composed and adds a Date,
 and commit the series on its own:
 
     for p in /tmp/series/*.patch; do
-        ~/lab/default.jj/libexec/mail/maildir-deliver.sh < "${p}"
+        "${ws}"/libexec/mail/maildir-deliver.sh < "${p}"
     done
     cd ~/lab/mail.jj
     jj diff --summary      # only "A maildir/..." lines
@@ -226,7 +229,7 @@ the reader can find it with `notmuch show`:
 Cite any other message the same way. Then deliver and commit it on its
 own:
 
-    ~/lab/default.jj/libexec/mail/maildir-deliver.sh < /tmp/reply.eml
+    "${ws}"/libexec/mail/maildir-deliver.sh < /tmp/reply.eml
     cd ~/lab/mail.jj
     jj diff --summary      # only "A maildir/..." lines
     jj commit -m "mail: Reply to <subject>"

@@ -11,11 +11,12 @@
 # from the notmuch index afterwards. A message still in the inbox stops
 # the loop, rather than being retried forever.
 #
-# The trunk workspace is ${TRUNK_WORKSPACE}, or ~/lab/default.jj. The
-# mail workspace is ${MAIL_WORKSPACE}, or ~/lab/mail.jj. The outbox
-# bookmark is named for your login. Each outcome is posted to the ntfy
-# topic ${NOTIFY_URL}, if set. The prompt is
-# ${LAB_PROCESS_MAIL_PROMPT}, or share/lab-process-mail/prompt.md in
+# The trunk workspace is ${TRUNK_WORKSPACE}, or ~/lab/default.jj. Each
+# pass runs in its own workspace, ${WORK_WORKSPACE}, or ~/lab/work.jj,
+# created on first use. The mail workspace is ${MAIL_WORKSPACE}, or
+# ~/lab/mail.jj. The outbox bookmark is named for your login. Each
+# outcome is posted to the ntfy topic ${NOTIFY_URL}, if set. The prompt
+# is ${LAB_PROCESS_MAIL_PROMPT}, or share/lab-process-mail/prompt.md in
 # the prefix this script is installed under.
 
 set -eu
@@ -70,6 +71,17 @@ get_up_to_date() {
 	notmuch new --quiet
 }
 
+# Give the agent a workspace of its own, so a pass never moves the
+# working copy of the trunk workspace. get_up_to_date may have rebased
+# its working-copy commit, so bring the files in line with it.
+prepare_workspace() {
+	if [ ! -d "${ws}" ]; then
+		jj -R "${trunk}" workspace add --name "$(basename "${ws}" .jj)" \
+		    -r trunk@upstream "${ws}"
+	fi
+	jj -R "${ws}" workspace update-stale
+}
+
 oldest_inbox_message() {
 	notmuch search --sort=oldest-first --output=messages --limit=1 \
 	    tag:inbox
@@ -91,6 +103,7 @@ main() {
 
 	trunk="${TRUNK_WORKSPACE:-${HOME}/lab/default.jj}"
 	mail="${MAIL_WORKSPACE:-${HOME}/lab/mail.jj}"
+	ws="${WORK_WORKSPACE:-${HOME}/lab/work.jj}"
 	me="$(whoami)"
 	bindir="$(CDPATH= cd -- "$(dirname -- "${0}")" && pwd)"
 	prompt="${LAB_PROCESS_MAIL_PROMPT:-${bindir}/../share/lab-process-mail/prompt.md}"
@@ -101,14 +114,16 @@ main() {
 
 	while :; do
 		get_up_to_date
+		prepare_workspace
 		id="$(oldest_inbox_message)"
 		[ -n "${id}" ] || break
 		subject="$(notmuch search "${id}" |
 		    sed -e 's/^[^;]*; //' -e 's/ ([^()]*)$//')"
 		echo "${PROGNAME}: ${id}"
-		(cd "${trunk}" &&
+		(cd "${ws}" &&
 		    claude --permission-mode auto -p "$(cat "${prompt}")
 
+Your workspace is ${ws}.
 The message to answer is ${id}." </dev/null >/dev/null)
 		notmuch new --quiet
 		if [ "$(notmuch count "${id} and tag:inbox")" -ne 0 ]; then

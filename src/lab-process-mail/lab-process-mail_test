@@ -7,6 +7,8 @@ atf_init_test_cases() {
 	atf_add_test_case passes_prompt_and_id
 	atf_add_test_case drains_oldest_first
 	atf_add_test_case stuck_message
+	atf_add_test_case creates_workspace
+	atf_add_test_case leaves_trunk_working_copy
 	atf_add_test_case silent_without_notify_url
 	atf_add_test_case rebases_work_onto_trunk
 	atf_add_test_case keeps_work_on_its_prerequisite
@@ -22,6 +24,7 @@ setup() {
 	export LAB_PROCESS_MAIL_PROMPT="$(atf_get_srcdir)/prompt.md"
 	export TRUNK_WORKSPACE="${PWD}/default.jj"
 	export MAIL_WORKSPACE="${PWD}/mail.jj"
+	export WORK_WORKSPACE="${PWD}/work.jj"
 	unset NOTIFY_URL
 
 	export JJ_CONFIG="${PWD}/jj.toml"
@@ -69,7 +72,7 @@ setup() {
 # claude records its working directory and argv in claude.log, one
 # pass per line group. With STUB_ANSWER=1 it answers the message: it
 # takes the id from the last line of the prompt and removes it from
-# the inbox.
+# the inbox. With STUB_MOVE=1 it moves its working copy to root().
 #
 # notmuch reads the inbox from the file inbox, one "id subject" per
 # line, oldest first. It answers only the queries lab-process-mail
@@ -85,6 +88,7 @@ mk_stubs() {
 	#!/bin/sh
 	echo "cwd \${PWD}" >> "${stubdir}/claude.log"
 	for a in "\$@"; do printf 'arg %s\n' "\$a" >> "${stubdir}/claude.log"; done
+	[ "\${STUB_MOVE:-0}" = 1 ] && jj new 'root()' >/dev/null 2>&1
 	if [ "\${STUB_ANSWER:-0}" = 1 ]; then
 		for a in "\$@"; do last="\$a"; done
 		id="\$(printf '%s\n' "\${last}" | tail -n 1 |
@@ -176,8 +180,9 @@ passes_prompt_and_id_body() {
 	echo 'id:a@x Hello there' > inbox
 	export STUB_ANSWER=1
 	atf_check -s exit:0 -o ignore -e ignore "${PROCESS_MAIL}"
-	atf_check -o match:"^cwd ${TRUNK_WORKSPACE}\$" cat claude.log
+	atf_check -o match:"^cwd ${WORK_WORKSPACE}\$" cat claude.log
 	atf_check -o match:"^arg # Process one lab-devel message" cat claude.log
+	atf_check -o match:"^Your workspace is ${WORK_WORKSPACE}\\.\$" cat claude.log
 	atf_check -o match:"^The message to answer is id:a@x\.\$" \
 	    tail -n 1 claude.log
 }
@@ -211,6 +216,26 @@ silent_without_notify_url_body() {
 	export STUB_ANSWER=1
 	atf_check -s exit:0 -o ignore -e ignore "${PROCESS_MAIL}"
 	atf_check -s exit:1 test -e curl.log
+}
+
+atf_test_case creates_workspace
+creates_workspace_body() {
+	setup
+	atf_check -s exit:0 -o ignore -e ignore "${PROCESS_MAIL}"
+	atf_check -o match:"^work: " jj -R default.jj workspace list
+	atf_check -o inline:"trunk: one" jj -R work.jj log --no-graph \
+	    -T 'description.first_line()' -r '@-'
+}
+
+atf_test_case leaves_trunk_working_copy
+leaves_trunk_working_copy_body() {
+	setup
+	echo 'id:a@x Hello there' > inbox
+	before="$(jj -R default.jj log --no-graph -T change_id -r @)"
+	export STUB_ANSWER=1 STUB_MOVE=1
+	atf_check -s exit:0 -o ignore -e ignore "${PROCESS_MAIL}"
+	atf_check -o inline:"${before}" \
+	    jj -R default.jj log --no-graph -T change_id -r @
 }
 
 atf_test_case rebases_work_onto_trunk
