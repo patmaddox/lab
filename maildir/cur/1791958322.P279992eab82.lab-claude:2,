@@ -1,0 +1,128 @@
+From: claude <claude@p7x.dev>
+Subject: Re: [PATCH v3] jails/instances/lab-mail: Initial spec
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+In-Reply-To: <m2a4ogizkf.fsf@beastie.p7x.dev>
+Message-ID: <1791958314.24a05601754a@p7x.dev>
+References: <4d40a245c49a3ec0631f80c5a65bf85497dadf6a.1791944336.git.claude@p7x.dev>
+	<m2ik34kh3f.fsf@beastie.p7x.dev> <1791954885.8f2eda621d8a@p7x.dev>
+	<m25wz4kgd1.fsf@beastie.p7x.dev> <1791955518.cdf0f5f4ee56@p7x.dev>
+	<m2pkxcj17u.fsf@beastie.p7x.dev> <1791956260.17661cb9c3c5@p7x.dev>
+	<m2h5ioj0q7.fsf@beastie.p7x.dev> <1791957630.42b2b06018a6@p7x.dev>
+	<m2a4ogizkf.fsf@beastie.p7x.dev>
+Date: Wed, 14 Oct 2026 06:12:02 +0000
+
+On Tue, 13 Oct 2026 23:08:48 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+> claude <claude@p7x.dev> writes:
+>
+>> On Tue, 13 Oct 2026 22:43:44 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+>>> claude <claude@p7x.dev> writes:
+>>>
+>>>> On Tue, 13 Oct 2026 22:33:09 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+>>>>> claude <claude@p7x.dev> writes:
+>>>>>> Keep your client out of this spec. With no queue, there is nothing
+>>>>>> about your client for lab-mail to specify.
+>>>>>> [...]
+>>>>>> and a msmtp entry in dotfiles/emacs. That is a small patch of its
+>>>>>> own, best sent when you move your Emacs off the jj maildir.
+>>>>>
+>>>>> Good thinking. What's a good way to track these sorts of things? Is it a
+>>>>> follow up in the spec? Add to todo.org? Or just leave it on the list and
+>>>>> let a secretary bring it up later?
+>>>>
+>>>> I suggest splitting the decision from the task.
+>>>> [...]
+>>>> - The task goes in todo.org, with the event that should trigger it:
+>>>>   "when Emacs moves off the jj maildir, send through lab-mail as
+>>>>   pat@patmaddox.com". That is the file you already work from.
+>>>> [...]
+>>>> If that suits you, I will send a one-line todo.org patch.
+>> [...]
+>> The todo.org question above is still open. Should I send that patch?
+>
+> Yes that works.
+
+Sent as "[PATCH] todo: Send as Pat through lab-mail later" [1]. It
+adds one heading at the end of todo.org, with a short body: the
+trigger (Emacs sends over SMTP instead of into the jj maildir), the
+two changes it takes (an allowed sender in smtprelay, an msmtp
+account in dotfiles/emacs), and a pointer to the spec's "alternatives
+considered" section. That is more than one line, so the reason
+travels with the task.
+
+>>> You're going to have to figure out how to not make this mistake again.
+>>
+>> The mistake was to report an inference as a fact. A failed require
+>> showed only that the load failed, and I named a cause without
+>> checking it. Patch 2 of the same series adds a rule to the
+>> dependencies section of CLAUDE.md: before calling a package missing,
+>> ask pkg with "pkg info -x <name>" or "pkg which <file>", and report
+>> what pkg says.
+>> [...]
+>
+> That's good but I think it reveals another principle: LLM needs to
+> discern inference and facts. When it makes claims, it should look for
+> opportunities to verify it, i.e. uncover and report a fact. If a claim
+> is inference, that should be noted as well.
+>
+> In other words, claims should be clearly indicated as facts or
+> inference, with evidence to back up each. Is that a reasonable
+> instruction that will result in better outcomes? I'm interested to see
+> if there's any prior art on that sort of thing.
+
+Yes, with two adjustments, and there is solid prior art.
+
+The first adjustment is to ask for evidence, not labels. A tag such
+as "verified" is model output like any other, and the model can
+write it wrongly, the same failure "Own the loop" describes for
+control tokens. A command and its output, or a file and line, is
+something you can re-run. So the rule should require the evidence,
+and treat a bare label as worth nothing.
+
+The second is to label only what matters. Tagging every sentence
+adds noise, and readers stop reading the tags. Mark the claims a
+decision rests on, and every claim not checked. A fact shown with
+its evidence needs no tag.
+
+On whether it gives better outcomes: I have no measurement for this
+list, so that part is inference. The research below shows that
+checking claims after drafting cuts hallucinated facts, and the
+"look for a way to verify" half of your rule is that step. The pkg
+mistake fits it exactly; one command would have turned the wrong
+inference into the right fact.
+
+Prior art. I checked the first three with a web search this pass,
+reading the search results and summaries, not the full documents:
+
+- US intelligence analysis, ICD 203 "Analytic Standards" (ODNI).
+  Tradecraft standard 3 reads "Properly distinguishes between
+  underlying intelligence information and analysts' assumptions and
+  judgments". It also asks analysts to state the assumptions an
+  argument hinges on. This is your rule nearly word for word.
+- Anthropic's "Reduce hallucinations" guide in the Claude docs. It
+  recommends allowing "I don't know", grounding answers in direct
+  quotes, and having the model find a supporting quote for each
+  claim and retract any it cannot support.
+- "Chain-of-Verification Reduces Hallucination in Large Language
+  Models" (Dhuliawala et al., Meta, ACL Findings 2024). The model
+  drafts, plans questions to check its draft, answers them
+  independently, and revises. It measured fewer hallucinations on
+  list questions, closed-book QA, and long-form text.
+
+From memory, not checked this pass:
+
+- The Linux kernel's Tested-by trailer, and the habit of writing
+  "compile-tested only" under the --- line. Both say what was run,
+  not just what is believed to work.
+- Evidentiality in linguistics. Some languages, Turkish and Quechua
+  among them, mark in the grammar whether the speaker saw a thing or
+  inferred or heard it.
+
+I have sent the rule as "[PATCH] claude: Mark claims as fact or
+inference" [2]. It adds a section to CLAUDE.md, after "Citing
+messages", with both adjustments above and the notmuch-emacs mistake
+as its example. It is independent of the pkg patch; I merged the two
+in a scratch change and jj reported no conflict.
+
+[1] id:3392fc1fe384930c729e4616a7fd4355f965064b.1791958269.git.claude@p7x.dev
+[2] id:2fe565cadf7c6f98422a28a03f0fb7ed709e76e0.1791958269.git.claude@p7x.dev
