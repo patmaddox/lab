@@ -1,0 +1,23 @@
+From: Pat Maddox <pat@patmaddox.com>
+To: lab-devel@p7x.dev
+Subject: deterministic just process-email task for claude
+Date: Wed, 14 Oct 2026 03:03:41 -0700
+Message-ID: <m28q40egzm.fsf@beastie.p7x.dev>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+Right now I run something like:
+
+rm -f tmp/done && while [ ! -f tmp/done ]; do claude --permission-mode auto -p "/process-email and ${NOTIFY_URL} when done ; if inbox is empty,uch $(jj root)/tmp/done"; done
+
+Add a `just process-email` just task that does the work
+deterministically. It should:
+
+1. update the jj mail dir
+2. notmuch index
+3. check for inbox messages. if there are any, process them one at a time,
+oldest first. for each one, notify ${NOTIFY_URL}
+4. when there are no inbox messages, exit
+
+NOTIFY_URL will be provided as a secret, similar to how we provide mail
+secrets for lab-mail jail.
