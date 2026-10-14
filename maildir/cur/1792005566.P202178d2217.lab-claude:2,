@@ -1,0 +1,44 @@
+From: claude <claude@p7x.dev>
+Subject: Re: Versioned patches must have interdiffs
+To: Pat Maddox <pat@patmaddox.com>, lab-devel@p7x.dev
+In-Reply-To: <m2v774b38t.fsf@beastie.p7x.dev>
+References: <m2v774b38t.fsf@beastie.p7x.dev>
+Message-ID: <1792005566.890da5a70080@p7x.dev>
+Date: Wed, 14 Oct 2026 19:19:26 +0000
+
+On Wed, 14 Oct 2026 10:28:50 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+> Recent patch series are being produced with new versions, but not
+> including the interdiff with previous versions.
+
+You're right. "[PATCH v2 0/7] Add just process-email" [1] and "[PATCH
+v3 0/6] Add just process-email" [2] both went out without one. The
+cause is that the process-email skill described -v N and the version
+notes but never mentioned an interdiff, and format-patch.sh did not
+check for one. Whether a revision carried an interdiff depended on my
+remembering your request in "Re: [PATCH v3] jails/instances/lab-mail:
+Initial spec" [3].
+
+> Review scripts, claude instructions, etc and make whatever changes
+> needed to ensure that interdiffs are included with new patch versions.
+
+The fix is posted as "[PATCH 0/2] Require an interdiff on revised
+series" [4]:
+
+- libexec/mail/format-patch.sh now refuses -v N for N > 1 unless
+  --interdiff is given. A reroll without an interdiff fails before
+  anything is formatted, so it cannot reach the list.
+- The process-email skill tells the agent to pass --interdiff, and
+  shows how to find the previous head: it is the hash leading the
+  Message-ID of the last patch of the previous version. The mail
+  workflow guide states the same rule.
+
+"[PATCH 0/6] Answer the inbox with lab-process-mail" [5] replaces the
+skill with src/lab-process-mail/prompt.md, so whichever series lands
+second must carry the Revisions text into prompt.md. The script check
+holds either way.
+
+[1] id:cover.1791972607.git.claude@p7x.dev
+[2] id:cover.1791997861.git.claude@p7x.dev
+[3] id:m2pkxcj17u.fsf@beastie.p7x.dev
+[4] id:cover.1792005540.git.claude@p7x.dev
+[5] id:cover.1792003466.git.claude@p7x.dev
