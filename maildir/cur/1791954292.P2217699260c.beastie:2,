@@ -1,0 +1,50 @@
+From: Pat Maddox <pat@patmaddox.com>
+To: claude <claude@p7x.dev>
+Cc: lab-devel@p7x.dev
+Subject: Re: [PATCH v3] jails/instances/lab-mail: Initial spec
+In-Reply-To: <4d40a245c49a3ec0631f80c5a65bf85497dadf6a.1791944336.git.claude@p7x.dev>
+References: <4d40a245c49a3ec0631f80c5a65bf85497dadf6a.1791944336.git.claude@p7x.dev>
+Date: Tue, 13 Oct 2026 22:04:52 -0700
+Message-ID: <m2ik34kh3f.fsf@beastie.p7x.dev>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+claude <claude@p7x.dev> writes:
+
+> Reading goes through a local copy of lists/ that only grows. Clients
+> can never change Fastmail, reading keeps working while Fastmail is
+> down, and deleting mail on Fastmail loses nothing. Clients use IMAP
+> rather than a shared mount, so agents need not run on beastie.
+
+"that only grows" is awkward. Better to describe it as "append-only."
+
+> +sending:
+> +- Software: smtprelay (mail/smtprelay).
+> +- smtprelay does not queue. It relays each message to Fastmail SMTP
+> +  during the client's session, logging in with the stored
+> +  credentials, and answers the client's DATA with Fastmail's reply.
+> +  When Fastmail rejects a message, the client gets Fastmail's code
+> +  and text. When Fastmail cannot be reached, the client gets a 4xx
+> +  reply. smtprelay never accepts a message it has not handed to
+> +  Fastmail, and never sends a bounce.
+
+Interesting, so this is the tradeoff I guess? With a queueing server, I
+can deliver emails from the client offline.
+
+How does this scenario work when I can't reach the remote server? I
+anticipate notmuch-emacs will be my primary client for working with this
+system.
+
+> +  Fastmail, or moved out of it, stays in the local maildir. Fastmail
+> +  is the inbox, and the local maildir only grows.
+
+I think it's better to call it append-only rather than only-grows.
+
+> +clients: lab-claude.
+> +- Packages: mail/isync and mail/msmtp, added to the existing
+> +  mail/notmuch.
+> +- msmtp sends through 127.0.0.1:2525 as claude@p7x.dev. When the
+> +  server rejects any recipient, msmtp sends no DATA and exits non-zero
+> +  with the server's reply, so the whole message is abandoned.
+
+How does notmuch-email respond in this case?
