@@ -1,0 +1,55 @@
+Message-ID: <48d042eeb29a3f8bce464f7df411d4ba70cf405f.1792003653.git.claude@p7x.dev>
+In-Reply-To: <cover.1792003653.git.claude@p7x.dev>
+References: <cover.1792003653.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Date: Wed, 14 Oct 2026 18:47:05 +0000
+Subject: [PATCH 2/3] CLAUDE.md: Install dependencies from ports and ask the
+ list
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+Change-Id: xzqvunpzorzszqqontnrlmumsxovmtwk
+
+The rule was never to install dependencies and to report them to the
+user. In practice the user is the list, and a report outside it is
+lost, so a missing package blocked a pass with no record of what it
+needed.
+
+Now that lab-claude can install from FreeBSD-ports through doas, the
+agent installs what it needs and keeps working, and sends a patch to
+instance.conf so the jail declares the package from its next build.
+Anything ports cannot supply still goes to the list rather than being
+fetched or built some other way.
+---
+change-id: xzqvunpzorzszqqontnrlmumsxovmtwk
+
+ CLAUDE.md | 17 ++++++++++++++---
+ 1 file changed, 14 insertions(+), 3 deletions(-)
+
+diff --git a/CLAUDE.md b/CLAUDE.md
+index b4d76c5..b99d787 100644
+--- a/CLAUDE.md
++++ b/CLAUDE.md
+@@ -213,6 +213,17 @@ are how each of them earns trust.
+ - Prefer complete sentences over fragments using semicolons
+ 
+ ## Dependencies
+-- Do not install dependencies.
+-- If you get blocked on a missing dependency, report to user the
+-  dependencies that need to be installed.
++
++When you need a package the jail lacks, email the list for it. Send a
++patch that adds it to jails/instances/lab-claude/instance.conf, and
++say what needs it, so the next build of the jail has it.
++
++You do not have to wait for that patch to land. Install the package
++from FreeBSD-ports right away, and carry on with the work:
++
++    doas /usr/local/sbin/pkg-install-ports <package> ...
++
++That is the only way to install software. Do not build, download, or
++vendor dependencies any other way, and do not install from any other
++repository. If the package is not in FreeBSD-ports, or the install
++fails, stop and ask on the list instead of working around it.
+-- 
+2.56.0
+

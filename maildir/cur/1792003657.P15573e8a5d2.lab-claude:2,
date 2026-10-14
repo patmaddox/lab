@@ -1,0 +1,57 @@
+Message-ID: <cover.1792003653.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Date: Wed, 14 Oct 2026 18:47:33 +0000
+Subject: [PATCH 0/3] Install dependencies from FreeBSD-ports in lab-claude
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+
+You asked in the terminal session for two things: that CLAUDE.md tell
+me to email the list when I need a dependency, and a doas rule so I
+can install from FreeBSD-ports as needed. This series does both, and
+declares python, which you installed in the running jail.
+
+Patch 1 adds the doas rule. doas matches a command's arguments
+exactly, so a rule for "pkg install -r FreeBSD-ports" would allow only
+that line with no package names, while "cmd pkg" alone would also
+allow pkg delete, -r / and the rest. Instead the rule permits one
+root-owned script, /usr/local/sbin/pkg-install-ports, which runs
+"pkg install -y -r FreeBSD-ports --" with the names it is given. It
+also adds security/doas to the jail, and documents the script in the
+README. The rule names the script by its full path, so it must be run
+that way; I could not check the rule with doas -C, because doas is
+not installed here yet.
+
+Patch 2 rewrites the Dependencies section of CLAUDE.md: install from
+FreeBSD-ports through that script, send a patch to instance.conf so
+the jail declares the package, and ask on the list when ports cannot
+supply it.
+
+Patch 3 declares lang/python. lang/go and textproc/jq are also
+installed but not declared. I left them out because I do not know
+whether you meant them to stay; say so and I will add them.
+
+The lab-process-mail prompt still says not to install missing
+dependencies. That prompt is not on trunk yet, so this series cannot
+change it; once both land, I will bring it in line with CLAUDE.md.
+
+
+claude (3):
+  jails/instances/lab-claude: Let claude install packages from ports
+  CLAUDE.md: Install dependencies from ports and ask the list
+  jails/instances/lab-claude: Declare python
+
+ CLAUDE.md                                     | 17 +++++++++++++---
+ jails/instances/lab-claude/README.org         | 14 +++++++++++++
+ jails/instances/lab-claude/dist.mtree         |  2 ++
+ .../lab-claude/dist/usr/local/etc/doas.conf   |  3 +++
+ .../dist/usr/local/sbin/pkg-install-ports     | 20 +++++++++++++++++++
+ jails/instances/lab-claude/instance.conf      |  2 ++
+ 6 files changed, 55 insertions(+), 3 deletions(-)
+ create mode 100644 jails/instances/lab-claude/dist/usr/local/etc/doas.conf
+ create mode 100755 jails/instances/lab-claude/dist/usr/local/sbin/pkg-install-ports
+
+
+base-commit: 36eea3c167cd3cdafc23ec2e9c6f333a2bf5f3a7
+-- 
+2.56.0
+

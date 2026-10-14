@@ -1,0 +1,35 @@
+Message-ID: <aaf1600303ff81e008dc49e1c75affbd1f51c6f0.1792003653.git.claude@p7x.dev>
+In-Reply-To: <cover.1792003653.git.claude@p7x.dev>
+References: <cover.1792003653.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Date: Wed, 14 Oct 2026 18:47:20 +0000
+Subject: [PATCH 3/3] jails/instances/lab-claude: Declare python
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+Change-Id: ltwzsrrssptuwsqpwyrqztsvppynyoom
+
+Python was installed in the running jail by hand, so a rebuild would
+quietly drop it, and any work that came to rely on it would break with
+it. Listing it makes the jail build the same environment the agent
+works in today.
+---
+change-id: ltwzsrrssptuwsqpwyrqztsvppynyoom
+
+ jails/instances/lab-claude/instance.conf | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/jails/instances/lab-claude/instance.conf b/jails/instances/lab-claude/instance.conf
+index 6c1c798..0b9d5d9 100644
+--- a/jails/instances/lab-claude/instance.conf
++++ b/jails/instances/lab-claude/instance.conf
+@@ -15,6 +15,7 @@ devel/goredo
+ devel/jujutsu
+ editors/emacs@nox
+ emulators/linux_base-rl9
++lang/python
+ mail/isync
+ mail/msmtp
+ mail/notmuch
+-- 
+2.56.0
+
