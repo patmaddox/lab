@@ -1,0 +1,105 @@
+Message-ID: <2169f83d49a59239c40d279c7a97e3dd1f8f6cf5.1792012623.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Subject: [PATCH] src/lab-process-mail: Report the inbox count in each notice
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+Change-Id: qpmlrnonkwmxoszrrtswrtlkwkookknn
+Date: Wed, 14 Oct 2026 21:17:11 +0000
+
+A notice says which message a pass answered, but not whether more are
+waiting, so the operator cannot tell from the phone whether the loop is
+done or still draining. Ending each notice with "(inbox N)" answers
+that at a glance; "(inbox 0)" on an answered notice means processing
+is finished.
+---
+change-id: qpmlrnonkwmxoszrrtswrtlkwkookknn
+base-branch: b/dev@upstream
+
+ src/lab-process-mail/lab-process-mail      | 15 ++++++++++-----
+ src/lab-process-mail/lab-process-mail_test | 12 ++++++++----
+ 2 files changed, 18 insertions(+), 9 deletions(-)
+
+diff --git a/src/lab-process-mail/lab-process-mail b/src/lab-process-mail/lab-process-mail
+index 412b232..5d2ba71 100755
+--- a/src/lab-process-mail/lab-process-mail
++++ b/src/lab-process-mail/lab-process-mail
+@@ -15,9 +15,10 @@
+ # pass runs in its own workspace, ${WORK_WORKSPACE}, or ~/lab/work.jj,
+ # created on first use. The mail workspace is ${MAIL_WORKSPACE}, or
+ # ~/lab/mail.jj. The outbox bookmark is named for your login. Each
+-# outcome is posted to the ntfy topic ${NOTIFY_URL}, if set. The prompt
+-# is ${LAB_PROCESS_MAIL_PROMPT}, or share/lab-process-mail/prompt.md in
+-# the prefix this script is installed under.
++# outcome is posted to the ntfy topic ${NOTIFY_URL}, if set, with the
++# number of messages left in the inbox. The prompt is
++# ${LAB_PROCESS_MAIL_PROMPT}, or share/lab-process-mail/prompt.md in the
++# prefix this script is installed under.
+ #
+ # Work is based on the revset ${LAB_BASE_BRANCH}, or trunk(). An
+ # operator's own assistant can set it to their staging branch, such as
+@@ -92,6 +93,10 @@ oldest_inbox_message() {
+ 	    tag:inbox
+ }
+ 
++inbox_count() {
++	notmuch count tag:inbox
++}
++
+ # Post to the operator's ntfy topic. A failed or slow post must not
+ # stop the inbox from draining, so this gives up after ten seconds and
+ # only warns. Without a topic it does nothing.
+@@ -134,10 +139,10 @@ The message to answer is ${id}." </dev/null >/dev/null)
+ 		notmuch new --quiet
+ 		if [ "$(notmuch count "${id} and tag:inbox")" -ne 0 ]; then
+ 			err "${id} is still in the inbox"
+-			notify "stuck: ${subject}"
++			notify "stuck: ${subject} (inbox $(inbox_count))"
+ 			exit 1
+ 		fi
+-		notify "answered: ${subject}"
++		notify "answered: ${subject} (inbox $(inbox_count))"
+ 	done
+ }
+ 
+diff --git a/src/lab-process-mail/lab-process-mail_test b/src/lab-process-mail/lab-process-mail_test
+index 36fbd55..2b13917 100755
+--- a/src/lab-process-mail/lab-process-mail_test
++++ b/src/lab-process-mail/lab-process-mail_test
+@@ -116,8 +116,12 @@ mk_stubs() {
+ 		fi
+ 		;;
+ 	count)
+-		id="\${2%% and tag:inbox}"
+-		grep -c "^\${id} " "\${inbox}" || :
++		if [ "\$2" = tag:inbox ]; then
++			grep -c . "\${inbox}" || :
++		else
++			id="\${2%% and tag:inbox}"
++			grep -c "^\${id} " "\${inbox}" || :
++		fi
+ 		;;
+ 	*)
+ 		echo "notmuch stub: \$*" >&2
+@@ -186,7 +190,7 @@ answers_message_body() {
+ 	export STUB_ANSWER=1 NOTIFY_URL=https://ntfy.example/topic
+ 	atf_check -s exit:0 -o inline:"lab-process-mail: id:a@x\n" \
+ 	    -e ignore "${PROCESS_MAIL}"
+-	atf_check -o match:"answered: Hello there" cat curl.log
++	atf_check -o match:"answered: Hello there \\(inbox 0\\)" cat curl.log
+ 	atf_check -o match:"https://ntfy.example/topic" cat curl.log
+ }
+ 
+@@ -223,7 +227,7 @@ stuck_message_body() {
+ 	atf_check -s exit:1 -o inline:"lab-process-mail: id:a@x\n" \
+ 	    -e match:"id:a@x is still in the inbox" "${PROCESS_MAIL}"
+ 	atf_check -o inline:"1\n" grep -c '^cwd ' claude.log
+-	atf_check -o match:"stuck: First" cat curl.log
++	atf_check -o match:"stuck: First \\(inbox 2\\)" cat curl.log
+ }
+ 
+ atf_test_case silent_without_notify_url
+
+base-commit: 890fd40aa9b1036a26ffb90a10ebdf44c97f2318
+-- 
+2.56.0
+
