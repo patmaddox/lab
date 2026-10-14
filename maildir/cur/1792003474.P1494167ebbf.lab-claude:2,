@@ -1,0 +1,48 @@
+Message-ID: <eb52f929451a3b0c2766df6591bff0d786aa31b9.1792003466.git.claude@p7x.dev>
+In-Reply-To: <cover.1792003466.git.claude@p7x.dev>
+References: <cover.1792003466.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Date: Wed, 14 Oct 2026 18:43:01 +0000
+Subject: [PATCH 5/6] jails/instances/lab-claude: Put ~/local/bin on the path
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+Change-Id: pqvspvnxuwnypstqnqzlokqrnqtwtlzl
+
+Tools that run the agent, such as lab-process-mail, are installed as
+the claude user under ~/local, so the agent cannot edit the copy that
+runs it. Their commands land in ~/local/bin, which was not on the
+path, so they could only be run by their full name.
+
+The login class now adds ~/local/bin after the default path, so a
+command installed there is found by name, but cannot shadow a system
+one.
+---
+change-id: pqvspvnxuwnypstqnqzlokqrnqtwtlzl
+
+ jails/instances/lab-claude/dist/home/claude/.login_conf | 6 +++++-
+ 1 file changed, 5 insertions(+), 1 deletion(-)
+
+diff --git a/jails/instances/lab-claude/dist/home/claude/.login_conf b/jails/instances/lab-claude/dist/home/claude/.login_conf
+index f3a0497..8d4e97e 100644
+--- a/jails/instances/lab-claude/dist/home/claude/.login_conf
++++ b/jails/instances/lab-claude/dist/home/claude/.login_conf
+@@ -8,6 +8,9 @@
+ # https://bugs.freebsd.org/bugzilla/show_bug.cgi?id=298878
+ # https://bugs.freebsd.org/bugzilla/show_bug.cgi?id=299200
+ #
++# The path is the default class's plus ~/local/bin, where packages
++# installed as this user with "pkg -r ~/local" put their commands.
++#
+ # getcap(3) does not allow comments inside a record, so they all
+ # live up here.
+ 
+@@ -29,4 +32,5 @@ me:\
+ 	CLAUDE_CODE_ENABLE_PROMPT_SUGGESTION=false,\
+ 	CLAUDE_CODE_GLOB_NO_IGNORE=false,\
+ 	CLAUDE_CODE_NATIVE_CURSOR=1,\
+-	USE_BUILTIN_RIPGREP=0:
++	USE_BUILTIN_RIPGREP=0:\
++	:path=/sbin /bin /usr/sbin /usr/bin /usr/local/sbin /usr/local/bin ~/bin ~/local/bin:
+-- 
+2.56.0
+

@@ -1,0 +1,93 @@
+Message-ID: <cover.1792003466.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Date: Wed, 14 Oct 2026 18:44:26 +0000
+Subject: [PATCH 0/6] Answer the inbox with lab-process-mail
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+
+This replaces "[PATCH v3 0/6] Add just process-email" [1] with a
+standalone tool, as agreed in the reply to that series [2].
+
+The just recipes ran from the trunk workspace, the same tree the agent
+edits. When a pass moved that workspace, the loop lost its own notify
+recipe and died after answering a message. lab-process-mail runs from
+a copy installed with pkg under ~/local, and carries the agent's
+instructions in a prompt installed beside it, so no pass can change
+the loop or the procedure it runs under.
+
+Patch 1 extracts v3 as it stood, rebase bug included: the loop, the
+update before each pass, the inbox check, ntfy, and the skill text
+(now prompt.md). The prompt answers one named message and does not
+loop. Patch 2 packages it the way dotfiles/emacs does, with no
+LOCALBASE in the package, and adds "just install" in
+src/lab-process-mail.
+
+Patch 3 fixes the rebase that cut work off a prerequisite it was built
+on, with a test that fails before it. On the current repo the rebase
+roots are identical before and after, so today's work moves exactly
+as it did.
+
+Patch 4 gives the agent ~/lab/work.jj, so a pass can no longer move
+the working copy of ~/lab/default.jj. I chose a workspace the tool
+makes over telling the agent in the prompt to make one, because the
+tool can guarantee it and a test can check it; the agent stays free to
+do whatever it likes inside that workspace.
+
+Patch 5 puts ~/local/bin on the claude user's path, and patch 6
+removes the process-email skill, pointing CLAUDE.md at the prompt.
+
+To try it:
+
+    cd src/lab-process-mail
+    just test
+    just install
+    NOTIFY_URL=https://ntfy.sh/<topic> ~/local/bin/lab-process-mail
+
+Notes:
+
+- v3's "Mount a secrets directory" patch is not carried over. The tool
+  reads NOTIFY_URL only, so the operator passes the topic in. If you
+  still want the jail to mount a secret, it can follow separately, but
+  login.conf cannot read a file into the environment, so something
+  else would still have to set NOTIFY_URL from it.
+- "Versioned patches must have interdiffs" [3] is still open in my
+  inbox. Once this lands, the place to fix it is prompt.md, not the
+  skill this series removes.
+- This series is new rather than v4, since every patch is new. v3 is
+  superseded and can be dropped.
+
+[1] id:cover.1791997861.git.claude@p7x.dev
+[2] id:m2a4ogb0ju.fsf@beastie.p7x.dev
+[3] id:m2v774b38t.fsf@beastie.p7x.dev
+
+
+claude (6):
+  src/lab-process-mail: Answer the inbox from outside the tree
+  src/lab-process-mail: Package it and install under ~/local
+  src/lab-process-mail: Keep rebased work on its prerequisites
+  src/lab-process-mail: Run each pass in its own workspace
+  jails/instances/lab-claude: Put ~/local/bin on the path
+  claude/skills: Remove process-email
+
+ CLAUDE.md                                     |  16 +-
+ .../lab-claude/dist/home/claude/.login_conf   |   6 +-
+ pkg.do                                        |   4 +-
+ src/lab-process-mail/Justfile                 |  13 +
+ src/lab-process-mail/Kyuafile                 |   5 +
+ src/lab-process-mail/lab-process-mail         | 138 ++++++++
+ src/lab-process-mail/lab-process-mail.pkg.do  |  49 +++
+ src/lab-process-mail/lab-process-mail_test    | 296 ++++++++++++++++++
+ .../lab-process-mail/prompt.md                | 111 +++----
+ 9 files changed, 560 insertions(+), 78 deletions(-)
+ create mode 100644 src/lab-process-mail/Justfile
+ create mode 100644 src/lab-process-mail/Kyuafile
+ create mode 100755 src/lab-process-mail/lab-process-mail
+ create mode 100644 src/lab-process-mail/lab-process-mail.pkg.do
+ create mode 100755 src/lab-process-mail/lab-process-mail_test
+ rename .claude/skills/process-email/SKILL.md => src/lab-process-mail/prompt.md (75%)
+
+
+base-commit: 36eea3c167cd3cdafc23ec2e9c6f333a2bf5f3a7
+-- 
+2.56.0
+

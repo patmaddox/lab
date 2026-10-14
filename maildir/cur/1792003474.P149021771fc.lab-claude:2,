@@ -1,0 +1,118 @@
+Message-ID: <ba8143aa19dbd4f4157a1c6a9a8c75fae41d7533.1792003466.git.claude@p7x.dev>
+In-Reply-To: <cover.1792003466.git.claude@p7x.dev>
+References: <cover.1792003466.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Date: Wed, 14 Oct 2026 18:39:03 +0000
+Subject: [PATCH 2/6] src/lab-process-mail: Package it and install under
+ ~/local
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+Change-Id: wrvtxrtxruvxvrlyqslnonxmwnwmvzro
+
+lab-process-mail only protects itself from edits when it runs from a
+copy outside the tree. A FreeBSD package makes that copy the same way
+every time, and pkg tracks what it installed, so an upgrade or removal
+leaves nothing stale behind.
+
+The package carries no LOCALBASE. Its files are bin/ and share/
+relative to whatever root pkg installs into, so "just install" puts
+them under ~/local the way a port lands under /usr/local, and the
+script finds its prompt relative to its own location. The same
+package can later move into a real port unchanged.
+---
+change-id: wrvtxrtxruvxvrlyqslnonxmwnwmvzro
+
+ pkg.do                                       |  4 +-
+ src/lab-process-mail/Justfile                | 13 ++++++
+ src/lab-process-mail/lab-process-mail.pkg.do | 49 ++++++++++++++++++++
+ 3 files changed, 65 insertions(+), 1 deletion(-)
+ create mode 100644 src/lab-process-mail/Justfile
+ create mode 100644 src/lab-process-mail/lab-process-mail.pkg.do
+
+diff --git a/pkg.do b/pkg.do
+index b3346ec..fee33b8 100755
+--- a/pkg.do
++++ b/pkg.do
+@@ -1,2 +1,4 @@
+ #!/bin/sh
+-redo-ifchange dotfiles/emacs/patmaddox-emacs.pkg
++redo-ifchange \
++    dotfiles/emacs/patmaddox-emacs.pkg \
++    src/lab-process-mail/lab-process-mail.pkg
+diff --git a/src/lab-process-mail/Justfile b/src/lab-process-mail/Justfile
+new file mode 100644
+index 0000000..cee8d0b
+--- /dev/null
++++ b/src/lab-process-mail/Justfile
+@@ -0,0 +1,13 @@
++help:
++  just -l
++
++pkg:
++  redo-ifchange lab-process-mail.pkg
++
++test:
++  kyua test
++
++# install under ~/local, as pkg would under LOCALBASE
++install: pkg
++  mkdir -p ~/local
++  INSTALL_AS_USER=yes REPOS_DIR=/dev/null pkg -r ~/local install -y -U $(realpath lab-process-mail.pkg)
+diff --git a/src/lab-process-mail/lab-process-mail.pkg.do b/src/lab-process-mail/lab-process-mail.pkg.do
+new file mode 100644
+index 0000000..8cf660a
+--- /dev/null
++++ b/src/lab-process-mail/lab-process-mail.pkg.do
+@@ -0,0 +1,49 @@
++#!/bin/sh
++set -eu
++
++# Build a FreeBSD package of lab-process-mail.
++# Install with: INSTALL_AS_USER=yes pkg -r ~/local add lab-process-mail.pkg
++# Files go to: bin/ and share/lab-process-mail/ under the root given to
++# pkg -r, so the package carries no LOCALBASE of its own.
++
++name="lab-process-mail"
++version="0.0.0"
++prefix="/"
++
++redo-ifchange lab-process-mail prompt.md
++
++# Stage files
++stagedir=$(mktemp -d)
++trap "rm -rf ${stagedir}" EXIT
++
++mkdir -p "${stagedir}/bin" "${stagedir}/share/${name}"
++install -m 0555 lab-process-mail "${stagedir}/bin/lab-process-mail"
++install -m 0444 prompt.md "${stagedir}/share/${name}/prompt.md"
++
++# Calculate flatsize
++flatsize=$(find "${stagedir}" -type f -exec stat -f%z {} + | awk '{s+=$1} END {print s}')
++
++# Create manifest
++manifest="${stagedir}/+MANIFEST"
++cat > "${manifest}" <<EOM
++name: ${name}
++version: ${version}
++origin: local/${name}
++comment: Answer the lab-devel inbox, one agent pass per message
++maintainer: pat@patmaddox.com
++prefix: ${prefix}
++www: https://git.sr.ht/~patmaddox/lab/tree/trunk/item/src/${name}
++flatsize: ${flatsize}
++desc: <<EOD
++Answer the lab-devel inbox, one agent pass per message, oldest first.
++
++INSTALL_AS_USER=yes pkg -r ~/local install -U \$(realpath ${name}.pkg)
++EOD
++files: {
++  /bin/lab-process-mail: "-"
++  /share/${name}/prompt.md: "-"
++}
++EOM
++
++pkg create -M "${manifest}" -r "${stagedir}" -o "$(dirname "$3")"
++mv "$(dirname "$3")/${name}-${version}.pkg" "$3"
+-- 
+2.56.0
+
