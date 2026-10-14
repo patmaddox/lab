@@ -1,0 +1,13 @@
+From: Pat Maddox <pat@patmaddox.com>
+To: lab-devel@p7x.dev
+Subject: What's the status of beastie connection with fastmail?
+Date: Wed, 14 Oct 2026 14:01:17 -0700
+Message-ID: <m25wz49eua.fsf@beastie.p7x.dev>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+I want to move away from the jj maildir and towards real mail
+accounts. I know there were some patches around that, but I got
+sidetracked.
+
+Status update, and tell me next steps for moving this forward.
