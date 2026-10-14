@@ -1,0 +1,79 @@
+From: claude <claude@p7x.dev>
+Subject: Re: [PATCH v10 2/6] jails/instances/lab-mail: Add the jail instance
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+In-Reply-To: <m2se28ejwf.fsf@beastie.p7x.dev>
+References: <cover.1791966707.git.claude@p7x.dev>
+	<f7d33de90b041535b343318c635af2b906b19c66.1791966707.git.claude@p7x.dev>
+	<m2se28ejwf.fsf@beastie.p7x.dev>
+Message-ID: <1791969177.c1690fafe5bf@p7x.dev>
+Date: Wed, 14 Oct 2026 09:13:10 +0000
+
+On Wed, 14 Oct 2026 02:00:48 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+> The readme is inadequate. It tells what the setup, but doesn't explain
+> how it works. It should document the flow of email both ways through
+> lab-mail server.
+
+Thanks; you're right. The README now has a "how it works" section.
+Patch 2 covers the jail and its mounts, and each service patch adds
+its leg of the flow: client to smtprelay to Fastmail for sending,
+Fastmail to mbsync to the maildir for fetching, and the maildir to
+Dovecot to a client for reading. Each section names the config files
+and the users the services run as. It is all in "[PATCH v11 0/8]
+jails/instances/lab-mail: Build the mail relay jail" [1].
+
+> Also, there needs to be some sort of check script to make sure
+> everything is set up and running properly.
+
+Patch 7 adds just check, run on beastie in the instance directory.
+It prints one ok or FAIL line for each check and exits non-zero if
+any fails. It checks the jail, mail-creds and who can read it, the
+owners of the mail state directories, that syslogd, cron, smtprelay
+and Dovecot are running, that 2525 and 2143 accept connections, that
+a fetch succeeded in the last five minutes, and that the log files
+exist. It only reads.
+
+> For example - I don't actually know how emails are fetched from fastmail
+> to the server. There's something that says they're fetched every minute,
+> but I don't see any cron jobs.
+
+The job is in /etc/cron.d/lab-mail inside the jail, from patch 4.
+The jail's cron reads that directory as well as the crontabs, so
+crontab -l does not show it. Once a minute it runs
+/usr/local/libexec/lab-mail/fetch as the mbsync user, under lockf so
+two runs never overlap. You can see it from beastie with:
+
+    cat /jails/instances/lab-mail/etc/cron.d/lab-mail
+
+The README's fetching section now says this, and the spec names the
+mechanism too.
+
+> I sent an email and it got fetched, so that's good. I think we need
+> three things:
+>
+> 1. documentation about the components and workflow
+> 2. status check to make sure everything is running as expected
+> 3. logging of the different components
+
+1 and 2 are above. For 3, patch 6 sends each service to a file of
+its own under /var/log/lab-mail/ in the jail: smtprelay.log,
+fetch.log and dovecot.log. All three also still go to maillog.
+newsyslog rotates them daily, like maillog. The fetch job used to
+log nothing on success; now it logs how many messages each pull
+brought, and every failure.
+
+One more thing you should know. From lab-claude, 127.0.0.1:2143
+answers but 127.0.0.1:2525 does not, so smtprelay is not running.
+v10's remotes.env calls jq by name, and rc(8) at boot runs with a
+PATH that leaves out /usr/local/bin. I reproduced it here: under that
+PATH, remotes.env prints "jq: not found" and builds a remote with no
+login. v11 calls /usr/local/bin/jq. I can't see inside lab-mail, so
+it is an inference that this is why smtprelay is down; maillog in the
+jail should say.
+
+After applying, run just build and then restart lab-mail. The restart
+is what makes syslogd and newsyslog pick up the new log files and
+starts smtprelay with the fix. Then just check should come back all
+ok.
+
+[1] id:cover.1791969110.git.claude@p7x.dev
