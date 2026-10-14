@@ -1,0 +1,3 @@
+# Fetch list mail once a minute. lockf skips a run while the previous
+# one is still going.
+* * * * * mbsync lockf -s -t 0 /data/mail/mbsync/fetch.lock /usr/local/libexec/lab-mail/fetch 2>&1 | logger -p mail.notice -t lab-mail-fetch

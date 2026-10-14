@@ -1,0 +1,18 @@
+#!/bin/sh
+# Pull new list mail from Fastmail, then let Dovecot read it.
+#
+# mbsync creates mail mode 0600 and folders 0700, whatever the umask.
+# Dovecot reads the maildir as vmail, which must not be able to write
+# it, so the new files are opened up for reading after each pull.
+set -u
+
+readonly maildir=/data/mail/maildir
+
+rc=0
+/usr/local/bin/mbsync -q -c /usr/local/etc/mbsyncrc lists || rc=${?}
+
+find ${maildir} \
+    \( -type d ! -perm -0055 -exec chmod go+rx {} + \) -o \
+    \( -type f ! -perm -0044 -exec chmod go+r {} + \)
+
+exit ${rc}

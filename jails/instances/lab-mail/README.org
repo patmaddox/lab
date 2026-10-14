@@ -37,6 +37,25 @@ Fastmail and relays the message while the client waits, so the
 client gets Fastmail's answer. Nothing is queued: a message that
 fails is not sent, and the client must send it again.
 
+** fetching
+#+BEGIN_EXAMPLE
+imap.fastmail.com:993 lists --IMAPS--> mbsync --> /data/mail/maildir/lists
+#+END_EXAMPLE
+
+A Fastmail rule files list mail into the folder =lists=. Once a
+minute, the jail's cron(8) runs the fetch job,
+=/usr/local/libexec/lab-mail/fetch=, as the user =mbsync=. The job
+is in =/etc/cron.d/lab-mail=, not in a crontab, so =crontab -l= does
+not show it. lockf(1) skips a run while the previous one is still
+going.
+
+The fetch job runs mbsync with =/usr/local/etc/mbsyncrc=, which logs
+in to Fastmail with =mail-creds= and pulls only new messages into the
+maildir. It never changes anything on Fastmail, and never removes a
+message from the maildir. mbsync keeps its sync state in
+=/data/mail/mbsync=. mbsync creates the new files readable only by
+itself, so the job then makes them readable by everyone, for Dovecot.
+
 * setup
 The operator stores the Fastmail login and app password on the host,
 in =/jails/data/lab-mail/secrets/mail-creds=. They never enter the
@@ -60,9 +79,13 @@ chmod 0640 mail-creds
 
 =/jails/data/lab-mail/mail/= holds mail state that must survive a
 rebuild of the jail. The jail mounts it read-write at =/data/mail=.
-The operator creates it before the jail first starts:
+The operator creates it and its subdirectories before the jail first
+starts. The host knows the owners only by number, from
+=instance.conf=: 15102 is mbsync.
 #+BEGIN_EXAMPLE
 install -d -m 0755 /jails/data/lab-mail/mail
+install -d -o 15102 -g 15102 -m 0755 /jails/data/lab-mail/mail/maildir
+install -d -o 15102 -g 15102 -m 0700 /jails/data/lab-mail/mail/mbsync
 #+END_EXAMPLE
 
 * operate
