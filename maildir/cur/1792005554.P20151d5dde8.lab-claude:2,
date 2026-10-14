@@ -1,0 +1,82 @@
+Message-ID: <7ea7501c552f7bf0557b03ceff748ce43fe0e9a0.1792005540.git.claude@p7x.dev>
+In-Reply-To: <cover.1792005540.git.claude@p7x.dev>
+References: <cover.1792005540.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Subject: [PATCH 1/2] libexec/mail: Refuse a reroll without an interdiff
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+Change-Id: xpklzwpowplrruxmqrvlvzrolzykuunu
+Date: Wed, 14 Oct 2026 19:19:14 +0000
+
+Revised series reached the list without an interdiff against their
+previous version, so the reviewer had to reread every patch to find
+what changed. Leaving it to whoever formats the series has not been
+enough. Making format-patch.sh refuse -v N for N > 1 unless
+--interdiff is given turns the omission into an error at the point
+where it can be fixed.
+---
+change-id: xpklzwpowplrruxmqrvlvzrolzykuunu
+
+ libexec/mail/format-patch.sh | 31 ++++++++++++++++++++++++++++---
+ 1 file changed, 28 insertions(+), 3 deletions(-)
+
+diff --git a/libexec/mail/format-patch.sh b/libexec/mail/format-patch.sh
+index cad19ab..c782e33 100755
+--- a/libexec/mail/format-patch.sh
++++ b/libexec/mail/format-patch.sh
+@@ -21,6 +21,12 @@
+ # on unmerged work, prerequisite-patch-id lines:
+ #
+ #     format-patch.sh -o /tmp/series --base="${base}" "${base}..${head}"
++#
++# A revised series (-v N, N > 1) must carry an interdiff against the
++# previous version, so the reviewer sees what changed without
++# rereading the whole series. Pass --interdiff=<previous head>; git
++# puts it in the cover letter, or below the "---" of a single patch.
++# A reroll without one is refused.
+ 
+ set -eu
+ set -o pipefail
+@@ -37,17 +43,36 @@ die() {
+ }
+ 
+ main() {
+-	local arg file
++	local arg file reroll interdiff want_reroll
++	reroll=1
++	interdiff=
++	want_reroll=
+ 
+ 	# git lists the files it writes, unless told to be quiet.
+ 	for arg; do
+ 		shift
++		if [ -n "${want_reroll}" ]; then
++			reroll="${arg}"
++			want_reroll=
++		fi
+ 		case "${arg}" in
+-		-q|--quiet) ;;
+-		*) set -- "${@}" "${arg}" ;;
++		-q|--quiet) continue ;;
++		-v|--reroll-count) want_reroll=1 ;;
++		-v*) reroll="${arg#-v}" ;;
++		--reroll-count=*) reroll="${arg#*=}" ;;
++		--interdiff|--interdiff=*) interdiff=1 ;;
+ 		esac
++		set -- "${@}" "${arg}"
+ 	done
+ 
++	case "${reroll}" in
++	''|1|*[!0-9]*) ;;
++	*)
++		[ -n "${interdiff}" ] ||
++		    die "v${reroll} needs --interdiff=<head of v$((reroll - 1))>"
++		;;
++	esac
++
+ 	git format-patch "${@}" | while read -r file; do
+ 		add_change_id "${file}"
+ 		echo "${file}"
+-- 
+2.56.0
+

@@ -1,0 +1,76 @@
+Message-ID: <d8e4eccf6fce753025ebec9c26179f417aadbc41.1792005540.git.claude@p7x.dev>
+In-Reply-To: <cover.1792005540.git.claude@p7x.dev>
+References: <cover.1792005540.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Subject: [PATCH 2/2] claude/skills/process-email: Show how to interdiff a
+ revision
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+Change-Id: luzplvsysuvssrwyzzvkuozrzowyzlpz
+Date: Wed, 14 Oct 2026 19:19:15 +0000
+
+The skill told the agent to send revisions with -v N but said nothing
+about the interdiff, which is why revised series kept going out
+without one. It now asks for --interdiff and shows where to find the
+previous version's head: git format-patch names each patch's
+Message-ID after its commit, so the head of the last version is the
+hash leading the Message-ID of its last patch. The mail workflow
+guide states the same rule.
+---
+change-id: luzplvsysuvssrwyzzvkuozrzowyzlpz
+
+ .claude/skills/process-email/SKILL.md | 22 ++++++++++++++++++----
+ doc/mail-workflow.md                  |  4 +++-
+ 2 files changed, 21 insertions(+), 5 deletions(-)
+
+diff --git a/.claude/skills/process-email/SKILL.md b/.claude/skills/process-email/SKILL.md
+index 2bf352b..94a0bdc 100644
+--- a/.claude/skills/process-email/SKILL.md
++++ b/.claude/skills/process-email/SKILL.md
+@@ -193,10 +193,24 @@ git then adds `prerequisite-patch-id:` lines for the commits between
+ trunk and the series. Name the prerequisite series in the cover letter
+ by its full subject, with its Message-ID in a footnote.
+ 
+-**Revisions.** For a revised series add `-v N`. Address every review
+-point the list researcher found unaddressed, or say why not. End the
+-cover letter blurb with what changed and a link to the previous
+-version:
++**Revisions.** For a revised series add `-v N` and
++`--interdiff=<head of v(N-1)>`. format-patch.sh refuses a reroll
++without an interdiff, which shows the reviewer exactly what changed
++since the version they read; git puts it in the cover letter, or below
++the `---` of a single patch. git names each patch's Message-ID after
++its commit, so the previous head is the leading hash of the last
++patch's Message-ID in v(N-1):
++
++    prev="<Message-ID of the last patch of v(N-1)>"
++    prev_head="${prev%%.*}"
++    git cat-file -e "${prev_head}^{commit}"
++
++If trunk moved between versions, the interdiff shows trunk's changes
++too; say so in the version notes.
++
++Address every review point the list researcher found unaddressed, or
++say why not. End the cover letter blurb with what changed and a link
++to the previous version:
+ 
+     Changes in vN:
+     - <what changed, and why>
+diff --git a/doc/mail-workflow.md b/doc/mail-workflow.md
+index 278d209..a8c7f50 100644
+--- a/doc/mail-workflow.md
++++ b/doc/mail-workflow.md
+@@ -71,7 +71,9 @@ Conventions:
+   or reject at that granularity.
+ - A new revision of a series is a **fresh thread** subject
+   `[PATCH vN]`, with a `v(N-1): <message-id>` link in the cover -- not a
+-  reply buried under the old thread.
++  reply buried under the old thread. It carries an interdiff against
++  v(N-1) (`git format-patch --interdiff`), which
++  `libexec/mail/format-patch.sh` requires.
+ - Append; never rewrite already-published history.
+ 
+ ## Maintainer side
+-- 
+2.56.0
+

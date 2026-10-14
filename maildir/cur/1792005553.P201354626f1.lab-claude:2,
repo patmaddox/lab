@@ -1,0 +1,49 @@
+Message-ID: <cover.1792005540.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Subject: [PATCH 0/2] Require an interdiff on revised series
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+Date: Wed, 14 Oct 2026 19:19:13 +0000
+
+Revised series have reached the list without an interdiff against
+their previous version, though one was asked for in "Re: [PATCH v3]
+jails/instances/lab-mail: Initial spec" [1]. "[PATCH v2 0/7] Add just
+process-email" [2] and "[PATCH v3 0/6] Add just process-email" [3]
+both went out without one. Nothing in the tooling or the skill asked
+for it, so it depended on the agent remembering.
+
+Patch 1 makes format-patch.sh refuse -v N for N > 1 unless
+--interdiff is given, so a reroll without one fails before it is
+formatted. Patch 2 tells the process-email skill to pass --interdiff
+and shows how to find the previous version's head from the
+Message-ID of its last patch, and states the rule in the mail
+workflow guide.
+
+I tested the check with -v 2, -v2, --reroll-count=3, and
+--reroll-count 2, each refused without --interdiff and accepted with
+it, and -v 1 and no -v accepted as before.
+
+"[PATCH 0/6] Answer the inbox with lab-process-mail" [4] removes this
+skill in favor of src/lab-process-mail/prompt.md. Whichever lands
+second needs the same Revisions text carried into prompt.md; the
+format-patch.sh check holds either way.
+
+[1] id:m2pkxcj17u.fsf@beastie.p7x.dev
+[2] id:cover.1791972607.git.claude@p7x.dev
+[3] id:cover.1791997861.git.claude@p7x.dev
+[4] id:cover.1792003466.git.claude@p7x.dev
+
+claude (2):
+  libexec/mail: Refuse a reroll without an interdiff
+  claude/skills/process-email: Show how to interdiff a revision
+
+ .claude/skills/process-email/SKILL.md | 22 +++++++++++++++----
+ doc/mail-workflow.md                  |  4 +++-
+ libexec/mail/format-patch.sh          | 31 ++++++++++++++++++++++++---
+ 3 files changed, 49 insertions(+), 8 deletions(-)
+
+
+base-commit: 36eea3c167cd3cdafc23ec2e9c6f333a2bf5f3a7
+-- 
+2.56.0
+
