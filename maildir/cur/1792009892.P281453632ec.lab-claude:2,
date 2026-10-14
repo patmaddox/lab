@@ -1,0 +1,704 @@
+Message-ID: <55aa1ee0da4276bd4b9deaf6014ce57303768370.1792009878.git.claude@p7x.dev>
+In-Reply-To: <cover.1792009878.git.claude@p7x.dev>
+References: <cover.1792009878.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Date: Wed, 14 Oct 2026 18:38:34 +0000
+Subject: [PATCH 1/5] src/lab-process-mail: Answer the inbox from outside the
+ tree
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+Change-Id: ukpzutoumtvxkskmvvonmrmpwzxtkkxv
+
+The process-email loop ran from a Justfile in the trunk workspace,
+which is the same tree the agent edits. When a pass moved that
+workspace to a commit without the recipes, the loop could no longer
+find its own notify and get-up-to-date steps, and it died after
+answering a message. Any loop that reads its own code from the tree
+under edit can break this way, or quietly change between passes.
+
+lab-process-mail is a standalone tool meant to run from an installed
+copy, outside the tree. The deterministic work stays in the script: it
+fetches, rebases trunk work and the outbox, picks the oldest inbox
+message, runs claude on it, checks the inbox afterwards, and posts to
+ntfy. Everything that needs judgement is in prompt.md, which ships
+beside the script, so a pass cannot edit the instructions it runs
+under either.
+
+The prompt takes one named message and does not loop, so the script
+alone decides which message each pass is for and can verify that
+exactly that message was answered.
+---
+change-id: ukpzutoumtvxkskmvvonmrmpwzxtkkxv
+
+ src/lab-process-mail/Kyuafile              |   5 +
+ src/lab-process-mail/lab-process-mail      | 121 ++++++++++
+ src/lab-process-mail/lab-process-mail_test | 251 ++++++++++++++++++++
+ src/lab-process-mail/prompt.md             | 258 +++++++++++++++++++++
+ 4 files changed, 635 insertions(+)
+ create mode 100644 src/lab-process-mail/Kyuafile
+ create mode 100755 src/lab-process-mail/lab-process-mail
+ create mode 100755 src/lab-process-mail/lab-process-mail_test
+ create mode 100644 src/lab-process-mail/prompt.md
+
+diff --git a/src/lab-process-mail/Kyuafile b/src/lab-process-mail/Kyuafile
+new file mode 100644
+index 0000000..5624564
+--- /dev/null
++++ b/src/lab-process-mail/Kyuafile
+@@ -0,0 +1,5 @@
++syntax(2)
++
++test_suite('lab-process-mail')
++
++atf_test_program{name='lab-process-mail_test'}
+diff --git a/src/lab-process-mail/lab-process-mail b/src/lab-process-mail/lab-process-mail
+new file mode 100755
+index 0000000..8f2d57c
+--- /dev/null
++++ b/src/lab-process-mail/lab-process-mail
+@@ -0,0 +1,121 @@
++#!/bin/sh
++#
++# lab-process-mail -- answer the lab-devel inbox, one agent pass per
++# message, oldest first.
++#
++# The loop is deterministic and the agent is not, so the two are kept
++# apart. Before each pass this script fetches, rebases trunk work and
++# the mail outbox, and picks the oldest inbox message. It then runs a
++# fresh claude with the prompt shipped beside it and that message's id.
++# The agent's output goes to /dev/null; whether the pass worked is read
++# from the notmuch index afterwards. A message still in the inbox stops
++# the loop, rather than being retried forever.
++#
++# The trunk workspace is ${TRUNK_WORKSPACE}, or ~/lab/default.jj. The
++# mail workspace is ${MAIL_WORKSPACE}, or ~/lab/mail.jj. The outbox
++# bookmark is named for your login. Each outcome is posted to the ntfy
++# topic ${NOTIFY_URL}, if set. The prompt is
++# ${LAB_PROCESS_MAIL_PROMPT}, or share/lab-process-mail/prompt.md in
++# the prefix this script is installed under.
++
++set -eu
++set -o pipefail
++
++readonly PROGNAME="${0##*/}"
++
++# Your commits off trunk, less everything descended from the list.
++# Trunk and the list share no commit but root(), so the outbox is left
++# out however far the list has moved since it was built on. Anything
++# built on a published head other than trunk, such as b/dev, is left
++# where it is; that covers your own patches once Pat publishes them.
++readonly WORK='mine() ~ ::trunk@upstream ~ (::mail@upstream ~ root())::
++    ~ (immutable() ~ ::trunk@upstream)::'
++
++err() {
++	echo "E: ${PROGNAME}: ${*}" >&2
++}
++
++warn() {
++	echo "W: ${PROGNAME}: ${*}" >&2
++}
++
++die() {
++	err "${@}"
++	exit 1
++}
++
++# Fetch every remote, rebase trunk work onto trunk@upstream and the
++# outbox onto mail@upstream, and index the list. This judges nothing:
++# a rebase that conflicts leaves the conflict in the commit, and a
++# patch applied upstream with edits survives as a redundant commit.
++# Settling those is the agent's job.
++get_up_to_date() {
++	# Both workspaces share one repo, so one fetch covers them.
++	jj -R "${trunk}" git fetch --all-remotes
++
++	jj -R "${trunk}" rebase -s "roots(${WORK})" -d trunk@upstream \
++	    --skip-emptied
++
++	# A bookmark with no pending mail, missing or merged in full, has
++	# nothing to rebase; point it at the list's tip instead.
++	if [ -z "$(jj -R "${mail}" log --no-graph -T commit_id \
++	    -r "bookmarks(exact:${me}) ~ ::mail@upstream")" ]; then
++		jj -R "${mail}" bookmark set "${me}" -r mail@upstream
++	fi
++	jj -R "${mail}" rebase -b "${me}" -d mail@upstream --skip-emptied
++	jj -R "${mail}" new "${me}"
++
++	notmuch new --quiet
++}
++
++oldest_inbox_message() {
++	notmuch search --sort=oldest-first --output=messages --limit=1 \
++	    tag:inbox
++}
++
++# Post to the operator's ntfy topic. A failed or slow post must not
++# stop the inbox from draining, so this gives up after ten seconds and
++# only warns. Without a topic it does nothing.
++notify() {
++	[ -n "${NOTIFY_URL:-}" ] || return 0
++	curl -fsS -m 10 -o /dev/null -H "Title: ${PROGNAME}" -d "${*}" \
++	    "${NOTIFY_URL}" || warn "could not post to ntfy"
++}
++
++main() {
++	local bindir prompt id subject
++
++	[ "${#}" -eq 0 ] || die "usage: ${PROGNAME}"
++
++	trunk="${TRUNK_WORKSPACE:-${HOME}/lab/default.jj}"
++	mail="${MAIL_WORKSPACE:-${HOME}/lab/mail.jj}"
++	me="$(whoami)"
++	bindir="$(CDPATH= cd -- "$(dirname -- "${0}")" && pwd)"
++	prompt="${LAB_PROCESS_MAIL_PROMPT:-${bindir}/../share/lab-process-mail/prompt.md}"
++
++	[ -d "${trunk}" ] || die "${trunk}: no trunk workspace"
++	[ -d "${mail}" ] || die "${mail}: no mail workspace"
++	[ -r "${prompt}" ] || die "${prompt}: no prompt"
++
++	while :; do
++		get_up_to_date
++		id="$(oldest_inbox_message)"
++		[ -n "${id}" ] || break
++		subject="$(notmuch search "${id}" |
++		    sed -e 's/^[^;]*; //' -e 's/ ([^()]*)$//')"
++		echo "${PROGNAME}: ${id}"
++		(cd "${trunk}" &&
++		    claude --permission-mode auto -p "$(cat "${prompt}")
++
++The message to answer is ${id}." </dev/null >/dev/null)
++		notmuch new --quiet
++		if [ "$(notmuch count "${id} and tag:inbox")" -ne 0 ]; then
++			err "${id} is still in the inbox"
++			notify "stuck: ${subject}"
++			exit 1
++		fi
++		notify "answered: ${subject}"
++	done
++}
++
++main "${@}"
+diff --git a/src/lab-process-mail/lab-process-mail_test b/src/lab-process-mail/lab-process-mail_test
+new file mode 100755
+index 0000000..dd6f49c
+--- /dev/null
++++ b/src/lab-process-mail/lab-process-mail_test
+@@ -0,0 +1,251 @@
++#!/usr/bin/env atf-sh
++
++atf_init_test_cases() {
++	atf_add_test_case no_args
++	atf_add_test_case empty_inbox
++	atf_add_test_case answers_message
++	atf_add_test_case passes_prompt_and_id
++	atf_add_test_case drains_oldest_first
++	atf_add_test_case stuck_message
++	atf_add_test_case silent_without_notify_url
++	atf_add_test_case rebases_work_onto_trunk
++	atf_add_test_case rebases_outbox_onto_list
++}
++
++# Build a small lab in the current directory: an upstream repo with
++# trunk and a mail list that share no history, an empty submissions
++# repo, and trunk and mail workspaces cloned from them. Stubs stand in
++# for claude, notmuch, and curl; see mk_stubs.
++setup() {
++	PROCESS_MAIL="$(atf_get_srcdir)/lab-process-mail"
++	export LAB_PROCESS_MAIL_PROMPT="$(atf_get_srcdir)/prompt.md"
++	export TRUNK_WORKSPACE="${PWD}/default.jj"
++	export MAIL_WORKSPACE="${PWD}/mail.jj"
++	unset NOTIFY_URL
++
++	export JJ_CONFIG="${PWD}/jj.toml"
++	cat > jj.toml <<-'EOF'
++	[user]
++	name = "Me"
++	email = "me@example.org"
++	EOF
++
++	mk_stubs
++	export PATH="${PWD}/bin:${PATH}"
++
++	git init -q --bare upstream.git 2>/dev/null
++	git init -q --bare submissions.git 2>/dev/null
++	jj git init seed.jj >/dev/null 2>&1
++	(
++		cd seed.jj
++		jj config set --repo user.email pat@example.org
++		echo one > file
++		jj commit -m 'trunk: one'
++		jj bookmark create trunk -r @-
++		jj new 'root()'
++		mkdir maildir
++		touch maildir/.gitkeep
++		jj commit -m 'mail: start the list'
++		jj bookmark create mail -r @-
++		jj git remote add upstream ../upstream.git
++		jj git push --remote upstream --bookmark trunk \
++		    --bookmark mail
++	) >/dev/null 2>&1 || atf_fail "cannot build upstream"
++
++	jj git clone --remote upstream upstream.git default.jj \
++	    >/dev/null 2>&1 || atf_fail "cannot clone upstream"
++	(
++		cd default.jj
++		jj git remote add submissions ../submissions.git
++		jj bookmark track mail@upstream
++		jj new trunk@upstream
++		jj workspace add -r mail@upstream ../mail.jj
++	) >/dev/null 2>&1 || atf_fail "cannot build workspaces"
++}
++
++# Stub commands, each logging what it was asked to do.
++#
++# claude records its working directory and argv in claude.log, one
++# pass per line group. With STUB_ANSWER=1 it answers the message: it
++# takes the id from the last line of the prompt and removes it from
++# the inbox.
++#
++# notmuch reads the inbox from the file inbox, one "id subject" per
++# line, oldest first. It answers only the queries lab-process-mail
++# makes.
++#
++# curl appends its argv to curl.log.
++mk_stubs() {
++	mkdir bin
++	: > inbox
++	stubdir="${PWD}"
++
++	cat > bin/claude <<-EOF
++	#!/bin/sh
++	echo "cwd \${PWD}" >> "${stubdir}/claude.log"
++	for a in "\$@"; do printf 'arg %s\n' "\$a" >> "${stubdir}/claude.log"; done
++	if [ "\${STUB_ANSWER:-0}" = 1 ]; then
++		for a in "\$@"; do last="\$a"; done
++		id="\$(printf '%s\n' "\${last}" | tail -n 1 |
++		    sed -e 's/^The message to answer is //' -e 's/\.\$//')"
++		grep -v "^\${id} " "${stubdir}/inbox" > "${stubdir}/inbox.new" || :
++		mv "${stubdir}/inbox.new" "${stubdir}/inbox"
++	fi
++	EOF
++
++	cat > bin/notmuch <<-EOF
++	#!/bin/sh
++	inbox="${stubdir}/inbox"
++	case "\$1" in
++	new)
++		;;
++	search)
++		for a in "\$@"; do last="\$a"; done
++		if [ "\${last}" = tag:inbox ]; then
++			head -n 1 "\${inbox}" | cut -d ' ' -f 1
++		else
++			subject="\$(grep "^\${last} " "\${inbox}" | cut -d ' ' -f 2-)"
++			echo "thread:1 today [1/1] Pat; \${subject} (inbox)"
++		fi
++		;;
++	count)
++		id="\${2%% and tag:inbox}"
++		grep -c "^\${id} " "\${inbox}" || :
++		;;
++	*)
++		echo "notmuch stub: \$*" >&2
++		exit 1
++		;;
++	esac
++	EOF
++
++	cat > bin/curl <<-EOF
++	#!/bin/sh
++	echo "\$*" >> "${stubdir}/curl.log"
++	EOF
++
++	chmod +x bin/*
++}
++
++# Push a new trunk commit upstream, as Pat would.
++advance_trunk() {
++	(
++		cd seed.jj
++		jj new trunk
++		echo two > file
++		jj commit -m 'trunk: two'
++		jj bookmark set trunk -r @-
++		jj git push --remote upstream --bookmark trunk
++	) >/dev/null 2>&1 || atf_fail "cannot advance trunk"
++}
++
++# Print the description of rev's parent in the trunk workspace.
++parent_of() {
++	jj -R default.jj log --no-graph -T 'description.first_line()' \
++	    -r "${1}-"
++}
++
++atf_test_case no_args
++no_args_body() {
++	setup
++	atf_check -s exit:1 -e match:"usage" "${PROCESS_MAIL}" extra
++}
++
++atf_test_case empty_inbox
++empty_inbox_body() {
++	setup
++	atf_check -s exit:0 -o empty -e ignore "${PROCESS_MAIL}"
++	atf_check -s exit:1 test -e claude.log
++}
++
++atf_test_case answers_message
++answers_message_body() {
++	setup
++	echo 'id:a@x Hello there' > inbox
++	export STUB_ANSWER=1 NOTIFY_URL=https://ntfy.example/topic
++	atf_check -s exit:0 -o inline:"lab-process-mail: id:a@x\n" \
++	    -e ignore "${PROCESS_MAIL}"
++	atf_check -o match:"answered: Hello there" cat curl.log
++	atf_check -o match:"https://ntfy.example/topic" cat curl.log
++}
++
++atf_test_case passes_prompt_and_id
++passes_prompt_and_id_body() {
++	setup
++	echo 'id:a@x Hello there' > inbox
++	export STUB_ANSWER=1
++	atf_check -s exit:0 -o ignore -e ignore "${PROCESS_MAIL}"
++	atf_check -o match:"^cwd ${TRUNK_WORKSPACE}\$" cat claude.log
++	atf_check -o match:"^arg # Process one lab-devel message" cat claude.log
++	atf_check -o match:"^The message to answer is id:a@x\.\$" \
++	    tail -n 1 claude.log
++}
++
++atf_test_case drains_oldest_first
++drains_oldest_first_body() {
++	setup
++	printf 'id:a@x First\nid:b@x Second\n' > inbox
++	export STUB_ANSWER=1
++	atf_check -s exit:0 \
++	    -o inline:"lab-process-mail: id:a@x\nlab-process-mail: id:b@x\n" \
++	    -e ignore "${PROCESS_MAIL}"
++	atf_check -o inline:"2\n" grep -c '^cwd ' claude.log
++}
++
++atf_test_case stuck_message
++stuck_message_body() {
++	setup
++	printf 'id:a@x First\nid:b@x Second\n' > inbox
++	export NOTIFY_URL=https://ntfy.example/topic
++	atf_check -s exit:1 -o inline:"lab-process-mail: id:a@x\n" \
++	    -e match:"id:a@x is still in the inbox" "${PROCESS_MAIL}"
++	atf_check -o inline:"1\n" grep -c '^cwd ' claude.log
++	atf_check -o match:"stuck: First" cat curl.log
++}
++
++atf_test_case silent_without_notify_url
++silent_without_notify_url_body() {
++	setup
++	echo 'id:a@x Hello there' > inbox
++	export STUB_ANSWER=1
++	atf_check -s exit:0 -o ignore -e ignore "${PROCESS_MAIL}"
++	atf_check -s exit:1 test -e curl.log
++}
++
++atf_test_case rebases_work_onto_trunk
++rebases_work_onto_trunk_body() {
++	setup
++	(
++		cd default.jj
++		echo mine > mine
++		jj commit -m 'work: mine'
++	) >/dev/null 2>&1
++	advance_trunk
++	atf_check -s exit:0 -o ignore -e ignore "${PROCESS_MAIL}"
++	atf_check_equal "trunk: two" \
++	    "$(parent_of 'description(substring:"work: mine")')"
++}
++
++atf_test_case rebases_outbox_onto_list
++rebases_outbox_onto_list_body() {
++	setup
++	me="$(whoami)"
++	(
++		cd mail.jj
++		echo reply > maildir/reply
++		jj commit -m 'mail: Reply'
++		jj bookmark create "${me}" -r @-
++	) >/dev/null 2>&1
++	(
++		cd seed.jj
++		jj new mail
++		echo post > maildir/post
++		jj commit -m 'mail: Post'
++		jj bookmark set mail -r @-
++		jj git push --remote upstream --bookmark mail
++	) >/dev/null 2>&1 || atf_fail "cannot advance the list"
++	atf_check -s exit:0 -o ignore -e ignore "${PROCESS_MAIL}"
++	atf_check_equal "mail: Post" "$(parent_of "${me}")"
++	atf_check -o inline:"mail: Reply" \
++	    jj -R mail.jj log --no-graph -T 'description.first_line()' -r @-
++}
+diff --git a/src/lab-process-mail/prompt.md b/src/lab-process-mail/prompt.md
+new file mode 100644
+index 0000000..43f1a7d
+--- /dev/null
++++ b/src/lab-process-mail/prompt.md
+@@ -0,0 +1,258 @@
++# Process one lab-devel message
++
++This pass takes the single inbox message named at the end of this
++prompt, does whatever it asks, and answers it on the list. The answer
++is always a reply; any patches go out first as their own series, which
++the reply cites.
++
++The list is a maildir carried by jj on the `mail` bookmark.
++zib/patch-review-workflow.org describes the whole workflow; this pass
++is the contributor side of it.
++
++lab-process-mail runs you, once per message, and does the mechanical
++work around the pass: it gets both workspaces up to date before you
++start, and checks the inbox after you finish. Never use Gmail or any
++external mail tool.
++
++## The operator does not read your output
++
++Nobody reads your stdout. The result of a pass is what lands on the
++list: a commit on your bookmark, pushed to `submissions`. Put every
++answer, question, and caveat in mail.
++
++Do not notify the operator either. lab-process-mail does that after
++each pass, from whether the message left the inbox.
++
++## Layout
++
++- `~/lab/default.jj` - trunk workspace, where patches are developed.
++- `~/lab/mail.jj` - mail workspace; its `maildir/` is the list.
++- `upstream` - canonical `trunk` and `mail`. Read-only to you.
++- `submissions` - your outbox. Push your bookmark, named for your
++  login, and nothing else. Pushing it never needs approval.
++
++notmuch derives the tags from the list itself on every `notmuch new`:
++your mail is `sent`, mail you answered with an In-Reply-To is
++`replied`, and all other mail from others is `inbox`. Replying to a
++message is what moves it out of your inbox.
++
++## 1. Settle what the update left
++
++Before starting you, lab-process-mail brought in everything that has
++landed since the last pass, on both trunk and the list. It fetched
++every remote, rebased your unmerged trunk work (`${work}`) onto
++trunk@upstream, rebased your outbox onto mail@upstream, started a
++fresh change in the mail workspace, and indexed the list, so messages
++you already answered count as replied:
++
++    me="$(whoami)"
++    work='mine() ~ ::trunk@upstream ~ (::mail@upstream ~ root())::
++        ~ (immutable() ~ ::trunk@upstream)::'
++
++That update makes no judgements, so settle what its rebase left:
++
++- A patch Pat applied unchanged becomes empty and is dropped.
++- A patch Pat applied with edits survives, now redundant. Find it by
++  comparing your commits with trunk's log and the list (an "applied"
++  reply, or its thread filed as accepted or merged), and abandon it
++  with `jj abandon`.
++- A conflicted commit (`jj log -r "conflicts() & mine()"`) must be
++  resolved: `jj new <commit>`, fix the files, `jj squash`. If you
++  posted it and it is still open, the series on the list is now stale;
++  note that it needs a revised version.
++
++When `jj log -r "${work}"` shows only open work, every commit is
++conflict-free, and nothing landed is left, trunk is current.
++
++## 2. Take the message
++
++The last line of this prompt names the message to answer, as a notmuch
++id, `id:<message-id>`. You do not choose the message:
++
++    id="id:<message-id>"   # from the last line of this prompt
++    thread="$(notmuch search --output=threads "${id}")"
++    msgid="${id#id:}"      # the bare Message-ID, for headers
++
++If the named message is not tagged `inbox` (`notmuch count "${id} and
++tag:inbox"` prints 0), it is already answered or archived: stop
++without writing anything.
++
++Every inbox message gets an answer, even if it is a short
++acknowledgement. Replying is the only way a message leaves the inbox,
++so an unanswered one blocks every pass after it.
++
++## 3. Gather context with subagents
++
++Run both in parallel with the Agent tool. They are read-only: they may
++run notmuch, jj log/show, and read files, but must not write files,
++move bookmarks, or create commits. Give each exactly this scope, and
++have each return only the shape asked for.
++
++**Thread reader.** Give it `${thread}` and `${id}`. It reads the whole
++thread with `notmuch show --entire-thread=true --format=text
++"${thread}"` and returns:
++
++- what the target message asks of you, in one or two sentences;
++- decisions, constraints, or corrections from later messages in the
++  thread that change that ask (later messages win);
++- patches in the thread, by subject and Message-ID, and their state as
++  the thread describes it;
++- open questions nobody has answered.
++
++**List researcher.** Give it the target's subject, Message-ID, and the
++key terms of its ask. It does two things.
++
++First, it searches the rest of the list (subjects, bodies, and the
++paths and commands the ask mentions) and returns at most ten related
++messages, each as subject, Message-ID, and one line on why it matters,
++plus any decision found elsewhere that constrains this work.
++
++Second, if the target concerns a patch series, it finds every earlier
++version: by `changeid:<id>` for each patch's change id, and by the
++"Link to v(N-1)" lines in cover letters. It reads each earlier
++version's whole thread, since that is where review happened, and
++returns every review point raised there: who raised it, the subject
++and Message-ID it was raised in, and whether the latest version
++addresses it. Unaddressed points come first.
++
++Read both results before deciding anything. A message elsewhere on the
++list may already settle the question or redefine the task.
++
++## 4. Do the work
++
++Decide whether the message needs code changes, or only a reply.
++
++For code changes, work in the trunk workspace on a fresh change:
++
++    cd ~/lab/default.jj
++    jj new trunk@upstream
++
++Follow CLAUDE.md for commit messages and patch scope: one logical
++change per commit, each message explaining why, and the series
++self-contained against trunk. Test the change and review your own diff
++before sending it. If you cannot finish, send a reply that says what
++blocked you and what you need.
++
++## 5. Post the series
++
++Skip this step if the work produced no commits.
++
++A patch series is its own thread on the list, never a reply to the
++message that asked for it. It follows the Linux kernel's conventions,
++less the archive links. Format it with
++`~/lab/default.jj/libexec/mail/format-patch.sh`, which runs git
++format-patch and gives each patch its commit's jj change id, as a
++Change-Id header and a `change-id:` line under the `---`. The patches
++come from the commit author, your address:
++
++    cd ~/lab/default.jj
++    base="$(jj log -r trunk@upstream --no-graph -T commit_id)"
++    head="$(jj log -r @- --no-graph -T commit_id)"
++    rm -rf /tmp/series
++    ~/lab/default.jj/libexec/mail/format-patch.sh -o /tmp/series \
++        --thread=shallow --base="${base}" \
++        --to="<sender's From>" "${base}..${head}"
++
++`--base` adds a `base-commit:` line naming the trunk commit the series
++applies to. Always pass it.
++
++**Cover letter.** For more than one patch add `--cover-letter` and
++fill in its subject and blurb. Put the explanation of the work there,
++or below the `---` line of a single patch.
++
++**Prerequisites.** Base new work on trunk. If it truly needs another
++unmerged series of yours, build on that series and format only your
++own commits, with the prerequisite's head as the range start:
++
++    ... --base="${base}" "${prereq_head}..${head}"
++
++git then adds `prerequisite-patch-id:` lines for the commits between
++trunk and the series. Name the prerequisite series in the cover letter
++by its full subject, with its Message-ID in a footnote.
++
++**Revisions.** For a revised series add `-v N`. Address every review
++point the list researcher found unaddressed, or say why not. End the
++cover letter blurb with what changed and a link to the previous
++version:
++
++    Changes in vN:
++    - <what changed, and why>
++    - Link to v(N-1): id:<message-id of the previous cover>
++
++The change ids are unchanged across versions, so a reader can match
++each patch to its earlier version with `notmuch search changeid:<id>`.
++
++Note the series' subject and Message-ID from its first file, the cover
++letter or the only patch, for the reply. A long Subject continues on
++indented lines. Then deliver each file in order into the mail
++workspace's maildir, which keeps the From as composed and adds a Date,
++and commit the series on its own:
++
++    for p in /tmp/series/*.patch; do
++        ~/lab/default.jj/libexec/mail/maildir-deliver.sh < "${p}"
++    done
++    cd ~/lab/mail.jj
++    jj diff --summary      # only "A maildir/..." lines
++    jj commit -m "mail: Post [PATCH] <subject>"
++
++## 6. Reply
++
++Every pass ends with a reply to the message, even a short
++acknowledgement, since replying is what moves it out of your inbox.
++Start from notmuch's reply, which sets From, To, Cc, Subject,
++In-Reply-To, and References, and quotes the message with an
++attribution line:
++
++    notmuch reply --reply-to=all "${id}" > /tmp/reply.eml
++
++Reply to all, as on any open-source list: the sender, the list, and
++everyone already copied. The list is the record of the work, so a
++reply that leaves it out is lost to everyone else.
++
++Add a Message-ID header, e.g.
++`Message-ID: <$(date +%s).$(openssl rand -hex 6)@p7x.dev>`. Write the
++body by CLAUDE.md's quoting rules: trim the quote to what you answer,
++never reword it, and put each answer beneath the lines it answers.
++Wrap at 72.
++
++If you posted a series, summarize what it does and cite it by its full
++subject with the Message-ID in a footnote, as CLAUDE.md describes, so
++the reader can find it with `notmuch show`:
++
++    The fix is posted as "[PATCH] jails: Add a README" [1].
++
++    [1] id:<message-id of the series>
++
++Cite any other message the same way. Then deliver and commit it on its
++own:
++
++    ~/lab/default.jj/libexec/mail/maildir-deliver.sh < /tmp/reply.eml
++    cd ~/lab/mail.jj
++    jj diff --summary      # only "A maildir/..." lines
++    jj commit -m "mail: Reply to <subject>"
++
++## 7. Push
++
++The series and the reply are separate commits, so the moderator can
++take or leave each. Point your bookmark at the last one and push:
++
++    jj bookmark set "${me}" -r @-
++    jj git push --remote submissions --bookmark "${me}"
++
++## 8. Verify
++
++Check the outcome from outside, not from what you printed:
++
++    notmuch new
++    notmuch search --output=tags "${id}"        # includes replied
++    jj log -r "${me}@submissions" --no-graph -T commit_id
++    jj log -r "${me}" --no-graph -T commit_id   # the same commit
++
++If the message is not `replied`, the reply's In-Reply-To is wrong. If
++the commits differ, the push failed. Fix it before stopping.
++
++## Missing dependencies
++- Do not install missing dependencies
++- Submit a patch declaring the dependencies you need to proceed
++- Try to identify all dependencies you will need upfront to complete
++  the task, to minimize the number of patches required.
+-- 
+2.56.0
+

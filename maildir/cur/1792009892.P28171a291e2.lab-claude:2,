@@ -1,0 +1,85 @@
+Message-ID: <cabfd449172cb4458fef9278813a49334d136bb8.1792009878.git.claude@p7x.dev>
+In-Reply-To: <cover.1792009878.git.claude@p7x.dev>
+References: <cover.1792009878.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Date: Wed, 14 Oct 2026 18:39:57 +0000
+Subject: [PATCH 3/5] src/lab-process-mail: Keep rebased work on its
+ prerequisites
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+Change-Id: nkktuvotluoqzpqpkqmyuurqosmvxnlw
+
+Work may be built on a list patch that is not mine, such as one
+applied locally with "just am" so a series can depend on it. The
+trunk rebase started from the roots of my own commits, so it cut such
+a series off the patch beneath it and moved it straight onto trunk.
+The series then lost the code it needs, and usually conflicted.
+
+The rebase now starts from the base of each stack that holds my work,
+so a prerequisite moves onto trunk together with the work built on it.
+Stacks made only of my commits move exactly as before.
+---
+change-id: nkktuvotluoqzpqpkqmyuurqosmvxnlw
+
+ src/lab-process-mail/lab-process-mail      |  6 ++++--
+ src/lab-process-mail/lab-process-mail_test | 20 ++++++++++++++++++++
+ 2 files changed, 24 insertions(+), 2 deletions(-)
+
+diff --git a/src/lab-process-mail/lab-process-mail b/src/lab-process-mail/lab-process-mail
+index 8f2d57c..22d64b4 100755
+--- a/src/lab-process-mail/lab-process-mail
++++ b/src/lab-process-mail/lab-process-mail
+@@ -53,8 +53,10 @@ get_up_to_date() {
+ 	# Both workspaces share one repo, so one fetch covers them.
+ 	jj -R "${trunk}" git fetch --all-remotes
+ 
+-	jj -R "${trunk}" rebase -s "roots(${WORK})" -d trunk@upstream \
+-	    --skip-emptied
++	# Move each stack from its base, not from your first commit in it,
++	# so work built on someone else's unmerged patch keeps that patch.
++	jj -R "${trunk}" rebase -s "roots(::(${WORK}) ~ ::trunk@upstream)" \
++	    -d trunk@upstream --skip-emptied
+ 
+ 	# A bookmark with no pending mail, missing or merged in full, has
+ 	# nothing to rebase; point it at the list's tip instead.
+diff --git a/src/lab-process-mail/lab-process-mail_test b/src/lab-process-mail/lab-process-mail_test
+index dd6f49c..f60452f 100755
+--- a/src/lab-process-mail/lab-process-mail_test
++++ b/src/lab-process-mail/lab-process-mail_test
+@@ -9,6 +9,7 @@ atf_init_test_cases() {
+ 	atf_add_test_case stuck_message
+ 	atf_add_test_case silent_without_notify_url
+ 	atf_add_test_case rebases_work_onto_trunk
++	atf_add_test_case keeps_work_on_its_prerequisite
+ 	atf_add_test_case rebases_outbox_onto_list
+ }
+ 
+@@ -226,6 +227,25 @@ rebases_work_onto_trunk_body() {
+ 	    "$(parent_of 'description(substring:"work: mine")')"
+ }
+ 
++atf_test_case keeps_work_on_its_prerequisite
++keeps_work_on_its_prerequisite_body() {
++	setup
++	(
++		cd default.jj
++		echo theirs > theirs
++		jj commit -m 'list: theirs'
++		jj metaedit --author 'Pat <pat@example.org>' -r @-
++		echo mine > mine
++		jj commit -m 'work: mine'
++	) >/dev/null 2>&1
++	advance_trunk
++	atf_check -s exit:0 -o ignore -e ignore "${PROCESS_MAIL}"
++	atf_check_equal "list: theirs" \
++	    "$(parent_of 'description(substring:"work: mine")')"
++	atf_check_equal "trunk: two" \
++	    "$(parent_of 'description(substring:"list: theirs")')"
++}
++
+ atf_test_case rebases_outbox_onto_list
+ rebases_outbox_onto_list_body() {
+ 	setup
+-- 
+2.56.0
+

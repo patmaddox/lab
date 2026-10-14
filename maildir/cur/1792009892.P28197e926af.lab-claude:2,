@@ -1,0 +1,276 @@
+Message-ID: <ff548afe421ce4c8371487781cbf0cfdb88278b8.1792009878.git.claude@p7x.dev>
+In-Reply-To: <cover.1792009878.git.claude@p7x.dev>
+References: <cover.1792009878.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Date: Wed, 14 Oct 2026 20:29:48 +0000
+Subject: [PATCH 5/5] src/lab-process-mail: Take the base from LAB_BASE_BRANCH
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+Change-Id: mxzutorvxrszomtttzlrrvpplpyuutvk
+
+lab-process-mail always based work on trunk. That suits an ordinary
+contributor, but an operator's own assistant does better seeing the
+tree the operator sees, and Pat stages every candidate for trunk on
+b/dev. Work based only on trunk misses those commits, so patches that
+build on them must be assembled by hand or rebased later.
+
+LAB_BASE_BRANCH names the revset to base work on, and defaults to
+trunk(), so an unconfigured run behaves as it did. The agent is told
+the base it was given, since the prompt's rebase and new-change steps
+depend on it. When b/dev is rebuilt upstream, work on it follows the
+new head and the old b/dev commits are dropped rather than copied.
+---
+change-id: mxzutorvxrszomtttzlrrvpplpyuutvk
+
+ src/lab-process-mail/lab-process-mail      | 30 +++++++-----
+ src/lab-process-mail/lab-process-mail_test | 57 +++++++++++++++++++++-
+ src/lab-process-mail/prompt.md             | 23 +++++----
+ 3 files changed, 88 insertions(+), 22 deletions(-)
+
+diff --git a/src/lab-process-mail/lab-process-mail b/src/lab-process-mail/lab-process-mail
+index b58cad6..412b232 100755
+--- a/src/lab-process-mail/lab-process-mail
++++ b/src/lab-process-mail/lab-process-mail
+@@ -4,7 +4,7 @@
+ # message, oldest first.
+ #
+ # The loop is deterministic and the agent is not, so the two are kept
+-# apart. Before each pass this script fetches, rebases trunk work and
++# apart. Before each pass this script fetches, rebases your work and
+ # the mail outbox, and picks the oldest inbox message. It then runs a
+ # fresh claude with the prompt shipped beside it and that message's id.
+ # The agent's output goes to /dev/null; whether the pass worked is read
+@@ -18,19 +18,24 @@
+ # outcome is posted to the ntfy topic ${NOTIFY_URL}, if set. The prompt
+ # is ${LAB_PROCESS_MAIL_PROMPT}, or share/lab-process-mail/prompt.md in
+ # the prefix this script is installed under.
++#
++# Work is based on the revset ${LAB_BASE_BRANCH}, or trunk(). An
++# operator's own assistant can set it to their staging branch, such as
++# b/dev@upstream, to see the tree as they do.
+ 
+ set -eu
+ set -o pipefail
+ 
+ readonly PROGNAME="${0##*/}"
++readonly BASE="${LAB_BASE_BRANCH:-trunk()}"
+ 
+-# Your commits off trunk, less everything descended from the list.
+-# Trunk and the list share no commit but root(), so the outbox is left
+-# out however far the list has moved since it was built on. Anything
+-# built on a published head other than trunk, such as b/dev, is left
+-# where it is; that covers your own patches once Pat publishes them.
+-readonly WORK='mine() ~ ::trunk@upstream ~ (::mail@upstream ~ root())::
+-    ~ (immutable() ~ ::trunk@upstream)::'
++# Your commits off the base, less everything descended from the list.
++# The base and the list share no commit but root(), so the outbox is
++# left out however far the list has moved since it was built on.
++# Anything built on a published head other than the base is left where
++# it is; that covers your own patches once Pat publishes them.
++readonly WORK="mine() ~ ::(${BASE}) ~ (::mail@upstream ~ root())::
++    ~ (immutable() ~ ::(${BASE}))::"
+ 
+ err() {
+ 	echo "E: ${PROGNAME}: ${*}" >&2
+@@ -45,7 +50,7 @@ die() {
+ 	exit 1
+ }
+ 
+-# Fetch every remote, rebase trunk work onto trunk@upstream and the
++# Fetch every remote, rebase your work onto the base and the
+ # outbox onto mail@upstream, and index the list. This judges nothing:
+ # a rebase that conflicts leaves the conflict in the commit, and a
+ # patch applied upstream with edits survives as a redundant commit.
+@@ -56,8 +61,8 @@ get_up_to_date() {
+ 
+ 	# Move each stack from its base, not from your first commit in it,
+ 	# so work built on someone else's unmerged patch keeps that patch.
+-	jj -R "${trunk}" rebase -s "roots(::(${WORK}) ~ ::trunk@upstream)" \
+-	    -d trunk@upstream --skip-emptied
++	jj -R "${trunk}" rebase -s "roots(::(${WORK}) ~ ::(${BASE}))" \
++	    -d "${BASE}" --skip-emptied
+ 
+ 	# A bookmark with no pending mail, missing or merged in full, has
+ 	# nothing to rebase; point it at the list's tip instead.
+@@ -77,7 +82,7 @@ get_up_to_date() {
+ prepare_workspace() {
+ 	if [ ! -d "${ws}" ]; then
+ 		jj -R "${trunk}" workspace add --name "$(basename "${ws}" .jj)" \
+-		    -r trunk@upstream "${ws}"
++		    -r "${BASE}" "${ws}"
+ 	fi
+ 	jj -R "${ws}" workspace update-stale
+ }
+@@ -124,6 +129,7 @@ main() {
+ 		    claude --permission-mode auto -p "$(cat "${prompt}")
+ 
+ Your workspace is ${ws}.
++Your base is ${BASE}.
+ The message to answer is ${id}." </dev/null >/dev/null)
+ 		notmuch new --quiet
+ 		if [ "$(notmuch count "${id} and tag:inbox")" -ne 0 ]; then
+diff --git a/src/lab-process-mail/lab-process-mail_test b/src/lab-process-mail/lab-process-mail_test
+index 8c2fb68..36fbd55 100755
+--- a/src/lab-process-mail/lab-process-mail_test
++++ b/src/lab-process-mail/lab-process-mail_test
+@@ -11,6 +11,8 @@ atf_init_test_cases() {
+ 	atf_add_test_case leaves_trunk_working_copy
+ 	atf_add_test_case silent_without_notify_url
+ 	atf_add_test_case rebases_work_onto_trunk
++	atf_add_test_case rebases_work_onto_base
++	atf_add_test_case follows_rewritten_base
+ 	atf_add_test_case keeps_work_on_its_prerequisite
+ 	atf_add_test_case rebases_outbox_onto_list
+ }
+@@ -25,7 +27,7 @@ setup() {
+ 	export TRUNK_WORKSPACE="${PWD}/default.jj"
+ 	export MAIL_WORKSPACE="${PWD}/mail.jj"
+ 	export WORK_WORKSPACE="${PWD}/work.jj"
+-	unset NOTIFY_URL
++	unset NOTIFY_URL LAB_BASE_BRANCH
+ 
+ 	export JJ_CONFIG="${PWD}/jj.toml"
+ 	cat > jj.toml <<-'EOF'
+@@ -144,6 +146,20 @@ advance_trunk() {
+ 	) >/dev/null 2>&1 || atf_fail "cannot advance trunk"
+ }
+ 
++# Push a staging branch b/dev upstream, one commit off trunk, as Pat
++# would. Run again after advance_trunk, it rebuilds b/dev on the new
++# trunk, leaving the old b/dev commit behind.
++publish_dev() {
++	(
++		cd seed.jj
++		jj new trunk
++		echo staged > staged
++		jj commit -m 'dev: staged'
++		jj bookmark set b/dev --allow-backwards -r @-
++		jj git push --remote upstream --bookmark b/dev
++	) >/dev/null 2>&1 || atf_fail "cannot publish b/dev"
++}
++
+ # Print the description of rev's parent in the trunk workspace.
+ parent_of() {
+ 	jj -R default.jj log --no-graph -T 'description.first_line()' \
+@@ -183,6 +199,7 @@ passes_prompt_and_id_body() {
+ 	atf_check -o match:"^cwd ${WORK_WORKSPACE}\$" cat claude.log
+ 	atf_check -o match:"^arg # Process one lab-devel message" cat claude.log
+ 	atf_check -o match:"^Your workspace is ${WORK_WORKSPACE}\\.\$" cat claude.log
++	atf_check -o match:'^Your base is trunk\(\)\.$' cat claude.log
+ 	atf_check -o match:"^The message to answer is id:a@x\.\$" \
+ 	    tail -n 1 claude.log
+ }
+@@ -252,6 +269,44 @@ rebases_work_onto_trunk_body() {
+ 	    "$(parent_of 'description(substring:"work: mine")')"
+ }
+ 
++atf_test_case rebases_work_onto_base
++rebases_work_onto_base_body() {
++	setup
++	(
++		cd default.jj
++		echo mine > mine
++		jj commit -m 'work: mine'
++	) >/dev/null 2>&1
++	publish_dev
++	export LAB_BASE_BRANCH=b/dev@upstream
++	atf_check -s exit:0 -o ignore -e ignore "${PROCESS_MAIL}"
++	atf_check_equal "dev: staged" \
++	    "$(parent_of 'description(substring:"work: mine")')"
++}
++
++atf_test_case follows_rewritten_base
++follows_rewritten_base_body() {
++	setup
++	publish_dev
++	jj -R default.jj git fetch >/dev/null 2>&1
++	(
++		cd default.jj
++		jj new b/dev@upstream
++		echo mine > mine
++		jj commit -m 'work: mine'
++	) >/dev/null 2>&1
++	advance_trunk
++	publish_dev
++	export LAB_BASE_BRANCH=b/dev@upstream
++	atf_check -s exit:0 -o ignore -e ignore "${PROCESS_MAIL}"
++	new="$(jj -R default.jj log --no-graph -T commit_id -r b/dev@upstream)"
++	atf_check_equal "${new}" "$(jj -R default.jj log --no-graph \
++	    -T commit_id -r 'description(substring:"work: mine")-')"
++	# The old b/dev commit is dropped, not carried along as a copy.
++	atf_check_equal "x" "$(jj -R default.jj log --no-graph -T '"x"' \
++	    -r 'description(substring:"dev: staged")')"
++}
++
+ atf_test_case keeps_work_on_its_prerequisite
+ keeps_work_on_its_prerequisite_body() {
+ 	setup
+diff --git a/src/lab-process-mail/prompt.md b/src/lab-process-mail/prompt.md
+index 9f08094..efdfc9e 100644
+--- a/src/lab-process-mail/prompt.md
++++ b/src/lab-process-mail/prompt.md
+@@ -27,6 +27,9 @@ each pass, from whether the message left the inbox.
+ 
+ - `${ws}` - your workspace, named near the end of this prompt. The
+   pass starts there, and you develop patches in it.
++- `${lab_base}` - the revset your work is based on, also named near
++  the end of this prompt. It is trunk() unless the operator chose
++  another, such as their staging branch b/dev@upstream.
+ - `~/lab/default.jj` - the operator's trunk workspace. Leave its
+   working copy alone.
+ - `~/lab/mail.jj` - mail workspace; its `maildir/` is the list.
+@@ -43,14 +46,15 @@ message is what moves it out of your inbox.
+ 
+ Before starting you, lab-process-mail brought in everything that has
+ landed since the last pass, on both trunk and the list. It fetched
+-every remote, rebased your unmerged trunk work (`${work}`) onto
+-trunk@upstream, rebased your outbox onto mail@upstream, started a
++every remote, rebased your unmerged work (`${work}`) onto
++`${lab_base}`, rebased your outbox onto mail@upstream, started a
+ fresh change in the mail workspace, and indexed the list, so messages
+ you already answered count as replied:
+ 
+     me="$(whoami)"
+-    work='mine() ~ ::trunk@upstream ~ (::mail@upstream ~ root())::
+-        ~ (immutable() ~ ::trunk@upstream)::'
++    lab_base='<revset>'    # from "Your base is" near the end
++    work="mine() ~ ::(${lab_base}) ~ (::mail@upstream ~ root())::
++        ~ (immutable() ~ ::(${lab_base}))::"
+ 
+ That update makes no judgements, so settle what its rebase left:
+ 
+@@ -65,7 +69,7 @@ That update makes no judgements, so settle what its rebase left:
+   note that it needs a revised version.
+ 
+ When `jj log -r "${work}"` shows only open work, every commit is
+-conflict-free, and nothing landed is left, trunk is current.
++conflict-free, and nothing landed is left, your work is current.
+ 
+ ## 2. Take the message
+ 
+@@ -128,7 +132,7 @@ Decide whether the message needs code changes, or only a reply.
+ For code changes, work in your workspace on a fresh change:
+ 
+     cd "${ws}"
+-    jj new trunk@upstream
++    jj new "${lab_base}"
+ 
+ Follow CLAUDE.md for commit messages and patch scope: one logical
+ change per commit, each message explaining why, and the series
+@@ -163,9 +167,10 @@ applies to. Always pass it.
+ fill in its subject and blurb. Put the explanation of the work there,
+ or below the `---` line of a single patch.
+ 
+-**Prerequisites.** Base new work on trunk. If it truly needs another
+-unmerged series of yours, build on that series and format only your
+-own commits, with the prerequisite's head as the range start:
++**Prerequisites.** The series applies to trunk. If it needs unmerged
++commits, such as those in a `${lab_base}` other than trunk, build on
++them and format only your own commits, with the prerequisite's head as
++the range start; on a base other than trunk, that is the base:
+ 
+     ... --base="${base}" "${prereq_head}..${head}"
+ 
+-- 
+2.56.0
+

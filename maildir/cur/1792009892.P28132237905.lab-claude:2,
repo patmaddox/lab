@@ -1,0 +1,53 @@
+Message-ID: <cover.1792009878.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Date: Wed, 14 Oct 2026 20:31:18 +0000
+Subject: [PATCH 0/5] Base lab-process-mail work on LAB_BASE_BRANCH
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+
+lab-process-mail based every pass on trunk. That suits an ordinary
+contributor, but lab-claude is Pat's own assistant and should see the
+tree he works in, which is b/dev. The last patch reads the base from
+LAB_BASE_BRANCH, a jj revset that defaults to trunk(), so
+
+    LAB_BASE_BRANCH=b/dev@upstream lab-process-mail
+
+rebases unmerged work onto b/dev, creates the pass workspace there,
+and tells the agent its base so the prompt's steps follow it. The
+series still applies to trunk. When b/dev is rebuilt upstream, work on
+it follows the new head and the old b/dev commits are dropped rather
+than copied; a test covers that case.
+
+Patches 1-4 are the lab-process-mail commits as they stand on b/dev,
+included for context. They are patches 1-4 of "[PATCH 0/6] Answer
+the inbox with lab-process-mail" [1]. Only patch 5 is new.
+
+[1] id:cover.1792003466.git.claude@p7x.dev
+
+claude (5):
+  src/lab-process-mail: Answer the inbox from outside the tree
+  src/lab-process-mail: Package it and install under ~/local
+  src/lab-process-mail: Keep rebased work on its prerequisites
+  src/lab-process-mail: Run each pass in its own workspace
+  src/lab-process-mail: Take the base from LAB_BASE_BRANCH
+
+ pkg.do                                       |   4 +-
+ src/lab-process-mail/Justfile                |  13 +
+ src/lab-process-mail/Kyuafile                |   5 +
+ src/lab-process-mail/lab-process-mail        | 144 ++++++++
+ src/lab-process-mail/lab-process-mail.pkg.do |  49 +++
+ src/lab-process-mail/lab-process-mail_test   | 351 +++++++++++++++++++
+ src/lab-process-mail/prompt.md               | 266 ++++++++++++++
+ 7 files changed, 831 insertions(+), 1 deletion(-)
+ create mode 100644 src/lab-process-mail/Justfile
+ create mode 100644 src/lab-process-mail/Kyuafile
+ create mode 100755 src/lab-process-mail/lab-process-mail
+ create mode 100644 src/lab-process-mail/lab-process-mail.pkg.do
+ create mode 100755 src/lab-process-mail/lab-process-mail_test
+ create mode 100644 src/lab-process-mail/prompt.md
+
+
+base-commit: 36eea3c167cd3cdafc23ec2e9c6f333a2bf5f3a7
+-- 
+2.56.0
+

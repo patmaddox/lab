@@ -1,0 +1,239 @@
+Message-ID: <5b4158de6daa04cc5cc177208ea3b027a70e355e.1792009878.git.claude@p7x.dev>
+In-Reply-To: <cover.1792009878.git.claude@p7x.dev>
+References: <cover.1792009878.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Date: Wed, 14 Oct 2026 18:42:03 +0000
+Subject: [PATCH 4/5] src/lab-process-mail: Run each pass in its own workspace
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+Change-Id: zylpouxxzqmynprkwomrwxrlvuuplwlr
+
+Each pass ran in the trunk workspace, and the agent moves its working
+copy freely: it starts fresh changes on trunk or b/dev, and leaves the
+workspace wherever its last series ended. The operator came back to a
+different working copy than the one they left, and anything they had
+in progress there was left behind on some other commit.
+
+The agent now gets a workspace of its own, created on first use and
+brought up to date before every pass. Commits are shared through the
+one repo, so nothing it produces is lost, but its working copy can no
+longer disturb anyone else.
+---
+change-id: zylpouxxzqmynprkwomrwxrlvuuplwlr
+
+ src/lab-process-mail/lab-process-mail      | 27 +++++++++++++++-----
+ src/lab-process-mail/lab-process-mail_test | 29 ++++++++++++++++++++--
+ src/lab-process-mail/prompt.md             | 19 ++++++++------
+ 3 files changed, 59 insertions(+), 16 deletions(-)
+
+diff --git a/src/lab-process-mail/lab-process-mail b/src/lab-process-mail/lab-process-mail
+index 22d64b4..b58cad6 100755
+--- a/src/lab-process-mail/lab-process-mail
++++ b/src/lab-process-mail/lab-process-mail
+@@ -11,11 +11,12 @@
+ # from the notmuch index afterwards. A message still in the inbox stops
+ # the loop, rather than being retried forever.
+ #
+-# The trunk workspace is ${TRUNK_WORKSPACE}, or ~/lab/default.jj. The
+-# mail workspace is ${MAIL_WORKSPACE}, or ~/lab/mail.jj. The outbox
+-# bookmark is named for your login. Each outcome is posted to the ntfy
+-# topic ${NOTIFY_URL}, if set. The prompt is
+-# ${LAB_PROCESS_MAIL_PROMPT}, or share/lab-process-mail/prompt.md in
++# The trunk workspace is ${TRUNK_WORKSPACE}, or ~/lab/default.jj. Each
++# pass runs in its own workspace, ${WORK_WORKSPACE}, or ~/lab/work.jj,
++# created on first use. The mail workspace is ${MAIL_WORKSPACE}, or
++# ~/lab/mail.jj. The outbox bookmark is named for your login. Each
++# outcome is posted to the ntfy topic ${NOTIFY_URL}, if set. The prompt
++# is ${LAB_PROCESS_MAIL_PROMPT}, or share/lab-process-mail/prompt.md in
+ # the prefix this script is installed under.
+ 
+ set -eu
+@@ -70,6 +71,17 @@ get_up_to_date() {
+ 	notmuch new --quiet
+ }
+ 
++# Give the agent a workspace of its own, so a pass never moves the
++# working copy of the trunk workspace. get_up_to_date may have rebased
++# its working-copy commit, so bring the files in line with it.
++prepare_workspace() {
++	if [ ! -d "${ws}" ]; then
++		jj -R "${trunk}" workspace add --name "$(basename "${ws}" .jj)" \
++		    -r trunk@upstream "${ws}"
++	fi
++	jj -R "${ws}" workspace update-stale
++}
++
+ oldest_inbox_message() {
+ 	notmuch search --sort=oldest-first --output=messages --limit=1 \
+ 	    tag:inbox
+@@ -91,6 +103,7 @@ main() {
+ 
+ 	trunk="${TRUNK_WORKSPACE:-${HOME}/lab/default.jj}"
+ 	mail="${MAIL_WORKSPACE:-${HOME}/lab/mail.jj}"
++	ws="${WORK_WORKSPACE:-${HOME}/lab/work.jj}"
+ 	me="$(whoami)"
+ 	bindir="$(CDPATH= cd -- "$(dirname -- "${0}")" && pwd)"
+ 	prompt="${LAB_PROCESS_MAIL_PROMPT:-${bindir}/../share/lab-process-mail/prompt.md}"
+@@ -101,14 +114,16 @@ main() {
+ 
+ 	while :; do
+ 		get_up_to_date
++		prepare_workspace
+ 		id="$(oldest_inbox_message)"
+ 		[ -n "${id}" ] || break
+ 		subject="$(notmuch search "${id}" |
+ 		    sed -e 's/^[^;]*; //' -e 's/ ([^()]*)$//')"
+ 		echo "${PROGNAME}: ${id}"
+-		(cd "${trunk}" &&
++		(cd "${ws}" &&
+ 		    claude --permission-mode auto -p "$(cat "${prompt}")
+ 
++Your workspace is ${ws}.
+ The message to answer is ${id}." </dev/null >/dev/null)
+ 		notmuch new --quiet
+ 		if [ "$(notmuch count "${id} and tag:inbox")" -ne 0 ]; then
+diff --git a/src/lab-process-mail/lab-process-mail_test b/src/lab-process-mail/lab-process-mail_test
+index f60452f..8c2fb68 100755
+--- a/src/lab-process-mail/lab-process-mail_test
++++ b/src/lab-process-mail/lab-process-mail_test
+@@ -7,6 +7,8 @@ atf_init_test_cases() {
+ 	atf_add_test_case passes_prompt_and_id
+ 	atf_add_test_case drains_oldest_first
+ 	atf_add_test_case stuck_message
++	atf_add_test_case creates_workspace
++	atf_add_test_case leaves_trunk_working_copy
+ 	atf_add_test_case silent_without_notify_url
+ 	atf_add_test_case rebases_work_onto_trunk
+ 	atf_add_test_case keeps_work_on_its_prerequisite
+@@ -22,6 +24,7 @@ setup() {
+ 	export LAB_PROCESS_MAIL_PROMPT="$(atf_get_srcdir)/prompt.md"
+ 	export TRUNK_WORKSPACE="${PWD}/default.jj"
+ 	export MAIL_WORKSPACE="${PWD}/mail.jj"
++	export WORK_WORKSPACE="${PWD}/work.jj"
+ 	unset NOTIFY_URL
+ 
+ 	export JJ_CONFIG="${PWD}/jj.toml"
+@@ -69,7 +72,7 @@ setup() {
+ # claude records its working directory and argv in claude.log, one
+ # pass per line group. With STUB_ANSWER=1 it answers the message: it
+ # takes the id from the last line of the prompt and removes it from
+-# the inbox.
++# the inbox. With STUB_MOVE=1 it moves its working copy to root().
+ #
+ # notmuch reads the inbox from the file inbox, one "id subject" per
+ # line, oldest first. It answers only the queries lab-process-mail
+@@ -85,6 +88,7 @@ mk_stubs() {
+ 	#!/bin/sh
+ 	echo "cwd \${PWD}" >> "${stubdir}/claude.log"
+ 	for a in "\$@"; do printf 'arg %s\n' "\$a" >> "${stubdir}/claude.log"; done
++	[ "\${STUB_MOVE:-0}" = 1 ] && jj new 'root()' >/dev/null 2>&1
+ 	if [ "\${STUB_ANSWER:-0}" = 1 ]; then
+ 		for a in "\$@"; do last="\$a"; done
+ 		id="\$(printf '%s\n' "\${last}" | tail -n 1 |
+@@ -176,8 +180,9 @@ passes_prompt_and_id_body() {
+ 	echo 'id:a@x Hello there' > inbox
+ 	export STUB_ANSWER=1
+ 	atf_check -s exit:0 -o ignore -e ignore "${PROCESS_MAIL}"
+-	atf_check -o match:"^cwd ${TRUNK_WORKSPACE}\$" cat claude.log
++	atf_check -o match:"^cwd ${WORK_WORKSPACE}\$" cat claude.log
+ 	atf_check -o match:"^arg # Process one lab-devel message" cat claude.log
++	atf_check -o match:"^Your workspace is ${WORK_WORKSPACE}\\.\$" cat claude.log
+ 	atf_check -o match:"^The message to answer is id:a@x\.\$" \
+ 	    tail -n 1 claude.log
+ }
+@@ -213,6 +218,26 @@ silent_without_notify_url_body() {
+ 	atf_check -s exit:1 test -e curl.log
+ }
+ 
++atf_test_case creates_workspace
++creates_workspace_body() {
++	setup
++	atf_check -s exit:0 -o ignore -e ignore "${PROCESS_MAIL}"
++	atf_check -o match:"^work: " jj -R default.jj workspace list
++	atf_check -o inline:"trunk: one" jj -R work.jj log --no-graph \
++	    -T 'description.first_line()' -r '@-'
++}
++
++atf_test_case leaves_trunk_working_copy
++leaves_trunk_working_copy_body() {
++	setup
++	echo 'id:a@x Hello there' > inbox
++	before="$(jj -R default.jj log --no-graph -T change_id -r @)"
++	export STUB_ANSWER=1 STUB_MOVE=1
++	atf_check -s exit:0 -o ignore -e ignore "${PROCESS_MAIL}"
++	atf_check -o inline:"${before}" \
++	    jj -R default.jj log --no-graph -T change_id -r @
++}
++
+ atf_test_case rebases_work_onto_trunk
+ rebases_work_onto_trunk_body() {
+ 	setup
+diff --git a/src/lab-process-mail/prompt.md b/src/lab-process-mail/prompt.md
+index 43f1a7d..9f08094 100644
+--- a/src/lab-process-mail/prompt.md
++++ b/src/lab-process-mail/prompt.md
+@@ -25,7 +25,10 @@ each pass, from whether the message left the inbox.
+ 
+ ## Layout
+ 
+-- `~/lab/default.jj` - trunk workspace, where patches are developed.
++- `${ws}` - your workspace, named near the end of this prompt. The
++  pass starts there, and you develop patches in it.
++- `~/lab/default.jj` - the operator's trunk workspace. Leave its
++  working copy alone.
+ - `~/lab/mail.jj` - mail workspace; its `maildir/` is the list.
+ - `upstream` - canonical `trunk` and `mail`. Read-only to you.
+ - `submissions` - your outbox. Push your bookmark, named for your
+@@ -122,9 +125,9 @@ list may already settle the question or redefine the task.
+ 
+ Decide whether the message needs code changes, or only a reply.
+ 
+-For code changes, work in the trunk workspace on a fresh change:
++For code changes, work in your workspace on a fresh change:
+ 
+-    cd ~/lab/default.jj
++    cd "${ws}"
+     jj new trunk@upstream
+ 
+ Follow CLAUDE.md for commit messages and patch scope: one logical
+@@ -140,16 +143,16 @@ Skip this step if the work produced no commits.
+ A patch series is its own thread on the list, never a reply to the
+ message that asked for it. It follows the Linux kernel's conventions,
+ less the archive links. Format it with
+-`~/lab/default.jj/libexec/mail/format-patch.sh`, which runs git
++`${ws}/libexec/mail/format-patch.sh`, which runs git
+ format-patch and gives each patch its commit's jj change id, as a
+ Change-Id header and a `change-id:` line under the `---`. The patches
+ come from the commit author, your address:
+ 
+-    cd ~/lab/default.jj
++    cd "${ws}"
+     base="$(jj log -r trunk@upstream --no-graph -T commit_id)"
+     head="$(jj log -r @- --no-graph -T commit_id)"
+     rm -rf /tmp/series
+-    ~/lab/default.jj/libexec/mail/format-patch.sh -o /tmp/series \
++    "${ws}"/libexec/mail/format-patch.sh -o /tmp/series \
+         --thread=shallow --base="${base}" \
+         --to="<sender's From>" "${base}..${head}"
+ 
+@@ -189,7 +192,7 @@ workspace's maildir, which keeps the From as composed and adds a Date,
+ and commit the series on its own:
+ 
+     for p in /tmp/series/*.patch; do
+-        ~/lab/default.jj/libexec/mail/maildir-deliver.sh < "${p}"
++        "${ws}"/libexec/mail/maildir-deliver.sh < "${p}"
+     done
+     cd ~/lab/mail.jj
+     jj diff --summary      # only "A maildir/..." lines
+@@ -226,7 +229,7 @@ the reader can find it with `notmuch show`:
+ Cite any other message the same way. Then deliver and commit it on its
+ own:
+ 
+-    ~/lab/default.jj/libexec/mail/maildir-deliver.sh < /tmp/reply.eml
++    "${ws}"/libexec/mail/maildir-deliver.sh < /tmp/reply.eml
+     cd ~/lab/mail.jj
+     jj diff --summary      # only "A maildir/..." lines
+     jj commit -m "mail: Reply to <subject>"
+-- 
+2.56.0
+
