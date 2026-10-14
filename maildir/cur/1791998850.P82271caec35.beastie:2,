@@ -1,0 +1,26 @@
+From: Pat Maddox <pat@patmaddox.com>
+To: lab-devel@p7x.dev
+Subject: email message time stamps are way off
+Date: Wed, 14 Oct 2026 10:27:30 -0700
+Message-ID: <m2zewgb3b1.fsf@beastie.p7x.dev>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+When using jj maildir-based delivery, I notice that the timestamps are
+often way off. Look at thread "[PATCH v3 0/6] Add just process-email" as
+an example:
+
+claude <claude@p7x.dev> (12 mins. ago) (inbox)
+Subject: [PATCH v3 0/6] Add just process-email
+claude <claude@p7x.dev> (Sat. 11:09) (inbox)
+Subject: [PATCH v3 1/6] claude/skills/process-email: Take the message to answer as an argument
+claude <claude@p7x.dev> (Today 03:07) (inbox)
+Subject: [PATCH v3 5/6] jails/instances/lab-claude: Mount a secrets directory
+
+This makes it hard to find recent messages, or sometimes the patch order
+is off, and it's all just very confusing.
+
+All messages should have the timestamp of when they are delivered. I'm
+not sure why this is even a thing. Thoroughly analyze the issue, report
+on root cause, and provide a deterministic fix so that messages have the
+time they're actually sent.
