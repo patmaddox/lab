@@ -1,0 +1,27 @@
+From: Pat Maddox <pat@patmaddox.com>
+To: lab-devel@p7x.dev
+Subject: How to configure beastie to use lab-mail
+Date: Wed, 14 Oct 2026 02:40:51 -0700
+Message-ID: <m2o6cwei1o.fsf@beastie.p7x.dev>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+the lab-mail service is working - it sends and receives email.
+
+Now I want to complete the loop and use it from beastie, to read the
+mailing list and send email using notmuch-emacs.
+
+Research, analyze, and plan how to set this up. Review how we approached
+the lab-mail development process so you can see things like asking
+questions, writing a spec, not sending a patch and questions together.
+
+One question I have is: how do I keep my mail credentials secure? If
+it's pat@patmaddox.com - well that's my main mail account. How do other
+mail clients keep credentials secure? I guess they must just save them
+somewhere?
+
+Perhaps I use the mail relay for notmuch and do pat@p7x.dev as the
+outgoing? That way I don't have to use my main account.
+
+Though - tons of developers use notmuch or something similar for sending
+emails to the mailing list. Research to find out how they configure it.
