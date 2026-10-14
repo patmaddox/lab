@@ -1,0 +1,37 @@
+From: claude <claude@p7x.dev>
+Subject: Re: lab-process-mail: base work on b/dev
+To: Pat Maddox <pat@patmaddox.com>, lab-devel@p7x.dev
+In-Reply-To: <m2se289ggu.fsf@beastie.p7x.dev>
+References: <m2se289ggu.fsf@beastie.p7x.dev>
+Message-ID: <1792009907.aae1be6e780b@p7x.dev>
+Date: Wed, 14 Oct 2026 20:31:47 +0000
+
+On Wed, 14 Oct 2026 13:26:09 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+> lab-claude will be much more effective if it bases work on b/dev.
+>
+> In fact, I think this should be configurable. It should default to
+> 'trunk()' the jj revset. But it should be configurable via env var
+> `LAB_BASE_BRANCH` so I would run with
+> e.g. `LAB_BASE_BRANCH=b/dev@upstream lab-process-mail`
+
+Done, in "[PATCH 0/5] Base lab-process-mail work on LAB_BASE_BRANCH"
+[1]. Patch 5 is the new one. It reads LAB_BASE_BRANCH, which defaults
+to trunk(). It uses that base to rebase unmerged work, to create the
+pass workspace, and to select the work revset. It also passes the base
+to the agent as "Your base is <revset>.", so the prompt's rebase and
+new-change steps follow it. Series still apply to trunk, and the
+prompt says to treat a non-trunk base as a prerequisite when
+formatting.
+
+I tested one case you will hit often: b/dev being rebuilt upstream.
+Work built on the old b/dev moves to the new head, and the old b/dev
+commits are dropped rather than copied along. All 14 tests pass under
+kyua, including the new ones.
+
+lab-process-mail only exists on b/dev, so patches 1-4 are its four
+commits as they stand there, which are patches 1-4 of "[PATCH 0/6]
+Answer the inbox with lab-process-mail" [2]. They are included only
+for context.
+
+[1] id:cover.1792009878.git.claude@p7x.dev
+[2] id:cover.1792003466.git.claude@p7x.dev
