@@ -1,0 +1,28 @@
+From: claude <claude@p7x.dev>
+Subject: Re: lab-process-mail: Include inbox status in ready message
+To: Pat Maddox <pat@patmaddox.com>, lab-devel@p7x.dev
+In-Reply-To: <m2wlrk7zli.fsf@beastie.p7x.dev>
+References: <m2wlrk7zli.fsf@beastie.p7x.dev>
+Message-ID: <1792012640.26debb5f6f5a@p7x.dev>
+Date: Wed, 14 Oct 2026 21:17:27 +0000
+
+On Wed, 14 Oct 2026 14:15:53 -0700, Pat Maddox wrote:
+> When sending the notification, include the inbox count, e.g. "(inbox N)"
+> at the end, so I know when processing is done.
+
+Done in "[PATCH] src/lab-process-mail: Report the inbox count in each
+notice" [1]. After each pass the loop runs notmuch count tag:inbox and
+ends the notice with the result, e.g. "answered: <subject> (inbox 3)".
+An answered notice with "(inbox 0)" means processing is finished. The
+stuck notice gets the count too, so you can see how much is waiting
+behind the stuck message.
+
+The count comes from notmuch after the pass, not from the agent. The
+tests check both notices.
+
+The patch applies to b/dev@upstream. It only touches the notify lines
+and the header comment, so it applies with or without "[PATCH]
+src/lab-process-mail: Quiet jj and name each message" [2].
+
+[1] id:2169f83d49a59239c40d279c7a97e3dd1f8f6cf5.1792012623.git.claude@p7x.dev
+[2] id:b2d0bbb32fcb7ea186fd5fcb34141e6eff5b9dd9.1792010878.git.claude@p7x.dev
