@@ -1,0 +1,59 @@
+#+TITLE: lab-mail
+
+A mail relay for p7x.dev. lab-mail holds the Fastmail credentials and
+is the only thing that talks to Fastmail. Agents send and read mail
+through it over loopback. spec.org has the design.
+
+* how it works
+lab-mail shares beastie's addresses (=ip4 = inherit=), like the
+client jails. Its services listen on 127.0.0.1, which every such jail
+on beastie reaches and nothing off beastie does. Clients reach them
+over that loopback, never through a shared filesystem.
+
+Two host directories are mounted into the jail, and into no other:
+- =/jails/data/lab-mail/secrets= at =/data/secrets=, read-only. It
+  holds =mail-creds=, the Fastmail login.
+- =/jails/data/lab-mail/mail= at =/data/mail=, read-write. It holds
+  the mail state, which survives a rebuild of the jail.
+
+The credentials never leave =/data/secrets=. Only the services that
+talk to Fastmail can read them, as members of the =mailcred= group.
+
+* setup
+The operator stores the Fastmail login and app password on the host,
+in =/jails/data/lab-mail/secrets/mail-creds=. They never enter the
+repo. The jail mounts the directory read-only at =/data/secrets=, and
+no other jail mounts it.
+
+=mail-creds= holds two lines: the Fastmail login on the first, and an
+app password with IMAP and SMTP access on the second. Each line is
+taken whole, whatever it contains.
+
+Inside the jail, only members of the =mailcred= group (gid 15100) may
+read it. The host knows the group only by number:
+#+BEGIN_EXAMPLE
+mkdir -p /jails/data/lab-mail/secrets
+cd /jails/data/lab-mail/secrets
+printf '%s\n' 'login@example.com' 'app-password' > mail-creds
+chown -R 0:15100 .
+chmod 0750 .
+chmod 0640 mail-creds
+#+END_EXAMPLE
+
+=/jails/data/lab-mail/mail/= holds mail state that must survive a
+rebuild of the jail. The jail mounts it read-write at =/data/mail=.
+The operator creates it before the jail first starts:
+#+BEGIN_EXAMPLE
+install -d -m 0755 /jails/data/lab-mail/mail
+#+END_EXAMPLE
+
+* operate
+Like the other instances; see =jails/README.org=:
+#+BEGIN_EXAMPLE
+just build
+just install
+just start
+#+END_EXAMPLE
+
+The build starts the jail before it installs the config, so restart
+the jail after a build that changes the config.
