@@ -15,9 +15,9 @@ fetch:
   jj --quiet abandon 'empty() & mutable() & ::@ ~ mine()'
 
 push:
-  jj --quiet git push -b mail --remote tngl
-  jj --quiet git push -b mail --remote jails
-  jj --quiet git push -b mail --remote github
+  jj --quiet git push --tracked --remote tngl
+  jj --quiet git push --tracked --remote jails
+  jj --quiet git push --tracked --remote github
   jj --quiet git export
 
 summary:
