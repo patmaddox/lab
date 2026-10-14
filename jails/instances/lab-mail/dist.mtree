@@ -1,0 +1,7 @@
+/set type=file uname=root gname=wheel mode=0644
+
+./etc/rc.conf.d type=dir mode=0755
+./etc/rc.conf.d/smtprelay
+./usr/local/etc/smtprelay type=dir mode=0755
+./usr/local/etc/smtprelay/remotes.env
+./usr/local/etc/smtprelay/smtprelay.ini

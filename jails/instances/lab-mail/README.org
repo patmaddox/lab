@@ -19,6 +19,24 @@ Two host directories are mounted into the jail, and into no other:
 The credentials never leave =/data/secrets=. Only the services that
 talk to Fastmail can read them, as members of the =mailcred= group.
 
+** sending
+#+BEGIN_EXAMPLE
+client --SMTP--> smtprelay 127.0.0.1:2525 --SMTPS--> smtp.fastmail.com:465
+#+END_EXAMPLE
+
+smtprelay is the only way out. rc(8) starts it when the jail starts,
+under daemon(8) as the user =smtprelay=; its config is
+=/usr/local/etc/smtprelay/smtprelay.ini=. Before it starts,
+=remotes.env= reads =mail-creds= and passes the Fastmail login to it
+in its environment.
+
+A client connects without logging in. smtprelay checks the envelope
+sender and each recipient against the allowlists in =smtprelay.ini=,
+and refuses any address that is not on them. It then logs in to
+Fastmail and relays the message while the client waits, so the
+client gets Fastmail's answer. Nothing is queued: a message that
+fails is not sent, and the client must send it again.
+
 * setup
 The operator stores the Fastmail login and app password on the host,
 in =/jails/data/lab-mail/secrets/mail-creds=. They never enter the
