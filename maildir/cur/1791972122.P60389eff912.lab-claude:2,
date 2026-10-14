@@ -1,0 +1,84 @@
+From: claude <claude@p7x.dev>
+Subject: Re: How to configure beastie to use lab-mail
+To: Pat Maddox <pat@patmaddox.com>, lab-devel@p7x.dev
+In-Reply-To: <m2h5ioeh8s.fsf@beastie.p7x.dev>
+References: <m2o6cwei1o.fsf@beastie.p7x.dev>
+	<1791971028.8e7f3eb2a8e4@p7x.dev> <m2h5ioeh8s.fsf@beastie.p7x.dev>
+Message-ID: <1791972118.654039ece7db@p7x.dev>
+Date: Wed, 14 Oct 2026 10:02:02 +0000
+
+On Wed, 14 Oct 2026 02:58:11 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+> > a) Reading: should Emacs move off the jj maildir for lab-devel? Or
+> >    should the IMAP mirror sit beside it as a second notmuch profile? The
+> >    patch workflow, process-email included, reads the jj maildir. If
+> >    you move, your mail stops reaching the list through jj, so the
+> >    moderated-delivery step in zib/patch-review-workflow.org changes.
+>
+> Yes this will switch from the jj maildir to synced maildir. I think it
+> would be fine as a second profile, at least to start. Here's how I'd
+> generally like the work to go (where each phase may have multiple
+> commits if needed):
+>
+> 1. update to support lab-mail server
+> 2. switch to lab-mail server config
+> 3. clean up vestigial jj maildir
+
+Thanks. The spec is posted as "[PATCH] dotfiles/notmuch: Spec reading
+and sending through lab-mail" [1], in dotfiles/notmuch/spec.org. It
+uses your three phases as its structure. Phase 1 adds a "lists"
+notmuch profile, mbsync and msmtp config, the two packages, and
+pat@p7x.dev as an allowed sender. Phase 1 changes nothing the jj
+maildir client uses. Phase 2 points Emacs at the profile and sends
+through msmtp. Phase 3 removes maildir-deliver.sh from dotfiles/emacs.
+
+One finding sets the order, and the spec states it as a rule. Phase 2
+lands only after process-email reads and sends through lab-mail too.
+[inference] Once Emacs sends over SMTP, your mail no longer reaches
+the jj maildir. I read only that maildir, so I would stop seeing your
+mail, and my replies would stop reaching you. Moving process-email is
+a separate spec, and I can write it next. Phase 1 does not depend on
+it.
+
+The profile's pre-new hook runs "mbsync lists", so a refresh in Emacs
+fetches and indexes in one step. It needs no cron entry or daemon on
+beastie. The spec lists a timer as the alternative if that turns out
+to be slow.
+
+> Let's go with pat@p7x.dev for the time being, just because it's already
+> set up and I can verify the workflow.
+
+Done. The spec lists "pat@p7x.dev is a sending identity on the Fastmail
+account behind mail-creds" as a provider prerequisite. It also assumes
+that mail to lab-devel@p7x.dev is filed into "lists" by your Fastmail
+rule. [inference] I have not seen that address on lab-mail yet, since
+the lab-mail acceptance test used lab@lists.p7x.dev. Step 1 of the
+acceptance test checks it. Sending as pat@patmaddox.com is out of
+scope. That replaces "[PATCH] todo: Send as Pat through lab-mail
+later" [2], which I have dropped.
+
+> > c) Loopback trust: is it acceptable that any process on beastie,
+> >    lab-claude included, can send as you? If not, do you prefer
+> >    per-user auth on smtprelay or a separate IP for lab-claude?
+>
+> Yes this is fine for now.
+
+The spec records this as accepted for now under "out of scope", and
+it names the two fixes for later.
+
+> I'm open to suggestions but I think this is a yes. Ultimately we should
+> be able to restore the entire message status from the list data - but
+> storing the message will mark it as sent right away, which is an over
+> all lower latency process.
+
+Agreed. Fcc goes to ~/mail/sent, beside the mirror and not inside it,
+because mbsync owns ~/mail/lists. Tags still come only from the list's
+contents. Acceptance step 7 checks your point: it rebuilds the
+database and expects the same sent, inbox and replied tags.
+
+I will start phase 1 once you approve the spec.
+
+[1] "[PATCH] dotfiles/notmuch: Spec reading and sending through
+    lab-mail"
+    id:6a8666348ab2db603875801d7405324720ecf6ae.1791972093.git.claude@p7x.dev
+[2] "[PATCH] todo: Send as Pat through lab-mail later"
+    id:3392fc1fe384930c729e4616a7fd4355f965064b.1791958269.git.claude@p7x.dev
