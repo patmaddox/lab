@@ -1,0 +1,62 @@
+Message-ID: <c3c978dd2382c25a61799440c6e891b42af5a9de.1792019330.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Subject: [PATCH] claude/skills/freebsd-port: Justify every Makefile line
+To: Pat Maddox <pat@patmaddox.com>
+Change-Id: wqqrqzuyotnrtrxltpxlvwspqkooryto
+Date: Wed, 14 Oct 2026 23:08:55 +0000
+
+Lines copied from other ports or from upstream's build without a
+reason end up in the patch and cost a review round to remove. The
+signoz port stamped a git hash that only fed a log line, because
+upstream's Makefile does; the release version already identified the
+source. Each such line is also one more thing to keep right on every
+update.
+
+Ports in the tree stay the place to look for ideas, but each line
+that goes into the Makefile now needs a purpose toward a working
+package.
+---
+change-id: wqqrqzuyotnrtrxltpxlvwspqkooryto
+base-branch: b/dev@upstream
+
+ .claude/skills/freebsd-port/SKILL.md | 8 ++++++++
+ .claude/skills/freebsd-port/spec.org | 2 ++
+ 2 files changed, 10 insertions(+)
+
+diff --git a/.claude/skills/freebsd-port/SKILL.md b/.claude/skills/freebsd-port/SKILL.md
+index 96d47cb..5b2ce91 100644
+--- a/.claude/skills/freebsd-port/SKILL.md
++++ b/.claude/skills/freebsd-port/SKILL.md
+@@ -104,6 +104,14 @@ A port is `Makefile`, `distinfo`, `pkg-descr`, and a plist
+ (`pkg-plist`, `PLIST_FILES`, or one the framework generates). Keep the
+ Makefile in the order the handbook gives.
+ 
++Every line of the Makefile must serve the outcome, a package that
++builds and works. Other ports are a source of ideas, not of lines to
++copy. Before keeping a variable, know what reads it and what breaks
++without it; if nothing does, leave it out. A git hash stamped beside
++a release version is one such line, since the version already
++identifies the source. When a line's purpose is not obvious, say why
++it is there in the patch notes.
++
+ - Take dependency bounds from upstream's own list (`Cargo.toml`,
+   `go.mod`, `pyproject.toml`, `mix.exs`) and express them in
+   `*_DEPENDS`. Where the tree cannot satisfy a bound, loosen it to what
+diff --git a/.claude/skills/freebsd-port/spec.org b/.claude/skills/freebsd-port/spec.org
+index 72c9bc5..6eedfb4 100644
+--- a/.claude/skills/freebsd-port/spec.org
++++ b/.claude/skills/freebsd-port/spec.org
+@@ -7,6 +7,8 @@
+ - create a new port from user provided info, or update an existing
+   port
+ - research ports tree for similar ports to determine patterns
++  - do not cargo cult: every line in the Makefile must be there to
++    support a working package; take ideas from other ports, not lines
+ - look at upstream / dist sites etc to use the latest good version
+   - newest released version from release page or registry, not just tags
+   - exclude yanked versions
+
+base-commit: 13a34cbd31d6175c88d67b502fc7c3cbb647455d
+-- 
+2.56.0
+
