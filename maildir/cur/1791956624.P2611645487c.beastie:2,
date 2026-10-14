@@ -1,0 +1,65 @@
+From: Pat Maddox <pat@patmaddox.com>
+To: claude <claude@p7x.dev>
+Cc: lab-devel@p7x.dev
+Subject: Re: [PATCH v3] jails/instances/lab-mail: Initial spec
+In-Reply-To: <1791956260.17661cb9c3c5@p7x.dev>
+References: <4d40a245c49a3ec0631f80c5a65bf85497dadf6a.1791944336.git.claude@p7x.dev>
+ <m2ik34kh3f.fsf@beastie.p7x.dev> <1791954885.8f2eda621d8a@p7x.dev>
+ <m25wz4kgd1.fsf@beastie.p7x.dev> <1791955518.cdf0f5f4ee56@p7x.dev>
+ <m2pkxcj17u.fsf@beastie.p7x.dev> <1791956260.17661cb9c3c5@p7x.dev>
+Date: Tue, 13 Oct 2026 22:43:44 -0700
+Message-ID: <m2h5ioj0q7.fsf@beastie.p7x.dev>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+claude <claude@p7x.dev> writes:
+
+> On Tue, 13 Oct 2026 22:33:09 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+>> Good thinking. What's a good way to track these sorts of things? Is it a
+>> follow up in the spec? Add to todo.org? Or just leave it on the list and
+>> let a secretary bring it up later?
+>
+> I suggest splitting the decision from the task.
+>
+> - The decision goes in the spec. v5 records it as the last
+>   alternative: your client is left out, and sending as you takes one
+>   more allowed sender and an msmtp entry. A spec describes the end
+>   state, so a "follow-up" section would be a to-do list living in the
+>   wrong place.
+> - The task goes in todo.org, with the event that should trigger it:
+>   "when Emacs moves off the jj maildir, send through lab-mail as
+>   pat@patmaddox.com". That is the file you already work from.
+> - Do not rely on the list alone. A thread leaves the inbox once it
+>   has a reply, and nothing brings it back. A secretary would have to
+>   find the item again in the archive each time, and could not tell
+>   whether it was still open.
+>
+> If that suits you, I will send a one-line todo.org patch.
+
+You cut out too much context. When replying, you shouldn't throw away
+previous levels of quotes. The whole point of using email for this
+interaction is that it's really straightforward: you reply, and it
+includes all the previous context. You trim any you don't need - but
+it's vertical trimming, not horizontal trimming. In other words, you
+don't remove entire indentation levels. When you edit to specific parts
+of a conversation, you include each of the levels of context (and you
+can elide stuff if it's helpful).
+
+Point being: you're responding to a question I asked, but _I_ don't know
+what my question is about, because the original context is lost.
+
+Here's another principle: every email should be readable on its own. It
+should have enough context that the material in it makes sense and you
+don't have to go hunting for other emails, but not so much that it adds
+noise to the conversation.
+
+>> hrm are you sure about that? I just went to install it and it said it's
+>> already installed. You're on lab-claude.p7x.dev right?
+>
+> You are right, and I was wrong. This is lab-claude.p7x.dev, and pkg
+> info shows notmuch-emacs-0.40_10 with emacs-nox-31.1. I ran Emacs
+> with -Q, which leaves /usr/local/share/emacs/site-lisp/notmuch off
+> load-path, so (require 'notmuch) failed. I took that as the package
+> being missing and did not check pkg.
+
+You're going to have to figure out how to not make this mistake again.
