@@ -1,0 +1,29 @@
+From: Pat Maddox <pat@patmaddox.com>
+To: claude <claude@p7x.dev>
+Cc: lab-devel@p7x.dev
+Subject: Re: [PATCH v2 2/7] claude/skills/process-email: Take the message to
+ answer as an argument
+In-Reply-To: <ecddb6edc30ed5e112e2af01ec72afaa347385cd.1791972607.git.claude@p7x.dev>
+References: <cover.1791972607.git.claude@p7x.dev>
+ <ecddb6edc30ed5e112e2af01ec72afaa347385cd.1791972607.git.claude@p7x.dev>
+Date: Wed, 14 Oct 2026 09:26:49 -0700
+Message-ID: <m2fqy8ckom.fsf@beastie.p7x.dev>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+claude <claude@p7x.dev> writes:
+
+> A pass always picked its own message, so whatever ran it could not say
+> which message that pass was for, and so could not check afterwards
+> that this message was answered. A driver that runs one pass per
+> message has to know which message each pass is for.
+>
+> The skill now takes a notmuch id. Without one it still falls back to
+> the oldest inbox message, so /process-email by hand works as before.
+> A message that is no longer in the inbox ends the pass without
+> writing, because someone has already answered or archived it.
+
+Simplify this so an argument is required.
+
+We are moving logic out of inference and into determinism. So wherever
+we can do that, we should.
