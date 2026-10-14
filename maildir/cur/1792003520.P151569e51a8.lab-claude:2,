@@ -1,0 +1,86 @@
+From: claude <claude@p7x.dev>
+Subject: Re: [PATCH v3 0/6] Add just process-email
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+In-Reply-To: <m2a4ogb0ju.fsf@beastie.p7x.dev>
+References: <cover.1791997861.git.claude@p7x.dev>
+	<1792000704.4cbdea5afcb3@p7x.dev> <m2a4ogb0ju.fsf@beastie.p7x.dev>
+Message-ID: <1792003490.d7cadd8e1379@p7x.dev>
+Date: Wed, 14 Oct 2026 18:45:20 +0000
+
+On Wed, 14 Oct 2026 11:27:01 -0700, Pat Maddox wrote:
+
+> I want to roughly mirror how upstream pkg installation works, and
+> ultimately this stuff may get contributed to ports. So really I'm
+> installing to LOCALBASE and I guess that shouldn't be baked into the
+> package - rather it is `pkg -r ~/local` maybe? So ultimately it will be
+> at ~/local/bin/lab-process-email.
+
+The package lists bin/lab-process-mail and
+share/lab-process-mail/prompt.md with no prefix of its own, and "just
+install" runs pkg -r ~/local. The command is lab-process-mail, after
+src/lab-process-mail; say if you meant lab-process-email.
+
+> It's not on PATH yet but we'll add it. In fact make a patch for
+> lab-claude that adds it for claude user.
+
+Patch 5 of the series [1] adds ~/local/bin to the path in the claude
+user's .login_conf, after the default entries.
+
+> Yes the prompt will be co-located with the script. We are extracting the
+> logic out of the skill. Ultimately there will be no claude skill for
+> this - I don't need the skill behavior. What I need is a deterministic
+> tool that prompts an agent for the non-deterministic work.
+
+prompt.md sits beside the script in src/lab-process-mail and installs
+to share/lab-process-mail. Patch 6 removes the skill and points
+CLAUDE.md at the prompt.
+
+> Yeah I think that's a good idea. That or the prompt tells claude to use
+> workspaces, I know it has some of that behavior built in. I'm open to
+> either - whichever will be more effective.
+
+I went with the tool making the workspace, ~/lab/work.jj, in patch 4.
+The tool can guarantee it and a test can check it, while a prompt can
+only ask. Inside that workspace the agent still decides everything,
+so it is no more prescriptive than before.
+
+> What I'm designing here is an work queue, and claude should develop
+> lab. So I'm open to design suggestions on how to accomplish that.
+
+The cleanest seam I see is the one this series draws: the tool owns
+the queue (what to work on next, whether it got done, who to tell),
+and the agent owns the work. Two suggestions for later, neither in
+this series. First, a pass that leaves its message in the inbox stops
+the whole loop; a "stuck" tag set by the tool would let it skip that
+message and keep draining, while still notifying you. Second, the
+tool could write a small per-pass record (message id, start, end,
+exit status) to a file, which gives you a history of the queue without
+reading agent output.
+
+> Yes exactly. We're taking the ideas in this patch series and formalizing
+> the implementation a bit more, to be a structured tool rather than an
+> unstructured skill. So the changes like it doesn't loop, it takes a
+> specific message, etc that needs to carry through.
+
+Done, with the one-message prompt carried over. v3 is superseded.
+
+> Yes fix the bug in the tool, but do it as a separate commit. So I'd like
+> to extract the logic mostly as is, bug and all, and have a commit that
+> clearly fixes it.
+
+Patch 1 extracts it as is, and patch 3 fixes the rebase with a test
+that fails before the fix.
+
+> > 6. Language and tests. I would write it in sh(1) with kyua tests,
+> >    like src/sclr. Notifications would go to NOTIFY_URL, as in v3, so
+> >    no topic is baked into the package. Is that right?
+>
+> That's right.
+
+The cover letter notes that v3's secrets mount is not carried over,
+since the tool reads only NOTIFY_URL.
+
+Thanks for the quick answers.
+
+[1] id:cover.1792003466.git.claude@p7x.dev
