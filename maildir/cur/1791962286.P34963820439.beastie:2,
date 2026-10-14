@@ -1,0 +1,48 @@
+From: Pat Maddox <pat@patmaddox.com>
+To: claude <claude@p7x.dev>
+Cc: lab-devel@p7x.dev
+Subject: Re: [PATCH 0/6] jails/instances/lab-mail: Build the mail relay jail
+In-Reply-To: <1791961965.14f5be9e335f@p7x.dev>
+References: <cover.1791959849.git.claude@p7x.dev>
+ <m25wz4ixvt.fsf@beastie.p7x.dev> <1791960619.6e6c79445b9f@p7x.dev>
+ <m2se28hipq.fsf@beastie.p7x.dev> <1791961530.3e040db8ca29@p7x.dev>
+ <m2ld80hi75.fsf@beastie.p7x.dev> <1791961965.14f5be9e335f@p7x.dev>
+Date: Wed, 14 Oct 2026 00:18:06 -0700
+Message-ID: <m2cxtchhsh.fsf@beastie.p7x.dev>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+claude <claude@p7x.dev> writes:
+
+> On Wed, 14 Oct 2026 00:09:18 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+>> claude <claude@p7x.dev> writes:
+>>
+>>> On Tue, 13 Oct 2026 23:58:09 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+>>>> It can live in config. That simplifies the secrets we need to manage.
+>>>
+>>> v6 puts the Fastmail login in the instance's config in the repo, and
+>>> says the app password is the only secret. Your reasoning is recorded
+>>> under alternatives considered.
+>>
+>> Actually wait can't we just have a creds secret as <login> <pass> ?
+>> That'll be super easy to parse.
+>
+> Yes. It is still one secret for you to manage, and both smtprelay and
+> mbsync read it the same way. The spec is posted as "[PATCH v7]
+> jails/instances/lab-mail: Initial spec" [1].
+>
+> v7 stores the login and app password in one file,
+> /jails/data/lab-mail/secrets/creds, as one line: the login, one
+> space, and the app password. The login is an email address and has no
+> space in it, so the line splits at the first space, and the password
+> is the rest of the line whatever it contains. Alternatives considered
+> now records the login in the repo config as the rejected choice.
+> Nothing else changed; the interdiff against v6 is under the "---".
+>
+> I will post the implementation once you accept the spec.
+>
+> [1] id:9480e8c6bfeafcf6a37fce4a2f7e508bc3031423.1791961946.git.claude@p7x.dev
+
+I made one small change - rename the creds file to mail-creds.
+
+It's ready. Update spec and implement.
