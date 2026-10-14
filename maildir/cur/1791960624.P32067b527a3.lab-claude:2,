@@ -1,0 +1,124 @@
+From: claude <claude@p7x.dev>
+Subject: Re: [PATCH 0/6] jails/instances/lab-mail: Build the mail relay jail
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+In-Reply-To: <m25wz4ixvt.fsf@beastie.p7x.dev>
+References: <cover.1791959849.git.claude@p7x.dev>
+	<m25wz4ixvt.fsf@beastie.p7x.dev>
+Message-ID: <1791960619.6e6c79445b9f@p7x.dev>
+Date: Wed, 14 Oct 2026 06:50:24 +0000
+
+On Tue, 13 Oct 2026 23:45:10 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+> You should not submit patches that disagree with the spec. In the course
+> of research and implementation, if you find information the contradicts
+> the spec, then you need to update the spec. This might involve asking
+> clarifying questions.
+
+You're right, and I'm sorry for repeating the mistake. I withdraw the
+series. Under your rule from the spec review, a patch or questions but
+not both, this reply carries only questions. Once you answer them I
+will post v6 of the spec, and after that an implementation that
+matches it.
+
+Two findings change the spec's wording but need no call from you. In
+v6 I will make both changes:
+
+> > 2. msmtp does send DATA. smtpd advertises PIPELINING, so msmtp sends
+
+The clients section will say "msmtp sends no message" instead of
+"msmtp sends no DATA".
+
+> > One more note on patch 6. The lists notmuch profile names its
+> > database path, though notmuch would derive the same path from
+
+This is an implementation detail beneath "notmuch new indexes it
+there", so the spec does not change.
+
+The rest need your call. Each gives my recommendation.
+
+> > 1. smtprelay refuses a sender or recipient with 451, not 5xx. The
+> >    code is hard-coded in senderChecker and recipientChecker in
+> >    main.go; there is no setting.
+
+Q1. The spec promises a 5xx, and you called recipient filtering a
+key design constraint, so I won't weaken it on my own. The options:
+
+  a. The spec says a refused sender or recipient gets a 4xx reply.
+     msmtp still exits non-zero and nothing is sent. The cost is that
+     4xx means "try again later", which misleads anything that reads
+     the code, though no client here queues.
+  b. lab-mail carries a local patch so smtprelay answers 550. That
+     means building smtprelay from ports in the jail rather than
+     installing the package, and keeping the patch current.
+  c. Another relay. None of the alternatives the spec weighs has both
+     a recipient allowlist and pass-through of Fastmail's reply.
+
+I recommend (a). Separately, should I offer smtprelay upstream a patch
+to answer 550? That is a pull request on GitHub, so I would not send
+it without your yes.
+
+> > 3. smtprelay adds a Received header to each message before relaying
+> >    it. The spec says it does not rewrite the headers.
+
+Q2. You asked for no header rewriting. Is it acceptable for the spec
+to say that smtprelay adds one Received line, as every MTA does, and
+changes nothing else in the message? I recommend yes.
+
+> > 4. Dovecot serves an empty INBOX next to lists. IMAP reserves INBOX
+> >    as every user's primary mailbox, and Dovecot requires an inbox
+> >    namespace.
+
+Q3. The options:
+
+  a. The list is the mailbox lists, and an empty, read-only INBOX sits
+     beside it.
+  b. The list is served as INBOX, and there is no mailbox named lists.
+     Dovecot's config is simpler, and no mailbox is empty.
+
+I recommend (a). The name says what the mailbox holds, it matches the
+Fastmail folder, and a second mirrored folder could sit beside it.
+
+> > 5. mbsync creates mail 0600 and folders 0700, hard-coded in
+> >    drv_maildir.c, whatever the umask. So vmail could not read the
+> >    maildir at all.
+
+Q4. The spec says Dovecot's user cannot write the maildir. It does not
+say how that user reads it. The options:
+
+  a. The fetch job opens up permissions after each pull. For the few
+     seconds between mbsync writing a message and the chmod, IMAP
+     cannot read that message. A client fetch that lands in that
+     moment fails and succeeds on its next run.
+  b. Dovecot runs as mbsync's user. Read-only then rests only on
+     Dovecot's ACL. This weakens the spec's guarantee.
+  c. The maildir is its own ZFS dataset with an inherited ACL that
+     grants Dovecot's user read access. I infer, but have not tested,
+     that this needs aclinherit=passthrough on that dataset. I cannot
+     see beastie's datasets from lab-claude.
+
+I recommend (a), because it works on any filesystem. If you prefer
+(c), tell me whether /jails/data/lab-mail/mail is its own dataset and
+whether you will set its ACL properties, or whether the instance
+should.
+
+> > 6. The secrets directory holds the Fastmail login as well as the app
+> >    password, in two files, user and password.
+
+Q5. The login is not secret, but it is your account name. Should it
+live in the secrets directory next to the password, or in lab-mail's
+config in the repo? I recommend the secrets directory, so the repo
+does not name your account and both values are in one place for the
+operator.
+
+> > 7. The spec calls the Fastmail folder "lists/". mbsyncrc uses the
+> >    IMAP name "lists".
+
+Q6. What name does the folder have over IMAP? Is it "lists" at the
+top level, or under INBOX, such as "INBOX/lists" or "INBOX.lists"?
+I cannot log in to Fastmail to check. The spec will name it exactly.
+
+I also checked the rest of the sending path against smtprelay's source
+for claims I had not verified. When Fastmail rejects a message, the
+client gets Fastmail's code and text unchanged. When Fastmail cannot
+be reached, the client gets 421. Both match the spec. I found no other
+gaps.
