@@ -15,9 +15,10 @@
 # pass runs in its own workspace, ${WORK_WORKSPACE}, or ~/lab/work.jj,
 # created on first use. The mail workspace is ${MAIL_WORKSPACE}, or
 # ~/lab/mail.jj. The outbox bookmark is named for your login. Each
-# outcome is posted to the ntfy topic ${NOTIFY_URL}, if set. The prompt
-# is ${LAB_PROCESS_MAIL_PROMPT}, or share/lab-process-mail/prompt.md in
-# the prefix this script is installed under.
+# outcome is posted to the ntfy topic ${NOTIFY_URL}, if set, with the
+# number of messages left in the inbox. The prompt is
+# ${LAB_PROCESS_MAIL_PROMPT}, or share/lab-process-mail/prompt.md in the
+# prefix this script is installed under.
 #
 # Work is based on the revset ${LAB_BASE_BRANCH}, or trunk(). An
 # operator's own assistant can set it to their staging branch, such as
@@ -92,6 +93,10 @@ oldest_inbox_message() {
 	    tag:inbox
 }
 
+inbox_count() {
+	notmuch count tag:inbox
+}
+
 # Post to the operator's ntfy topic. A failed or slow post must not
 # stop the inbox from draining, so this gives up after ten seconds and
 # only warns. Without a topic it does nothing.
@@ -134,10 +139,10 @@ The message to answer is ${id}." </dev/null >/dev/null)
 		notmuch new --quiet
 		if [ "$(notmuch count "${id} and tag:inbox")" -ne 0 ]; then
 			err "${id} is still in the inbox"
-			notify "stuck: ${subject}"
+			notify "stuck: ${subject} (inbox $(inbox_count))"
 			exit 1
 		fi
-		notify "answered: ${subject}"
+		notify "answered: ${subject} (inbox $(inbox_count))"
 	done
 }
 

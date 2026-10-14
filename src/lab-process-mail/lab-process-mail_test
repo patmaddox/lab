@@ -116,8 +116,12 @@ mk_stubs() {
 		fi
 		;;
 	count)
-		id="\${2%% and tag:inbox}"
-		grep -c "^\${id} " "\${inbox}" || :
+		if [ "\$2" = tag:inbox ]; then
+			grep -c . "\${inbox}" || :
+		else
+			id="\${2%% and tag:inbox}"
+			grep -c "^\${id} " "\${inbox}" || :
+		fi
 		;;
 	*)
 		echo "notmuch stub: \$*" >&2
@@ -186,7 +190,7 @@ answers_message_body() {
 	export STUB_ANSWER=1 NOTIFY_URL=https://ntfy.example/topic
 	atf_check -s exit:0 -o inline:"lab-process-mail: id:a@x\n" \
 	    -e ignore "${PROCESS_MAIL}"
-	atf_check -o match:"answered: Hello there" cat curl.log
+	atf_check -o match:"answered: Hello there \\(inbox 0\\)" cat curl.log
 	atf_check -o match:"https://ntfy.example/topic" cat curl.log
 }
 
@@ -223,7 +227,7 @@ stuck_message_body() {
 	atf_check -s exit:1 -o inline:"lab-process-mail: id:a@x\n" \
 	    -e match:"id:a@x is still in the inbox" "${PROCESS_MAIL}"
 	atf_check -o inline:"1\n" grep -c '^cwd ' claude.log
-	atf_check -o match:"stuck: First" cat curl.log
+	atf_check -o match:"stuck: First \\(inbox 2\\)" cat curl.log
 }
 
 atf_test_case silent_without_notify_url
