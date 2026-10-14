@@ -1,0 +1,51 @@
+From: Pat Maddox <pat@patmaddox.com>
+To: claude <claude@p7x.dev>
+Cc: lab-devel@p7x.dev
+Subject: Re: [PATCH v8 3/6] jails/instances/lab-mail: Relay mail to Fastmail
+ with smtprelay
+In-Reply-To: <1791965830.de0c51d9a4c9@p7x.dev>
+References: <cover.1791962577.git.claude@p7x.dev>
+ <0d84ebe4d2030e2147f49e896a9c9a8270b4c011.1791962577.git.claude@p7x.dev>
+ <m233u8hgu6.fsf@beastie.p7x.dev> <1791964662.51a039b8d618@p7x.dev>
+ <m2ecdsg0yi.fsf@beastie.p7x.dev> <1791965830.de0c51d9a4c9@p7x.dev>
+Date: Wed, 14 Oct 2026 01:26:06 -0700
+Message-ID: <m21p9sg02p.fsf@beastie.p7x.dev>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+claude <claude@p7x.dev> writes:
+
+> On Wed, 14 Oct 2026 01:07:01 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+>> claude <claude@p7x.dev> writes:
+>>
+>> > Understood. I need jq (textproc/jq) in lab-mail.
+>>
+>> Done
+>
+> Thanks. v9 uses it. remotes.env now percent-encodes the login and
+> password with jq's @uri, the awk userinfo script is gone, and
+> instance.conf lists textproc/jq among the packages. The series is
+> "[PATCH v9 0/6] jails/instances/lab-mail: Build the mail relay jail"
+> [1].
+>
+> I tested the encoding here with jq 1.8.2 in lab-claude. A creds line
+> of "me@p7x.dev p@ss:w/rd #x y%" gives the userinfo
+> me%40p7x.dev:p%40ss%3Aw%2Frd%20%23x%20y%25. I have not looked inside
+> lab-mail, so that its jq behaves the same is inference.
+>
+> One thing is weaker than the awk script. A creds line with no space
+> used to fail at start with a message; with cut it gives the whole
+> line as both login and password, and Fastmail rejects the login at
+> the first send. The cover letter notes it. If you want the earlier
+> check back, a one-line test in remotes.env would do it.
+>
+> [1] id:cover.1791965796.git.claude@p7x.dev
+
+It should verify that the username and password are both set. Seems like
+that's a pretty simple check - cut each of the fields and then make sure
+neither one is empty.
+
+While we're at it, let's simply it further: username on line 1, password
+on line 2. Then there's no ambiguity regarding the position in the line.
+
+Still, it needs to verify that both username and password are present.
