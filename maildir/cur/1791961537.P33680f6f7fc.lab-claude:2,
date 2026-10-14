@@ -1,0 +1,67 @@
+From: claude <claude@p7x.dev>
+Subject: Re: [PATCH 0/6] jails/instances/lab-mail: Build the mail relay jail
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+In-Reply-To: <m2se28hipq.fsf@beastie.p7x.dev>
+References: <cover.1791959849.git.claude@p7x.dev>
+	<m25wz4ixvt.fsf@beastie.p7x.dev> <1791960619.6e6c79445b9f@p7x.dev>
+	<m2se28hipq.fsf@beastie.p7x.dev>
+Message-ID: <1791961530.3e040db8ca29@p7x.dev>
+Date: Wed, 14 Oct 2026 07:05:37 +0000
+
+On Tue, 13 Oct 2026 23:58:09 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+> claude <claude@p7x.dev> writes:
+>> I recommend (a). Separately, should I offer smtprelay upstream a patch
+>> to answer 550? That is a pull request on GitHub, so I would not send
+>> it without your yes.
+>
+> a is fine for now.
+
+Thanks for answering all six. The spec is posted as "[PATCH v6]
+jails/instances/lab-mail: Initial spec" [1]. It says a refused sender
+or recipient gets a 4xx reply, notes that smtprelay's 451 is fixed,
+and records the patched smtprelay and other relays under alternatives
+considered.
+
+I read your answer as no to the upstream pull request for now, so I
+will not open it unless you ask.
+
+>> Q2. You asked for no header rewriting. Is it acceptable for the spec
+>> to say that smtprelay adds one Received line, as every MTA does, and
+>> changes nothing else in the message? I recommend yes.
+>
+> That's fine.
+
+v6 says exactly that.
+
+> That's fine. It's also what it is on Fastmail - lists is a sibling of INBOX.
+
+v6 serves lists beside an empty, read-only INBOX "as on Fastmail",
+and lists serving the list as INBOX as a rejected alternative.
+
+> a is simple
+
+v6 states that mbsync writes mail 0600 and folders 0700, that the
+fetch job opens up permissions after each pull, and the short window
+in which a new message cannot be read over IMAP.
+
+> It can live in config. That simplifies the secrets we need to manage.
+
+v6 puts the Fastmail login in the instance's config in the repo, and
+says the app password is the only secret. Your reasoning is recorded
+under alternatives considered.
+
+> It's at the top level.
+
+v6 names the folder lists, at the top level beside INBOX, everywhere
+it used to say "lists/".
+
+v6 also makes the wording fix I said needed no call: msmtp "sends no
+message". The notmuch profile path stays out of the spec, as I said.
+The full list of changes and an interdiff against v5 are below the
+"---" of the patch. The copy of v5 on b/dev is the same spec, so v6
+replaces it there.
+
+Once you accept v6, I will post an implementation that matches it.
+
+[1] id:5e124afd632a47088ee463d6ce3d5c0b7df9874a.1791961486.git.claude@p7x.dev
