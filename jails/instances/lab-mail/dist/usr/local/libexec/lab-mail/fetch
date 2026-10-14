@@ -4,15 +4,32 @@
 # mbsync creates mail mode 0600 and folders 0700, whatever the umask.
 # Dovecot reads the maildir as vmail, which must not be able to write
 # it, so the new files are opened up for reading after each pull.
+#
+# cron sends the output to the fetch log. mbsync -q prints only
+# errors, so the job says itself what each pull brought.
 set -u
 
 readonly maildir=/data/mail/maildir
 
+messages() {
+	find ${maildir} -type f \( -path '*/new/*' -o -path '*/cur/*' \) |
+	    wc -l
+}
+
+before=$(($(messages)))
 rc=0
 /usr/local/bin/mbsync -q -c /usr/local/etc/mbsyncrc lists || rc=${?}
+after=$(($(messages)))
 
 find ${maildir} \
     \( -type d ! -perm -0055 -exec chmod go+rx {} + \) -o \
     \( -type f ! -perm -0044 -exec chmod go+r {} + \)
+
+if [ ${after} -gt ${before} ]; then
+	echo "fetched $((after - before)) new messages"
+fi
+if [ ${rc} -ne 0 ]; then
+	echo "mbsync failed with exit status ${rc}"
+fi
 
 exit ${rc}

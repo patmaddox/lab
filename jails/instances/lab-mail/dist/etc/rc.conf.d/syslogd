@@ -1,0 +1,3 @@
+# No network socket. The jail shares beastie's addresses, so one would
+# contend for UDP port 514 with the other jails' syslogd.
+syslogd_flags="-ss"

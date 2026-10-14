@@ -2,9 +2,14 @@
 
 ./etc/cron.d type=dir mode=0755
 ./etc/cron.d/lab-mail
+./etc/newsyslog.conf.d type=dir mode=0755
+./etc/newsyslog.conf.d/lab-mail.conf
 ./etc/rc.conf.d type=dir mode=0755
 ./etc/rc.conf.d/dovecot
 ./etc/rc.conf.d/smtprelay
+./etc/rc.conf.d/syslogd
+./etc/syslog.d type=dir mode=0755
+./etc/syslog.d/lab-mail.conf
 ./usr/local/etc/dovecot type=dir mode=0755
 ./usr/local/etc/dovecot/dovecot-acl
 ./usr/local/etc/dovecot/dovecot.conf
@@ -14,3 +19,4 @@
 ./usr/local/etc/smtprelay/smtprelay.ini
 ./usr/local/libexec/lab-mail type=dir mode=0755
 ./usr/local/libexec/lab-mail/fetch mode=0755
+./var/log/lab-mail type=dir mode=0755

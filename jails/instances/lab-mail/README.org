@@ -73,6 +73,21 @@ Dovecot never talks to Fastmail. A client reads only what the last
 fetch brought, so new list mail reaches it within a minute or two,
 and reading keeps working while Fastmail is down.
 
+** logs
+Each service logs through syslogd(8) in the jail, to a file of its
+own under =/var/log/lab-mail/=, and all of them to =/var/log/maillog=:
+- =smtprelay.log=: each session, with the client, the envelope, and
+  Fastmail's reply.
+- =fetch.log=: each pull that brought mail, and every fetch failure.
+- =dovecot.log=: each IMAP login, and every error.
+
+A fetch that brings nothing logs nothing, so a quiet =fetch.log= is
+normal. The routing is in =/etc/syslog.d/lab-mail.conf=, and
+newsyslog(8) rotates the files daily and keeps a week. From beastie:
+#+BEGIN_EXAMPLE
+doas tail -f /jails/instances/lab-mail/var/log/lab-mail/fetch.log
+#+END_EXAMPLE
+
 * setup
 The operator stores the Fastmail login and app password on the host,
 in =/jails/data/lab-mail/secrets/mail-creds=. They never enter the
