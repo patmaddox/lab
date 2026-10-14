@@ -58,21 +58,22 @@ die() {
 # Settling those is the agent's job.
 get_up_to_date() {
 	# Both workspaces share one repo, so one fetch covers them.
-	jj -R "${trunk}" git fetch --all-remotes
+	jj --quiet -R "${trunk}" git fetch --all-remotes
 
 	# Move each stack from its base, not from your first commit in it,
 	# so work built on someone else's unmerged patch keeps that patch.
-	jj -R "${trunk}" rebase -s "roots(::(${WORK}) ~ ::(${BASE}))" \
-	    -d "${BASE}" --skip-emptied
+	jj --quiet -R "${trunk}" rebase \
+	    -s "roots(::(${WORK}) ~ ::(${BASE}))" -d "${BASE}" --skip-emptied
 
 	# A bookmark with no pending mail, missing or merged in full, has
 	# nothing to rebase; point it at the list's tip instead.
 	if [ -z "$(jj -R "${mail}" log --no-graph -T commit_id \
 	    -r "bookmarks(exact:${me}) ~ ::mail@upstream")" ]; then
-		jj -R "${mail}" bookmark set "${me}" -r mail@upstream
+		jj --quiet -R "${mail}" bookmark set "${me}" -r mail@upstream
 	fi
-	jj -R "${mail}" rebase -b "${me}" -d mail@upstream --skip-emptied
-	jj -R "${mail}" new "${me}"
+	jj --quiet -R "${mail}" rebase -b "${me}" -d mail@upstream \
+	    --skip-emptied
+	jj --quiet -R "${mail}" new "${me}"
 
 	notmuch new --quiet
 }
@@ -82,10 +83,10 @@ get_up_to_date() {
 # its working-copy commit, so bring the files in line with it.
 prepare_workspace() {
 	if [ ! -d "${ws}" ]; then
-		jj -R "${trunk}" workspace add --name "$(basename "${ws}" .jj)" \
-		    -r "${BASE}" "${ws}"
+		jj --quiet -R "${trunk}" workspace add \
+		    --name "$(basename "${ws}" .jj)" -r "${BASE}" "${ws}"
 	fi
-	jj -R "${ws}" workspace update-stale
+	jj --quiet -R "${ws}" workspace update-stale
 }
 
 oldest_inbox_message() {
@@ -129,7 +130,7 @@ main() {
 		[ -n "${id}" ] || break
 		subject="$(notmuch search "${id}" |
 		    sed -e 's/^[^;]*; //' -e 's/ ([^()]*)$//')"
-		echo "${PROGNAME}: ${id}"
+		echo "${PROGNAME}: ${id} (${subject})"
 		(cd "${ws}" &&
 		    claude --permission-mode auto -p "$(cat "${prompt}")
 

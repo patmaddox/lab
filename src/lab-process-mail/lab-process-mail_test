@@ -4,6 +4,7 @@ atf_init_test_cases() {
 	atf_add_test_case no_args
 	atf_add_test_case empty_inbox
 	atf_add_test_case answers_message
+	atf_add_test_case quiet_update
 	atf_add_test_case passes_prompt_and_id
 	atf_add_test_case drains_oldest_first
 	atf_add_test_case stuck_message
@@ -188,10 +189,25 @@ answers_message_body() {
 	setup
 	echo 'id:a@x Hello there' > inbox
 	export STUB_ANSWER=1 NOTIFY_URL=https://ntfy.example/topic
-	atf_check -s exit:0 -o inline:"lab-process-mail: id:a@x\n" \
+	atf_check -s exit:0 \
+	    -o inline:"lab-process-mail: id:a@x (Hello there)\n" \
 	    -e ignore "${PROCESS_MAIL}"
 	atf_check -o match:"answered: Hello there \\(inbox 0\\)" cat curl.log
 	atf_check -o match:"https://ntfy.example/topic" cat curl.log
+}
+
+atf_test_case quiet_update
+quiet_update_head() {
+	atf_set descr "Getting up to date prints nothing"
+}
+quiet_update_body() {
+	setup
+	echo 'id:a@x Hello there' > inbox
+	export STUB_ANSWER=1
+	atf_check -s exit:0 -o ignore -e ignore "${PROCESS_MAIL}"
+	echo 'id:b@x Again' > inbox
+	atf_check -s exit:0 -o inline:"lab-process-mail: id:b@x (Again)\n" \
+	    -e empty "${PROCESS_MAIL}"
 }
 
 atf_test_case passes_prompt_and_id
@@ -213,9 +229,9 @@ drains_oldest_first_body() {
 	setup
 	printf 'id:a@x First\nid:b@x Second\n' > inbox
 	export STUB_ANSWER=1
-	atf_check -s exit:0 \
-	    -o inline:"lab-process-mail: id:a@x\nlab-process-mail: id:b@x\n" \
-	    -e ignore "${PROCESS_MAIL}"
+	printf '%s\n' 'lab-process-mail: id:a@x (First)' \
+	    'lab-process-mail: id:b@x (Second)' > expout
+	atf_check -s exit:0 -o file:expout -e ignore "${PROCESS_MAIL}"
 	atf_check -o inline:"2\n" grep -c '^cwd ' claude.log
 }
 
@@ -224,7 +240,7 @@ stuck_message_body() {
 	setup
 	printf 'id:a@x First\nid:b@x Second\n' > inbox
 	export NOTIFY_URL=https://ntfy.example/topic
-	atf_check -s exit:1 -o inline:"lab-process-mail: id:a@x\n" \
+	atf_check -s exit:1 -o inline:"lab-process-mail: id:a@x (First)\n" \
 	    -e match:"id:a@x is still in the inbox" "${PROCESS_MAIL}"
 	atf_check -o inline:"1\n" grep -c '^cwd ' claude.log
 	atf_check -o match:"stuck: First \\(inbox 2\\)" cat curl.log
