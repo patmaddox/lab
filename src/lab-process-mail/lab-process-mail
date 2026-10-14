@@ -1,0 +1,121 @@
+#!/bin/sh
+#
+# lab-process-mail -- answer the lab-devel inbox, one agent pass per
+# message, oldest first.
+#
+# The loop is deterministic and the agent is not, so the two are kept
+# apart. Before each pass this script fetches, rebases trunk work and
+# the mail outbox, and picks the oldest inbox message. It then runs a
+# fresh claude with the prompt shipped beside it and that message's id.
+# The agent's output goes to /dev/null; whether the pass worked is read
+# from the notmuch index afterwards. A message still in the inbox stops
+# the loop, rather than being retried forever.
+#
+# The trunk workspace is ${TRUNK_WORKSPACE}, or ~/lab/default.jj. The
+# mail workspace is ${MAIL_WORKSPACE}, or ~/lab/mail.jj. The outbox
+# bookmark is named for your login. Each outcome is posted to the ntfy
+# topic ${NOTIFY_URL}, if set. The prompt is
+# ${LAB_PROCESS_MAIL_PROMPT}, or share/lab-process-mail/prompt.md in
+# the prefix this script is installed under.
+
+set -eu
+set -o pipefail
+
+readonly PROGNAME="${0##*/}"
+
+# Your commits off trunk, less everything descended from the list.
+# Trunk and the list share no commit but root(), so the outbox is left
+# out however far the list has moved since it was built on. Anything
+# built on a published head other than trunk, such as b/dev, is left
+# where it is; that covers your own patches once Pat publishes them.
+readonly WORK='mine() ~ ::trunk@upstream ~ (::mail@upstream ~ root())::
+    ~ (immutable() ~ ::trunk@upstream)::'
+
+err() {
+	echo "E: ${PROGNAME}: ${*}" >&2
+}
+
+warn() {
+	echo "W: ${PROGNAME}: ${*}" >&2
+}
+
+die() {
+	err "${@}"
+	exit 1
+}
+
+# Fetch every remote, rebase trunk work onto trunk@upstream and the
+# outbox onto mail@upstream, and index the list. This judges nothing:
+# a rebase that conflicts leaves the conflict in the commit, and a
+# patch applied upstream with edits survives as a redundant commit.
+# Settling those is the agent's job.
+get_up_to_date() {
+	# Both workspaces share one repo, so one fetch covers them.
+	jj -R "${trunk}" git fetch --all-remotes
+
+	jj -R "${trunk}" rebase -s "roots(${WORK})" -d trunk@upstream \
+	    --skip-emptied
+
+	# A bookmark with no pending mail, missing or merged in full, has
+	# nothing to rebase; point it at the list's tip instead.
+	if [ -z "$(jj -R "${mail}" log --no-graph -T commit_id \
+	    -r "bookmarks(exact:${me}) ~ ::mail@upstream")" ]; then
+		jj -R "${mail}" bookmark set "${me}" -r mail@upstream
+	fi
+	jj -R "${mail}" rebase -b "${me}" -d mail@upstream --skip-emptied
+	jj -R "${mail}" new "${me}"
+
+	notmuch new --quiet
+}
+
+oldest_inbox_message() {
+	notmuch search --sort=oldest-first --output=messages --limit=1 \
+	    tag:inbox
+}
+
+# Post to the operator's ntfy topic. A failed or slow post must not
+# stop the inbox from draining, so this gives up after ten seconds and
+# only warns. Without a topic it does nothing.
+notify() {
+	[ -n "${NOTIFY_URL:-}" ] || return 0
+	curl -fsS -m 10 -o /dev/null -H "Title: ${PROGNAME}" -d "${*}" \
+	    "${NOTIFY_URL}" || warn "could not post to ntfy"
+}
+
+main() {
+	local bindir prompt id subject
+
+	[ "${#}" -eq 0 ] || die "usage: ${PROGNAME}"
+
+	trunk="${TRUNK_WORKSPACE:-${HOME}/lab/default.jj}"
+	mail="${MAIL_WORKSPACE:-${HOME}/lab/mail.jj}"
+	me="$(whoami)"
+	bindir="$(CDPATH= cd -- "$(dirname -- "${0}")" && pwd)"
+	prompt="${LAB_PROCESS_MAIL_PROMPT:-${bindir}/../share/lab-process-mail/prompt.md}"
+
+	[ -d "${trunk}" ] || die "${trunk}: no trunk workspace"
+	[ -d "${mail}" ] || die "${mail}: no mail workspace"
+	[ -r "${prompt}" ] || die "${prompt}: no prompt"
+
+	while :; do
+		get_up_to_date
+		id="$(oldest_inbox_message)"
+		[ -n "${id}" ] || break
+		subject="$(notmuch search "${id}" |
+		    sed -e 's/^[^;]*; //' -e 's/ ([^()]*)$//')"
+		echo "${PROGNAME}: ${id}"
+		(cd "${trunk}" &&
+		    claude --permission-mode auto -p "$(cat "${prompt}")
+
+The message to answer is ${id}." </dev/null >/dev/null)
+		notmuch new --quiet
+		if [ "$(notmuch count "${id} and tag:inbox")" -ne 0 ]; then
+			err "${id} is still in the inbox"
+			notify "stuck: ${subject}"
+			exit 1
+		fi
+		notify "answered: ${subject}"
+	done
+}
+
+main "${@}"

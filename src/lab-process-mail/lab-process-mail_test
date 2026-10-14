@@ -1,0 +1,251 @@
+#!/usr/bin/env atf-sh
+
+atf_init_test_cases() {
+	atf_add_test_case no_args
+	atf_add_test_case empty_inbox
+	atf_add_test_case answers_message
+	atf_add_test_case passes_prompt_and_id
+	atf_add_test_case drains_oldest_first
+	atf_add_test_case stuck_message
+	atf_add_test_case silent_without_notify_url
+	atf_add_test_case rebases_work_onto_trunk
+	atf_add_test_case rebases_outbox_onto_list
+}
+
+# Build a small lab in the current directory: an upstream repo with
+# trunk and a mail list that share no history, an empty submissions
+# repo, and trunk and mail workspaces cloned from them. Stubs stand in
+# for claude, notmuch, and curl; see mk_stubs.
+setup() {
+	PROCESS_MAIL="$(atf_get_srcdir)/lab-process-mail"
+	export LAB_PROCESS_MAIL_PROMPT="$(atf_get_srcdir)/prompt.md"
+	export TRUNK_WORKSPACE="${PWD}/default.jj"
+	export MAIL_WORKSPACE="${PWD}/mail.jj"
+	unset NOTIFY_URL
+
+	export JJ_CONFIG="${PWD}/jj.toml"
+	cat > jj.toml <<-'EOF'
+	[user]
+	name = "Me"
+	email = "me@example.org"
+	EOF
+
+	mk_stubs
+	export PATH="${PWD}/bin:${PATH}"
+
+	git init -q --bare upstream.git 2>/dev/null
+	git init -q --bare submissions.git 2>/dev/null
+	jj git init seed.jj >/dev/null 2>&1
+	(
+		cd seed.jj
+		jj config set --repo user.email pat@example.org
+		echo one > file
+		jj commit -m 'trunk: one'
+		jj bookmark create trunk -r @-
+		jj new 'root()'
+		mkdir maildir
+		touch maildir/.gitkeep
+		jj commit -m 'mail: start the list'
+		jj bookmark create mail -r @-
+		jj git remote add upstream ../upstream.git
+		jj git push --remote upstream --bookmark trunk \
+		    --bookmark mail
+	) >/dev/null 2>&1 || atf_fail "cannot build upstream"
+
+	jj git clone --remote upstream upstream.git default.jj \
+	    >/dev/null 2>&1 || atf_fail "cannot clone upstream"
+	(
+		cd default.jj
+		jj git remote add submissions ../submissions.git
+		jj bookmark track mail@upstream
+		jj new trunk@upstream
+		jj workspace add -r mail@upstream ../mail.jj
+	) >/dev/null 2>&1 || atf_fail "cannot build workspaces"
+}
+
+# Stub commands, each logging what it was asked to do.
+#
+# claude records its working directory and argv in claude.log, one
+# pass per line group. With STUB_ANSWER=1 it answers the message: it
+# takes the id from the last line of the prompt and removes it from
+# the inbox.
+#
+# notmuch reads the inbox from the file inbox, one "id subject" per
+# line, oldest first. It answers only the queries lab-process-mail
+# makes.
+#
+# curl appends its argv to curl.log.
+mk_stubs() {
+	mkdir bin
+	: > inbox
+	stubdir="${PWD}"
+
+	cat > bin/claude <<-EOF
+	#!/bin/sh
+	echo "cwd \${PWD}" >> "${stubdir}/claude.log"
+	for a in "\$@"; do printf 'arg %s\n' "\$a" >> "${stubdir}/claude.log"; done
+	if [ "\${STUB_ANSWER:-0}" = 1 ]; then
+		for a in "\$@"; do last="\$a"; done
+		id="\$(printf '%s\n' "\${last}" | tail -n 1 |
+		    sed -e 's/^The message to answer is //' -e 's/\.\$//')"
+		grep -v "^\${id} " "${stubdir}/inbox" > "${stubdir}/inbox.new" || :
+		mv "${stubdir}/inbox.new" "${stubdir}/inbox"
+	fi
+	EOF
+
+	cat > bin/notmuch <<-EOF
+	#!/bin/sh
+	inbox="${stubdir}/inbox"
+	case "\$1" in
+	new)
+		;;
+	search)
+		for a in "\$@"; do last="\$a"; done
+		if [ "\${last}" = tag:inbox ]; then
+			head -n 1 "\${inbox}" | cut -d ' ' -f 1
+		else
+			subject="\$(grep "^\${last} " "\${inbox}" | cut -d ' ' -f 2-)"
+			echo "thread:1 today [1/1] Pat; \${subject} (inbox)"
+		fi
+		;;
+	count)
+		id="\${2%% and tag:inbox}"
+		grep -c "^\${id} " "\${inbox}" || :
+		;;
+	*)
+		echo "notmuch stub: \$*" >&2
+		exit 1
+		;;
+	esac
+	EOF
+
+	cat > bin/curl <<-EOF
+	#!/bin/sh
+	echo "\$*" >> "${stubdir}/curl.log"
+	EOF
+
+	chmod +x bin/*
+}
+
+# Push a new trunk commit upstream, as Pat would.
+advance_trunk() {
+	(
+		cd seed.jj
+		jj new trunk
+		echo two > file
+		jj commit -m 'trunk: two'
+		jj bookmark set trunk -r @-
+		jj git push --remote upstream --bookmark trunk
+	) >/dev/null 2>&1 || atf_fail "cannot advance trunk"
+}
+
+# Print the description of rev's parent in the trunk workspace.
+parent_of() {
+	jj -R default.jj log --no-graph -T 'description.first_line()' \
+	    -r "${1}-"
+}
+
+atf_test_case no_args
+no_args_body() {
+	setup
+	atf_check -s exit:1 -e match:"usage" "${PROCESS_MAIL}" extra
+}
+
+atf_test_case empty_inbox
+empty_inbox_body() {
+	setup
+	atf_check -s exit:0 -o empty -e ignore "${PROCESS_MAIL}"
+	atf_check -s exit:1 test -e claude.log
+}
+
+atf_test_case answers_message
+answers_message_body() {
+	setup
+	echo 'id:a@x Hello there' > inbox
+	export STUB_ANSWER=1 NOTIFY_URL=https://ntfy.example/topic
+	atf_check -s exit:0 -o inline:"lab-process-mail: id:a@x\n" \
+	    -e ignore "${PROCESS_MAIL}"
+	atf_check -o match:"answered: Hello there" cat curl.log
+	atf_check -o match:"https://ntfy.example/topic" cat curl.log
+}
+
+atf_test_case passes_prompt_and_id
+passes_prompt_and_id_body() {
+	setup
+	echo 'id:a@x Hello there' > inbox
+	export STUB_ANSWER=1
+	atf_check -s exit:0 -o ignore -e ignore "${PROCESS_MAIL}"
+	atf_check -o match:"^cwd ${TRUNK_WORKSPACE}\$" cat claude.log
+	atf_check -o match:"^arg # Process one lab-devel message" cat claude.log
+	atf_check -o match:"^The message to answer is id:a@x\.\$" \
+	    tail -n 1 claude.log
+}
+
+atf_test_case drains_oldest_first
+drains_oldest_first_body() {
+	setup
+	printf 'id:a@x First\nid:b@x Second\n' > inbox
+	export STUB_ANSWER=1
+	atf_check -s exit:0 \
+	    -o inline:"lab-process-mail: id:a@x\nlab-process-mail: id:b@x\n" \
+	    -e ignore "${PROCESS_MAIL}"
+	atf_check -o inline:"2\n" grep -c '^cwd ' claude.log
+}
+
+atf_test_case stuck_message
+stuck_message_body() {
+	setup
+	printf 'id:a@x First\nid:b@x Second\n' > inbox
+	export NOTIFY_URL=https://ntfy.example/topic
+	atf_check -s exit:1 -o inline:"lab-process-mail: id:a@x\n" \
+	    -e match:"id:a@x is still in the inbox" "${PROCESS_MAIL}"
+	atf_check -o inline:"1\n" grep -c '^cwd ' claude.log
+	atf_check -o match:"stuck: First" cat curl.log
+}
+
+atf_test_case silent_without_notify_url
+silent_without_notify_url_body() {
+	setup
+	echo 'id:a@x Hello there' > inbox
+	export STUB_ANSWER=1
+	atf_check -s exit:0 -o ignore -e ignore "${PROCESS_MAIL}"
+	atf_check -s exit:1 test -e curl.log
+}
+
+atf_test_case rebases_work_onto_trunk
+rebases_work_onto_trunk_body() {
+	setup
+	(
+		cd default.jj
+		echo mine > mine
+		jj commit -m 'work: mine'
+	) >/dev/null 2>&1
+	advance_trunk
+	atf_check -s exit:0 -o ignore -e ignore "${PROCESS_MAIL}"
+	atf_check_equal "trunk: two" \
+	    "$(parent_of 'description(substring:"work: mine")')"
+}
+
+atf_test_case rebases_outbox_onto_list
+rebases_outbox_onto_list_body() {
+	setup
+	me="$(whoami)"
+	(
+		cd mail.jj
+		echo reply > maildir/reply
+		jj commit -m 'mail: Reply'
+		jj bookmark create "${me}" -r @-
+	) >/dev/null 2>&1
+	(
+		cd seed.jj
+		jj new mail
+		echo post > maildir/post
+		jj commit -m 'mail: Post'
+		jj bookmark set mail -r @-
+		jj git push --remote upstream --bookmark mail
+	) >/dev/null 2>&1 || atf_fail "cannot advance the list"
+	atf_check -s exit:0 -o ignore -e ignore "${PROCESS_MAIL}"
+	atf_check_equal "mail: Post" "$(parent_of "${me}")"
+	atf_check -o inline:"mail: Reply" \
+	    jj -R mail.jj log --no-graph -T 'description.first_line()' -r @-
+}
