@@ -1,0 +1,85 @@
+Message-ID: <8339d78a011d65a7b9a7f57592fb6c726999a7b9.1791972607.git.claude@p7x.dev>
+In-Reply-To: <cover.1791972607.git.claude@p7x.dev>
+References: <cover.1791972607.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Date: Wed, 14 Oct 2026 10:07:40 +0000
+Subject: [PATCH v2 6/7] jails/instances/lab-claude: Mount a secrets directory
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+Change-Id: pmwwrvlopppluzmpnwqwyquqyuqpvkys
+
+just process-email is to notify the operator through ntfy after each
+message it answers. The topic URL is a secret: anyone who has it can
+read and post to the topic, so it must stay out of the repo, like
+lab-mail's Fastmail login.
+
+Mount it from the host read-only, the same way lab-mail does, so the
+operator manages it in one place outside the jail and a rebuild does
+not lose it. Declare curl, which the loop uses to post, rather than
+relying on it arriving as another package's dependency.
+---
+change-id: pmwwrvlopppluzmpnwqwyquqyuqpvkys
+
+ jails/instances/lab-claude/README.org    | 21 +++++++++++++++++++++
+ jails/instances/lab-claude/instance.conf |  1 +
+ jails/instances/lab-claude/jail.conf     |  3 +++
+ 3 files changed, 25 insertions(+)
+
+diff --git a/jails/instances/lab-claude/README.org b/jails/instances/lab-claude/README.org
+index 1a386c7..48c3962 100644
+--- a/jails/instances/lab-claude/README.org
++++ b/jails/instances/lab-claude/README.org
+@@ -34,3 +34,24 @@ message goes to no one; fix the address and send again. A non-zero
+ exit can also mean Fastmail refused the message or could not be
+ reached; msmtp prints the server's reply either way. Nothing is
+ queued, so a message that failed was not sent.
++
++* secrets
++The operator stores lab-claude's secrets on the host, in
++=/jails/data/lab-claude/secrets=. They never enter the repo. The jail
++mounts the directory read-only at =/data/secrets=, and no other jail
++mounts it.
++
++=notify-url= holds one line: the ntfy topic URL that =just
++process-email= posts to after each message it answers. Without it the
++loop runs as before and sends no notifications.
++
++Inside the jail, only the user =claude= (uid and gid 15000) may read
++it. The host knows the owner only by number:
++#+BEGIN_EXAMPLE
++mkdir -p /jails/data/lab-claude/secrets
++cd /jails/data/lab-claude/secrets
++printf '%s\n' 'https://ntfy.sh/<topic>' > notify-url
++chown -R 0:15000 .
++chmod 0750 .
++chmod 0640 notify-url
++#+END_EXAMPLE
+diff --git a/jails/instances/lab-claude/instance.conf b/jails/instances/lab-claude/instance.conf
+index 6917807..37cd628 100644
+--- a/jails/instances/lab-claude/instance.conf
++++ b/jails/instances/lab-claude/instance.conf
+@@ -15,6 +15,7 @@ devel/goredo
+ devel/jujutsu
+ editors/emacs@nox
+ emulators/linux_base-rl9
++ftp/curl
+ mail/isync
+ mail/msmtp
+ mail/notmuch
+diff --git a/jails/instances/lab-claude/jail.conf b/jails/instances/lab-claude/jail.conf
+index 564d94d..0fad1c4 100644
+--- a/jails/instances/lab-claude/jail.conf
++++ b/jails/instances/lab-claude/jail.conf
+@@ -10,6 +10,9 @@ lab-claude {
+   exec.prepare += "mkdir -p ${path}/data/lab-submissions.git";
+   mount += "/jails/share/lab-submissions.git ${path}/data/lab-submissions.git nullfs rw 0 0";
+ 
++  exec.prepare += "mkdir -p ${path}/data/secrets";
++  mount += "/jails/data/lab-claude/secrets ${path}/data/secrets nullfs ro 0 0";
++
+   allow.mount;
+   allow.mount.devfs;
+   allow.mount.fdescfs;
+-- 
+2.56.0
+

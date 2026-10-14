@@ -1,0 +1,92 @@
+Message-ID: <ecddb6edc30ed5e112e2af01ec72afaa347385cd.1791972607.git.claude@p7x.dev>
+In-Reply-To: <cover.1791972607.git.claude@p7x.dev>
+References: <cover.1791972607.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Date: Sat, 10 Oct 2026 18:09:30 +0000
+Subject: [PATCH v2 2/7] claude/skills/process-email: Take the message to
+ answer as an argument
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+Change-Id: ktpzmqruykkypmyrnnkzlstxlspzwnuw
+
+A pass always picked its own message, so whatever ran it could not say
+which message that pass was for, and so could not check afterwards
+that this message was answered. A driver that runs one pass per
+message has to know which message each pass is for.
+
+The skill now takes a notmuch id. Without one it still falls back to
+the oldest inbox message, so /process-email by hand works as before.
+A message that is no longer in the inbox ends the pass without
+writing, because someone has already answered or archived it.
+---
+change-id: ktpzmqruykkypmyrnnkzlstxlspzwnuw
+
+ .claude/skills/process-email/SKILL.md | 29 ++++++++++++++++++---------
+ 1 file changed, 20 insertions(+), 9 deletions(-)
+
+diff --git a/.claude/skills/process-email/SKILL.md b/.claude/skills/process-email/SKILL.md
+index 82dc45c..f1d9518 100644
+--- a/.claude/skills/process-email/SKILL.md
++++ b/.claude/skills/process-email/SKILL.md
+@@ -1,21 +1,23 @@
+ ---
+ name: process-email
+ description: >-
+-  Process the oldest message in your lab-devel inbox and act on it.
++  Process a message in your lab-devel inbox, the one named by the
++  argument or else the oldest, and act on it.
+   Gather the message's thread and related list context with subagents,
+   do the work it asks for, post any patches as their own series, and
+   reply on the list, pushing to the submissions remote. Never use
+   Gmail or any external mail tool. The operator does not read your
+   stdout, so the result must land on the list.
++argument-hint: "[id:<message-id>]"
+ disable-model-invocation: true
+ ---
+ 
+ # process-email
+ 
+-One pass takes the single oldest message in your inbox, does whatever
+-it asks, and answers it on the list. The answer is always a reply; any
+-patches go out first as their own series, which the reply cites. Loop
+-the skill to drain the inbox.
++One pass takes a single message in your inbox, the one its argument
++names or else the oldest, does whatever it asks, and answers it on the
++list. The answer is always a reply; any patches go out first as their
++own series, which the reply cites. Loop the skill to drain the inbox.
+ 
+ The list is a maildir carried by jj on the `mail` bookmark.
+ zib/patch-review-workflow.org describes the whole workflow; this skill
+@@ -91,16 +93,25 @@ A bookmark with no pending mail, missing or merged in full, is
+ pointed at the list's tip first. It has nothing to rebase, so the
+ rebase alone would leave it behind on an old list.
+ 
+-## 2. Pick the oldest inbox message
++## 2. Pick the message
+ 
+-`just get-oldest-inbox-message` names it. Ask it rather than querying
+-notmuch yourself, so every caller agrees on which message is next:
++The skill's argument, if given, names the message to answer as a
++notmuch id, `id:<message-id>`. Without one, take the oldest inbox
++message. `just get-oldest-inbox-message` names it. Ask it rather than
++querying notmuch yourself, so every caller agrees on which message is
++next:
+ 
+-    id="$(just -f ~/lab/default.jj/Justfile get-oldest-inbox-message)"
++    id="$ARGUMENTS"
++    if [ -z "${id}" ]; then
++        id="$(just -f ~/lab/default.jj/Justfile get-oldest-inbox-message)"
++    fi
+     thread="$(notmuch search --output=threads "${id}")"
+     msgid="${id#id:}"      # the bare Message-ID, for headers
+ 
+ If there is none, the inbox is empty: stop without writing anything.
++If the named message is not tagged `inbox`
++(`notmuch count "${id} and tag:inbox"` prints 0), it is already
++answered or archived: stop without writing anything.
+ 
+ Every inbox message gets an answer, even if it is a short
+ acknowledgement. Replying is the only way a message leaves the inbox,
+-- 
+2.56.0
+

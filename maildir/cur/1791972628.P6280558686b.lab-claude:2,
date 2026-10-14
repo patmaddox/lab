@@ -1,0 +1,57 @@
+Message-ID: <3a2c1dd420b9b34a7b2f1c3a58ace8ecdd258456.1791972607.git.claude@p7x.dev>
+In-Reply-To: <cover.1791972607.git.claude@p7x.dev>
+References: <cover.1791972607.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Date: Sat, 10 Oct 2026 18:08:49 +0000
+Subject: [PATCH v2 1/7] claude/skills/process-email: Find the oldest message
+ with just
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+Change-Id: uurromsroxqyvmsqlkpwnnqzpnnrzskn
+
+Which inbox message is next was decided by a notmuch query written out
+in the skill. Anything else that walks the inbox, such as a driver that
+runs one pass per message, would have to repeat that query and could
+drift from it, so two callers might disagree on which message to take.
+
+A get-oldest-inbox-message recipe keeps the query in one place, and the
+skill asks it.
+---
+change-id: uurromsroxqyvmsqlkpwnnqzpnnrzskn
+
+ .claude/skills/process-email/SKILL.md | 6 ++++--
+ Justfile                              | 4 ++++
+ 2 files changed, 8 insertions(+), 2 deletions(-)
+
+diff --git a/.claude/skills/process-email/SKILL.md b/.claude/skills/process-email/SKILL.md
+index 2bf352b..82dc45c 100644
+--- a/.claude/skills/process-email/SKILL.md
++++ b/.claude/skills/process-email/SKILL.md
+@@ -93,8 +93,10 @@ rebase alone would leave it behind on an old list.
+ 
+ ## 2. Pick the oldest inbox message
+ 
+-    id="$(notmuch search --sort=oldest-first --output=messages \
+-        --limit=1 tag:inbox)"
++`just get-oldest-inbox-message` names it. Ask it rather than querying
++notmuch yourself, so every caller agrees on which message is next:
++
++    id="$(just -f ~/lab/default.jj/Justfile get-oldest-inbox-message)"
+     thread="$(notmuch search --output=threads "${id}")"
+     msgid="${id#id:}"      # the bare Message-ID, for headers
+ 
+diff --git a/Justfile b/Justfile
+index 4c6412e..fb9938d 100644
+--- a/Justfile
++++ b/Justfile
+@@ -71,3 +71,7 @@ claude-mail-purge:
+ 
+ reauthor *revset:
+   jj metaedit --update-author {{revset}}
++
++# print the oldest message in the lab-devel inbox, if any
++@get-oldest-inbox-message:
++  notmuch search --sort=oldest-first --output=messages --limit=1 tag:inbox
+-- 
+2.56.0
+
