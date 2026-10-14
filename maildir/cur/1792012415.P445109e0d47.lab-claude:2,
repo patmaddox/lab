@@ -1,0 +1,88 @@
+From: claude <claude@p7x.dev>
+Subject: Re: What's the status of beastie connection with fastmail?
+To: Pat Maddox <pat@patmaddox.com>, lab-devel@p7x.dev
+In-Reply-To: <m25wz49eua.fsf@beastie.p7x.dev>
+References: <m25wz49eua.fsf@beastie.p7x.dev>
+Message-ID: <1792012410.52cbe6f1fda2@p7x.dev>
+Date: Wed, 14 Oct 2026 21:13:35 +0000
+
+On Wed, 14 Oct 2026 14:01:17 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+> I want to move away from the jj maildir and towards real mail
+> accounts. I know there were some patches around that, but I got
+> sidetracked.
+
+The server side is done, the client side is a spec waiting on you,
+and nothing has moved off the jj maildir yet.
+
+Merged on trunk [fact, checked]:
+
+- "[PATCH v11 0/8] jails/instances/lab-mail: Build the mail relay
+  jail" [1]. lab-mail relays SMTP to Fastmail with smtprelay on
+  127.0.0.1:2525, mirrors the Fastmail "lists" folder with mbsync,
+  serves that mirror read-only over IMAP with Dovecot, and has a check
+  script and per-service logs. smtprelay's allowed_sender is only
+  ^claude@p7x\.dev$ today.
+- lab-claude has an mbsync "lists" channel, an msmtp account for
+  claude@p7x.dev, and a "lists" notmuch profile. Nothing uses them
+  yet; src/lab-process-mail still reads ~/lab/mail.jj.
+
+Open on the list [fact, checked]:
+
+- "[PATCH v2] dotfiles/notmuch: Spec reading and sending through
+  lab-mail" [2], the beastie client spec. It has no review yet, and
+  it is already stale: it predates your request for a per-user
+  directory (~/mail/pat_at_p7x.dev/{lists,sent}) and still carries
+  phases, which you said belong in mail, not in a spec.
+- "Re: How to configure beastie to use lab-mail" [3] asks you four
+  questions, e to h, that block spec v3. Nobody has answered them.
+- "[PATCH v2 1/2] notmuch: Tag messages under archive/ as archived"
+  [4] is unmerged, and question h decides whether it survives.
+
+Not started: nothing for beastie's client is in trunk or b/dev.
+infra/hosts/beastie/ports lists notmuch but not isync or msmtp, and
+dotfiles/emacs still sends through maildir-deliver.sh into jj.
+
+> Status update, and tell me next steps for moving this forward.
+
+The next step is yours. In order:
+
+1. Answer e to h in [3]. Short versions:
+   e) One spec for the whole move (list in Fastmail "lists", both
+      beastie and lab-claude read it through lab-mail and send
+      through it), or a separate spec for my side? I recommend one.
+   f) Through smtprelay my mail reaches the list unmoderated. Accept
+      that, or hold it somewhere for review?
+   g) The jj history: import the jj maildir into "lists" once, or
+      freeze it in jj? And may I retire the mail bookmark, the
+      submissions remote, and ~/lab/mail.jj for mail afterwards?
+   h) Archiving: a beastie-only notmuch tag, or a Fastmail folder
+      that mbsync also pulls?
+   Also confirm the per-user rule applies to lab-claude too
+   (~/mail/claude_at_p7x.dev/{lists,sent}).
+
+2. I send spec v3: declarative end state only, per-user mail roots,
+   and, if you pick one spec in e, my side included.
+
+3. Once you approve the spec, I send patches, each small:
+   - add mail/isync and mail/msmtp to beastie's ports list;
+   - allow pat@p7x.dev as a sender in smtprelay (you also need it set
+     up as a Fastmail sending identity, and a rule filing
+     lab-devel@p7x.dev into "lists");
+   - add the beastie mbsyncrc, msmtprc, and "lists" notmuch profile
+     to dotfiles;
+   - move src/lab-process-mail onto lab-claude's "lists" profile and
+     msmtp.
+
+4. Switch: point Emacs at the "lists" profile, send with msmtp, and
+   Fcc into ~/mail/pat_at_p7x.dev/sent. [inference] This has to come
+   after the lab-process-mail move, or I stop seeing your mail.
+
+5. Clean up as g decides: maildir-deliver.sh, the mail bookmark,
+   and the submissions remote.
+
+If you answer e to h in [3], I can have spec v3 out on the next pass.
+
+[1] id:cover.1791969110.git.claude@p7x.dev
+[2] id:98e6118893ce32847b6f9257758941158da31eee.1791973147.git.claude@p7x.dev
+[3] id:1791972996.459b93eb1b3f@p7x.dev
+[4] id:aebdd150bfe012de3141bbf35f9e0d2524af1412.1791652315.git.claude@p7x.dev
