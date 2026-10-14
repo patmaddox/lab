@@ -1,0 +1,72 @@
+Message-ID: <75eae9e19b1d4c6d4d766c8fdc211ff051415e79.1791999508.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Date: Wed, 14 Oct 2026 17:36:39 +0000
+Subject: [PATCH v3 7/6] libexec/mail: Leave published work in place
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+In-Reply-To: <cover.1791997861.git.claude@p7x.dev>
+References: <cover.1791997861.git.claude@p7x.dev>
+Change-Id: orqpullwrqqrwqystttnrzykuzryrzqz
+
+Once Pat publishes my patches in b/dev, they become immutable, but
+they are still mine and still off trunk. get-up-to-date.sh then tries
+to rebase them onto trunk, jj refuses, and just process-email stops
+before it reads any mail.
+
+Work built on b/dev, including the working copy, would also be moved
+onto trunk and lose the merge it was built against. The process-email
+skill repeats the revset to judge what is left open, so it changes in
+step.
+---
+change-id: orqpullwrqqrwqystttnrzykuzryrzqz
+
+This fixes a failure the series hits once b/dev carries it. It sits on
+top of 6/6 and can be taken or left on its own.
+
+ .claude/skills/process-email/SKILL.md | 3 ++-
+ libexec/mail/get-up-to-date.sh        | 7 +++++--
+ 2 files changed, 7 insertions(+), 3 deletions(-)
+
+diff --git a/.claude/skills/process-email/SKILL.md b/.claude/skills/process-email/SKILL.md
+index 172bc32..5125d3d 100644
+--- a/.claude/skills/process-email/SKILL.md
++++ b/.claude/skills/process-email/SKILL.md
+@@ -50,7 +50,8 @@ Before any work, bring in everything that has landed since the last
+ pass, on both trunk and the list. One recipe does the mechanical part:
+ 
+     me="$(whoami)"
+-    work='mine() ~ ::trunk@upstream ~ (::mail@upstream ~ root())::'
++    work='mine() ~ ::trunk@upstream ~ (::mail@upstream ~ root())::
++        ~ (immutable() ~ ::trunk@upstream)::'
+     cd ~/lab/default.jj
+     just get-up-to-date
+ 
+diff --git a/libexec/mail/get-up-to-date.sh b/libexec/mail/get-up-to-date.sh
+index 462c01d..3e295b2 100755
+--- a/libexec/mail/get-up-to-date.sh
++++ b/libexec/mail/get-up-to-date.sh
+@@ -28,8 +28,11 @@ readonly PROGNAME="${0##*/}"
+ 
+ # Your commits off trunk, less everything descended from the list.
+ # Trunk and the list share no commit but root(), so the outbox is left
+-# out however far the list has moved since it was built on.
+-readonly WORK='mine() ~ ::trunk@upstream ~ (::mail@upstream ~ root())::'
++# out however far the list has moved since it was built on. Anything
++# built on a published head other than trunk, such as b/dev, is left
++# where it is; that covers your own patches once Pat publishes them.
++readonly WORK='mine() ~ ::trunk@upstream ~ (::mail@upstream ~ root())::
++    ~ (immutable() ~ ::trunk@upstream)::'
+ 
+ err() {
+ 	echo "E: ${PROGNAME}: ${*}" >&2
+
+base-commit: 36eea3c167cd3cdafc23ec2e9c6f333a2bf5f3a7
+prerequisite-patch-id: 0cb3f3aaa06c250334b6da718de3f2d2d2d2cb5a
+prerequisite-patch-id: 5fd1e1bd7c00a9b7348041476009300e8841c18f
+prerequisite-patch-id: 3f65ab311446c8d41d97304477224031fd39631e
+prerequisite-patch-id: 582a303fde468aed8ef79d2312e16ba062e3562f
+prerequisite-patch-id: 5e79dd9a73a792b7fd98bd162553d0bb0b599be9
+prerequisite-patch-id: 250aea1a0bdb40f73a55b202a42fcba974f512c6
+-- 
+2.56.0
+
