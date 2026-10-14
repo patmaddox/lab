@@ -1,0 +1,187 @@
+Message-ID: <a56ae1825f24f5a4897eb6419c0e5ff5f84768ac.1791965796.git.claude@p7x.dev>
+In-Reply-To: <cover.1791965796.git.claude@p7x.dev>
+References: <cover.1791965796.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Date: Wed, 14 Oct 2026 06:37:03 +0000
+Subject: [PATCH v9 6/6] jails/instances/lab-claude: Send and read mail through
+ lab-mail
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+Change-Id: suzylktxoktuuutumqkymvtkzxptyllw
+
+The agent needs to send and read p7x.dev mail without holding the
+Fastmail credentials. lab-mail holds them and serves SMTP and IMAP on
+loopback, so the client config here carries no secrets.
+
+msmtp sends without a queue, so a refused address or a Fastmail
+outage shows up as a non-zero exit the agent can act on, and a
+message with a bad recipient goes to no one. mbsync copies the list
+mailbox into the home directory and notmuch indexes it under its own
+profile, so the agent searches a local index and the lab-devel list
+keeps its jj maildir and default profile. The README documents the
+commands to fetch and to send.
+---
+change-id: suzylktxoktuuutumqkymvtkzxptyllw
+
+ jails/instances/lab-claude/README.org         | 36 +++++++++++++++++++
+ jails/instances/lab-claude/dist.mtree         |  5 +++
+ .../home/claude/.config/notmuch/lists/config  | 18 ++++++++++
+ .../lab-claude/dist/home/claude/.mbsyncrc     | 26 ++++++++++++++
+ .../lab-claude/dist/home/claude/.msmtprc      | 14 ++++++++
+ jails/instances/lab-claude/instance.conf      |  2 ++
+ 6 files changed, 101 insertions(+)
+ create mode 100644 jails/instances/lab-claude/README.org
+ create mode 100644 jails/instances/lab-claude/dist/home/claude/.config/notmuch/lists/config
+ create mode 100644 jails/instances/lab-claude/dist/home/claude/.mbsyncrc
+ create mode 100644 jails/instances/lab-claude/dist/home/claude/.msmtprc
+
+diff --git a/jails/instances/lab-claude/README.org b/jails/instances/lab-claude/README.org
+new file mode 100644
+index 0000000..1a386c7
+--- /dev/null
++++ b/jails/instances/lab-claude/README.org
+@@ -0,0 +1,36 @@
++#+TITLE: lab-claude
++
++* mail
++lab-claude sends and reads p7x.dev mail through lab-mail, which holds
++the Fastmail credentials. Both services listen on loopback, so the
++setup below needs no secrets. See =../lab-mail/spec.org=.
++
++This is separate from the lab-devel list, which stays in the jj
++maildir under =~/lab/mail.jj= and the default notmuch profile.
++
++** fetch and read
++mbsync pulls the =lists= mailbox into =~/mail/lists=, and notmuch
++indexes it under its own profile, =lists=:
++#+BEGIN_EXAMPLE
++mbsync lists && NOTMUCH_PROFILE=lists notmuch new
++NOTMUCH_PROFILE=lists notmuch search from:pat@patmaddox.com
++NOTMUCH_PROFILE=lists notmuch show id:<message-id>
++#+END_EXAMPLE
++
++lab-mail's mbsync fetches from Fastmail once a minute, so a message
++sent to the list shows up here within two minutes.
++
++** send
++msmtp sends as claude@p7x.dev. With =-t= it takes the recipients
++from the To, Cc and Bcc headers:
++#+BEGIN_EXAMPLE
++msmtp -t < message.eml
++#+END_EXAMPLE
++
++lab-mail's smtprelay accepts only claude@p7x.dev as the sender, and
++only pat@patmaddox.com and addresses at p7x.dev or lists.p7x.dev as
++recipients. If it refuses any address, msmtp exits non-zero and the
++message goes to no one; fix the address and send again. A non-zero
++exit can also mean Fastmail refused the message or could not be
++reached; msmtp prints the server's reply either way. Nothing is
++queued, so a message that failed was not sent.
+diff --git a/jails/instances/lab-claude/dist.mtree b/jails/instances/lab-claude/dist.mtree
+index 81e9654..fe11665 100644
+--- a/jails/instances/lab-claude/dist.mtree
++++ b/jails/instances/lab-claude/dist.mtree
+@@ -3,6 +3,11 @@
+ ./home/claude/.config type=dir mode=0755
+ ./home/claude/.config/jj type=dir mode=0755
+ ./home/claude/.config/jj/config.toml
++./home/claude/.config/notmuch type=dir mode=0755
++./home/claude/.config/notmuch/lists type=dir mode=0755
++./home/claude/.config/notmuch/lists/config
+ ./home/claude/.gitconfig
+ ./home/claude/.login_conf
++./home/claude/.mbsyncrc
++./home/claude/.msmtprc mode=0600
+ ./home/claude/bootstrap.sh mode=0755
+diff --git a/jails/instances/lab-claude/dist/home/claude/.config/notmuch/lists/config b/jails/instances/lab-claude/dist/home/claude/.config/notmuch/lists/config
+new file mode 100644
+index 0000000..27931ef
+--- /dev/null
++++ b/jails/instances/lab-claude/dist/home/claude/.config/notmuch/lists/config
+@@ -0,0 +1,18 @@
++# notmuch profile for the list mail fetched from lab-mail. Use it with
++# NOTMUCH_PROFILE=lists; the default profile stays on the jj maildir.
++# The database path is explicit, so pointing NOTMUCH_CONFIG here can
++# never index this mail into the default profile's database.
++
++[database]
++mail_root=/home/claude/mail
++path=/home/claude/.local/share/notmuch/lists
++
++[user]
++name=claude
++primary_email=claude@p7x.dev
++
++[new]
++ignore=.uidvalidity;.mbsyncstate;.mbsyncstate.journal;.mbsyncstate.new;.mbsyncstate.lock
++
++[maildir]
++synchronize_flags=false
+diff --git a/jails/instances/lab-claude/dist/home/claude/.mbsyncrc b/jails/instances/lab-claude/dist/home/claude/.mbsyncrc
+new file mode 100644
+index 0000000..bcc86d3
+--- /dev/null
++++ b/jails/instances/lab-claude/dist/home/claude/.mbsyncrc
+@@ -0,0 +1,26 @@
++# Fetch the lists mailbox from lab-mail into ~/mail/lists.
++#
++# lab-mail serves it on loopback and accepts any login, so the
++# credentials here are placeholders.
++
++IMAPAccount lab-mail
++Host 127.0.0.1
++Port 2143
++TLSType None
++AuthMechs LOGIN
++User claude
++Pass lab-mail
++
++IMAPStore lab-mail
++Account lab-mail
++
++MaildirStore local
++Path ~/mail/
++
++Channel lists
++Far :lab-mail:lists
++Near :local:lists
++Create Near
++Sync Pull
++Expunge None
++Remove None
+diff --git a/jails/instances/lab-claude/dist/home/claude/.msmtprc b/jails/instances/lab-claude/dist/home/claude/.msmtprc
+new file mode 100644
+index 0000000..13a47ef
+--- /dev/null
++++ b/jails/instances/lab-claude/dist/home/claude/.msmtprc
+@@ -0,0 +1,14 @@
++# Send through lab-mail, which relays each message to Fastmail during
++# the session. msmtp exits non-zero if any address is refused, and
++# the message then goes to no one.
++
++defaults
++auth off
++tls off
++
++account lab-mail
++host 127.0.0.1
++port 2525
++from claude@p7x.dev
++
++account default : lab-mail
+diff --git a/jails/instances/lab-claude/instance.conf b/jails/instances/lab-claude/instance.conf
+index b34cac6..6917807 100644
+--- a/jails/instances/lab-claude/instance.conf
++++ b/jails/instances/lab-claude/instance.conf
+@@ -15,6 +15,8 @@ devel/goredo
+ devel/jujutsu
+ editors/emacs@nox
+ emulators/linux_base-rl9
++mail/isync
++mail/msmtp
+ mail/notmuch
+ mail/notmuch-emacs
+ misc/claude-code
+-- 
+2.56.0
+

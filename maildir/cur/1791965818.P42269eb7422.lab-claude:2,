@@ -1,0 +1,265 @@
+Message-ID: <351f0106e59fc1b66087e101a478b414f5b92f6b.1791965796.git.claude@p7x.dev>
+In-Reply-To: <cover.1791965796.git.claude@p7x.dev>
+References: <cover.1791965796.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Date: Wed, 14 Oct 2026 01:38:12 +0000
+Subject: [PATCH v9 1/6] jails/instances/lab-mail: Initial spec
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+Change-Id: rlrysuruvryxyvntzzsmyzxntuyxxkuv
+
+Agents need to send and read p7x.dev mail, but the Fastmail
+credentials should not live in any jail an agent works in. A
+standalone spec settles what the relay jail does before anything is
+built, so the design can be reviewed and changed in one place.
+
+The agent must learn when a send fails and why. A queuing MTA
+answers 250 before it talks to Fastmail, so a later rejection only
+comes back as a bounce the agent may never see. smtprelay relays
+during the client's session instead, and passes Fastmail's reply
+through. smtprelay also checks the sender and recipients against
+allowlists before it contacts Fastmail, so mistakes fail fast with a
+clear reply. The cost is that nothing holds mail while Fastmail is
+unreachable; the client gets a 4xx reply and must send again later.
+
+Reading goes through an append-only local copy of the lists folder.
+Clients can never change Fastmail, reading keeps working while
+Fastmail is down, and deleting mail on Fastmail loses nothing.
+Clients use IMAP rather than a shared mount, so agents need not run
+on beastie.
+
+The spec also lists the alternatives each decision rejects, and why,
+so a reader can tell what lab-mail does not do and need not reopen a
+settled choice.
+---
+change-id: rlrysuruvryxyvntzzsmyzxntuyxxkuv
+
+ jails/instances/lab-mail/spec.org | 216 ++++++++++++++++++++++++++++++
+ 1 file changed, 216 insertions(+)
+ create mode 100644 jails/instances/lab-mail/spec.org
+
+diff --git a/jails/instances/lab-mail/spec.org b/jails/instances/lab-mail/spec.org
+new file mode 100644
+index 0000000..56b4537
+--- /dev/null
++++ b/jails/instances/lab-mail/spec.org
+@@ -0,0 +1,216 @@
++#+TITLE: lab-mail: a mail relay jail for p7x.dev
++
++artifact: a jail instance in this dir, built and operated like the
++other instances in =jails/instances=, plus the mail clients that
++lab-claude needs to use it.
++
++goal: agents send and read p7x.dev mail without holding the mail
++credentials. lab-mail holds them, and it is the only thing that talks
++to the mail provider. Agents reach lab-mail over the network (SMTP and
++IMAP), never through a shared filesystem, so they need not run on the
++same host as lab-mail.
++
++provider: p7x.dev and lists.p7x.dev are hosted on Fastmail.
++- IMAP: imap.fastmail.com, port 993, implicit TLS
++- SMTP submission: smtp.fastmail.com, port 465, implicit TLS
++- lab-mail logs in with the Fastmail account's login and one app
++  password, with IMAP and SMTP access. smtprelay and mbsync both use
++  them.
++- claude@p7x.dev is a sending identity on the Fastmail account.
++- A Fastmail rule marks list mail as read and files it into the
++  folder =lists=. Over IMAP, =lists= is at the top level, a sibling of
++  INBOX, and it has no subfolders.
++
++access:
++- lab-mail uses =ip4 = inherit=, like the client jails. A jail with
++  its own address has its own 127.0.0.1, which the other jails cannot
++  reach.
++- smtprelay listens on 127.0.0.1:2525 for SMTP, and Dovecot listens
++  on 127.0.0.1:2143 for IMAP. Neither listens on an external address
++  or on a standard port (25, 587, 143, or 993), so no tool finds them
++  there by default.
++- So beastie, and every jail on it that uses =ip4 = inherit=, can use
++  lab-mail, and nothing off beastie can. That is the security
++  boundary. No pf rules are needed.
++- Clients do not authenticate to send. IMAP has no anonymous mode,
++  so Dovecot accepts any user name and password at login.
++- No TLS between clients and smtprelay or Dovecot. The traffic stays
++  on loopback.
++
++credentials:
++- The operator stores the Fastmail login and app password on the host
++  in one file, =/jails/data/lab-mail/secrets/mail-creds=. It is the
++  only secret, and it never enters the repo.
++- =mail-creds= holds one line: the login, one space, and the app
++  password. The login is an email address and has no space in it, so
++  the login runs to the first space and the app password is the rest
++  of the line.
++- nullfs-mounted read-only into lab-mail, and into no other jail.
++- Inside lab-mail, readable only by smtprelay and mbsync.
++- The instance documents how the operator stores it.
++
++sending:
++- Software: smtprelay (mail/smtprelay).
++- smtprelay does not queue. It relays each message to Fastmail SMTP
++  during the client's session, logging in with the stored
++  credentials, and answers the client's DATA with Fastmail's reply.
++  When Fastmail rejects a message, the client gets Fastmail's code
++  and text. When Fastmail cannot be reached, the client gets a 4xx
++  reply. smtprelay never accepts a message it has not handed to
++  Fastmail, and never sends a bounce.
++- smtprelay adds one Received header to each message, as every MTA
++  does. It does not rewrite the sender, any other header, or the
++  body.
++- smtprelay checks the envelope sender and each envelope recipient
++  against allowlists in its config, before it contacts Fastmail.
++  Adding an address is a one-line change to the instance's config.
++- Allowed envelope senders (MAIL FROM): =claude@p7x.dev=. Any other
++  sender is refused with a 4xx reply.
++- Allowed envelope recipients (RCPT TO):
++  - =pat@patmaddox.com=
++  - any address at =p7x.dev=
++  - any address at =lists.p7x.dev=
++- Domains match exactly and without regard to case. =p7x.dev= does
++  not match its subdomains. That is why =lists.p7x.dev= is listed on
++  its own.
++- Any other recipient is refused with a 4xx reply to its RCPT TO.
++- smtprelay refuses a sender or recipient with 451, and the code is
++  not configurable. 4xx means "try again later", which is wrong for
++  a refused address, but no client here queues or retries, so the
++  refusal still ends the send.
++- A message with any refused recipient is sent to no one. smtprelay
++  refuses the recipient; the client then abandons the message (see
++  clients).
++
++reading:
++- Software: isync (mail/isync) for mbsync, and Dovecot (mail/dovecot)
++  for IMAP.
++- mbsync in lab-mail pulls new messages from the Fastmail folder
++  =lists= into a local maildir once a minute.
++- mbsync only pulls new messages. It never sends new messages, flag
++  changes, or deletions to Fastmail, and it never removes a message
++  from the local maildir. A message deleted from =lists= on Fastmail,
++  or moved out of it, stays in the local maildir. Fastmail is the
++  inbox, and the local maildir is append-only.
++- The local maildir lives in =/jails/data/lab-mail/mail/=, mounted
++  read-write into lab-mail only, so a rebuild of the jail does not
++  fetch the folder again.
++- The operator creates that directory and its subdirectories on the
++  host before the jail starts, as with the credentials. The jail does
++  not create anything on the host.
++- mbsync creates mail 0600 and folders 0700, whatever the umask.
++  After each pull, the fetch job makes the maildir readable, and not
++  writable, by Dovecot's user. A message from that pull cannot be read
++  over IMAP until then; a client fetch in that moment fails and
++  succeeds on its next run.
++- Dovecot serves the local maildir as the mailbox =lists=, beside an
++  empty INBOX, as on Fastmail. Clients can list, fetch, search, and
++  IDLE on =lists=. Both mailboxes are read-only: Dovecot rejects
++  attempts to set flags, append, copy into them, or expunge, and
++  Dovecot's user cannot write the maildir.
++- Dovecot serves IMAP only. It does not run POP3, LMTP, or
++  submission.
++- Reading keeps working from the local copy while Fastmail is down.
++
++clients: lab-claude.
++- Packages: mail/isync and mail/msmtp, added to the existing
++  mail/notmuch.
++- msmtp sends through 127.0.0.1:2525 as claude@p7x.dev. When the
++  server refuses any recipient, msmtp sends no message and exits
++  non-zero with the server's reply, so the whole message is
++  abandoned.
++- mbsync pulls the =lists= mailbox from 127.0.0.1:2143 into a maildir
++  in the agent's home, and =notmuch new= indexes it there. The agent
++  searches and reads the local index, not IMAP.
++- lab-claude documents the commands to fetch and to send.
++
++acceptance test: run from lab-claude.
++1. pat@patmaddox.com sends a message to lab@lists.p7x.dev.
++2. Within two minutes, mbsync fetches the message from lab-mail and
++   =notmuch search= finds it.
++3. The agent replies with msmtp as claude@p7x.dev to pat@patmaddox.com
++   and lab@lists.p7x.dev. msmtp exits 0.
++4. pat@patmaddox.com receives the reply.
++5. A message to pat@patmaddox.com and someone@example.com is refused
++   at RCPT TO for someone@example.com. msmtp exits non-zero and
++   pat@patmaddox.com receives nothing.
++6. A message from someone@p7x.dev is refused. msmtp exits non-zero.
++7. An IMAP STORE of \Deleted followed by EXPUNGE on =lists= fails, and
++   the message stays in place, both in lab-mail's maildir and on
++   Fastmail.
++
++out of scope:
++- The lab-devel list and the process-email workflow. They keep using
++  the maildir in jj.
++- An archive of the list in git. It is a separate artifact, and can
++  be fed from the =lists= mailbox like any other client.
++- Restricting which jails or local users may use lab-mail.
++- Delivery failures that happen after Fastmail has accepted a
++  message, and where Fastmail delivers mail for claude@p7x.dev.
++
++alternatives considered: each decision above, what it rejects, and
++why.
++- Relay without a queue, not a queuing MTA (OpenSMTPD, Postfix). A
++  queue answers 250 before Fastmail sees the message, so a rejection
++  comes back later as a bounce the sender may never see. The relay
++  keeps every failure in the client's session. The cost is that
++  nothing holds mail while Fastmail is unreachable; the client gets a
++  4xx reply and must send again.
++- No queue in the client either (msmtpq). A client queue also answers
++  "sent" before Fastmail has the message, which moves the same problem
++  one hop closer to the sender instead of removing it. An agent can
++  act on msmtp's non-zero exit, but a message waiting in a queue is a
++  state nothing checks. Outages are rare and short, and a failed send
++  in Emacs keeps the compose buffer, so the message is not lost.
++- smtprelay, not other relays. Postfix's smtpd_proxy_filter hands mail
++  to a local filter, which cannot log in to Fastmail. Sendmail's m4
++  config costs effort for no gain. dma and msmtp do not listen on the
++  network, so each client jail would need the credentials. Dovecot
++  submission needs clients to log in, and has no recipient allowlist.
++- Refuse an address with smtprelay's 451, not a 5xx from a locally
++  patched smtprelay or from another relay. A local patch means
++  building smtprelay from ports and keeping the patch current, and no
++  other relay weighed here has both a recipient allowlist and
++  pass-through of Fastmail's reply. The client exits non-zero either
++  way.
++- Check the sender against an allowlist, and never rewrite it. An
++  unchecked sender fails only at Fastmail, if at all; rewriting would
++  send mail as someone the client did not ask for.
++- Reject the whole message on any bad recipient, not deliver to the
++  good ones. A bad recipient is most likely a typo, and the sender
++  should fix it and send once to everyone.
++- mbsync into a local maildir, not a Dovecot imapc proxy to Fastmail.
++  A proxy stops serving mail while Fastmail is down, and it holds a
++  read-write login, so read-only depends on its config. mbsync only
++  pulls, so it is read-only by construction.
++- Open up the maildir's permissions after each pull, not run Dovecot
++  as mbsync's user, and not grant read access with an inherited ZFS
++  ACL. Sharing mbsync's user would leave read-only resting on
++  Dovecot's ACL alone. An inherited ACL needs its own dataset with
++  ACL properties set on the host, where a chmod works on any
++  filesystem.
++- Serve the list as =lists= beside an empty INBOX, not as INBOX. The
++  name says what the mailbox holds, it matches Fastmail, and another
++  mirrored folder could sit beside it.
++- Dovecot, not Cyrus or Courier. Each of those brings its own mail
++  store and admin model, where Dovecot serves a plain maildir.
++- IMAP over loopback, not a nullfs-mounted maildir. A mount ties
++  every client to beastie's filesystem. A loopback bind is cheap to
++  change into an external address later.
++- =ip4 = inherit= and a loopback bind, not an address of its own with
++  pf rules, or vnet. Nothing needs to restrict which jails on beastie
++  use lab-mail, and a jail with its own address cannot reach the
++  loopback the other jails share.
++- Ports 2525 and 2143, not 25 and 143, so no tool finds lab-mail by
++  default and sends or reads mail by accident.
++- The login and app password in one =mail-creds= file, not the login in
++  the repo config and the password in a file of its own. The login is
++  not secret, but keeping both together gives the operator one file
++  to manage, and one line that smtprelay and mbsync split the same
++  way.
++- One app password, not one for SMTP and one for IMAP. Both live in
++  the same jail behind the same mount, so two add no protection.
++- Pat's own mail client is not part of this spec. With no queue,
++  there is nothing about it for lab-mail to provide. Sending as
++  pat@patmaddox.com takes one more allowed sender and an msmtp entry
++  in his client.
+-- 
+2.56.0
+

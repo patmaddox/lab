@@ -1,0 +1,311 @@
+Message-ID: <cover.1791965796.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Date: Wed, 14 Oct 2026 08:16:36 +0000
+Subject: [PATCH v9 0/6] jails/instances/lab-mail: Build the mail relay jail
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+
+Agents need to send and read p7x.dev mail without holding the
+Fastmail credentials. This series builds lab-mail, the relay jail
+that holds them, and points lab-claude's mail clients at it.
+
+Patch 1 is the spec. Patches 2 to 5 build lab-mail one service at a
+time: the jail and its credential mount, smtprelay for sending,
+mbsync for the append-only copy of the lists folder, and Dovecot to
+serve that copy read-only over IMAP. Patch 6 sets up msmtp, mbsync
+and a separate notmuch profile in lab-claude, so the lab-devel list
+keeps its jj maildir.
+
+Testing. None of the services has run. I cannot build or start a
+jail from here, so the acceptance test in the spec is still to do on
+beastie. What I checked here, as fact:
+- remotes.env from patch 3, sourced by sh(1) under set -a as rc.subr
+  does, with jq 1.8.2 from lab-claude, turns the line
+  "me@p7x.dev p@ss:w/rd #x y%" into
+  smtps://me%40p7x.dev:p%40ss%3Aw%2Frd%20%23x%20y%25@smtp.fastmail.com:465
+- Each dist.mtree lists exactly the files under dist/, and the shell
+  files pass sh -n.
+
+Inference, not tested:
+- smtprelay decodes the percent-escapes. It parses its remote with
+  Go's net/url, whose Userinfo returns decoded values.
+- A jail started before the operator creates /jails/data/lab-mail/mail
+  fails to mount it, and jail(8) names the missing path.
+- jq in lab-mail is the same jq as in lab-claude. I have not looked
+  inside lab-mail.
+
+One behavior is weaker than v8's awk script. A mail-creds line with
+no space now gives the whole line as both the login and the password,
+where the script refused it with a message. Fastmail then rejects
+the login, so the failure shows up at the first send or fetch rather
+than at start.
+
+Changes in v9:
+- The jail no longer creates anything on the host. jail.conf keeps
+  only the mkdir of the mountpoint inside the jail root, and the
+  README gives the operator one block that creates the data dirs
+  with their owners and modes, as Pat asked on patch 2. The spec
+  says the operator creates them, so the spec and the patches agree.
+- jq's @uri percent-encodes the login and password in remotes.env,
+  and textproc/jq is added to the packages. The 42-line awk userinfo
+  script is gone, as Pat asked on patch 3.
+- mbsync splits mail-creds with cut, not sed, as Pat asked on patch
+  4. -f2- keeps a password that contains a space.
+- The patch 4 message says the local maildir is append-only, the
+  spec's words.
+- IMAP and Dovecot stay as in v8. Pat's question on patches 5 and 6
+  is answered in the v8 thread, and he called the series good to go.
+- lab-claude's README names smtprelay and mbsync where it said
+  lab-mail, so it names the process and not the host.
+- Link to v8: id:cover.1791962577.git.claude@p7x.dev
+
+Interdiff against v8:
+
+diff --git a/jails/instances/lab-claude/README.org b/jails/instances/lab-claude/README.org
+index 75305c207c..1a386c7f92 100644
+--- a/jails/instances/lab-claude/README.org
++++ b/jails/instances/lab-claude/README.org
+@@ -17,8 +17,8 @@
+ NOTMUCH_PROFILE=lists notmuch show id:<message-id>
+ #+END_EXAMPLE
+ 
+-lab-mail fetches from Fastmail once a minute, so a message sent to
+-the list shows up here within two minutes.
++lab-mail's mbsync fetches from Fastmail once a minute, so a message
++sent to the list shows up here within two minutes.
+ 
+ ** send
+ msmtp sends as claude@p7x.dev. With =-t= it takes the recipients
+@@ -27,8 +27,8 @@
+ msmtp -t < message.eml
+ #+END_EXAMPLE
+ 
+-lab-mail accepts only claude@p7x.dev as the sender, and only
+-pat@patmaddox.com and addresses at p7x.dev or lists.p7x.dev as
++lab-mail's smtprelay accepts only claude@p7x.dev as the sender, and
++only pat@patmaddox.com and addresses at p7x.dev or lists.p7x.dev as
+ recipients. If it refuses any address, msmtp exits non-zero and the
+ message goes to no one; fix the address and send again. A non-zero
+ exit can also mean Fastmail refused the message or could not be
+diff --git a/jails/instances/lab-mail/README.org b/jails/instances/lab-mail/README.org
+index 9dce86efee..d2224de00a 100644
+--- a/jails/instances/lab-mail/README.org
++++ b/jails/instances/lab-mail/README.org
+@@ -26,7 +26,16 @@
+ #+END_EXAMPLE
+ 
+ =/jails/data/lab-mail/mail/= holds mail state that must survive a
+-rebuild of the jail. The jail creates it on start.
++rebuild of the jail. The jail mounts it read-write at =/data/mail=.
++The operator creates it and its subdirectories before the jail first
++starts. The host knows the owners only by number, from
++=instance.conf=: 15102 is mbsync, 15103 is vmail.
++#+BEGIN_EXAMPLE
++install -d -m 0755 /jails/data/lab-mail/mail
++install -d -o 15102 -g 15102 -m 0755 /jails/data/lab-mail/mail/maildir
++install -d -o 15102 -g 15102 -m 0700 /jails/data/lab-mail/mail/mbsync
++install -d -o 15103 -g 15103 -m 0700 /jails/data/lab-mail/mail/dovecot
++#+END_EXAMPLE
+ 
+ * operate
+ Like the other instances; see =jails/README.org=:
+diff --git a/jails/instances/lab-mail/dist/usr/local/etc/mbsyncrc b/jails/instances/lab-mail/dist/usr/local/etc/mbsyncrc
+index 9ca1831c3a..0956e77358 100644
+--- a/jails/instances/lab-mail/dist/usr/local/etc/mbsyncrc
++++ b/jails/instances/lab-mail/dist/usr/local/etc/mbsyncrc
+@@ -8,8 +8,8 @@
+ Host imap.fastmail.com
+ Port 993
+ TLSType IMAPS
+-UserCmd "sed 's/ .*//' /data/secrets/mail-creds"
+-PassCmd "sed 's/^[^ ]* //' /data/secrets/mail-creds"
++UserCmd "cut -d' ' -f1 /data/secrets/mail-creds"
++PassCmd "cut -d' ' -f2- /data/secrets/mail-creds"
+ 
+ IMAPStore fastmail
+ Account fastmail
+diff --git a/jails/instances/lab-mail/dist/usr/local/etc/smtprelay/remotes.env b/jails/instances/lab-mail/dist/usr/local/etc/smtprelay/remotes.env
+index fa05916985..b1bb979b3e 100644
+--- a/jails/instances/lab-mail/dist/usr/local/etc/smtprelay/remotes.env
++++ b/jails/instances/lab-mail/dist/usr/local/etc/smtprelay/remotes.env
+@@ -1,4 +1,11 @@
+ # Sourced by rc.subr(8) as root when smtprelay starts. The remote
+ # carries the Fastmail login, so it is built from mail-creds here and
+ # handed to smtprelay in its environment, never written to a file.
+-SMTPRELAY_REMOTES="smtps://$(/usr/local/libexec/lab-mail/userinfo)@smtp.fastmail.com:465"
++#
++# mail-creds splits at its first space, so the password is the rest
++# of the line. Both halves are percent-encoded, since an "@", ":", "/"
++# or "#" in them would otherwise end its field in the URL.
++SMTPRELAY_REMOTES="smtps://\
++$(cut -d' ' -f1 /data/secrets/mail-creds | jq -Rr @uri):\
++$(cut -d' ' -f2- /data/secrets/mail-creds | jq -Rr @uri)\
++@smtp.fastmail.com:465"
+diff --git a/jails/instances/lab-mail/dist/usr/local/libexec/lab-mail/userinfo b/jails/instances/lab-mail/dist/usr/local/libexec/lab-mail/userinfo
+deleted file mode 100755
+index b6ba3d4012..0000000000
+--- a/jails/instances/lab-mail/dist/usr/local/libexec/lab-mail/userinfo
++++ /dev/null
+@@ -1,42 +0,0 @@
+-#!/bin/sh
+-# Print the login and app password from mail-creds as URL userinfo,
+-# login:password, for smtprelay's remote. The line splits at its
+-# first space, and the password is the rest of the line. Both are
+-# percent-encoded, so any character in them survives the URL.
+-set -eu
+-
+-LC_ALL=C exec awk '
+-BEGIN {
+-	for (i = 1; i < 256; i++)
+-		ord[sprintf("%c", i)] = i
+-}
+-
+-function encode(s,    out, c, i) {
+-	out = ""
+-	for (i = 1; i <= length(s); i++) {
+-		c = substr(s, i, 1)
+-		if (c ~ /[A-Za-z0-9._~-]/)
+-			out = out c
+-		else
+-			out = out sprintf("%%%02X", ord[c])
+-	}
+-	return out
+-}
+-
+-NR == 1 {
+-	done = 1
+-	n = index($0, " ")
+-	if (n == 0) {
+-		print "mail-creds: no space after the login" > "/dev/stderr"
+-		exit 1
+-	}
+-	printf "%s:%s\n", encode(substr($0, 1, n - 1)), encode(substr($0, n + 1))
+-}
+-
+-END {
+-	if (!done) {
+-		print "mail-creds: empty" > "/dev/stderr"
+-		exit 1
+-	}
+-}
+-' /data/secrets/mail-creds
+diff --git a/jails/instances/lab-mail/dist.mtree b/jails/instances/lab-mail/dist.mtree
+index 82d934394f..6923d75304 100644
+--- a/jails/instances/lab-mail/dist.mtree
++++ b/jails/instances/lab-mail/dist.mtree
+@@ -14,4 +14,3 @@
+ ./usr/local/etc/smtprelay/smtprelay.ini
+ ./usr/local/libexec/lab-mail type=dir mode=0755
+ ./usr/local/libexec/lab-mail/fetch mode=0755
+-./usr/local/libexec/lab-mail/userinfo mode=0755
+diff --git a/jails/instances/lab-mail/instance.conf b/jails/instances/lab-mail/instance.conf
+index 56e044180e..25b73fdcc8 100644
+--- a/jails/instances/lab-mail/instance.conf
++++ b/jails/instances/lab-mail/instance.conf
+@@ -1,6 +1,6 @@
+ # Members of mailcred can read the Fastmail credentials. vmail is
+ # Dovecot's mail user; it is left out so it cannot read them.
+-# README.org has the numeric id the host side depends on.
++# README.org has the numeric ids the host side depends on.
+ readonly groups="
+ mailcred:15100
+ "
+@@ -15,4 +15,5 @@
+ mail/dovecot
+ mail/isync
+ mail/smtprelay
++textproc/jq
+ "
+diff --git a/jails/instances/lab-mail/jail.conf b/jails/instances/lab-mail/jail.conf
+index ec601140d4..8aa53d9d1f 100644
+--- a/jails/instances/lab-mail/jail.conf
++++ b/jails/instances/lab-mail/jail.conf
+@@ -8,12 +8,8 @@
+   exec.prepare += "mkdir -p ${path}/data/secrets";
+   mount += "/jails/data/lab-mail/secrets ${path}/data/secrets nullfs ro 0 0";
+ 
+-  # Mail state that must survive a rebuild. The owners are numeric
+-  # ids from instance.conf: 15102 is mbsync, 15103 is vmail.
+-  exec.prepare += "install -d -m 0755 /jails/data/lab-mail/mail";
+-  exec.prepare += "install -d -o 15102 -g 15102 -m 0755 /jails/data/lab-mail/mail/maildir";
+-  exec.prepare += "install -d -o 15102 -g 15102 -m 0700 /jails/data/lab-mail/mail/mbsync";
+-  exec.prepare += "install -d -o 15103 -g 15103 -m 0700 /jails/data/lab-mail/mail/dovecot";
++  # Mail state that must survive a rebuild. The operator creates it on
++  # the host, as with the credentials.
+   exec.prepare += "mkdir -p ${path}/data/mail";
+   mount += "/jails/data/lab-mail/mail ${path}/data/mail nullfs rw 0 0";
+ }
+diff --git a/jails/instances/lab-mail/spec.org b/jails/instances/lab-mail/spec.org
+index 4ed2fa6306..56b45377d6 100644
+--- a/jails/instances/lab-mail/spec.org
++++ b/jails/instances/lab-mail/spec.org
+@@ -95,6 +95,9 @@
+ - The local maildir lives in =/jails/data/lab-mail/mail/=, mounted
+   read-write into lab-mail only, so a rebuild of the jail does not
+   fetch the folder again.
++- The operator creates that directory and its subdirectories on the
++  host before the jail starts, as with the credentials. The jail does
++  not create anything on the host.
+ - mbsync creates mail 0600 and folders 0700, whatever the umask.
+   After each pull, the fetch job makes the maildir readable, and not
+   writable, by Dovecot's user. A message from that pull cannot be read
+
+claude (6):
+  jails/instances/lab-mail: Initial spec
+  jails/instances/lab-mail: Add the jail instance
+  jails/instances/lab-mail: Relay mail to Fastmail with smtprelay
+  jails/instances/lab-mail: Mirror the lists folder with mbsync
+  jails/instances/lab-mail: Serve the mirror over IMAP with Dovecot
+  jails/instances/lab-claude: Send and read mail through lab-mail
+
+ jails/instances/lab-claude/README.org         |  36 +++
+ jails/instances/lab-claude/dist.mtree         |   5 +
+ .../home/claude/.config/notmuch/lists/config  |  18 ++
+ .../lab-claude/dist/home/claude/.mbsyncrc     |  26 +++
+ .../lab-claude/dist/home/claude/.msmtprc      |  14 ++
+ jails/instances/lab-claude/instance.conf      |   2 +
+ jails/instances/lab-mail/Justfile             |   1 +
+ jails/instances/lab-mail/README.org           |  49 ++++
+ jails/instances/lab-mail/clean.do             |   1 +
+ jails/instances/lab-mail/dist.mtree           |  16 ++
+ .../lab-mail/dist/etc/cron.d/lab-mail         |   3 +
+ .../lab-mail/dist/etc/rc.conf.d/dovecot       |   1 +
+ .../lab-mail/dist/etc/rc.conf.d/smtprelay     |   4 +
+ .../dist/usr/local/etc/dovecot/dovecot-acl    |   2 +
+ .../dist/usr/local/etc/dovecot/dovecot.conf   |  54 +++++
+ .../lab-mail/dist/usr/local/etc/mbsyncrc      |  28 +++
+ .../dist/usr/local/etc/smtprelay/remotes.env  |  11 +
+ .../usr/local/etc/smtprelay/smtprelay.ini     |  20 ++
+ .../dist/usr/local/libexec/lab-mail/fetch     |  18 ++
+ jails/instances/lab-mail/instance.conf        |  19 ++
+ jails/instances/lab-mail/jail.conf            |  15 ++
+ jails/instances/lab-mail/jail.log.do          |   1 +
+ jails/instances/lab-mail/spec.org             | 216 ++++++++++++++++++
+ 23 files changed, 560 insertions(+)
+ create mode 100644 jails/instances/lab-claude/README.org
+ create mode 100644 jails/instances/lab-claude/dist/home/claude/.config/notmuch/lists/config
+ create mode 100644 jails/instances/lab-claude/dist/home/claude/.mbsyncrc
+ create mode 100644 jails/instances/lab-claude/dist/home/claude/.msmtprc
+ create mode 120000 jails/instances/lab-mail/Justfile
+ create mode 100644 jails/instances/lab-mail/README.org
+ create mode 120000 jails/instances/lab-mail/clean.do
+ create mode 100644 jails/instances/lab-mail/dist.mtree
+ create mode 100644 jails/instances/lab-mail/dist/etc/cron.d/lab-mail
+ create mode 100644 jails/instances/lab-mail/dist/etc/rc.conf.d/dovecot
+ create mode 100644 jails/instances/lab-mail/dist/etc/rc.conf.d/smtprelay
+ create mode 100644 jails/instances/lab-mail/dist/usr/local/etc/dovecot/dovecot-acl
+ create mode 100644 jails/instances/lab-mail/dist/usr/local/etc/dovecot/dovecot.conf
+ create mode 100644 jails/instances/lab-mail/dist/usr/local/etc/mbsyncrc
+ create mode 100644 jails/instances/lab-mail/dist/usr/local/etc/smtprelay/remotes.env
+ create mode 100644 jails/instances/lab-mail/dist/usr/local/etc/smtprelay/smtprelay.ini
+ create mode 100755 jails/instances/lab-mail/dist/usr/local/libexec/lab-mail/fetch
+ create mode 100644 jails/instances/lab-mail/instance.conf
+ create mode 100644 jails/instances/lab-mail/jail.conf
+ create mode 120000 jails/instances/lab-mail/jail.log.do
+ create mode 100644 jails/instances/lab-mail/spec.org
+
+
+base-commit: 23c5779575deee14b294b1a99db19ebecef4fd69
+-- 
+2.56.0
+
