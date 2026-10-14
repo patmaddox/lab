@@ -1,0 +1,102 @@
+Message-ID: <cover.1791997861.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Date: Wed, 14 Oct 2026 17:11:01 +0000
+Subject: [PATCH v3 0/6] Add just process-email
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+
+This adds `just process-email`, which drains the lab-devel inbox one
+message at a time without a model deciding when to stop. Each pass:
+
+- runs `just get-up-to-date`, which fetches every remote, rebases
+  unmerged trunk work and the mail outbox, and runs notmuch new;
+- takes the oldest inbox message from `just get-oldest-inbox-message`;
+- runs a fresh `claude --permission-mode auto -p "/process-email <id>"`
+  with its output sent to /dev/null;
+- checks with notmuch that the message left the inbox, and posts to
+  the operator's ntfy topic with `just notify`.
+
+The loop ends when the inbox is empty. If a pass leaves its message in
+the inbox, it prints "E: process-email: <id> is still in the inbox",
+notifies "stuck: <subject>", and exits 1, rather than running claude
+on that message forever. This replaces the loop that reran claude
+until the model touched tmp/done.
+
+/process-email requires the message id as its argument and answers
+only that message. It has no loop mode and no fallback to the oldest
+message; choosing the message is the caller's job. Its step 1 runs the
+same `just get-up-to-date`, leaving the model only what needs
+judgement: conflicted commits and patches applied with edits.
+
+The ntfy topic URL is a secret, so it lives on the host in
+/jails/data/lab-claude/secrets/notify-url, mounted read-only at
+/data/secrets the way lab-mail's credentials are. NOTIFY_URL in the
+environment overrides it. With neither set, the loop runs and sends
+nothing. A post that fails or takes longer than ten seconds only
+warns, so it cannot stop the inbox from draining.
+
+Testing: with a stub `claude` on PATH that answers nothing, the loop
+fetched, picked the oldest message, printed the E: line, and exited 1.
+`just notify` against a closed port printed "W: notify: could not
+post to ntfy" and exited 0. With no topic configured, notify exits 0
+and posts nothing.
+
+Setup on beastie, before restarting lab-claude:
+
+    mkdir -p /jails/data/lab-claude/secrets
+    cd /jails/data/lab-claude/secrets
+    printf '%s\n' 'https://ntfy.sh/<topic>' > notify-url
+    chown -R 0:15000 .
+    chmod 0750 .
+    chmod 0640 notify-url
+
+Note: "[PATCH] claude: Treat unintegrated mail as revisable drafts" [1]
+and "[PATCH] claude: Update stale threads from process-email" [2] also
+edit step 2 of the skill. Whichever lands second will need a small
+rebase.
+
+Changes in v3:
+- Require the id argument in /process-email and drop its fallback to
+  the oldest message, as asked in "Re: [PATCH v2 2/7]
+  claude/skills/process-email: Take the message to answer as an
+  argument" [3]. The skill no longer queries notmuch, so
+  "claude/skills/process-email: Find the oldest message with just" is
+  folded into "just: Add just process-email", where the recipe's only
+  caller now lives.
+- Remove the skill's Modes section and its "Loop the skill" line, so
+  the skill only ever processes one message, as asked in "Re: [PATCH
+  v2 3/7] just: Add just process-email" [4]. 6/6 says in the skill
+  that a pass sends no notification.
+- Prefix error messages with "E: " in the loop and in
+  get-up-to-date.sh [4]. notify's failure is not fatal, so it is
+  prefixed "W: " instead; say if you want "E: " there too.
+- Remove double spaces from get-up-to-date.sh comments.
+- Link to v2: id:cover.1791972607.git.claude@p7x.dev
+
+[1] id:51d24553357a9c0c014a16e757860da83e6b573a.1791651322.git.claude@p7x.dev
+[2] id:0679664429442bba2f35603d5842d72a01325811.1791652624.git.claude@p7x.dev
+[3] id:m2fqy8ckom.fsf@beastie.p7x.dev
+[4] id:m2jynkckqb.fsf@beastie.p7x.dev
+
+claude (6):
+  claude/skills/process-email: Take the message to answer as an argument
+  just: Add just process-email
+  just: Get up to date before each process-email pass
+  claude/skills/process-email: Get up to date with just
+  jails/instances/lab-claude: Mount a secrets directory
+  just: Notify after each process-email pass
+
+ .claude/skills/process-email/SKILL.md    | 80 ++++++++++--------------
+ Justfile                                 | 42 +++++++++++++
+ jails/instances/lab-claude/README.org    | 21 +++++++
+ jails/instances/lab-claude/instance.conf |  1 +
+ jails/instances/lab-claude/jail.conf     |  3 +
+ libexec/mail/get-up-to-date.sh           | 69 ++++++++++++++++++++
+ 6 files changed, 169 insertions(+), 47 deletions(-)
+ create mode 100755 libexec/mail/get-up-to-date.sh
+
+
+base-commit: 36eea3c167cd3cdafc23ec2e9c6f333a2bf5f3a7
+-- 
+2.56.0
+

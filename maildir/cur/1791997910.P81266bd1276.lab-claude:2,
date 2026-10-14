@@ -1,0 +1,79 @@
+Message-ID: <071d876ef9cca9aab616163b49334928fcd9ef1b.1791997861.git.claude@p7x.dev>
+In-Reply-To: <cover.1791997861.git.claude@p7x.dev>
+References: <cover.1791997861.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Date: Wed, 14 Oct 2026 10:08:26 +0000
+Subject: [PATCH v3 6/6] just: Notify after each process-email pass
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+Change-Id: otwkzmpmqsmtsvzutwtyonkpmnuvwrzv
+
+just process-email runs unattended, so the operator learns what it did
+only by reading the list. A notification per message lets them follow
+the loop from a phone and know at once when it stops on a message it
+could not answer.
+
+The loop sends it, not the model, because only the loop knows from
+the inbox whether the pass answered the message. A model asked to
+notify may skip it, or report success for a pass that failed.
+
+A failed or slow post must not stop the inbox from draining, so
+notify gives up after ten seconds and only warns. Without a topic it
+does nothing, so the loop still runs where no secret is set up.
+---
+change-id: otwkzmpmqsmtsvzutwtyonkpmnuvwrzv
+
+ .claude/skills/process-email/SKILL.md |  3 +++
+ Justfile                              | 16 ++++++++++++++++
+ 2 files changed, 19 insertions(+)
+
+diff --git a/.claude/skills/process-email/SKILL.md b/.claude/skills/process-email/SKILL.md
+index 4a15ea9..172bc32 100644
+--- a/.claude/skills/process-email/SKILL.md
++++ b/.claude/skills/process-email/SKILL.md
+@@ -28,6 +28,9 @@ Nobody reads your stdout. The result of a pass is what lands on the
+ list: a commit on your bookmark, pushed to `submissions`. Put every
+ answer, question, and caveat in mail.
+ 
++Do not notify the operator either. `just process-email` does that after
++each pass, from whether the message left the inbox.
++
+ ## Layout
+ 
+ - `~/lab/default.jj` - trunk workspace, where patches are developed.
+diff --git a/Justfile b/Justfile
+index 3c34602..81b0144 100644
+--- a/Justfile
++++ b/Justfile
+@@ -88,12 +88,28 @@ process-email:
+     just get-up-to-date
+     id="$(just get-oldest-inbox-message)"
+     [ -n "${id}" ] || break
++    subject="$(notmuch search "${id}" |
++      sed -e 's/^[^;]*; //' -e 's/ ([^()]*)$//')"
+     echo "process-email: ${id}"
+     claude --permission-mode auto -p "/process-email ${id}" \
+       </dev/null >/dev/null
+     notmuch new --quiet
+     if [ "$(notmuch count "${id} and tag:inbox")" -ne 0 ]; then
+       echo "E: process-email: ${id} is still in the inbox" >&2
++      just notify "stuck: ${subject}"
+       exit 1
+     fi
++    just notify "answered: ${subject}"
+   done
++
++# post a message to the operator's ntfy topic, if one is configured
++[positional-arguments]
++notify +message:
++  #!/bin/sh
++  url="${NOTIFY_URL:-}"
++  if [ -z "${url}" ] && [ -r /data/secrets/notify-url ]; then
++    url="$(head -n 1 /data/secrets/notify-url)"
++  fi
++  [ -n "${url}" ] || exit 0
++  curl -fsS -m 10 -o /dev/null -H "Title: process-email" -d "$*" "${url}" ||
++    echo "W: notify: could not post to ntfy" >&2
+-- 
+2.56.0
+

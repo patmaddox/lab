@@ -1,0 +1,104 @@
+Message-ID: <744658fe8bc46d199cb41135e91538c1732b61ef.1791997861.git.claude@p7x.dev>
+In-Reply-To: <cover.1791997861.git.claude@p7x.dev>
+References: <cover.1791997861.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Date: Sat, 10 Oct 2026 18:09:30 +0000
+Subject: [PATCH v3 1/6] claude/skills/process-email: Take the message to
+ answer as an argument
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+Change-Id: ktpzmqruykkypmyrnnkzlstxlspzwnuw
+
+A pass picked its own message with a notmuch query, so whatever ran it
+could not say which message that pass was for, and so could not check
+afterwards that this message was answered. Choosing the next message
+needs no judgement, and leaving it to the model means a driver and the
+model could disagree on it.
+
+The skill now requires a notmuch id and answers only that message. The
+skill no longer loops over the inbox; draining it is left to a caller
+that runs one pass per message. A named message that is no longer in
+the inbox ends the pass without writing, because someone has already
+answered or archived it.
+---
+change-id: ktpzmqruykkypmyrnnkzlstxlspzwnuw
+
+ .claude/skills/process-email/SKILL.md | 39 ++++++++++++++-------------
+ 1 file changed, 20 insertions(+), 19 deletions(-)
+
+diff --git a/.claude/skills/process-email/SKILL.md b/.claude/skills/process-email/SKILL.md
+index 2bf352b..2885777 100644
+--- a/.claude/skills/process-email/SKILL.md
++++ b/.claude/skills/process-email/SKILL.md
+@@ -1,21 +1,22 @@
+ ---
+ name: process-email
+ description: >-
+-  Process the oldest message in your lab-devel inbox and act on it.
+-  Gather the message's thread and related list context with subagents,
+-  do the work it asks for, post any patches as their own series, and
+-  reply on the list, pushing to the submissions remote. Never use
+-  Gmail or any external mail tool. The operator does not read your
+-  stdout, so the result must land on the list.
++  Process the lab-devel inbox message named by the argument and act
++  on it. Gather the message's thread and related list context with
++  subagents, do the work it asks for, post any patches as their own
++  series, and reply on the list, pushing to the submissions remote.
++  Never use Gmail or any external mail tool. The operator does not
++  read your stdout, so the result must land on the list.
++argument-hint: "id:<message-id>"
+ disable-model-invocation: true
+ ---
+ 
+ # process-email
+ 
+-One pass takes the single oldest message in your inbox, does whatever
+-it asks, and answers it on the list. The answer is always a reply; any
+-patches go out first as their own series, which the reply cites. Loop
+-the skill to drain the inbox.
++One pass takes the single inbox message its argument names, does
++whatever it asks, and answers it on the list. The answer is always a
++reply; any patches go out first as their own series, which the reply
++cites.
+ 
+ The list is a maildir carried by jj on the `mail` bookmark.
+ zib/patch-review-workflow.org describes the whole workflow; this skill
+@@ -91,14 +92,19 @@ A bookmark with no pending mail, missing or merged in full, is
+ pointed at the list's tip first. It has nothing to rebase, so the
+ rebase alone would leave it behind on an old list.
+ 
+-## 2. Pick the oldest inbox message
++## 2. Take the message
+ 
+-    id="$(notmuch search --sort=oldest-first --output=messages \
+-        --limit=1 tag:inbox)"
++The skill's argument names the message to answer, as a notmuch id,
++`id:<message-id>`. It is required; you do not choose the message:
++
++    id="$ARGUMENTS"
+     thread="$(notmuch search --output=threads "${id}")"
+     msgid="${id#id:}"      # the bare Message-ID, for headers
+ 
+-If there is none, the inbox is empty: stop without writing anything.
++If there is no argument, stop without writing anything. If the named
++message is not tagged `inbox` (`notmuch count "${id} and tag:inbox"`
++prints 0), it is already answered or archived: stop without writing
++anything.
+ 
+ Every inbox message gets an answer, even if it is a short
+ acknowledgement. Replying is the only way a message leaves the inbox,
+@@ -274,11 +280,6 @@ Check the outcome from outside, not from what you printed:
+ If the message is not `replied`, the reply's In-Reply-To is wrong. If
+ the commits differ, the push failed. Fix it before stopping.
+ 
+-## Modes
+-
+-- One pass: answer the oldest inbox message, then stop.
+-- Loop: repeat until step 2 finds an empty inbox.
+-
+ ## Missing dependencies
+ - Do not install missing dependencies
+ - Submit a patch declaring the dependencies you need to proceed
+-- 
+2.56.0
+

@@ -1,0 +1,131 @@
+Message-ID: <cfc39b724234b9d116398377da224579c818866c.1791997861.git.claude@p7x.dev>
+In-Reply-To: <cover.1791997861.git.claude@p7x.dev>
+References: <cover.1791997861.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Date: Sat, 10 Oct 2026 19:11:41 +0000
+Subject: [PATCH v3 3/6] just: Get up to date before each process-email pass
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+Change-Id: rvsxmkkrwyrsouzoltkozuqwvptxpktr
+
+The process-email loop only reindexed the list between passes. Each
+model pass fetched and rebased by following prose in the skill, so
+whether a pass started from the current trunk and list depended on
+the model carrying out those steps faithfully.
+
+Fetching and rebasing need no judgement. A script does them the same
+way every time, and the loop now runs it before each lookup, so the
+next message is picked from the current list. The model is left only
+what does take judgement: conflicts the rebase left behind and
+patches applied upstream with edits. Running the script again is
+harmless, so a pass can call the same recipe itself.
+---
+change-id: rvsxmkkrwyrsouzoltkozuqwvptxpktr
+
+ Justfile                       |  6 ++-
+ libexec/mail/get-up-to-date.sh | 69 ++++++++++++++++++++++++++++++++++
+ 2 files changed, 74 insertions(+), 1 deletion(-)
+ create mode 100755 libexec/mail/get-up-to-date.sh
+
+diff --git a/Justfile b/Justfile
+index 02d15f5..3c34602 100644
+--- a/Justfile
++++ b/Justfile
+@@ -72,6 +72,10 @@ claude-mail-purge:
+ reauthor *revset:
+   jj metaedit --update-author {{revset}}
+ 
++# fetch, rebase trunk work and the mail outbox, and index the list
++get-up-to-date:
++  ./libexec/mail/get-up-to-date.sh
++
+ # print the oldest message in the lab-devel inbox, if any
+ @get-oldest-inbox-message:
+   notmuch search --sort=oldest-first --output=messages --limit=1 tag:inbox
+@@ -81,7 +85,7 @@ process-email:
+   #!/bin/sh
+   set -eu
+   while :; do
+-    notmuch new --quiet
++    just get-up-to-date
+     id="$(just get-oldest-inbox-message)"
+     [ -n "${id}" ] || break
+     echo "process-email: ${id}"
+diff --git a/libexec/mail/get-up-to-date.sh b/libexec/mail/get-up-to-date.sh
+new file mode 100755
+index 0000000..462c01d
+--- /dev/null
++++ b/libexec/mail/get-up-to-date.sh
+@@ -0,0 +1,69 @@
++#!/bin/sh
++#
++# get-up-to-date.sh -- bring trunk work and the mail outbox up to date.
++#
++# The best-effort, deterministic part of a process-email pass. It
++# fetches every remote, rebases your unmerged trunk work onto
++# trunk@upstream, rebases your outbox bookmark onto mail@upstream, and
++# indexes the list with notmuch.
++#
++# It does not judge anything. A rebase that conflicts still succeeds
++# and leaves the conflict in the commit; a patch applied upstream with
++# edits survives as a redundant commit. Settling those is left to
++# whoever runs this next, and the state is in jj for them to read:
++#
++#     jj log -r 'conflicts() & mine()'
++#
++# Running it twice is harmless. It exits non-zero only when a step
++# fails outright, such as a fetch that cannot reach a remote.
++#
++# The trunk workspace is the one holding this script. The mail
++# workspace is ${MAIL_WORKSPACE}, or ~/lab/mail.jj. The outbox bookmark
++# is named for your login.
++
++set -eu
++set -o pipefail
++
++readonly PROGNAME="${0##*/}"
++
++# Your commits off trunk, less everything descended from the list.
++# Trunk and the list share no commit but root(), so the outbox is left
++# out however far the list has moved since it was built on.
++readonly WORK='mine() ~ ::trunk@upstream ~ (::mail@upstream ~ root())::'
++
++err() {
++	echo "E: ${PROGNAME}: ${*}" >&2
++}
++
++die() {
++	err "${@}"
++	exit 1
++}
++
++main() {
++	local trunk mail me
++	trunk="$(CDPATH= cd -- "$(dirname -- "${0}")/../.." && pwd)" \
++	    || die "cannot resolve trunk workspace"
++	mail="${MAIL_WORKSPACE:-${HOME}/lab/mail.jj}"
++	[ -d "${mail}" ] || die "${mail}: no mail workspace"
++	me="$(whoami)"
++
++	# Both workspaces share one repo, so one fetch covers them.
++	jj -R "${trunk}" git fetch --all-remotes
++
++	jj -R "${trunk}" rebase -s "roots(${WORK})" -d trunk@upstream \
++	    --skip-emptied
++
++	# A bookmark with no pending mail, missing or merged in full, has
++	# nothing to rebase; point it at the list's tip instead.
++	if [ -z "$(jj -R "${mail}" log --no-graph -T commit_id \
++	    -r "bookmarks(exact:${me}) ~ ::mail@upstream")" ]; then
++		jj -R "${mail}" bookmark set "${me}" -r mail@upstream
++	fi
++	jj -R "${mail}" rebase -b "${me}" -d mail@upstream --skip-emptied
++	jj -R "${mail}" new "${me}"
++
++	notmuch new --quiet
++}
++
++main "${@}"
+-- 
+2.56.0
+
