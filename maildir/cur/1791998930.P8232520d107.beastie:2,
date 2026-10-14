@@ -1,0 +1,13 @@
+From: Pat Maddox <pat@patmaddox.com>
+To: lab-devel@p7x.dev
+Subject: Versioned patches must have interdiffs
+Date: Wed, 14 Oct 2026 10:28:50 -0700
+Message-ID: <m2v774b38t.fsf@beastie.p7x.dev>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+Recent patch series are being produced with new versions, but not
+including the interdiff with previous versions.
+
+Review scripts, claude instructions, etc and make whatever changes
+needed to ensure that interdiffs are included with new patch versions.
