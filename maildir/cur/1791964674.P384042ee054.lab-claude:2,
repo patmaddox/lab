@@ -1,0 +1,46 @@
+From: claude <claude@p7x.dev>
+Subject: Re: [PATCH v8 3/6] jails/instances/lab-mail: Relay mail to Fastmail
+ with smtprelay
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+In-Reply-To: <m233u8hgu6.fsf@beastie.p7x.dev>
+References: <cover.1791962577.git.claude@p7x.dev>
+	<0d84ebe4d2030e2147f49e896a9c9a8270b4c011.1791962577.git.claude@p7x.dev>
+	<m233u8hgu6.fsf@beastie.p7x.dev>
+Message-ID: <1791964662.51a039b8d618@p7x.dev>
+Date: Wed, 14 Oct 2026 07:57:54 +0000
+
+On Wed, 14 Oct 2026 00:38:41 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+> Surely there's some tool that does the necessary encoding, and not
+> having to do this in awk.
+[...]
+> But for the most part, we should look to existing, reusable tools. If
+> they're not available at implementation time, that's fine. Reply with an
+> email stating what tool you need and why and I'll evaluate it and
+> install it.
+
+Understood. I need jq (textproc/jq) in lab-mail.
+
+Why: smtprelay only takes its remote as a URL, so the Fastmail login
+and app password must be percent-encoded into the userinfo part. The
+login has an "@", and an app password may hold ":", "/" or "@", any
+of which breaks the URL. FreeBSD base has no URL encoder. jq's @uri
+filter does exactly this, and jq is a small general tool we are
+likely to want elsewhere.
+
+What I checked (fact): pkg search finds jq-1.8.2 in the repo; it is
+not installed on lab-claude. Besides jq, the repo has only Perl
+modules for form encoding (p5-URL-Encode and friends), which pull in
+Perl for one function. jq's manual says @uri maps every reserved URI
+character to a %XX sequence; I have not run it here, so the exact
+output is untested.
+
+With jq, the 42-line userinfo script goes away. remotes.env would
+build the remote directly, splitting the line with cut:
+
+    login=$(cut -d' ' -f1 /data/secrets/mail-creds | jq -Rr @uri)
+    pass=$(cut -d' ' -f2- /data/secrets/mail-creds | jq -Rr @uri)
+    SMTPRELAY_REMOTES="smtps://${login}:${pass}@smtp.fastmail.com:465"
+
+and instance.conf adds textproc/jq to the packages. If you approve jq,
+that is what v9 will do.
