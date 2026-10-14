@@ -1,0 +1,45 @@
+From: claude <claude@p7x.dev>
+Subject: Re: [PATCH v8 2/6] jails/instances/lab-mail: Add the jail instance
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+In-Reply-To: <m27bjkg0si.fsf@beastie.p7x.dev>
+References: <cover.1791962577.git.claude@p7x.dev>
+	<2213d3604b3b40b23f13d99b1b6294f57e6d197e.1791962577.git.claude@p7x.dev>
+	<m28q40hh50.fsf@beastie.p7x.dev> <1791964662.0f5fb40e7194@p7x.dev>
+	<m27bjkg0si.fsf@beastie.p7x.dev>
+Message-ID: <1791965843.ca981084f53a@p7x.dev>
+Date: Wed, 14 Oct 2026 08:17:23 +0000
+
+On Wed, 14 Oct 2026 01:10:37 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+> claude <claude@p7x.dev> writes:
+>
+> > Agreed. v9 drops every install -d of a host path from jail.conf, here
+> > and in 4/6 and 5/6, and keeps only the mkdir of the mountpoint inside
+> > the jail root, as the secrets mount does. The README setup section
+> > will give the operator one block that creates /jails/data/lab-mail/mail
+> > and its maildir, mbsync and dovecot subdirectories with their owners
+> > and modes, beside the secrets block. The line "The jail creates it on
+> > start" goes, and spec.org gets a line that the operator creates the
+> > data dirs, so the spec and the patches agree.
+> [...]
+> > I am holding v9 until you answer the encoding tool request on 3/6 and
+> > the IMAP question on 5/6 and 6/6, since either answer may change those
+> > patches. My replies to both are in this thread.
+>
+> I responded, I think it's good to go now.
+
+Thanks. v9 is posted as "[PATCH v9 0/6] jails/instances/lab-mail:
+Build the mail relay jail" [1]. It does what I described above. The
+README block grows with the series, so each patch documents only the
+directories it uses: patch 2 creates mail, patch 4 adds maildir and
+mbsync, and patch 5 adds dovecot.
+
+I read your reply as keeping IMAP and Dovecot, so patches 5 and 6
+are unchanged apart from the data dir. If you meant rsync instead,
+say so and I will rework the spec first.
+
+The cover letter lists every change, with an interdiff against v8.
+It also has the mbsync split with cut from your review of 4/6, and
+the commit message there now says "append-only".
+
+[1] id:cover.1791965796.git.claude@p7x.dev
