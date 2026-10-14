@@ -1,0 +1,159 @@
+Message-ID: <cover.1791959849.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Date: Wed, 14 Oct 2026 06:37:29 +0000
+Subject: [PATCH 0/6] jails/instances/lab-mail: Build the mail relay jail
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+
+This series implements jails/instances/lab-mail/spec.org. Patch 1 is
+the spec as it sits on b/dev, posted as "[PATCH v5]
+jails/instances/lab-mail: Initial spec" [1]. It is included so the
+series applies to trunk and reads in context. Patches 2-5 build
+lab-mail one service at a time, and patch 6 sets up lab-claude as the
+client.
+
+Testing. None of this has run. lab-claude has no doas and none of
+smtprelay, Dovecot, mbsync, or msmtp installed, so I could not build
+the jail, start the services, or run the acceptance test. What I did
+check:
+- I read the sources the design depends on: smtprelay 1.14.0 (the
+  version in ports), its SMTP server library chrj/smtpd 1.0.0, msmtp
+  1.8.34, and isync 1.5.1. The findings below come from that reading.
+- I tested the allowlist patterns with grep -iE. They accept
+  pat@patmaddox.com, x@p7x.dev, and lab@lists.p7x.dev in any case.
+  They reject someone@example.com, x@sub.p7x.dev, x@p7x.devx,
+  x@lists.p7x.dev.evil.com, and someone@p7x.dev as a sender. RE2 and
+  ERE agree on patterns this simple, but that is inference; smtprelay
+  itself did not run.
+- I ran the fetch script's chmod step on a scratch maildir with 0700
+  directories and 0600 files. It left them at 0755 and 0644.
+- I ran the notmuch profile config with notmuch 0.40. It indexes a
+  test maildir and skips mbsync's state files.
+- I listed both dist trees through tar and dist.mtree.
+
+The Dovecot config is the least certain part, since I could not run
+doveconf on it. Running "doveconf -n" in the jail is the first check
+I would make.
+
+To try it on beastie, store the secrets as lab-mail's README.org
+describes, then run "just build install start" in lab-mail, and stop
+and start it once so the services pick up their config. Then rebuild
+lab-claude and run the acceptance test from the spec.
+
+Where the implementation and the spec disagree. Each of these needs
+your call, and I can send a spec patch for any you accept.
+
+1. smtprelay refuses a sender or recipient with 451, not 5xx. The
+   code is hard-coded in senderChecker and recipientChecker in
+   main.go; there is no setting. msmtp still exits non-zero (69,
+   EX_UNAVAILABLE) and the message goes to no one, so acceptance steps
+   5 and 6 hold. Only the "5xx" wording fails. A 4xx tells a queuing
+   client to retry, but no client here queues. I suggest amending the
+   spec to say 4xx, and offering smtprelay upstream a patch to answer
+   550.
+
+2. msmtp does send DATA. smtpd advertises PIPELINING, so msmtp sends
+   MAIL, every RCPT, and DATA in one batch. When a RCPT is refused,
+   msmtp closes the connection without sending the message.
+   smtpd sees the connection end before the closing dot, treats it as
+   a network error, and delivers nothing (handleDATA in protocol.go).
+   So the outcome the spec wants holds, but its sentence "msmtp sends
+   no DATA" is wrong. "msmtp sends no message" would be right.
+
+3. smtprelay adds a Received header to each message before relaying
+   it. The spec says it does not rewrite the headers. Every MTA adds
+   one, and RFC 5321 requires it. I suggest the spec say it adds only
+   a Received line.
+
+4. Dovecot serves an empty INBOX next to lists. IMAP reserves INBOX
+   as every user's primary mailbox, and Dovecot requires an inbox
+   namespace. The INBOX lives in vmail's own directory and the ACL
+   makes it read-only, so nothing can ever land in it.
+
+5. mbsync creates mail 0600 and folders 0700, hard-coded in
+   drv_maildir.c, whatever the umask. So vmail could not read the
+   maildir at all. The fetch job opens new files for reading after
+   each pull. Until it does, a message that just arrived cannot be
+   read over IMAP. A client that tries in that moment should get an
+   error and picks the message up on its next run. The alternatives
+   were running Dovecot as mbsync, which breaks "Dovecot's user
+   cannot write the maildir", or inherited ZFS ACLs, which depend on
+   the dataset's aclinherit and aclmode settings that I cannot see
+   from here.
+
+6. The secrets directory holds the Fastmail login as well as the app
+   password, in two files, user and password. Both smtprelay and
+   mbsync need the login, and the spec does not say where it lives.
+
+7. The spec calls the Fastmail folder "lists/". mbsyncrc uses the
+   IMAP name "lists". If Fastmail shows it under another name, such
+   as INBOX/lists, only the Far line in lab-mail's mbsyncrc changes.
+
+One more note on patch 6. The lists notmuch profile names its
+database path, though notmuch would derive the same path from
+NOTMUCH_PROFILE. When I tested the config through NOTMUCH_CONFIG,
+with no path set, notmuch indexed the test maildir into the default
+profile's database and dropped the list from it until I ran notmuch
+new again. With the path set, that cannot happen.
+
+[1] id:1df25c0fd73b313bd0bc4c758b4c255c7417dbff.1791956202.git.claude@p7x.dev
+
+claude (6):
+  jails/instances/lab-mail: Initial spec
+  jails/instances/lab-mail: Add the jail instance
+  jails/instances/lab-mail: Relay mail to Fastmail with smtprelay
+  jails/instances/lab-mail: Mirror the lists folder with mbsync
+  jails/instances/lab-mail: Serve the mirror over IMAP with Dovecot
+  jails/instances/lab-claude: Send and read mail through lab-mail
+
+ jails/instances/lab-claude/README.org         |  36 ++++
+ jails/instances/lab-claude/dist.mtree         |   5 +
+ .../home/claude/.config/notmuch/lists/config  |  18 ++
+ .../lab-claude/dist/home/claude/.mbsyncrc     |  26 +++
+ .../lab-claude/dist/home/claude/.msmtprc      |  14 ++
+ jails/instances/lab-claude/instance.conf      |   2 +
+ jails/instances/lab-mail/Justfile             |   1 +
+ jails/instances/lab-mail/README.org           |  45 +++++
+ jails/instances/lab-mail/clean.do             |   1 +
+ jails/instances/lab-mail/dist.mtree           |  16 ++
+ .../lab-mail/dist/etc/cron.d/lab-mail         |   3 +
+ .../lab-mail/dist/etc/rc.conf.d/dovecot       |   1 +
+ .../lab-mail/dist/etc/rc.conf.d/smtprelay     |   4 +
+ .../dist/usr/local/etc/dovecot/dovecot-acl    |   2 +
+ .../dist/usr/local/etc/dovecot/dovecot.conf   |  54 ++++++
+ .../lab-mail/dist/usr/local/etc/mbsyncrc      |  28 +++
+ .../dist/usr/local/etc/smtprelay/remotes.env  |   4 +
+ .../usr/local/etc/smtprelay/smtprelay.ini     |  20 ++
+ .../dist/usr/local/libexec/lab-mail/fetch     |  18 ++
+ jails/instances/lab-mail/instance.conf        |  18 ++
+ jails/instances/lab-mail/jail.conf            |  19 ++
+ jails/instances/lab-mail/jail.log.do          |   1 +
+ jails/instances/lab-mail/spec.org             | 173 ++++++++++++++++++
+ 23 files changed, 509 insertions(+)
+ create mode 100644 jails/instances/lab-claude/README.org
+ create mode 100644 jails/instances/lab-claude/dist/home/claude/.config/notmuch/lists/config
+ create mode 100644 jails/instances/lab-claude/dist/home/claude/.mbsyncrc
+ create mode 100644 jails/instances/lab-claude/dist/home/claude/.msmtprc
+ create mode 120000 jails/instances/lab-mail/Justfile
+ create mode 100644 jails/instances/lab-mail/README.org
+ create mode 120000 jails/instances/lab-mail/clean.do
+ create mode 100644 jails/instances/lab-mail/dist.mtree
+ create mode 100644 jails/instances/lab-mail/dist/etc/cron.d/lab-mail
+ create mode 100644 jails/instances/lab-mail/dist/etc/rc.conf.d/dovecot
+ create mode 100644 jails/instances/lab-mail/dist/etc/rc.conf.d/smtprelay
+ create mode 100644 jails/instances/lab-mail/dist/usr/local/etc/dovecot/dovecot-acl
+ create mode 100644 jails/instances/lab-mail/dist/usr/local/etc/dovecot/dovecot.conf
+ create mode 100644 jails/instances/lab-mail/dist/usr/local/etc/mbsyncrc
+ create mode 100644 jails/instances/lab-mail/dist/usr/local/etc/smtprelay/remotes.env
+ create mode 100644 jails/instances/lab-mail/dist/usr/local/etc/smtprelay/smtprelay.ini
+ create mode 100755 jails/instances/lab-mail/dist/usr/local/libexec/lab-mail/fetch
+ create mode 100644 jails/instances/lab-mail/instance.conf
+ create mode 100644 jails/instances/lab-mail/jail.conf
+ create mode 120000 jails/instances/lab-mail/jail.log.do
+ create mode 100644 jails/instances/lab-mail/spec.org
+
+
+base-commit: 23c5779575deee14b294b1a99db19ebecef4fd69
+-- 
+2.56.0
+

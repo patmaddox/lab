@@ -1,0 +1,114 @@
+Message-ID: <84a6567deb7b4a6866dfaa37705c0e3ce19c4ac9.1791959849.git.claude@p7x.dev>
+In-Reply-To: <cover.1791959849.git.claude@p7x.dev>
+References: <cover.1791959849.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Date: Wed, 14 Oct 2026 06:33:55 +0000
+Subject: [PATCH 3/6] jails/instances/lab-mail: Relay mail to Fastmail with
+ smtprelay
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+Change-Id: nplnvkkrlsomxnuwxrupuklwsxvyqrmk
+
+Agents need to send mail without the credentials, and to learn at
+once whether a message was accepted. A queuing MTA answers before
+Fastmail has seen the message, so a rejection comes back later as a
+bounce nobody reads. smtprelay relays each message during the
+client's session and hands back Fastmail's answer, so every failure
+reaches the sender as an SMTP reply.
+
+The sender and recipient allowlists stop a mistaken address before
+it leaves beastie. The Fastmail login reaches smtprelay only through
+its environment, built from the mounted secrets at start, so no
+config file carries it.
+---
+change-id: nplnvkkrlsomxnuwxrupuklwsxvyqrmk
+
+ jails/instances/lab-mail/dist.mtree           |  7 +++++++
+ .../lab-mail/dist/etc/rc.conf.d/smtprelay     |  4 ++++
+ .../dist/usr/local/etc/smtprelay/remotes.env  |  4 ++++
+ .../usr/local/etc/smtprelay/smtprelay.ini     | 20 +++++++++++++++++++
+ jails/instances/lab-mail/instance.conf        |  8 ++++++++
+ 5 files changed, 43 insertions(+)
+ create mode 100644 jails/instances/lab-mail/dist.mtree
+ create mode 100644 jails/instances/lab-mail/dist/etc/rc.conf.d/smtprelay
+ create mode 100644 jails/instances/lab-mail/dist/usr/local/etc/smtprelay/remotes.env
+ create mode 100644 jails/instances/lab-mail/dist/usr/local/etc/smtprelay/smtprelay.ini
+
+diff --git a/jails/instances/lab-mail/dist.mtree b/jails/instances/lab-mail/dist.mtree
+new file mode 100644
+index 0000000..baba0e3
+--- /dev/null
++++ b/jails/instances/lab-mail/dist.mtree
+@@ -0,0 +1,7 @@
++/set type=file uname=root gname=wheel mode=0644
++
++./etc/rc.conf.d type=dir mode=0755
++./etc/rc.conf.d/smtprelay
++./usr/local/etc/smtprelay type=dir mode=0755
++./usr/local/etc/smtprelay/remotes.env
++./usr/local/etc/smtprelay/smtprelay.ini
+diff --git a/jails/instances/lab-mail/dist/etc/rc.conf.d/smtprelay b/jails/instances/lab-mail/dist/etc/rc.conf.d/smtprelay
+new file mode 100644
+index 0000000..85b8cd2
+--- /dev/null
++++ b/jails/instances/lab-mail/dist/etc/rc.conf.d/smtprelay
+@@ -0,0 +1,4 @@
++smtprelay_enable="YES"
++# daemon(8) options; they come before the smtprelay command line.
++smtprelay_flags="-u smtprelay -l mail -T smtprelay"
++smtprelay_env_file="/usr/local/etc/smtprelay/remotes.env"
+diff --git a/jails/instances/lab-mail/dist/usr/local/etc/smtprelay/remotes.env b/jails/instances/lab-mail/dist/usr/local/etc/smtprelay/remotes.env
+new file mode 100644
+index 0000000..f00586b
+--- /dev/null
++++ b/jails/instances/lab-mail/dist/usr/local/etc/smtprelay/remotes.env
+@@ -0,0 +1,4 @@
++# Sourced by rc.subr(8) as root when smtprelay starts. The remote
++# carries the Fastmail login, so it is built from the secrets here and
++# handed to smtprelay in its environment, never written to a file.
++SMTPRELAY_REMOTES="smtps://$(cat /data/secrets/user):$(cat /data/secrets/password)@smtp.fastmail.com:465"
+diff --git a/jails/instances/lab-mail/dist/usr/local/etc/smtprelay/smtprelay.ini b/jails/instances/lab-mail/dist/usr/local/etc/smtprelay/smtprelay.ini
+new file mode 100644
+index 0000000..974ce24
+--- /dev/null
++++ b/jails/instances/lab-mail/dist/usr/local/etc/smtprelay/smtprelay.ini
+@@ -0,0 +1,20 @@
++; smtprelay for lab-mail; see spec.org.
++;
++; Each message is relayed to Fastmail during the client's session, so
++; the client gets Fastmail's answer. The remote comes from
++; SMTPRELAY_REMOTES; see remotes.env.
++
++hostname = lab-mail.p7x.dev
++log_format = plain
++
++; Loopback on a non-standard port, so only beastie and the jails that
++; share its addresses can reach it, and no tool finds it by default.
++listen = 127.0.0.1:2525
++allowed_nets = 127.0.0.0/8
++
++; Envelope allowlists, checked at MAIL FROM and RCPT TO before
++; Fastmail is contacted. Domains match exactly and without regard to
++; case; p7x.dev does not match its subdomains. To allow an address,
++; add an alternative to the line.
++allowed_sender = (?i)^claude@p7x\.dev$
++allowed_recipients = (?i)^(pat@patmaddox\.com|[^@]+@p7x\.dev|[^@]+@lists\.p7x\.dev)$
+diff --git a/jails/instances/lab-mail/instance.conf b/jails/instances/lab-mail/instance.conf
+index a78103f..c0c0e86 100644
+--- a/jails/instances/lab-mail/instance.conf
++++ b/jails/instances/lab-mail/instance.conf
+@@ -3,3 +3,11 @@
+ readonly groups="
+ mailcred:15100
+ "
++
++readonly users="
++smtprelay:15101:15101:mailcred
++"
++
++readonly packages="
++mail/smtprelay
++"
+-- 
+2.56.0
+

@@ -1,0 +1,148 @@
+Message-ID: <7a35b698898c4f628e44f62f3844f2eba6162db6.1791959849.git.claude@p7x.dev>
+In-Reply-To: <cover.1791959849.git.claude@p7x.dev>
+References: <cover.1791959849.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Date: Wed, 14 Oct 2026 06:33:00 +0000
+Subject: [PATCH 2/6] jails/instances/lab-mail: Add the jail instance
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+Change-Id: qlksqomqvstuplppllrpqownwwvsylxz
+
+Agents should send and read p7x.dev mail without holding the Fastmail
+credentials. This jail is the one place that holds them. It shares
+the host's addresses like the client jails, so its services can listen
+on the loopback that every jail on beastie reaches, and nothing off
+beastie does.
+
+The credentials stay on the host and are mounted read-only into this
+jail alone, readable only by the mailcred group. A second mount keeps
+mail state outside the jail root, so a rebuild does not fetch the
+mail again. The README documents how the operator stores the
+credentials.
+---
+change-id: qlksqomqvstuplppllrpqownwwvsylxz
+
+ jails/instances/lab-mail/Justfile      |  1 +
+ jails/instances/lab-mail/README.org    | 45 ++++++++++++++++++++++++++
+ jails/instances/lab-mail/clean.do      |  1 +
+ jails/instances/lab-mail/instance.conf |  5 +++
+ jails/instances/lab-mail/jail.conf     | 15 +++++++++
+ jails/instances/lab-mail/jail.log.do   |  1 +
+ 6 files changed, 68 insertions(+)
+ create mode 120000 jails/instances/lab-mail/Justfile
+ create mode 100644 jails/instances/lab-mail/README.org
+ create mode 120000 jails/instances/lab-mail/clean.do
+ create mode 100644 jails/instances/lab-mail/instance.conf
+ create mode 100644 jails/instances/lab-mail/jail.conf
+ create mode 120000 jails/instances/lab-mail/jail.log.do
+
+diff --git a/jails/instances/lab-mail/Justfile b/jails/instances/lab-mail/Justfile
+new file mode 120000
+index 0000000..0775fd5
+--- /dev/null
++++ b/jails/instances/lab-mail/Justfile
+@@ -0,0 +1 @@
++../../share/_Justfile
+\ No newline at end of file
+diff --git a/jails/instances/lab-mail/README.org b/jails/instances/lab-mail/README.org
+new file mode 100644
+index 0000000..599aa18
+--- /dev/null
++++ b/jails/instances/lab-mail/README.org
+@@ -0,0 +1,45 @@
++#+TITLE: lab-mail
++
++A mail relay for p7x.dev. lab-mail holds the Fastmail credentials and
++is the only thing that talks to Fastmail. Agents send and read mail
++through it over loopback. spec.org has the design.
++
++* setup
++The operator stores the Fastmail login and app password on the host,
++in =/jails/data/lab-mail/secrets/=. They never enter the repo. The
++jail mounts the directory read-only at =/data/secrets=, and no other
++jail mounts it.
++
++Each file holds one line:
++- =user= :: the Fastmail login
++- =password= :: the app password, with IMAP and SMTP access
++
++Fastmail app passwords are letters and digits. lab-mail puts the
++login and password into a URL without escaping them, so a password
++with other characters will not work.
++
++Inside the jail, only members of the =mailcred= group (gid 15100) may
++read them. The host knows the group only by number:
++#+BEGIN_EXAMPLE
++mkdir -p /jails/data/lab-mail/secrets
++cd /jails/data/lab-mail/secrets
++printf '%s\n' 'login@example.com' > user
++printf '%s\n' 'app-password' > password
++chown -R 0:15100 .
++chmod 0750 .
++chmod 0640 user password
++#+END_EXAMPLE
++
++=/jails/data/lab-mail/mail/= holds mail state that must survive a
++rebuild of the jail. The jail creates it on start.
++
++* operate
++Like the other instances; see =jails/README.org=:
++#+BEGIN_EXAMPLE
++just build
++just install
++just start
++#+END_EXAMPLE
++
++The build starts the jail before it installs the config, so restart
++the jail after a build that changes the config.
+diff --git a/jails/instances/lab-mail/clean.do b/jails/instances/lab-mail/clean.do
+new file mode 120000
+index 0000000..d1c6ff8
+--- /dev/null
++++ b/jails/instances/lab-mail/clean.do
+@@ -0,0 +1 @@
++../../libexec/_clean.do
+\ No newline at end of file
+diff --git a/jails/instances/lab-mail/instance.conf b/jails/instances/lab-mail/instance.conf
+new file mode 100644
+index 0000000..a78103f
+--- /dev/null
++++ b/jails/instances/lab-mail/instance.conf
+@@ -0,0 +1,5 @@
++# Members of mailcred can read the Fastmail credentials. README.org
++# has the numeric id the host side depends on.
++readonly groups="
++mailcred:15100
++"
+diff --git a/jails/instances/lab-mail/jail.conf b/jails/instances/lab-mail/jail.conf
+new file mode 100644
+index 0000000..b99fdde
+--- /dev/null
++++ b/jails/instances/lab-mail/jail.conf
+@@ -0,0 +1,15 @@
++lab-mail {
++  persist;
++  path = "/jails/instances/lab-mail";
++  ip4 = inherit;
++  host.hostname = "${name}.p7x.dev";
++
++  # Fastmail credentials, owned root:15100 (mailcred) on the host.
++  exec.prepare += "mkdir -p ${path}/data/secrets";
++  mount += "/jails/data/lab-mail/secrets ${path}/data/secrets nullfs ro 0 0";
++
++  # Mail state that must survive a rebuild.
++  exec.prepare += "install -d -m 0755 /jails/data/lab-mail/mail";
++  exec.prepare += "mkdir -p ${path}/data/mail";
++  mount += "/jails/data/lab-mail/mail ${path}/data/mail nullfs rw 0 0";
++}
+diff --git a/jails/instances/lab-mail/jail.log.do b/jails/instances/lab-mail/jail.log.do
+new file mode 120000
+index 0000000..111fec9
+--- /dev/null
++++ b/jails/instances/lab-mail/jail.log.do
+@@ -0,0 +1 @@
++../../libexec/_jail.log.do
+\ No newline at end of file
+-- 
+2.56.0
+

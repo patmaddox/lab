@@ -1,0 +1,171 @@
+Message-ID: <c798e15878f20253d2d8b365949e03684b6943c8.1791959849.git.claude@p7x.dev>
+In-Reply-To: <cover.1791959849.git.claude@p7x.dev>
+References: <cover.1791959849.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Date: Wed, 14 Oct 2026 06:34:57 +0000
+Subject: [PATCH 5/6] jails/instances/lab-mail: Serve the mirror over IMAP with
+ Dovecot
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+Change-Id: ppsyqmxwvnrsywsmxltxwsntzvtmzsqq
+
+Agents need to read list mail without the Fastmail credentials, and
+from any host that might run them later. Dovecot serves the local
+maildir over IMAP on loopback, so a client needs a network address
+and not a shared filesystem, and keeps working while Fastmail is
+down.
+
+The mailbox is read-only twice over. An ACL grants clients only list
+and read, and Dovecot runs as a user that cannot write the maildir.
+Clients log in with any name and password, since IMAP has no
+anonymous mode and loopback is the boundary.
+---
+change-id: ppsyqmxwvnrsywsmxltxwsntzvtmzsqq
+
+ jails/instances/lab-mail/dist.mtree           |  4 ++
+ .../lab-mail/dist/etc/rc.conf.d/dovecot       |  1 +
+ .../dist/usr/local/etc/dovecot/dovecot-acl    |  2 +
+ .../dist/usr/local/etc/dovecot/dovecot.conf   | 54 +++++++++++++++++++
+ jails/instances/lab-mail/instance.conf        |  7 ++-
+ jails/instances/lab-mail/jail.conf            |  3 +-
+ 6 files changed, 68 insertions(+), 3 deletions(-)
+ create mode 100644 jails/instances/lab-mail/dist/etc/rc.conf.d/dovecot
+ create mode 100644 jails/instances/lab-mail/dist/usr/local/etc/dovecot/dovecot-acl
+ create mode 100644 jails/instances/lab-mail/dist/usr/local/etc/dovecot/dovecot.conf
+
+diff --git a/jails/instances/lab-mail/dist.mtree b/jails/instances/lab-mail/dist.mtree
+index bd868d3..6923d75 100644
+--- a/jails/instances/lab-mail/dist.mtree
++++ b/jails/instances/lab-mail/dist.mtree
+@@ -3,7 +3,11 @@
+ ./etc/cron.d type=dir mode=0755
+ ./etc/cron.d/lab-mail
+ ./etc/rc.conf.d type=dir mode=0755
++./etc/rc.conf.d/dovecot
+ ./etc/rc.conf.d/smtprelay
++./usr/local/etc/dovecot type=dir mode=0755
++./usr/local/etc/dovecot/dovecot-acl
++./usr/local/etc/dovecot/dovecot.conf
+ ./usr/local/etc/mbsyncrc
+ ./usr/local/etc/smtprelay type=dir mode=0755
+ ./usr/local/etc/smtprelay/remotes.env
+diff --git a/jails/instances/lab-mail/dist/etc/rc.conf.d/dovecot b/jails/instances/lab-mail/dist/etc/rc.conf.d/dovecot
+new file mode 100644
+index 0000000..4ede90f
+--- /dev/null
++++ b/jails/instances/lab-mail/dist/etc/rc.conf.d/dovecot
+@@ -0,0 +1 @@
++dovecot_enable="YES"
+diff --git a/jails/instances/lab-mail/dist/usr/local/etc/dovecot/dovecot-acl b/jails/instances/lab-mail/dist/usr/local/etc/dovecot/dovecot-acl
+new file mode 100644
+index 0000000..526a49c
+--- /dev/null
++++ b/jails/instances/lab-mail/dist/usr/local/etc/dovecot/dovecot-acl
+@@ -0,0 +1,2 @@
++* owner lr
++* anyone lr
+diff --git a/jails/instances/lab-mail/dist/usr/local/etc/dovecot/dovecot.conf b/jails/instances/lab-mail/dist/usr/local/etc/dovecot/dovecot.conf
+new file mode 100644
+index 0000000..93962c9
+--- /dev/null
++++ b/jails/instances/lab-mail/dist/usr/local/etc/dovecot/dovecot.conf
+@@ -0,0 +1,54 @@
++# Dovecot for lab-mail; see spec.org.
++#
++# Serves the maildir mbsync fetches as one read-only mailbox, lists,
++# over IMAP on loopback. Nothing else: no POP3, LMTP, or submission.
++
++protocols = imap
++listen = 127.0.0.1
++
++# Clients connect over loopback only, so there is no TLS, and any
++# user name and password are accepted.
++ssl = no
++disable_plaintext_auth = no
++
++service imap-login {
++  inet_listener imap {
++    address = 127.0.0.1
++    port = 2143
++  }
++  inet_listener imaps {
++    port = 0
++  }
++}
++
++passdb {
++  driver = static
++  args = nopassword=y
++}
++
++# Every login is the same user, vmail, which can read the maildir but
++# not write it. The indexes, the UID list, and an empty INBOX, which
++# IMAP requires, live in a directory of vmail's own.
++userdb {
++  driver = static
++  args = uid=vmail gid=vmail home=/data/mail/dovecot
++}
++
++namespace inbox {
++  inbox = yes
++  separator = /
++}
++
++mail_location = maildir:/data/mail/maildir:LAYOUT=fs:INBOX=/data/mail/dovecot/inbox:INDEX=/data/mail/dovecot/index:CONTROL=/data/mail/dovecot/control:VOLATILEDIR=/data/mail/dovecot/volatile
++
++# Every mailbox is read-only: clients may list, read, search, and
++# IDLE, but not set flags, append, copy in, or expunge.
++mail_plugins = acl
++
++protocol imap {
++  mail_plugins = $mail_plugins imap_acl
++}
++
++plugin {
++  acl = vfile:/usr/local/etc/dovecot/dovecot-acl
++}
+diff --git a/jails/instances/lab-mail/instance.conf b/jails/instances/lab-mail/instance.conf
+index ec15ea3..56e0441 100644
+--- a/jails/instances/lab-mail/instance.conf
++++ b/jails/instances/lab-mail/instance.conf
+@@ -1,5 +1,6 @@
+-# Members of mailcred can read the Fastmail credentials. README.org
+-# has the numeric id the host side depends on.
++# Members of mailcred can read the Fastmail credentials. vmail is
++# Dovecot's mail user; it is left out so it cannot read them.
++# README.org has the numeric id the host side depends on.
+ readonly groups="
+ mailcred:15100
+ "
+@@ -7,9 +8,11 @@ mailcred:15100
+ readonly users="
+ smtprelay:15101:15101:mailcred
+ mbsync:15102:15102:mailcred
++vmail:15103:15103
+ "
+ 
+ readonly packages="
++mail/dovecot
+ mail/isync
+ mail/smtprelay
+ "
+diff --git a/jails/instances/lab-mail/jail.conf b/jails/instances/lab-mail/jail.conf
+index aa8f659..ec60114 100644
+--- a/jails/instances/lab-mail/jail.conf
++++ b/jails/instances/lab-mail/jail.conf
+@@ -9,10 +9,11 @@ lab-mail {
+   mount += "/jails/data/lab-mail/secrets ${path}/data/secrets nullfs ro 0 0";
+ 
+   # Mail state that must survive a rebuild. The owners are numeric
+-  # ids from instance.conf: 15102 is mbsync.
++  # ids from instance.conf: 15102 is mbsync, 15103 is vmail.
+   exec.prepare += "install -d -m 0755 /jails/data/lab-mail/mail";
+   exec.prepare += "install -d -o 15102 -g 15102 -m 0755 /jails/data/lab-mail/mail/maildir";
+   exec.prepare += "install -d -o 15102 -g 15102 -m 0700 /jails/data/lab-mail/mail/mbsync";
++  exec.prepare += "install -d -o 15103 -g 15103 -m 0700 /jails/data/lab-mail/mail/dovecot";
+   exec.prepare += "mkdir -p ${path}/data/mail";
+   mount += "/jails/data/lab-mail/mail ${path}/data/mail nullfs rw 0 0";
+ }
+-- 
+2.56.0
+
