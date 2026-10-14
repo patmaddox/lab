@@ -1,0 +1,43 @@
+Message-ID: <344ea7536ffc18f7da0ed451953d7db2cc2bd913.1792003709.git.claude@p7x.dev>
+In-Reply-To: <cover.1792003709.git.claude@p7x.dev>
+References: <cover.1792003709.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Date: Wed, 14 Oct 2026 18:47:20 +0000
+Subject: [PATCH v2 3/3] jails/instances/lab-claude: Declare the packages
+ installed by hand
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+Change-Id: ltwzsrrssptuwsqpwyrqztsvppynyoom
+
+python, go, and jq were installed in the running jail by hand, so a
+rebuild would quietly drop them, and any work that came to rely on
+them would break. Listing them makes the jail build the same
+environment the agent works in today.
+---
+change-id: ltwzsrrssptuwsqpwyrqztsvppynyoom
+
+ jails/instances/lab-claude/instance.conf | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/jails/instances/lab-claude/instance.conf b/jails/instances/lab-claude/instance.conf
+index 6c1c798..ec29306 100644
+--- a/jails/instances/lab-claude/instance.conf
++++ b/jails/instances/lab-claude/instance.conf
+@@ -15,6 +15,8 @@ devel/goredo
+ devel/jujutsu
+ editors/emacs@nox
+ emulators/linux_base-rl9
++lang/go
++lang/python
+ mail/isync
+ mail/msmtp
+ mail/notmuch
+@@ -25,4 +27,5 @@ ports-mgmt/portfmt
+ ports-mgmt/portlint
+ security/doas
+ shells/bash
++textproc/jq
+ "
+-- 
+2.56.0
+

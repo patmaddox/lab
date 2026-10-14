@@ -1,0 +1,100 @@
+Message-ID: <cover.1792003709.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Date: Wed, 14 Oct 2026 18:48:29 +0000
+Subject: [PATCH v2 0/3] Install dependencies from FreeBSD-ports in lab-claude
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+
+You asked for two things in the terminal session: that CLAUDE.md tell
+me to email the list when I need a dependency, and a doas rule so I
+can install from FreeBSD-ports as needed. This series does both, and
+declares the packages already installed in the jail by hand.
+
+Patch 1 adds the doas rule. doas matches a command's arguments
+exactly, so a rule for "pkg install -r FreeBSD-ports" would allow only
+that line with no package names, while "cmd pkg" alone would also
+allow pkg delete, -r / and the rest. Instead the rule permits one
+root-owned script, /usr/local/sbin/pkg-install-ports, which runs
+"pkg install -y -r FreeBSD-ports --" with the names it is given. It
+also adds security/doas to the jail, and documents the script in the
+README. I checked the rule with doas -C: the script by its full path
+is permitted, while the bare name and "pkg delete" are denied.
+
+Patch 2 rewrites the Dependencies section of CLAUDE.md: install from
+FreeBSD-ports through that script, send a patch to instance.conf so
+the jail declares the package, and ask on the list when ports cannot
+supply it.
+
+Patch 3 declares lang/python, lang/go, and textproc/jq, which are
+installed in the running jail but were not listed.
+
+The jail's live doas.conf is still the sample, and the script is not
+installed yet, so the rule takes effect only once lab-claude's dist is
+reinstalled.
+
+The lab-process-mail prompt still says not to install missing
+dependencies. That prompt is not on trunk yet, so this series cannot
+change it; once both land, I will bring it in line with CLAUDE.md.
+
+Changes in v2:
+- Declare lang/go and textproc/jq as well as python, since every
+  installed package belongs in instance.conf.
+- Say so in CLAUDE.md, and ask for a patch for any package found
+  installed but not listed.
+- Link to v1: id:cover.1792003653.git.claude@p7x.dev
+
+
+claude (3):
+  jails/instances/lab-claude: Let claude install packages from ports
+  CLAUDE.md: Install dependencies from ports and ask the list
+  jails/instances/lab-claude: Declare the packages installed by hand
+
+ CLAUDE.md                                     | 19 +++++++++++++++---
+ jails/instances/lab-claude/README.org         | 14 +++++++++++++
+ jails/instances/lab-claude/dist.mtree         |  2 ++
+ .../lab-claude/dist/usr/local/etc/doas.conf   |  3 +++
+ .../dist/usr/local/sbin/pkg-install-ports     | 20 +++++++++++++++++++
+ jails/instances/lab-claude/instance.conf      |  4 ++++
+ 6 files changed, 59 insertions(+), 3 deletions(-)
+ create mode 100644 jails/instances/lab-claude/dist/usr/local/etc/doas.conf
+ create mode 100755 jails/instances/lab-claude/dist/usr/local/sbin/pkg-install-ports
+
+Interdiff against v1:
+diff --git a/CLAUDE.md b/CLAUDE.md
+index b99d787..3775c46 100644
+--- a/CLAUDE.md
++++ b/CLAUDE.md
+@@ -216,7 +216,9 @@ are how each of them earns trust.
+ 
+ When you need a package the jail lacks, email the list for it. Send a
+ patch that adds it to jails/instances/lab-claude/instance.conf, and
+-say what needs it, so the next build of the jail has it.
++say what needs it, so the next build of the jail has it. Every package
++installed in the jail belongs in instance.conf. If you find one that
++is installed but not listed, send that patch too.
+ 
+ You do not have to wait for that patch to land. Install the package
+ from FreeBSD-ports right away, and carry on with the work:
+diff --git a/jails/instances/lab-claude/instance.conf b/jails/instances/lab-claude/instance.conf
+index 0b9d5d9..ec29306 100644
+--- a/jails/instances/lab-claude/instance.conf
++++ b/jails/instances/lab-claude/instance.conf
+@@ -15,6 +15,7 @@ devel/goredo
+ devel/jujutsu
+ editors/emacs@nox
+ emulators/linux_base-rl9
++lang/go
+ lang/python
+ mail/isync
+ mail/msmtp
+@@ -26,4 +27,5 @@ ports-mgmt/portfmt
+ ports-mgmt/portlint
+ security/doas
+ shells/bash
++textproc/jq
+ "
+
+base-commit: 36eea3c167cd3cdafc23ec2e9c6f333a2bf5f3a7
+-- 
+2.56.0
+

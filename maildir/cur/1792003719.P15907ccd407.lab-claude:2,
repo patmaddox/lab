@@ -1,0 +1,114 @@
+Message-ID: <398576d8700c4b0a3ffd937c89d7ad4cd44de216.1792003709.git.claude@p7x.dev>
+In-Reply-To: <cover.1792003709.git.claude@p7x.dev>
+References: <cover.1792003709.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Date: Wed, 14 Oct 2026 18:46:44 +0000
+Subject: [PATCH v2 1/3] jails/instances/lab-claude: Let claude install
+ packages from ports
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+Change-Id: ptlktkozlrrvyvlnmyookpvsluxknwmx
+
+The agent sometimes needs a tool the jail does not have, and its only
+option was to stop and ask for a rebuild. That stalls the work for a
+dependency that FreeBSD-ports could have supplied in seconds.
+
+claude may now install packages from FreeBSD-ports as root through
+doas. doas matches arguments exactly, so it cannot permit "pkg
+install" with any package names but nothing else; a small root-owned
+script that only installs from FreeBSD-ports is the one command doas
+allows. claude still cannot remove packages, change repositories, or
+install into another root.
+---
+change-id: ptlktkozlrrvyvlnmyookpvsluxknwmx
+
+ jails/instances/lab-claude/README.org         | 14 +++++++++++++
+ jails/instances/lab-claude/dist.mtree         |  2 ++
+ .../lab-claude/dist/usr/local/etc/doas.conf   |  3 +++
+ .../dist/usr/local/sbin/pkg-install-ports     | 20 +++++++++++++++++++
+ jails/instances/lab-claude/instance.conf      |  1 +
+ 5 files changed, 40 insertions(+)
+ create mode 100644 jails/instances/lab-claude/dist/usr/local/etc/doas.conf
+ create mode 100755 jails/instances/lab-claude/dist/usr/local/sbin/pkg-install-ports
+
+diff --git a/jails/instances/lab-claude/README.org b/jails/instances/lab-claude/README.org
+index 1a386c7..4ee9cbe 100644
+--- a/jails/instances/lab-claude/README.org
++++ b/jails/instances/lab-claude/README.org
+@@ -34,3 +34,17 @@ message goes to no one; fix the address and send again. A non-zero
+ exit can also mean Fastmail refused the message or could not be
+ reached; msmtp prints the server's reply either way. Nothing is
+ queued, so a message that failed was not sent.
++
++* packages
++The jail's packages are the ones listed in =instance.conf=. When the
++agent needs one more, it can install it from FreeBSD-ports without a
++rebuild:
++#+BEGIN_EXAMPLE
++doas /usr/local/sbin/pkg-install-ports jq
++#+END_EXAMPLE
++
++doas allows claude to run that script as root and nothing else. The
++script only runs =pkg install -r FreeBSD-ports=, so it cannot remove
++packages, change repositories, or install into another root. A
++package installed this way is lost when the jail is rebuilt; it
++belongs in =instance.conf= too.
+diff --git a/jails/instances/lab-claude/dist.mtree b/jails/instances/lab-claude/dist.mtree
+index fe11665..4101fe9 100644
+--- a/jails/instances/lab-claude/dist.mtree
++++ b/jails/instances/lab-claude/dist.mtree
+@@ -11,3 +11,5 @@
+ ./home/claude/.mbsyncrc
+ ./home/claude/.msmtprc mode=0600
+ ./home/claude/bootstrap.sh mode=0755
++./usr/local/etc/doas.conf uname=root gname=wheel mode=0644
++./usr/local/sbin/pkg-install-ports uname=root gname=wheel mode=0555
+diff --git a/jails/instances/lab-claude/dist/usr/local/etc/doas.conf b/jails/instances/lab-claude/dist/usr/local/etc/doas.conf
+new file mode 100644
+index 0000000..7e9f1ae
+--- /dev/null
++++ b/jails/instances/lab-claude/dist/usr/local/etc/doas.conf
+@@ -0,0 +1,3 @@
++# claude may install packages from FreeBSD-ports, and nothing else, as
++# root; see /usr/local/sbin/pkg-install-ports.
++permit nopass claude as root cmd /usr/local/sbin/pkg-install-ports
+diff --git a/jails/instances/lab-claude/dist/usr/local/sbin/pkg-install-ports b/jails/instances/lab-claude/dist/usr/local/sbin/pkg-install-ports
+new file mode 100755
+index 0000000..eeab29d
+--- /dev/null
++++ b/jails/instances/lab-claude/dist/usr/local/sbin/pkg-install-ports
+@@ -0,0 +1,20 @@
++#!/bin/sh
++#
++# pkg-install-ports -- install packages from the FreeBSD-ports repo.
++#
++# doas runs this as root for the claude user. doas matches a command's
++# arguments exactly, so it cannot permit "pkg install" with arbitrary
++# package names but nothing else. This script is the one command doas
++# allows: it only ever installs from FreeBSD-ports, and "--" keeps the
++# names from being read as pkg options.
++#
++#     doas pkg-install-ports python3 py311-requests
++
++set -eu
++
++if [ "${#}" -eq 0 ]; then
++	echo "usage: ${0##*/} package ..." >&2
++	exit 64
++fi
++
++exec /usr/sbin/pkg install -y -r FreeBSD-ports -- "${@}"
+diff --git a/jails/instances/lab-claude/instance.conf b/jails/instances/lab-claude/instance.conf
+index 6917807..6c1c798 100644
+--- a/jails/instances/lab-claude/instance.conf
++++ b/jails/instances/lab-claude/instance.conf
+@@ -23,5 +23,6 @@ misc/claude-code
+ ports-mgmt/pkg
+ ports-mgmt/portfmt
+ ports-mgmt/portlint
++security/doas
+ shells/bash
+ "
+-- 
+2.56.0
+
