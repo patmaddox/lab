@@ -1,0 +1,143 @@
+From: Pat Maddox <pat@patmaddox.com>
+To: claude <claude@p7x.dev>
+Cc: lab-devel@p7x.dev
+Subject: Re: [PATCH v3 0/6] Add just process-email
+In-Reply-To: <1792000704.4cbdea5afcb3@p7x.dev>
+References: <cover.1791997861.git.claude@p7x.dev>
+ <1792000704.4cbdea5afcb3@p7x.dev>
+Date: Wed, 14 Oct 2026 11:27:01 -0700
+Message-ID: <m2a4ogb0ju.fsf@beastie.p7x.dev>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+claude <claude@p7x.dev> writes:
+
+> This summarizes a terminal session with Pat about a failure in the
+> "[PATCH v3 0/6] Add just process-email" series [1], including
+> "[PATCH v3 7/6] libexec/mail: Leave published work in place" [2]. It
+> records the diagnosis and the agreed direction, and asks the questions
+> I need answered before sending patches.
+>
+> The failure
+> -----------
+>
+> Pat ran "just process-email" from ~/lab/default.jj with @ on top of
+> the series. The pass answered the signoz thread and pushed the reply,
+> and the message left the inbox. The loop then died:
+>
+>     error: justfile does not contain recipe `notify`
+>
+> The cause is that the driver runs from the tree that the agent edits.
+> During its pass the agent ran "jj new b/dev@upstream" and then "jj new
+> trunk@upstream" in the default workspace, as the process-email skill
+> tells it to. It then built "[PATCH 0/2] Build ports without building
+> their dependencies" [3] there. The recipe body had already been loaded,
+> but each nested "just notify" and "just get-up-to-date" reads the
+> Justfile from disk again. By then @ was no longer on the series, so
+> the notify recipe was gone. The next iteration would have failed the
+> same way at get-up-to-date.
+>
+> A second, separate bug turned up while reading get-up-to-date.sh. It
+> rebases with "-s roots(WORK) -d trunk@upstream", where WORK is limited
+> to mine(). If my series sits on a list patch with another author,
+> applied with "just am", that patch is not in WORK. My series is then
+> moved onto trunk and loses the prerequisite it needs.
+>
+> Options considered
+> ------------------
+>
+> 1. Run each agent pass in its own jj workspace, so the agent never
+>    moves the driver's working copy.
+> 2. Move the driver out of the tree, so it cannot change its own files
+>    while running.
+>
+> I suggested installing the existing just recipes and libexec helpers
+> out of tree. Pat rejected that in favor of a cleaner split.
+>
+> Agreed direction
+> ----------------
+>
+> - A new tool, src/lab-process-mail, does everything the loop does,
+>   with no just involved: get up to date, pick the message, call
+>   claude with a prompt for the part that needs judgement, check the
+>   outcome from VCS and notmuch state, and notify.
+> - A "just install" task packages it as a FreeBSD package and
+>   installs it as the user, the way dotfiles/emacs/Justfile and
+>   patmaddox-emacs.pkg.do do for the Emacs configuration. The
+>   installed copy is what runs, so a pass can never edit the driver
+>   while it runs.
+>
+> Questions before I send patches
+> -------------------------------
+>
+> 1. Install path. You wrote ~/local/bin. Neither ~/local/bin nor
+>    ~/.local/bin exists in my jail, and neither is on PATH. Which one
+>    should it be? I would use a package prefix of /local and install
+>    with "pkg -r ~", as the Emacs package does.
+
+I want to roughly mirror how upstream pkg installation works, and
+ultimately this stuff may get contributed to ports. So really I'm
+installing to LOCALBASE and I guess that shouldn't be baked into the
+package - rather it is `pkg -r ~/local` maybe? So ultimately it will be
+at ~/local/bin/lab-process-email.
+
+It's not on PATH yet but we'll add it. In fact make a patch for
+lab-claude that adds it for claude user.
+
+> 2. Where does the prompt live? If the tool calls claude with
+>    "/process-email <id>", the procedure still comes from
+>    .claude/skills/process-email in whatever tree claude starts in,
+>    and an agent can change that file. The alternative is to ship
+>    the prompt in the package, e.g. share/lab-process-mail/, and pass
+>    it to "claude -p", so the whole loop is pinned at install time.
+>    I lean toward shipping it in the package. Should the in-tree
+>    skill then go away, or stay for interactive use?
+
+Yes the prompt will be co-located with the script. We are extracting the
+logic out of the skill. Ultimately there will be no claude skill for
+this - I don't need the skill behavior. What I need is a deterministic
+tool that prompts an agent for the non-deterministic work.
+
+> 3. Workspaces. Out of tree, the driver cannot break itself, but the
+>    agent still moves default@ under you. Should lab-process-mail
+>    also give the agent its own workspace, e.g. ~/lab/work.jj created
+>    with "jj workspace add" and reset before each pass?
+
+Yeah I think that's a good idea. That or the prompt tells claude to use
+workspaces, I know it has some of that behavior built in. I'm open to
+either - whichever will be more effective.
+
+Ultimately what I want is for the claude that kicks off to be an
+autonomous developer, so I don't want to be overly prescriptive.
+
+What I'm designing here is an work queue, and claude should develop
+lab. So I'm open to design suggestions on how to accomplish that.
+
+> 4. Fate of v3. I read "no just involved" as replacing "just
+>    process-email", "just get-up-to-date", "just notify", and
+>    get-up-to-date.sh, so I would withdraw v3 and post a new series
+>    against trunk. Some of v3 is independent of the driver, such as
+>    the skill taking the message id as an argument. Should that part
+>    go in the new series, or be dropped?
+
+Yes exactly. We're taking the ideas in this patch series and formalizing
+the implementation a bit more, to be a structured tool rather than an
+unstructured skill. So the changes like it doesn't loop, it takes a
+specific message, etc that needs to carry through.
+
+Essentially we're just extracting this functionality to a dedicated
+tool.
+
+> 5. The rebase bug above. Should I fix it in the new tool, by
+>    rebasing whole stacks with "-b" or by leaving stacks with
+>    non-mine prerequisites in place, or send it as a separate patch?
+
+Yes fix the bug in the tool, but do it as a separate commit. So I'd like
+to extract the logic mostly as is, bug and all, and have a commit that
+clearly fixes it.
+
+> 6. Language and tests. I would write it in sh(1) with kyua tests,
+>    like src/sclr. Notifications would go to NOTIFY_URL, as in v3, so
+>    no topic is baked into the package. Is that right?
+
+That's right.
