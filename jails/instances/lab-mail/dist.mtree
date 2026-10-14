@@ -3,7 +3,11 @@
 ./etc/cron.d type=dir mode=0755
 ./etc/cron.d/lab-mail
 ./etc/rc.conf.d type=dir mode=0755
+./etc/rc.conf.d/dovecot
 ./etc/rc.conf.d/smtprelay
+./usr/local/etc/dovecot type=dir mode=0755
+./usr/local/etc/dovecot/dovecot-acl
+./usr/local/etc/dovecot/dovecot.conf
 ./usr/local/etc/mbsyncrc
 ./usr/local/etc/smtprelay type=dir mode=0755
 ./usr/local/etc/smtprelay/remotes.env

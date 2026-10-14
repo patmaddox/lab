@@ -56,6 +56,23 @@ message from the maildir. mbsync keeps its sync state in
 =/data/mail/mbsync=. mbsync creates the new files readable only by
 itself, so the job then makes them readable by everyone, for Dovecot.
 
+** reading
+#+BEGIN_EXAMPLE
+/data/mail/maildir/lists --> Dovecot 127.0.0.1:2143 --IMAP--> client
+#+END_EXAMPLE
+
+rc(8) starts Dovecot when the jail starts; its config is
+=/usr/local/etc/dovecot/dovecot.conf=. It serves the maildir as the
+mailbox =lists=, beside an empty INBOX, and accepts any user name and
+password. Every login runs as the user =vmail=, which can read the
+maildir but not write it, and keeps Dovecot's indexes in
+=/data/mail/dovecot=. The ACL in =dovecot-acl= makes every mailbox
+read-only, so a client cannot flag, add, or delete mail.
+
+Dovecot never talks to Fastmail. A client reads only what the last
+fetch brought, so new list mail reaches it within a minute or two,
+and reading keeps working while Fastmail is down.
+
 * setup
 The operator stores the Fastmail login and app password on the host,
 in =/jails/data/lab-mail/secrets/mail-creds=. They never enter the
@@ -81,11 +98,12 @@ chmod 0640 mail-creds
 rebuild of the jail. The jail mounts it read-write at =/data/mail=.
 The operator creates it and its subdirectories before the jail first
 starts. The host knows the owners only by number, from
-=instance.conf=: 15102 is mbsync.
+=instance.conf=: 15102 is mbsync, 15103 is vmail.
 #+BEGIN_EXAMPLE
 install -d -m 0755 /jails/data/lab-mail/mail
 install -d -o 15102 -g 15102 -m 0755 /jails/data/lab-mail/mail/maildir
 install -d -o 15102 -g 15102 -m 0700 /jails/data/lab-mail/mail/mbsync
+install -d -o 15103 -g 15103 -m 0700 /jails/data/lab-mail/mail/dovecot
 #+END_EXAMPLE
 
 * operate
