@@ -53,8 +53,10 @@ get_up_to_date() {
 	# Both workspaces share one repo, so one fetch covers them.
 	jj -R "${trunk}" git fetch --all-remotes
 
-	jj -R "${trunk}" rebase -s "roots(${WORK})" -d trunk@upstream \
-	    --skip-emptied
+	# Move each stack from its base, not from your first commit in it,
+	# so work built on someone else's unmerged patch keeps that patch.
+	jj -R "${trunk}" rebase -s "roots(::(${WORK}) ~ ::trunk@upstream)" \
+	    -d trunk@upstream --skip-emptied
 
 	# A bookmark with no pending mail, missing or merged in full, has
 	# nothing to rebase; point it at the list's tip instead.

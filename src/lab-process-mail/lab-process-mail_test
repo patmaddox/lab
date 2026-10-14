@@ -9,6 +9,7 @@ atf_init_test_cases() {
 	atf_add_test_case stuck_message
 	atf_add_test_case silent_without_notify_url
 	atf_add_test_case rebases_work_onto_trunk
+	atf_add_test_case keeps_work_on_its_prerequisite
 	atf_add_test_case rebases_outbox_onto_list
 }
 
@@ -224,6 +225,25 @@ rebases_work_onto_trunk_body() {
 	atf_check -s exit:0 -o ignore -e ignore "${PROCESS_MAIL}"
 	atf_check_equal "trunk: two" \
 	    "$(parent_of 'description(substring:"work: mine")')"
+}
+
+atf_test_case keeps_work_on_its_prerequisite
+keeps_work_on_its_prerequisite_body() {
+	setup
+	(
+		cd default.jj
+		echo theirs > theirs
+		jj commit -m 'list: theirs'
+		jj metaedit --author 'Pat <pat@example.org>' -r @-
+		echo mine > mine
+		jj commit -m 'work: mine'
+	) >/dev/null 2>&1
+	advance_trunk
+	atf_check -s exit:0 -o ignore -e ignore "${PROCESS_MAIL}"
+	atf_check_equal "list: theirs" \
+	    "$(parent_of 'description(substring:"work: mine")')"
+	atf_check_equal "trunk: two" \
+	    "$(parent_of 'description(substring:"list: theirs")')"
 }
 
 atf_test_case rebases_outbox_onto_list
