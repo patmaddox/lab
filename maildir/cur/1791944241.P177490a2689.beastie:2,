@@ -1,0 +1,221 @@
+From: Pat Maddox <pat@patmaddox.com>
+To: claude <claude@p7x.dev>, lab-devel@p7x.dev
+Subject: Re: p7x mail relay jail
+In-Reply-To: <1791943332.59637291f136@p7x.dev>
+References: <m2ik35npbo.fsf@beastie.p7x.dev>
+ <1791937094.8bb36fc859c3@p7x.dev> <m2pkxdm5gk.fsf@beastie.p7x.dev>
+ <1791941956.9ee36bfce7f8@p7x.dev> <m21p9tm4ev.fsf@beastie.p7x.dev>
+ <1791943332.59637291f136@p7x.dev>
+Date: Tue, 13 Oct 2026 19:17:21 -0700
+Message-ID: <m27bjlkoum.fsf@beastie.p7x.dev>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+claude <claude@p7x.dev> writes:
+
+> On Tue, 13 Oct 2026 18:55:52 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+>> Ah you are mistaken. Do not put open questions in the spec. The spec is
+>> declarative end state. Any open questions need to be asked via email
+>> thread. The end result of the email thread is a spec sufficient to be
+>> implemented - it shouldn't require direct editing on my part.
+>
+> Understood, thanks. v2 is posted as "[PATCH v2]
+> jails/instances/lab-mail: Initial spec" [1]. It has no questions
+> section. Where I had to choose, it states my choice as the end state,
+> and the questions below ask you to confirm or overturn those choices.
+> If you do, I will send a v3. Nothing in v2 needs editing by you.
+
+You still misunderstand. You should not post a spec until all the
+questions are resolved. It's not "here's a draft spec, and I have some
+questions." You only post a draft spec when you have no more
+questions. Then I'll respond to the patch - and you will either reply
+with an updated patch that you are confident in, or reply with
+questions, but not both.
+
+>> In that case, it needs to be configured with the allowed sending
+>> addresses.
+>
+> Done. Only claude@p7x.dev is allowed as the envelope sender, and any
+> other sender is rejected with a 5xx in the session.
+
+Just to clarify - we'll be able to add more email addresses over time,
+correct?
+
+>> Interesting. I'm inclined to say let's talk about this and explore the
+>> nullmount option... but I also want to design this system to not require
+>> local jails. It seems like having agents connect via IMAP doesn't do
+>> much in the way of moving parts, and lets me move agents to remote
+>> instances if I want. i.e. the design should not be coupled to beastie.
+>
+> Agreed. The spec's goal now says that clients reach lab-mail only over
+> SMTP and IMAP, never through a shared filesystem.
+>
+>> I do think it's important that the jails have fast access to the files
+>> though. I'm envisioning that they will use notmuch to index the
+>> data. How will that work? It might be out of scope for this spec, but I
+>> at least want to think through this.
+>
+> Each client keeps its own maildir and its own notmuch index. mbsync in
+> the client pulls the lists mailbox from lab-mail into a maildir in the
+> agent's home, then "notmuch new" indexes it. After that, every search
+> and read is local and fast. IMAP is only in the path when new mail is
+> fetched. This is the same shape as today, where notmuch indexes a
+> local maildir; only the way the files arrive is different.
+>
+> The delay is the two polls added together: Fastmail to lab-mail, then
+> lab-mail to the client. The spec puts the first at one minute and the
+> acceptance test allows two minutes overall. If that is too slow later,
+> Dovecot supports IMAP IDLE, so a client can run a watcher such as
+> goimapnotify and fetch the moment mail arrives. The spec only promises
+> that lab-mail supports IDLE.
+
+That latency is absolutely fine.
+
+> I put the lab-claude side in the spec (mail/isync and mail/msmtp in
+> its packages), because the acceptance test cannot run without it.
+>
+>> That's fine, but we can also configure it to listen on a different
+>> port. In fact I'm inclined to do that, just so other tools don't detect
+>> 25 and use it by default.
+>
+> The spec uses 127.0.0.1:2525 for SMTP. IMAP stays on 143, since nothing
+> picks up IMAP by default. Tell me if you want a different number.
+
+Pick a non-standard port for it as well.
+
+>> How does mbsync handle moves / deletes on the remote IMAP server? I
+>> think this next part is out of scope for this jail, but I want to keep
+>> an archive of the mailing list in git.
+>>
+>> i.e. I should be able to delete all of emails in fastmail, and not lose
+>> my email archive.
+>
+> mbsync decides this per kind of change and per direction. Its Sync
+> option takes "New" (new messages), "Gone" (messages that disappeared),
+> and "Flags", each for Pull or Push. A move out of lists/ looks the same
+> as a delete: the message is gone from the folder.
+>
+> The spec configures lab-mail to pull new messages only, with nothing
+> pushed and Expunge None. A message that vanishes from lists/ on
+> Fastmail stays in lab-mail's maildir, so the local copy only grows.
+> You can empty lists/ on Fastmail and lose nothing in lab-mail. Clients
+> pull the same way from lab-mail.
+>
+> One caveat, as I understand mbsync: it tracks messages by UID. If
+> lists/ itself is deleted and recreated, its UIDVALIDITY changes and
+> mbsync stops with an error rather than guessing. Deleting messages
+> inside the folder is fine; deleting the folder needs an operator.
+
+That all sounds good.
+
+>> This spec doesn't need to handle that - but I want to think ahead a bit,
+>> and know that fastmail is essentially an inbox to the list archive, not
+>> the list archive itself.
+>
+> The spec says this in those words, and lists the git archive as out of
+> scope. The archiver can be one more IMAP client of lab-mail. Note that
+> lab-mail's maildir is a copy, not a backup: if both it and Fastmail
+> were wiped, the git archive would be the only copy left.
+>
+>> I'm inclined to reject the whole thing, because it's likely a typo,
+>> e.g. claude@p7z.dev
+>
+> Done, with one caveat that comes from the next point. SMTP rejects
+> recipients one at a time, at RCPT TO. Whether the rest of the message
+> still goes out is the client's choice. msmtp sends no DATA if any
+> recipient is refused, and exits non-zero with the server's reply. I
+> checked this in its source (smtp_send_envelope). The spec makes msmtp
+> the sender in lab-claude, and the acceptance test checks that a typo
+> recipient means nobody gets the message.
+
+Sounds good.
+
+>> I'm okay with doing the rejection in OpenSMTPD config. Though I suggest
+>> more research to see if there's a setting to allow rejections to pass
+>> through, i.e. to not accept immediately but rather to proxy. Fine if
+>> not, I just want to be certain that's not an option.
+>
+> It is an option, and I changed the spec to use it. I found:
+>
+> - OpenSMTPD always queues. smtpd.conf(5) has no mode that relays
+>   before it answers.
+> - Postfix has smtpd_proxy_filter, which holds the session open while
+>   it talks to another SMTP server. That server is meant to be a local
+>   filter that hands mail back to Postfix. It cannot log in to Fastmail
+>   itself, so it does not solve this.
+> - smtprelay (mail/smtprelay, maintained by decke@) is built for this.
+>   It relays each message to the upstream server inside the client's
+>   DATA command. If upstream answers with an SMTP error, smtprelay
+>   returns that code and text to the client; for other failures, such
+>   as Fastmail being unreachable, it returns 421. It also has the two
+>   checks we need: allowed_sender and allowed_recipients (regular
+>   expressions).
+>
+> With smtprelay, lab-mail never accepts a message it has not handed to
+> Fastmail and never sends a bounce, so there is no queue to watch.
+>
+> The cost is the whole-message rule. OpenSMTPD could enforce that on
+> the server with a builtin filter that disconnects at the first bad
+> RCPT TO. smtprelay cannot, so the rule rests on msmtp as above. I think
+> pass-through is worth more, because it is the only way the agent sees
+> Fastmail's own reasons. Do you agree, or would you rather keep
+> OpenSMTPD?
+
+I think that makes sense, relay behavior is better. That's the whole
+point of this jail, is to relay smtp and imap between agents and
+fastmail, with the agents not having credentials.
+
+I assume we can also filter the destination addresses? That's a key
+design constraint.
+
+>> I'm confused, I thought you said we need to check the sender, because
+>> the agent won't ever see a rejection from Fastmail.
+>>
+>> The agent needs to know if its send was rejected, and why.
+>
+> You are right, and v1 contradicted itself. It turned your "don't
+> rewrite" into "don't check", and then it relied on a bounce the agent
+> might never see.
+>
+> v2 covers both cases. lab-mail checks the sender and the recipients
+> itself, so those mistakes are rejected in the session with a clear
+> reply. Anything Fastmail rejects comes back in the same session,
+> through smtprelay. In both cases msmtp exits non-zero and prints the
+> reply, so the agent knows that it failed and why.
+
+You say "lab-mail checks", but lab-mail is a host - what is the actual
+process name? e.g. "lab-mail's smtprelay checks..." if that's indeed the case.
+
+> The one case left is a failure after Fastmail has accepted the message,
+> e.g. the remote side of pat@patmaddox.com refusing it later. Fastmail
+> then bounces to claude@p7x.dev. All the allowed recipients are at your
+> own domains, so this should be rare, and the spec lists it as out of
+> scope.
+>
+> Three questions remain, and each would change v2:
+>
+> 1. smtprelay instead of OpenSMTPD, with the whole-message rule enforced
+>    by msmtp. Agreed?
+
+Works for me.
+
+> 2. Credentials: the spec gives lab-mail two Fastmail app passwords.
+>    The SMTP one has SMTP access only, which Fastmail offers, so it
+>    cannot read mail if it leaks. For IMAP I found no documented
+>    read-only option, though an old bug report mentions a "read-only"
+>    setting for IMAP app passwords. When you create the IMAP password,
+>    could you check the access menu? If read-only IMAP exists, I will
+>    add it to the spec, and then Fastmail itself guarantees what you
+>    asked for.
+
+I don't think there's any value in two separate password. I only have
+one app password for the relay.
+
+> 3. Mail to claude@p7x.dev: where does it land on Fastmail? This now
+>    matters only for the late bounces above. If it should be readable
+>    by the agent, a Fastmail rule filing it into lists/ would do it,
+>    but then it shows up in the list archive too. I would leave it out
+>    for now.
+
+That's outside the scope of the spec. claude@p7x.dev is its own email
+address, configurable however I feel like it.
