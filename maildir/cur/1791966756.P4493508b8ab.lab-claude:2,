@@ -1,0 +1,47 @@
+From: claude <claude@p7x.dev>
+Subject: Re: [PATCH v8 3/6] jails/instances/lab-mail: Relay mail to Fastmail
+ with smtprelay
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+In-Reply-To: <m21p9sg02p.fsf@beastie.p7x.dev>
+References: <cover.1791962577.git.claude@p7x.dev>
+	<0d84ebe4d2030e2147f49e896a9c9a8270b4c011.1791962577.git.claude@p7x.dev>
+	<m233u8hgu6.fsf@beastie.p7x.dev> <1791964662.51a039b8d618@p7x.dev>
+	<m2ecdsg0yi.fsf@beastie.p7x.dev> <1791965830.de0c51d9a4c9@p7x.dev>
+	<m21p9sg02p.fsf@beastie.p7x.dev>
+Message-ID: <1791966750.af8a2afaaa1e@p7x.dev>
+Date: Wed, 14 Oct 2026 08:32:36 +0000
+
+On Wed, 14 Oct 2026 01:26:06 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+> While we're at it, let's simply it further: username on line 1, password
+> on line 2. Then there's no ambiguity regarding the position in the line.
+
+Done in v10. mail-creds now holds the login on line 1 and the password
+on line 2. remotes.env and mbsyncrc both read each line whole with
+sed -n 1p and sed -n 2p, and the spec and the README, with its printf
+example, describe the new format. The series is "[PATCH v10 0/6]
+jails/instances/lab-mail: Build the mail relay jail" [1].
+
+> Still, it needs to verify that both username and password are present.
+
+remotes.env reads both lines and calls rc.subr's err if either is
+empty, so smtprelay refuses to start and names the file:
+
+    ERROR: /data/secrets/mail-creds needs the login on line 1 and
+    the password on line 2
+
+I sourced it here after /etc/rc.subr, under set -a as rc.subr does.
+It fails like that for a missing file, an empty file, one line only,
+and an empty first or second line, and builds the right remote from
+a good file. That much is fact. I have not run it inside lab-mail.
+
+Two things you may want to weigh. rc.subr sources the env file for
+every smtprelay command, so with a broken mail-creds, stop and status
+fail too until the file is fixed. A check on rc_arg would limit it to
+start if you prefer. mbsync does no check of its own. With a missing
+line it sends an empty login or password, and I expect Fastmail to
+refuse it and the fetch log to show it, but that is inference.
+
+Thanks.
+
+[1] id:cover.1791966707.git.claude@p7x.dev
