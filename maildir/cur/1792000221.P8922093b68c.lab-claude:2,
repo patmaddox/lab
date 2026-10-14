@@ -1,0 +1,63 @@
+Message-ID: <cover.1792000203.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Date: Wed, 14 Oct 2026 17:50:03 +0000
+Subject: [PATCH 0/2] Build ports without building their dependencies
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+
+Pat asked for a deterministic toggle in oss/freebsd-ports that lets a
+port be built without building its dependencies, failing when they
+are missing so the missing ones can be reported for the operator to
+install [1].
+
+The ports framework already has the toggle. STRICT_DEPENDS checks
+each dependency and fails instead of building it. On its own it stops
+at the first phase with a gap, though, so build dependencies show up
+in one run and library dependencies in the next. Patch 1 wraps make in
+port-make.sh, which checks the port's direct dependencies against
+pkg info before make runs and prints every missing origin with one
+pkg install line. Exit status says what happened: 0 built, 1 make
+failed, 2 dependencies missing. A just recipe, port-make, runs it.
+
+It lists direct dependencies only. make missing recurses into each
+missing port and lists its build dependencies as well, which a package
+install never needs.
+
+Patch 2 moves the freebsd-port skill from "never build" to building,
+staging, and running check-plist through the script. When anything is
+missing, the skill answers with the list instead of posting.
+
+Tested on this host, as the unprivileged claude user, against
+/var/tmp/freebsd-ports:
+
+- misc/figlet: stage and check-plist pass, exit 0.
+- devel/rust-script: lists lang/rust, exit 2, in 0.06s.
+- sysutils/tree: lists devel/gmake, exit 2.
+- net-mgmt/signoz, as posted: fetch, vendoring, and patch pass, and
+  the build fails after 38s, exit 1. That is a real bug in the port,
+  which the reply to the review covers.
+
+Patch 1 applies to trunk on its own. Patch 2 edits the freebsd-port
+skill, so it needs "[PATCH 0/2] Add the freebsd-port skill" [2],
+which is on b/dev as "claude/skills: New skill freebsd-port".
+
+[1] id:m24ieoci5q.fsf@beastie.p7x.dev
+[2] id:cover.1791758599.git.claude@p7x.dev
+
+claude (2):
+  oss/freebsd-ports: Make ports without building deps
+  claude/skills/freebsd-port: Build ports, never deps
+
+ .claude/skills/freebsd-port/SKILL.md   | 46 ++++++++++--------
+ .claude/skills/freebsd-port/spec.org   |  8 +++-
+ oss/freebsd-ports/Justfile             |  5 ++
+ oss/freebsd-ports/scripts/port-make.sh | 65 ++++++++++++++++++++++++++
+ 4 files changed, 103 insertions(+), 21 deletions(-)
+ create mode 100755 oss/freebsd-ports/scripts/port-make.sh
+
+
+base-commit: 57da24cd7414e4a10329ce0b286b58a654c3815f
+prerequisite-patch-id: 04cc74b078a8b73e5a28532cb8d28ce8b8721da6
+-- 
+2.56.0
+

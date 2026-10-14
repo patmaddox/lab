@@ -1,0 +1,125 @@
+Message-ID: <1068625d97c4d8ebe6b879a21a73c18f7195dd69.1792000203.git.claude@p7x.dev>
+In-Reply-To: <cover.1792000203.git.claude@p7x.dev>
+References: <cover.1792000203.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Date: Wed, 14 Oct 2026 17:48:10 +0000
+Subject: [PATCH 1/2] oss/freebsd-ports: Make ports without building deps
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+Change-Id: wrwvwvpynvyorrlrmzmvypqmnzzvplxz
+
+Building a port in the ports tree installs each missing dependency by
+building it from source first, which can take hours and changes the
+host. To avoid that, ports work here has skipped the build and left it
+to poudriere, so patches have gone out with their build and plist
+unchecked.
+
+port-make.sh builds the port alone. It first checks the port's direct
+dependencies against the installed packages and, if any are missing,
+lists them all with a pkg install line and exits 2 before make runs.
+The operator installs them once and the build is retried. Only direct
+dependencies are listed because pkg brings in their own run
+dependencies, and their build dependencies are never needed.
+
+STRICT_DEPENDS stays set while make runs, so a dependency the check
+did not catch stops the build rather than being built. The work,
+distfile, and options directories live under /var/tmp, since the
+defaults are root-owned.
+---
+change-id: wrwvwvpynvyorrlrmzmvypqmnzzvplxz
+
+ oss/freebsd-ports/Justfile             |  5 ++
+ oss/freebsd-ports/scripts/port-make.sh | 65 ++++++++++++++++++++++++++
+ 2 files changed, 70 insertions(+)
+ create mode 100755 oss/freebsd-ports/scripts/port-make.sh
+
+diff --git a/oss/freebsd-ports/Justfile b/oss/freebsd-ports/Justfile
+index 3ee983a..24a7222 100644
+--- a/oss/freebsd-ports/Justfile
++++ b/oss/freebsd-ports/Justfile
+@@ -24,6 +24,11 @@ clone:
+   if [ ! -d ../../repos/freebsd-ports.jj ]; then jj git clone git@github.com:patmaddox/freebsd-ports.git ../../repos/freebsd-ports.jj; fi
+   jj -R ../../repos/freebsd-ports.jj git remote add upstream https://github.com/freebsd/freebsd-ports.git 2>&1 || true
+ 
++# make a port without building its dependencies (default: stage check-plist)
++[no-cd]
++port-make tree origin *targets:
++  sh {{justfile_directory()}}/scripts/port-make.sh {{tree}} {{origin}} {{targets}}
++
+ testport *args:
+   doas poudriere testport -j 142 -p dev {{args}}
+ 
+diff --git a/oss/freebsd-ports/scripts/port-make.sh b/oss/freebsd-ports/scripts/port-make.sh
+new file mode 100755
+index 0000000..87b6647
+--- /dev/null
++++ b/oss/freebsd-ports/scripts/port-make.sh
+@@ -0,0 +1,65 @@
++#!/bin/sh
++# Run make on one port without ever building its dependencies.
++#
++# usage: port-make.sh <ports-tree> <category/port> [target ...]
++#
++# Before make runs, the port's direct dependencies for the requested
++# targets are checked against the installed packages. If any are
++# missing, their origins and a pkg install line are printed and the
++# script exits 2 without running make. STRICT_DEPENDS stays set for
++# the run itself, so a dependency the check missed still stops the
++# build instead of being built from source.
++#
++# Exit status: 0 on success, 1 if make fails, 2 if dependencies are
++# missing.
++set -eu
++
++: ${PORT_VARDIR:=/var/tmp}
++
++main() {
++    if [ $# -lt 2 ]; then
++	echo "usage: port-make.sh <ports-tree> <category/port> [target ...]" >&2
++	exit 1
++    fi
++    tree=$(realpath "${1}"); shift
++    origin=${1}; shift
++    [ $# -gt 0 ] || set -- stage check-plist
++
++    missing=$(missing_depends "$@")
++    if [ -n "${missing}" ]; then
++	echo "${origin}: missing dependencies:"
++	echo "${missing}" | sed -e 's/^/    /'
++	echo "install with:"
++	echo "    pkg install" ${missing}
++	exit 2
++    fi
++
++    portmake "$@" || exit 1
++}
++
++portmake() {
++    make -C "${tree}/${origin}" PORTSDIR="${tree}" BATCH=yes \
++	STRICT_DEPENDS=yes \
++	DISTDIR="${PORT_VARDIR}/freebsd-ports-distfiles" \
++	WRKDIRPREFIX="${PORT_VARDIR}/freebsd-ports-work" \
++	PORT_DBDIR="${PORT_VARDIR}/freebsd-ports-db" "$@"
++}
++
++# Print the origins the targets depend on directly that are not
++# installed. Build dependencies are always needed; run and test
++# dependencies only when the targets include test.
++missing_depends() {
++    lists=build-depends-list
++    for t in "$@"; do
++	if [ "${t}" = test ]; then
++	    lists="${lists} run-depends-list test-depends-list"
++	fi
++    done
++    installed=$(pkg info -aoq)
++    portmake ${lists} | sed -e "s|^${tree}/||" | sort -u | \
++	while read -r dep; do
++	    echo "${installed}" | grep -qxF "${dep}" || echo "${dep}"
++	done
++}
++
++main "$@"
+-- 
+2.56.0
+

@@ -1,0 +1,136 @@
+Message-ID: <5293d68e4412885af348d313336b9120433e20b0.1792000203.git.claude@p7x.dev>
+In-Reply-To: <cover.1792000203.git.claude@p7x.dev>
+References: <cover.1792000203.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Date: Wed, 14 Oct 2026 17:49:09 +0000
+Subject: [PATCH 2/2] claude/skills/freebsd-port: Build ports, never deps
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+Change-Id: zxquunzwoynkosszuskvmpzprxryqovr
+
+Ports have gone to the list without a build, so the build and the
+plist were first checked in Pat's poudriere run, a round trip later.
+A vendored module that no longer compiles with the tree's Go, or a
+plist drafted from upstream's install rules, passes every linter and
+fails only there.
+
+Building the port itself is cheap; what took too long was building
+its dependencies. port-make.sh never does that, so the skill now
+builds, stages, and runs check-plist through it. When dependencies are
+missing, the skill answers with the whole list instead of posting an
+unbuilt patch, so the operator can install them in one step and run
+it again.
+---
+change-id: zxquunzwoynkosszuskvmpzprxryqovr
+
+ .claude/skills/freebsd-port/SKILL.md | 46 ++++++++++++++++------------
+ .claude/skills/freebsd-port/spec.org |  8 +++--
+ 2 files changed, 33 insertions(+), 21 deletions(-)
+
+diff --git a/.claude/skills/freebsd-port/SKILL.md b/.claude/skills/freebsd-port/SKILL.md
+index 96d47cb..b519078 100644
+--- a/.claude/skills/freebsd-port/SKILL.md
++++ b/.claude/skills/freebsd-port/SKILL.md
+@@ -3,8 +3,8 @@ name: freebsd-port
+ description: >-
+   Create a new FreeBSD port or update an existing one in a fresh clone
+   of the public ports tree, lint it, and post it to lab-devel as a
+-  [freebsd-ports PATCH] for review. Prepares the patch only; the port
+-  is never built.
++  [freebsd-ports PATCH] for review. Builds the port to check it, but
++  never its dependencies.
+ disable-model-invocation: true
+ argument-hint: <category/port> [version, home page, repository, ...]
+ ---
+@@ -21,8 +21,10 @@ repository. If the origin exists in the tree, the job is an update;
+ otherwise it is a new port. If they do not name an origin, or give too
+ little to find the software, ask before starting.
+ 
+-The result is a patch on lab-devel. Pat builds it with poudriere and
+-takes it upstream, so this skill prepares the patch and nothing more.
++The result is a patch on lab-devel. Pat tests it in poudriere and
++takes it upstream. This skill builds and stages the port on the host
++first, so the patch arrives with its build and plist checked, but it
++never builds a dependency; the operator installs those as packages.
+ spec.org beside this file is the specification; this file is how to
+ carry it out.
+ 
+@@ -115,26 +117,31 @@ Makefile in the order the handbook gives.
+   dependencies go in `TEST_DEPENDS`.
+ - For an update, reset `PORTREVISION` and regenerate `distinfo`.
+ 
+-Do not build; it takes too long, and poudriere checks the build. Reading
+-metadata is fine. Fetch, extract, and the framework's metadata targets
+-are allowed; configure, build, stage, install, and check-plist are
+-not. Keep distfiles, work directories, and saved options out of the
+-tree and out of the root-owned defaults, and take default options
+-without prompting:
++Run make only through port-make.sh. It never builds a dependency:
++before make runs it checks the port's direct dependencies against the
++installed packages, and keeps STRICT_DEPENDS set so a missing one
++stops make rather than being built. It also keeps distfiles, work
++directories, and saved options under /var/tmp, out of the tree and the
++root-owned defaults, and takes default options without prompting:
+ 
+     portmake() {
+-        make -C "${tree}/${origin}" PORTSDIR="${tree}" BATCH=yes \
+-            DISTDIR=/var/tmp/freebsd-ports-distfiles \
+-            WRKDIRPREFIX=/var/tmp/freebsd-ports-work \
+-            PORT_DBDIR=/var/tmp/freebsd-ports-db "${@}"
++        ~/lab/default.jj/oss/freebsd-ports/scripts/port-make.sh \
++            "${tree}" "${origin}" "${@}"
+     }
+     portmake makesum # writes distinfo from the fetched distfiles
+     portmake extract # to read upstream's sources
+     portmake cargo-crates # or gomod-vendor, as the framework requires
++    portmake stage check-plist # builds, stages, and checks the plist
++    portmake clean
+ 
+-Never write a checksum by hand. Without a build the plist cannot be
+-checked, so draft it from upstream's install rules and say in the patch
+-notes that it is unverified.
++Never write a checksum by hand. Fix the port until `stage check-plist`
++passes; the build and plist are part of what the patch is judged on.
++
++Exit status 2 means dependencies are missing, and the output lists
++every one with a `pkg install` line. Do not work around it, and do not
++post the port. Answer with the full list instead, so the operator can
++install them in one step and run the skill again. When a list message
++asked for the port, that answer is the reply to it.
+ 
+ ## 6. Lint
+ 
+@@ -191,8 +198,9 @@ The patch is applied with `git am` in a ports tree, not with lab's
+ 
+ For more than one patch add `--cover-letter` and fill it in. Below the
+ `---` of a single patch, or in the cover letter, write the notes for
+-review: the ports you followed, what was checked (lint, makesum), what
+-was not (the build, the plist), and any loosened dependency bound.
++review: the ports you followed, what was checked (lint, the build,
++check-plist), what was not (running the software, other
++architectures), and any loosened dependency bound.
+ 
+ Deliver the series into the mail workspace and push it, as
+ zib/patch-review-workflow.org describes:
+diff --git a/.claude/skills/freebsd-port/spec.org b/.claude/skills/freebsd-port/spec.org
+index 72c9bc5..dd966b8 100644
+--- a/.claude/skills/freebsd-port/spec.org
++++ b/.claude/skills/freebsd-port/spec.org
+@@ -12,8 +12,12 @@
+   - exclude yanked versions
+   - exclude pre releases
+ - run all the linters to make sure it's clean
+-- prepare the patch only - do not build, it will take too long
+-  - getting metadata is okay, e.g. make fetch, make makesum
++- build the port, but never its dependencies; building them takes too
++  long
++  - run make through =oss/freebsd-ports/scripts/port-make.sh=, which
++    fails instead of building a missing dependency
++  - if dependencies are missing, stop and report them all for the
++    operator to install
+ - post patch to list with [freebsd-ports PATCH] prefix
+   - patch will be applied with =git am= in a git dir, no need to be
+     supported by =just am=
+-- 
+2.56.0
+
