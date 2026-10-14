@@ -1,0 +1,66 @@
+From: Pat Maddox <pat@patmaddox.com>
+To: claude <claude@p7x.dev>
+Cc: lab-devel@p7x.dev
+Subject: Re: [PATCH v7] jails/instances/lab-mail: Initial spec
+In-Reply-To: <9480e8c6bfeafcf6a37fce4a2f7e508bc3031423.1791961946.git.claude@p7x.dev>
+References: <9480e8c6bfeafcf6a37fce4a2f7e508bc3031423.1791961946.git.claude@p7x.dev>
+Date: Wed, 14 Oct 2026 00:17:33 -0700
+Message-ID: <m2h5iohhte.fsf@beastie.p7x.dev>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+claude <claude@p7x.dev> writes:
+
+> Agents need to send and read p7x.dev mail, but the Fastmail
+> credentials should not live in any jail an agent works in. A
+> standalone spec settles what the relay jail does before anything is
+> built, so the design can be reviewed and changed in one place.
+>
+> The agent must learn when a send fails and why. A queuing MTA
+> answers 250 before it talks to Fastmail, so a later rejection only
+> comes back as a bounce the agent may never see. smtprelay relays
+> during the client's session instead, and passes Fastmail's reply
+> through. smtprelay also checks the sender and recipients against
+> allowlists before it contacts Fastmail, so mistakes fail fast with a
+> clear reply. The cost is that nothing holds mail while Fastmail is
+> unreachable; the client gets a 4xx reply and must send again later.
+>
+> Reading goes through an append-only local copy of the lists folder.
+> Clients can never change Fastmail, reading keeps working while
+> Fastmail is down, and deleting mail on Fastmail loses nothing.
+> Clients use IMAP rather than a shared mount, so agents need not run
+> on beastie.
+>
+> The spec also lists the alternatives each decision rejects, and why,
+> so a reader can tell what lab-mail does not do and need not reopen a
+> settled choice.
+> ---
+> change-id: rlrysuruvryxyvntzzsmyzxntuyxxkuv
+>
+> Changes in v7, from Pat's follow-up in "Re: [PATCH 0/6]
+> jails/instances/lab-mail: Build the mail relay jail" [1]:
+> - The Fastmail login and app password live together in one secret
+>   file, creds, as one line: the login, a space, and the app
+>   password. The login is an email address with no space in it, so
+>   the line splits at the first space and a password needs no
+>   escaping. Alternatives considered records the login in the repo
+>   config instead.
+> - Link to v6: id:5e124afd632a47088ee463d6ce3d5c0b7df9874a.1791961486.git.claude@p7x.dev
+>
+> [1] id:m2ld80hi75.fsf@beastie.p7x.dev
+>
+>  jails/instances/lab-mail/spec.org | 213 ++++++++++++++++++++++++++++++
+>  1 file changed, 213 insertions(+)
+>  create mode 100644 jails/instances/lab-mail/spec.org
+>
+> diff --git a/jails/instances/lab-mail/spec.org b/jails/instances/lab-mail/spec.org
+> new file mode 100644
+> index 0000000..e417efe
+> --- /dev/null
+> +++ b/jails/instances/lab-mail/spec.org
+> +credentials:
+> +- The operator stores the Fastmail login and app password on the host
+> +  in one file, =/jails/data/lab-mail/secrets/creds=. It is the only
+> +  secret, and it never enters the repo.
+
+call it mail-creds
