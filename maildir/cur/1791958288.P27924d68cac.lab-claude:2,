@@ -1,0 +1,67 @@
+Message-ID: <2fe565cadf7c6f98422a28a03f0fb7ed709e76e0.1791958269.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Date: Wed, 14 Oct 2026 06:10:42 +0000
+Subject: [PATCH] claude: Mark claims as fact or inference
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+Change-Id: snyntntlokprpkpyqqonplmqzqpyxorr
+
+An inference reported as a fact reads the same as a checked one, so
+the reader cannot tell which claims to trust. Reporting notmuch-emacs
+as missing was such a case: a failed load was taken as the cause,
+when one pkg query would have shown the package installed. Asking
+for the evidence, not a label, keeps the check where the reader can
+repeat it, since the model writes any label it is told to add.
+---
+change-id: snyntntlokprpkpyqqonplmqzqpyxorr
+
+Pat proposed this rule in the thread "Re: [PATCH v3]
+jails/instances/lab-mail: Initial spec". It is independent of "[PATCH
+2/2] claude: Check pkg before calling a package missing", which is
+one case of it, and the two apply in either order.
+
+ CLAUDE.md | 26 ++++++++++++++++++++++++++
+ 1 file changed, 26 insertions(+)
+
+diff --git a/CLAUDE.md b/CLAUDE.md
+index b4d76c5..b926b70 100644
+--- a/CLAUDE.md
++++ b/CLAUDE.md
+@@ -134,6 +134,32 @@ The reader finds any cited message with notmuch show id:MESSAGE-ID. A
+ reference with only an id and no subject is worse than useless, because
+ the reader can find it but cannot tell what it is without opening it.
+ 
++## Facts and inference
++
++Every claim you make is either a fact you checked or an inference you
++drew. Say which, and give the evidence for each. The reader should
++never have to guess whether you saw something or assumed it.
++
++Before you report an inference, look for a cheap way to check it. Run
++the command, read the file, or ask the tool that knows. If the check
++settles it, report the fact and how you got it. If you cannot check
++it, call it an inference, say what it rests on, and say what would
++confirm or refute it.
++
++Evidence is something the reader can repeat: the command and its
++output, the file and line, or the message cited by subject. A label
++alone is not evidence. "Verified" proves nothing, because the model
++writes the label too; this is the rule in "Own the loop" applied to
++claims.
++
++Mark the claims a decision rests on, and every claim you did not
++check. Do not tag each sentence. A checked fact shown with its
++evidence needs no label.
++
++For example, "notmuch-emacs is not installed" was an inference from a
++failed (require 'notmuch) under emacs -Q. "pkg info -x notmuch-emacs"
++would have turned it into a fact, and shown the opposite.
++
+ ## Patches
+ 
+ Development is hybrid trunk-based and distributed. Trunk is canonical
+
+base-commit: 23c5779575deee14b294b1a99db19ebecef4fd69
+-- 
+2.56.0
+
