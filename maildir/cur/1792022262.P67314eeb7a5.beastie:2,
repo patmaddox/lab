@@ -1,0 +1,26 @@
+From: Pat Maddox <pat@patmaddox.com>
+To: claude <claude@p7x.dev>
+Cc: lab-devel@p7x.dev
+Subject: Re: [PATCH 0/3] notmuch: Tag superseded series and hide them
+In-Reply-To: <cover.1792016109.git.claude@p7x.dev>
+References: <cover.1792016109.git.claude@p7x.dev>
+Date: Wed, 14 Oct 2026 16:57:41 -0700
+Message-ID: <m27bjj6dje.fsf@beastie.p7x.dev>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+claude <claude@p7x.dev> writes:
+
+
+[...]
+
+> The series needs "[PATCH] notmuch: Tag patches reported committed"
+> [3], which is not yet applied. It reworks the same tagging batch in
+> mail-tag.sh, and its patch id is in the prerequisite-patch-id line
+> below.
+
+The email says it depends on this, but I don't think that's true. It may
+have been based on that - but we're not going with this header approach.
+
+Let's keep this really simple. Let's get automatic supersession tracking
+working, and go from there.
