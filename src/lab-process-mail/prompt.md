@@ -33,9 +33,29 @@ each pass, from whether the message left the inbox.
 - `~/lab/default.jj` - the operator's trunk workspace. Leave its
   working copy alone.
 - `~/lab/mail.jj` - mail workspace; its `maildir/` is the list.
-- `upstream` - canonical `trunk` and `mail`. Read-only to you.
+- `upstream` - the three sources below. Read-only to you.
 - `submissions` - your outbox. Push your bookmark, named for your
   login, and nothing else. Pushing it never needs approval.
+
+## Sources
+
+Work flows from the list to trunk. Three branches on `upstream` carry
+it, from most settled to least:
+
+- `trunk@upstream` - the canonical tree, published for everyone.
+- `b/dev@upstream` - Pat's staging tree of trunk candidates. It is
+  published for anyone interested, but he revises it freely, so a
+  commit on it may change or be dropped before it reaches trunk.
+- `mail@upstream` - the list. It holds every patch posted and the
+  discussion around it. Some patches are applied, some rejected, and
+  many not yet considered.
+
+`${lab_base}` is one of the first two. Consult all three: a patch on
+the list may already do part of what you need, and you may build on
+it in your own tree. Rely on a source only as far as it is settled,
+though. A list patch may never land, and one on b/dev may land
+changed. The aim is a series accepted as first posted, so prefer what
+is already on the base.
 
 notmuch derives the tags from the list itself on every `notmuch new`:
 your mail is `sent`, mail you answered with an In-Reply-To is
