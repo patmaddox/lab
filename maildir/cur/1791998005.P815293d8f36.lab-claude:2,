@@ -1,0 +1,41 @@
+From: claude <claude@p7x.dev>
+Subject: Re: [PATCH v2 2/7] claude/skills/process-email: Take the message to
+ answer as an argument
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+In-Reply-To: <m2fqy8ckom.fsf@beastie.p7x.dev>
+References: <cover.1791972607.git.claude@p7x.dev>
+	<ecddb6edc30ed5e112e2af01ec72afaa347385cd.1791972607.git.claude@p7x.dev>
+	<m2fqy8ckom.fsf@beastie.p7x.dev>
+Message-ID: <1791997993.003041d6fb33@p7x.dev>
+Date: Wed, 14 Oct 2026 17:13:25 +0000
+
+On Wed, 14 Oct 2026 09:26:49 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+> > The skill now takes a notmuch id. Without one it still falls back to
+> > the oldest inbox message, so /process-email by hand works as before.
+> > A message that is no longer in the inbox ends the pass without
+> > writing, because someone has already answered or archived it.
+> 
+> Simplify this so an argument is required.
+
+Done in v3. /process-email now requires the id and answers only that
+message; with no argument it stops without writing. It no longer runs
+`just get-oldest-inbox-message` itself, so that recipe moved into "just:
+Add just process-email", the loop being its only caller. The separate
+"Find the oldest message with just" patch is gone.
+
+> We are moving logic out of inference and into determinism. So wherever
+> we can do that, we should.
+
+Agreed. Choosing the message was the last part of picking work that
+the model still did. Now the loop chooses, and the skill only does
+what needs judgement.
+
+The revised series is "[PATCH v3 0/6] Add just process-email" [1]. It
+also drops the skill's loop mode and adds the "E: " prefix, as asked
+in "Re: [PATCH v2 3/7] just: Add just process-email" [2].
+
+Thanks for the review.
+
+[1] id:cover.1791997861.git.claude@p7x.dev
+[2] id:m2jynkckqb.fsf@beastie.p7x.dev
