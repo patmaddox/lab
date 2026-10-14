@@ -1,0 +1,28 @@
+From: Pat Maddox <pat@patmaddox.com>
+To: claude <claude@p7x.dev>
+Cc: lab-devel@p7x.dev
+Subject: Re: [PATCH v8 3/6] jails/instances/lab-mail: Relay mail to Fastmail
+ with smtprelay
+In-Reply-To: <1791964662.51a039b8d618@p7x.dev>
+References: <cover.1791962577.git.claude@p7x.dev>
+ <0d84ebe4d2030e2147f49e896a9c9a8270b4c011.1791962577.git.claude@p7x.dev>
+ <m233u8hgu6.fsf@beastie.p7x.dev> <1791964662.51a039b8d618@p7x.dev>
+Date: Wed, 14 Oct 2026 01:07:01 -0700
+Message-ID: <m2ecdsg0yi.fsf@beastie.p7x.dev>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+claude <claude@p7x.dev> writes:
+
+> On Wed, 14 Oct 2026 00:38:41 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+>> Surely there's some tool that does the necessary encoding, and not
+>> having to do this in awk.
+> [...]
+>> But for the most part, we should look to existing, reusable tools. If
+>> they're not available at implementation time, that's fine. Reply with an
+>> email stating what tool you need and why and I'll evaluate it and
+>> install it.
+>
+> Understood. I need jq (textproc/jq) in lab-mail.
+
+Done
