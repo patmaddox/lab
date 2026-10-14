@@ -1,0 +1,130 @@
+From: claude <claude@p7x.dev>
+Subject: Re: Supporting status trailers in emails
+To: Pat Maddox <pat@patmaddox.com>, lab-devel@p7x.dev
+In-Reply-To: <m21p9s9ejd.fsf@beastie.p7x.dev>
+References: <m21p9s9ejd.fsf@beastie.p7x.dev>
+Message-ID: <1792012556.c12ca97c38b9@p7x.dev>
+Date: Wed, 14 Oct 2026 21:15:59 +0000
+
+On Wed, 14 Oct 2026 14:07:50 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+> So, research how they track versions of patch series, and how they
+> indicate states like approved, rejected, etc. Report on what you find so
+> that we can develop a workflow.
+
+Here is what I found. Each project has two parts: how it links the
+versions of a series, and where it keeps a series' state. Only one of
+them keeps that state in the mail itself.
+
+Linux kernel. Each version is a new thread, marked [PATCH vN]. The
+cover letter ends with "Changes in vN" and a "Link to v(N-1)" line.
+b4 writes both, and it puts a change-id in the cover letter that
+stays the same across versions. Approval goes in reply trailers:
+Acked-by, Reviewed-by and Tested-by. A Reviewed-by on the cover
+letter covers the whole series. "b4 trailers" and "b4 am" collect
+them and write them into the commit message. Nobody has defined a
+rejection trailer. A NAK, or "Nacked-by", is written in prose, and a
+maintainer says "applied, thanks" ("b4 ty") or "dropped" in prose too.
+The real state lives outside the mail, in Patchwork
+(patchwork.kernel.org). Its states are New, Under Review, Accepted,
+Rejected, RFC, Not Applicable, Changes Requested, Awaiting Upstream,
+Superseded and Deferred. Maintainers set them by hand, and a bot sets
+some of them when commits land.
+
+OpenBSD. Patches go to tech@ inline. A new version is usually posted
+in the same thread ("updated diff below"), so there is nothing to
+supersede. Approval is "ok kettenis@" in a reply, and the committer
+copies it into the commit message ("ok kettenis@ claudio@"). There is
+no tracker and no rejection marker. A diff that nobody oks just goes
+nowhere. The only durable state is the commit log.
+
+PostgreSQL. Patches are attachments named v2-0001-*.patch, and every
+version stays in one thread. The state is in the CommitFest app
+(commitfest.postgresql.org). Each entry links to its mail threads and
+has one of these statuses: Needs Review, Waiting on Author, Ready for
+Committer, Committed, Returned with Feedback, Rejected, Withdrawn, or
+Moved to next CF. cfbot applies the newest patch set it finds in the
+thread. The commit carries "Reviewed-by:" and a "Discussion:" trailer
+that links to the thread by Message-ID. That links a commit back to
+its thread, but nothing in the mail marks the thread as done.
+
+FreeBSD also seems worth a look, given our commit style. Commit
+messages carry "Reviewed by:", "Approved by:" (the mentor or re@
+sign-off), and "Differential Revision:". The review state lives in
+Phabricator.
+
+Git (git.git) keeps its state in the list. Junio posts "What's cooking
+in git.git" regularly, and it gives the state of every topic: "Will
+merge to next", "Expecting a reroll", "Will discard", and so on.
+Every state comes from one maintainer message.
+
+sourcehut (lists.sr.ht) is the closest match to what you propose. A
+reply in a patchset thread can carry the header
+"X-Sourcehut-Patchset-Update:" with one of PROPOSED, NEEDS_REVISION,
+SUPERSEDED, APPROVED, REJECTED or APPLIED. The list sets the
+patchset's state from it.
+
+So the big three keep series state in a web tool, and only use mail
+for approval trailers. Sourcehut and Git keep it in mail. Your goal
+of deriving state from the list puts us with them.
+
+> Again a goal of this workflow is to have the current state of the list
+> be derivable from the contents of the list. So I won't tag things as
+> overcome or accepted - those need to be derived from the
+> contents. Supporting trailers - or a similar mechanism - lets me add
+> metadata to emails after the fact.
+
+That fits what is already on the list. "[PATCH] notmuch: Tag patches
+reported committed" [1] adds a header_ids helper to mail-tag.sh. It
+pulls a Message-ID out of a named header, and the committed tag is
+derived from it on every notmuch new. Your choice there of a header
+naming the Message-ID [2] carries over to this. Here is a shape I
+would propose, for you to decide on:
+
+1. Key names. Use hyphens: Superseded-by, Approved-by, Rejected-by. I
+   checked "git interpret-trailers --parse". It does not accept
+   "Overcome by:" with a space, and one invalid line voids the whole
+   trailer block. I would also say "superseded" rather than
+   "overcome", since Patchwork and sourcehut both use it, but the name
+   is yours to pick.
+
+2. Header or body trailer. Body trailers are visible and easy to type
+   in any client, and git interpret-trailers can parse them. They need
+   care, though. Quoted lines must not count, and a signature after
+   the trailers stops git from finding them. A header like the
+   Committed: one is unambiguous, but it is hidden and harder to write
+   by hand. I lean toward body trailers parsed with git
+   interpret-trailers, applied only to the unquoted last paragraph.
+
+3. Scope. A trailer applies to the message the reply's In-Reply-To
+   names. A reply to the cover letter, or to a lone patch, applies to
+   the whole thread. A reply to patch N/M applies only to that patch.
+   This gives you both commit-level and thread-level approval and
+   rejection with one rule. Tagging a thread needs a thread lookup.
+   Today mail-tag.sh only tags single messages.
+
+4. Authority. Anyone can write a trailer, including me, so the hook
+   should count Approved-by and Rejected-by only when the From is a
+   maintainer address. Superseded-by could also be accepted from the
+   series' own author. If you want "the latest trailer wins" when two
+   disagree, ordering by Date works.
+
+5. Supersession without an extra reply. Every revised cover letter
+   already ends with "Link to v(N-1): id:<msgid>", which
+   src/lab-process-mail/prompt.md requires. The hook could derive
+   superseded for the v(N-1) thread from that line. The explicit
+   Superseded-by reply would then be for cases the Link line does not
+   cover, such as a series replaced by a different one.
+
+6. Hiding. Add superseded (and maybe rejected) to search.exclude_tags
+   in the notmuch config. The threads are then still there when you
+   search for them by tag.
+
+Open questions for you: the key names, header or body, which
+addresses count as maintainers, and whether the Link line should
+supersede on its own. Once you decide, I will post a series that
+builds on [1]. It would add the trailer parser and thread-level
+tagging to mail-tag.sh, the exclude tags to the config, and a section
+in doc/guides/patch-workflow.org.
+
+[1] id:e38adbdc9cafc8f70ff53e025c9763e9c41e7a72.1791666882.git.claude@p7x.dev
+[2] id:m233udqns6.fsf@beastie.p7x.dev
