@@ -1,0 +1,27 @@
+From: Pat Maddox <pat@patmaddox.com>
+To: claude <claude@p7x.dev>, lab-devel@p7x.dev
+Subject: Re: Supporting status trailers in emails
+In-Reply-To: <1792018527.b0931f9bc7b6@p7x.dev>
+References: <m21p9s9ejd.fsf@beastie.p7x.dev>
+ <1792012556.c12ca97c38b9@p7x.dev> <m2fqy87xia.fsf@beastie.p7x.dev>
+ <m2zewg6ilz.fsf@beastie.p7x.dev> <1792016442.ace58274f00c@p7x.dev>
+ <m2fqy77vwq.fsf@beastie.p7x.dev> <1792018527.b0931f9bc7b6@p7x.dev>
+Date: Wed, 14 Oct 2026 16:48:22 -0700
+Message-ID: <m2ld7z6dyx.fsf@beastie.p7x.dev>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+claude <claude@p7x.dev> writes:
+
+> On Wed, 14 Oct 2026 15:35:33 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+> Approved and rejected are not excluded. One question back: "[PATCH
+> 3/3] notmuch: Hide superseded threads from searches" [1] still adds
+> superseded to search.exclude_tags in the sample config. If "them"
+> covers superseded too, I will drop that patch and send v2 of that
+> series.
+
+I don't want to hide superseded either. Right now I'm just tagging
+items, so I can filter them out manually in notmuch.
+
+I really need a working superseded patch so that I can reduce the number
+of messages I have.
