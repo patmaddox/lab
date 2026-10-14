@@ -1,0 +1,65 @@
+From: claude <claude@p7x.dev>
+Subject: Re: p7x mail relay jail
+To: Pat Maddox <pat@patmaddox.com>, lab-devel@p7x.dev
+In-Reply-To: <m27bjlkoum.fsf@beastie.p7x.dev>
+References: <m2ik35npbo.fsf@beastie.p7x.dev>
+	<1791937094.8bb36fc859c3@p7x.dev> <m2pkxdm5gk.fsf@beastie.p7x.dev>
+	<1791941956.9ee36bfce7f8@p7x.dev> <m21p9tm4ev.fsf@beastie.p7x.dev>
+	<1791943332.59637291f136@p7x.dev> <m27bjlkoum.fsf@beastie.p7x.dev>
+Message-ID: <1791944359.5f06c6bd3ea3@p7x.dev>
+Date: Wed, 14 Oct 2026 02:19:23 +0000
+
+On Tue, 13 Oct 2026 19:17:21 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+> You still misunderstand. You should not post a spec until all the
+> questions are resolved. It's not "here's a draft spec, and I have some
+> questions." You only post a draft spec when you have no more
+> questions. Then I'll respond to the patch - and you will either reply
+> with an updated patch that you are confident in, or reply with
+> questions, but not both.
+
+Understood, thanks. Your answers here settle everything I had, so I
+have no questions left. v3 is posted as "[PATCH v3]
+jails/instances/lab-mail: Initial spec" [1]. This reply only answers
+your questions.
+
+> Just to clarify - we'll be able to add more email addresses over time,
+> correct?
+
+Yes. The allowed senders are one setting in smtprelay's config
+(allowed_sender, a regular expression). Adding an address is a
+one-line change to the instance; the spec says so.
+
+> Pick a non-standard port for it as well.
+
+Dovecot now listens on 127.0.0.1:2143. The spec now says that neither
+daemon uses a standard port (25, 587, 143, or 993).
+
+> I assume we can also filter the destination addresses? That's a key
+> design constraint.
+
+Yes. smtprelay checks each RCPT TO against its allowed_recipients
+setting, before it contacts Fastmail. A recipient outside
+pat@patmaddox.com, @p7x.dev, and @lists.p7x.dev gets a 5xx reply in
+the session. Step 5 of the acceptance test checks this.
+
+> You say "lab-mail checks", but lab-mail is a host - what is the actual
+> process name? e.g. "lab-mail's smtprelay checks..." if that's indeed the case.
+
+It is smtprelay, as you guessed. v3 names the daemon that does each
+job: smtprelay sends and filters, mbsync pulls from Fastmail, and
+Dovecot serves IMAP. "lab-mail" is left only where the spec means the
+jail.
+
+> I don't think there's any value in two separate password. I only have
+> one app password for the relay.
+
+Done. The spec uses one app password, with IMAP and SMTP access,
+shared by smtprelay and mbsync.
+
+> That's outside the scope of the spec. claude@p7x.dev is its own email
+> address, configurable however I feel like it.
+
+Done. The spec lists where Fastmail delivers claude@p7x.dev's mail
+under out of scope.
+
+[1] id:4d40a245c49a3ec0631f80c5a65bf85497dadf6a.1791944336.git.claude@p7x.dev
