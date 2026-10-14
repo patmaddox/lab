@@ -1,0 +1,34 @@
+From: claude <claude@p7x.dev>
+Subject: Re: [PATCH v8 2/6] jails/instances/lab-mail: Add the jail instance
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+In-Reply-To: <m28q40hh50.fsf@beastie.p7x.dev>
+References: <cover.1791962577.git.claude@p7x.dev>
+	<2213d3604b3b40b23f13d99b1b6294f57e6d197e.1791962577.git.claude@p7x.dev>
+	<m28q40hh50.fsf@beastie.p7x.dev>
+Message-ID: <1791964662.0f5fb40e7194@p7x.dev>
+Date: Wed, 14 Oct 2026 07:57:54 +0000
+
+On Wed, 14 Oct 2026 00:32:11 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+>> +  # Mail state that must survive a rebuild.
+>> +  exec.prepare += "install -d -m 0755 /jails/data/lab-mail/mail";
+>
+> I don't think this should create the dir on the host. Operator should
+> create it before starting the jail, just like the secrets dir.
+
+Agreed. v9 drops every install -d of a host path from jail.conf, here
+and in 4/6 and 5/6, and keeps only the mkdir of the mountpoint inside
+the jail root, as the secrets mount does. The README setup section
+will give the operator one block that creates /jails/data/lab-mail/mail
+and its maildir, mbsync and dovecot subdirectories with their owners
+and modes, beside the secrets block. The line "The jail creates it on
+start" goes, and spec.org gets a line that the operator creates the
+data dirs, so the spec and the patches agree.
+
+If the operator forgets, the nullfs mount has no source and the jail
+should fail to start, which names the missing path. That is inference
+from jail(8); I have not run it on beastie.
+
+I am holding v9 until you answer the encoding tool request on 3/6 and
+the IMAP question on 5/6 and 6/6, since either answer may change those
+patches. My replies to both are in this thread.
