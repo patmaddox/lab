@@ -1,0 +1,72 @@
+From: claude <claude@p7x.dev>
+Subject: Re: [PATCH v3] jails/instances/lab-mail: Initial spec
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+In-Reply-To: <m25wz4kgd1.fsf@beastie.p7x.dev>
+References: <4d40a245c49a3ec0631f80c5a65bf85497dadf6a.1791944336.git.claude@p7x.dev>
+	<m2ik34kh3f.fsf@beastie.p7x.dev> <1791954885.8f2eda621d8a@p7x.dev>
+	<m25wz4kgd1.fsf@beastie.p7x.dev>
+Message-ID: <1791955518.cdf0f5f4ee56@p7x.dev>
+Date: Wed, 14 Oct 2026 05:25:23 +0000
+
+On Tue, 13 Oct 2026 22:20:42 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+> > So nothing is lost, but nothing retries for you either. If you want
+> > mail written offline to go out by itself, the queue has to live in
+> > your client, not in lab-mail. msmtp ships msmtpq, a wrapper that
+> > queues locally when the network is down and sends the queue later.
+> > I have not checked how it treats a 5xx. It must not queue a permanent
+> > rejection, or it brings back the problem the relay solves.
+>
+> What's a better approach here? Error early and save the draft, and
+> manually re-send? Or queue it up and have it auto-deliver later?
+
+Error early, keep the message, and re-send by hand. Three reasons:
+
+- You asked that the sender always learn when a send fails and why.
+  That is what ruled out a queuing MTA in lab-mail. A client queue
+  answers "sent" before Fastmail has seen the message, so it moves
+  the same problem one hop closer to you instead of removing it.
+- An agent is worse off with a queue than you are. process-email
+  checks results from outside, and a non-zero msmtp exit is a fact
+  it can act on: stop, and send again on the next pass. A message
+  sitting in msmtpq's queue is a state no pass looks at.
+- The cost is small. Fastmail outages are rare and short, and while
+  you are on beastie, reaching lab-mail is never the problem. A
+  failed send leaves the compose buffer open; C-c C-p files it under
+  your drafts search, and you send it from there.
+
+v4 is posted as "[PATCH v4] jails/instances/lab-mail: Initial spec"
+[1]. The spec text is the same as v3 apart from "append-only". The
+commit message now states the cost: nothing holds mail while Fastmail
+is unreachable, and the client must send again later.
+
+> > 2. When Fastmail is down, is it enough for your client to keep the
+> >    draft and let you send again by hand, or do you want a client-side
+> >    queue? If a queue, should your client and its queue be in this
+> >    spec, next to lab-claude?
+>
+> Not sure - open to suggestions here.
+
+Keep your client out of this spec. With no queue, there is nothing
+about your client for lab-mail to specify. Today your Emacs sends
+through libexec/maildir-deliver.sh into the jj maildir, which the
+spec leaves alone. Also, smtprelay accepts only claude@p7x.dev as a
+sender, so sending as you through lab-mail takes one allowlist line
+and a msmtp entry in dotfiles/emacs. That is a small patch of its
+own, best sent when you move your Emacs off the jj maildir.
+
+> I don't think notmuch should proactively tag replied. That's probably
+> vestigial behavior. We now know that the replied tag can be fully
+> derived from the list state.
+
+Agreed. The post-new hook (dotfiles/notmuch/hooks/mail-tag.sh)
+already resets replied and recomputes it from In-Reply-To on every
+notmuch new, so the tag Emacs adds before sending is at best
+redundant. "[PATCH] emacs: Leave the replied tag to notmuch new" [2]
+sets notmuch-message-replied-tags to nil. The original stays in your
+inbox until the next notmuch new picks up your reply. I checked that
+init.el still parses; I could not load it here, because notmuch-emacs
+is not installed in this jail.
+
+[1] id:128086ffb500da9838f19356191d2485b6b4ff08.1791955493.git.claude@p7x.dev
+[2] id:7d576466e07439fd2059007caf327e87a609493d.1791955493.git.claude@p7x.dev
