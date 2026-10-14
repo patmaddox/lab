@@ -1,0 +1,125 @@
+From: Pat Maddox <pat@patmaddox.com>
+To: claude <claude@p7x.dev>, lab-devel@p7x.dev
+Subject: Re: Supporting status trailers in emails
+In-Reply-To: <1792012556.c12ca97c38b9@p7x.dev>
+References: <m21p9s9ejd.fsf@beastie.p7x.dev> <1792012556.c12ca97c38b9@p7x.dev>
+Date: Wed, 14 Oct 2026 15:01:01 -0700
+Message-ID: <m2fqy87xia.fsf@beastie.p7x.dev>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+claude <claude@p7x.dev> writes:
+
+> On Wed, 14 Oct 2026 14:07:50 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+>> So, research how they track versions of patch series, and how they
+>> indicate states like approved, rejected, etc. Report on what you find so
+>> that we can develop a workflow.
+
+[...]
+
+> Git (git.git) keeps its state in the list. Junio posts "What's cooking
+> in git.git" regularly, and it gives the state of every topic: "Will
+> merge to next", "Expecting a reroll", "Will discard", and so on.
+> Every state comes from one maintainer message.
+
+It gives the state of every topic? How does that work? Also it seems to
+be branch-based, rather than patch-based.
+
+The question I'm trying to address here is, how do I reduce the noise
+from old patches? The first set of patches is superseded ones. Then I
+also need a way to archive / reject some.
+
+Previously I was going to use folders, but now that I'm planning to use
+real email, I need to find a different approach.
+
+I can't imagine that git reports on every single email thread that has
+ever existed, that would be insane.
+
+> sourcehut (lists.sr.ht) is the closest match to what you propose. A
+> reply in a patchset thread can carry the header
+> "X-Sourcehut-Patchset-Update:" with one of PROPOSED, NEEDS_REVISION,
+> SUPERSEDED, APPROVED, REJECTED or APPLIED. The list sets the
+> patchset's state from it.
+
+Interesting can you provide docs and examples for this? Also how does it
+compare to other methods?
+
+> So the big three keep series state in a web tool, and only use mail
+> for approval trailers. Sourcehut and Git keep it in mail. Your goal
+> of deriving state from the list puts us with them.
+
+I don't mind projecting state in another tool that makes it all more
+visible... but it should be possible to reconstruct it from the mailing
+list and/or git repo.
+
+Essentially there needs to be a database somewhere. That can be the
+corpus of emails, metadata in a git branch, or a dedicated database.
+
+>> Again a goal of this workflow is to have the current state of the list
+>> be derivable from the contents of the list. So I won't tag things as
+>> overcome or accepted - those need to be derived from the
+>> contents. Supporting trailers - or a similar mechanism - lets me add
+>> metadata to emails after the fact.
+>
+> That fits what is already on the list. "[PATCH] notmuch: Tag patches
+> reported committed" [1] adds a header_ids helper to mail-tag.sh. It
+> pulls a Message-ID out of a named header, and the committed tag is
+> derived from it on every notmuch new. Your choice there of a header
+> naming the Message-ID [2] carries over to this. Here is a shape I
+> would propose, for you to decide on:
+>
+> 1. Key names. Use hyphens: Superseded-by, Approved-by, Rejected-by. I
+>    checked "git interpret-trailers --parse". It does not accept
+>    "Overcome by:" with a space, and one invalid line voids the whole
+>    trailer block. I would also say "superseded" rather than
+>    "overcome", since Patchwork and sourcehut both use it, but the name
+>    is yours to pick.
+
+Superseded-by sounds good.
+
+> 2. Header or body trailer. Body trailers are visible and easy to type
+>    in any client, and git interpret-trailers can parse them. They need
+>    care, though. Quoted lines must not count, and a signature after
+>    the trailers stops git from finding them. A header like the
+>    Committed: one is unambiguous, but it is hidden and harder to write
+>    by hand. I lean toward body trailers parsed with git
+>    interpret-trailers, applied only to the unquoted last paragraph.
+
+I think body trailers are the way to go. The idea is that I would reply
+to an email, and the last several lines would be the trailers that I
+introduce.
+
+
+[...]
+
+> 4. Authority. Anyone can write a trailer, including me, so the hook
+>    should count Approved-by and Rejected-by only when the From is a
+>    maintainer address. Superseded-by could also be accepted from the
+>    series' own author. If you want "the latest trailer wins" when two
+>    disagree, ordering by Date works.
+
+For now I think we're okay. And yes the latest trailer wins.
+
+> 5. Supersession without an extra reply. Every revised cover letter
+>    already ends with "Link to v(N-1): id:<msgid>", which
+>    src/lab-process-mail/prompt.md requires. The hook could derive
+>    superseded for the v(N-1) thread from that line. The explicit
+>    Superseded-by reply would then be for cases the Link line does not
+>    cover, such as a series replaced by a different one.
+
+I really like this... provide a report of patch series that we currently
+have, and the ones that would be detected as superseded via this
+mechanism. And show the ones that would not be, that we'd need to groom
+for manual supersession.
+
+> Open questions for you: the key names, header or body, which
+> addresses count as maintainers, and whether the Link line should
+> supersede on its own. Once you decide, I will post a series that
+> builds on [1]. It would add the trailer parser and thread-level
+> tagging to mail-tag.sh, the exclude tags to the config, and a section
+> in doc/guides/patch-workflow.org.
+>
+> [1] id:e38adbdc9cafc8f70ff53e025c9763e9c41e7a72.1791666882.git.claude@p7x.dev
+> [2] id:m233udqns6.fsf@beastie.p7x.dev
+
+I think I covered all of those in-line.
