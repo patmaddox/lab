@@ -1,0 +1,152 @@
+From: Pat Maddox <pat@patmaddox.com>
+To: claude <claude@p7x.dev>, lab-devel@p7x.dev
+Subject: Re: p7x mail relay jail
+In-Reply-To: <1791937094.8bb36fc859c3@p7x.dev>
+References: <m2ik35npbo.fsf@beastie.p7x.dev> <1791937094.8bb36fc859c3@p7x.dev>
+Date: Tue, 13 Oct 2026 18:33:15 -0700
+Message-ID: <m2pkxdm5gk.fsf@beastie.p7x.dev>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+claude <claude@p7x.dev> writes:
+
+> On Tue, 13 Oct 2026 16:38:51 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+>> Goal: Create a jail config for a mail relay to access mail for p7x.dev.
+>>
+>> The purpose is to provide a jail that holds onto the mail credentials,
+>> so that agents can send and read email, but not have the credentials
+>> themselves.
+>
+> Thanks, the goal is clear. I have a design to propose, but a few
+> facts decide its shape and I would be guessing at them, so I am
+> asking before I send a patch.
+
+I want to adjust this a bit and do a spec-driven workflow. So the first
+goal of this thread is to produce a spec, that is implementable. The
+back and forth with questions captures a lot of that information, but
+the first artifact should be a spec that stands alone. Then we can
+implement from the spec.
+
+> The proposal is a new instance, jails/instances/lab-mail, built the
+> same way as lab-claude:
+>
+> - OpenSMTPD (mail/opensmtpd) accepts mail from the jails without
+>   auth and relays it to the provider with the stored credentials.
+
+Sounds good, but I'd like to know what alternatives there are, and make
+a deliberate choice - i.e. what's the reasoning for using opensmtpd over
+others?
+
+> - Dovecot (mail/dovecot) with the imapc backend proxies IMAP to the
+>   provider and exposes only lists/ to the jails, read-only.
+
+ditto
+
+> - The credentials live in /jails/data/lab-mail/ on the host, mounted
+>   read-only with nullfs like lab-claude's state. They never enter
+>   the repo, and no other jail mounts them.
+
+Sounds good.
+
+>> - jails can connect with no authentication
+>
+> This is the part I cannot do safely with the current setup. Every
+> instance uses "ip4 = inherit", so a connection from lab-claude
+> arrives from the host's own address. The relay cannot tell a jail
+> from any other process on the host, and if it listens on the host's
+> external address, from anything that can reach beastie.
+
+Ah, we don't need to do that level of validation. All I meant was that
+the jails that connect to it will not need to authenticate - but it
+doesn't mean that the service is only accessible via the jails.
+
+It could listen on localhost on beastie, and thus still be accessible to
+any jails with inherit networking, right?
+
+Or it could have its own address, in which case all the jails would
+still be able to access it.
+
+I think this is bringing up two distinct things: how jails get access,
+and how to prevent access from other hosts. I think the simplest thing
+is to bind locally, and then jails can access it. If I'm wrong about
+that, then I think a dedicate IP for the mail jail will work
+too. Correct me if I'm wrong.
+
+> I propose giving lab-mail its own address, with the relay listening
+> only there, and moving the client jails off "inherit" to their own
+> addresses on the jails bridge. pf then passes 25 and 143 to lab-mail
+> only from those addresses. That changes lab-claude and lab-devel
+> networking, so I want your agreement first. Would you rather keep
+> "inherit" and accept that "the jails" means "anything on the host"?
+> Or would you prefer vnet jails like snapper on andre?
+
+I don't think the client jails need to move off "inherit", do they?
+That's only if we want to lock down access to them, which I don't think
+is necessary. Here's a security rule I can live with: the mail server is
+accessible via beastie, and any jails that run on it. I think we can do
+that by limiting where it binds, not necessarily having to use pf
+anywhere.
+
+>> - imap subdir lists/ is available for jails to fetch / read
+>
+> Who hosts p7x.dev mail, and what are its IMAP and SMTP submission
+> endpoints (host, port, TLS mode, and password or app-specific
+> token)? I will write the config against those and leave the secret
+> itself in /jails/data/lab-mail/.
+
+p7x.dev and lists.p7x.dev is hosted on fastmail.
+
+> Is lists/ a folder on the provider's account, with subfolders per
+> list? Should jails be able to set flags (e.g. \Seen), or only read?
+> I would start read-only.
+
+It's a single folder in fastmail. I do not intend to have
+subfolders. All list email is marked as read and moved into lists/ via a
+rule.
+
+The IMAP connection should be read-only. In fact if there's a way to
+guarantee that in the mail server connection, that would be good.
+
+> Would you rather have a local copy? mbsync into a local maildir
+> served by Dovecot keeps working when the provider is down, at the
+> cost of one more moving part. I would start with the imapc proxy.
+
+Give me an overview of the two different implementation approaches. I
+like the idea of it working even if connection to fastmail is
+down. However, the main thing I'm interested in right now is getting a
+working example going, then I can iterate on it.
+
+The first test is pretty simple: I send an email from pat@patmaddox.com
+to lab@lists.p7x.dev. The agent reads the email and responds as
+claude@p7x.dev.
+
+>> - outbound email can only go to pat@patmaddox.com and
+>> - *@lists.p7x.dev. all other email is rejected
+>
+> The list today is lab-devel@p7x.dev, and reply-all addresses it
+> there. Under this rule those replies would be rejected. Is the list
+> moving to lab-devel@lists.p7x.dev, or should lab-devel@p7x.dev also
+> be allowed?
+
+Good question, and keep bringing things up like this if you find
+them. You're supposed to look for logical errors.
+
+- pat@patmaddox.com
+- @p7x.dev
+- @lists.p7x.dev
+
+> Which sender addresses may jails use? I would rewrite or reject
+> anything that is not <user>@p7x.dev, since the provider will likely
+> refuse a From it does not own. Should it be one address per jail
+> (e.g. claude@p7x.dev) or one shared address?
+
+Don't rewrite. What happens if upstream provider rejects it? Will the
+rejection be passed through to the client? That would be useful if so.
+
+For now it will be claude@p7x.dev since that's what we're working with.
+
+> Once these are settled I will send the lab-mail instance as one
+> series. The networking change will be a separate patch in front of
+> it.
+
+As mentioned earlier, I want to start with a spec.
