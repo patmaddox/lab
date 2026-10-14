@@ -1,0 +1,25 @@
+From: Pat Maddox <pat@patmaddox.com>
+To: lab-devel@p7x.dev
+Subject: lab-process-mail: base work on b/dev
+Date: Wed, 14 Oct 2026 13:26:09 -0700
+Message-ID: <m2se289ggu.fsf@beastie.p7x.dev>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+The lab-process-mail tool bases work on trunk. That makes sense for a
+general contributor, but lab-claude is my personal coding assistant. I
+would run it inline in my shell if I trusted it, but I don't.
+
+That means that it should behave differently than an ordinary
+contributor. While a typical contributor would want to base work on
+trunk, my coding assistant should see pretty much the same view I
+do. b/dev is the branch I use to stage and test work before
+committing. In effect, all the commits in b/dev are potential targets
+for the next trunk move.
+
+lab-claude will be much more effective if it bases work on b/dev.
+
+In fact, I think this should be configurable. It should default to
+'trunk()' the jj revset. But it should be configurable via env var
+`LAB_BASE_BRANCH` so I would run with
+e.g. `LAB_BASE_BRANCH=b/dev@upstream lab-process-mail`
