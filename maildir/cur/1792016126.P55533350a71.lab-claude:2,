@@ -1,0 +1,64 @@
+Message-ID: <cover.1792016109.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Subject: [PATCH 0/3] notmuch: Tag superseded series and hide them
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+Date: Wed, 14 Oct 2026 22:15:26 +0000
+
+Old versions of a series stay on the list next to the current one,
+and a reader has to open each thread to tell which is live. This
+series derives a superseded tag from the list itself, as decided in
+"Re: Supporting status trailers in emails" [1], and hides the tagged
+threads from searches.
+
+Patch 1 tags the thread a revised cover letter names on its "Link to
+vN: id:<message-id>" line. Run over the list as it stands, it tags 24
+threads, one per Link line.
+
+Patch 2 tags the thread of any message whose closing trailers include
+Superseded-by, found with git interpret-trailers. A quoted trailer does
+not count. It is for the series no Link line covers, such as one a
+different series replaces. Any sender may write it, and the hook needs
+git.
+
+Patch 3 adds superseded to search.exclude_tags in the sample config.
+Only new installs get it; an existing ~/.notmuch-config needs the tag
+added by hand. One effect to weigh: where it is excluded, inbox mail
+in a superseded thread drops out of tag:inbox searches too. claude's
+config does not exclude it, so lab-process-mail still answers such
+mail.
+
+Approved and rejected are left out until their form is settled; the
+open question is in the same thread [2].
+
+The series needs "[PATCH] notmuch: Tag patches reported committed"
+[3], which is not yet applied. It reworks the same tagging batch in
+mail-tag.sh, and its patch id is in the prerequisite-patch-id line
+below.
+
+I tested each patch against a scratch notmuch database built from a
+copy of the maildir, with four added replies: a closing trailer, one
+above a signature, a quoted one, and one followed by more text. The
+first two tag their threads and the others do not.
+
+base-branch: b/dev@upstream
+
+[1] id:m2fqy87xia.fsf@beastie.p7x.dev
+[2] id:m2zewg6ilz.fsf@beastie.p7x.dev
+[3] id:e38adbdc9cafc8f70ff53e025c9763e9c41e7a72.1791666882.git.claude@p7x.dev
+
+claude (3):
+  notmuch: Tag series a later version replaces
+  notmuch: Tag threads a Superseded-by trailer names
+  notmuch: Hide superseded threads from searches
+
+ dotfiles/notmuch/hooks/mail-tag.sh     | 66 ++++++++++++++++++++++----
+ dotfiles/notmuch/notmuch-config.sample |  5 +-
+ 2 files changed, 62 insertions(+), 9 deletions(-)
+
+
+base-commit: e98145ce3999e69b68bfee6b5dc57025ce920a57
+prerequisite-patch-id: ccc8e4847410591dd56615d327df6f7247860afa
+-- 
+2.56.0
+

@@ -1,0 +1,43 @@
+Message-ID: <3dd2c9890ced3ef7293a5487fbc00c69c0a5bf56.1792016109.git.claude@p7x.dev>
+In-Reply-To: <cover.1792016109.git.claude@p7x.dev>
+References: <cover.1792016109.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Subject: [PATCH 3/3] notmuch: Hide superseded threads from searches
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+Change-Id: nrptukosmntqksqpyqkqokrrynsvwowy
+Date: Wed, 14 Oct 2026 22:15:29 +0000
+
+A superseded tag only cuts the noise if searches leave those threads
+out. Excluding the tag by default shows each series once, at its
+current version, while a search that names the tag still finds the
+old ones for review history.
+
+The package installs the sample only where no config exists, so
+existing setups keep their exclusions until they add the tag.
+---
+change-id: nrptukosmntqksqpyqkqokrrynsvwowy
+
+ dotfiles/notmuch/notmuch-config.sample | 5 ++++-
+ 1 file changed, 4 insertions(+), 1 deletion(-)
+
+diff --git a/dotfiles/notmuch/notmuch-config.sample b/dotfiles/notmuch/notmuch-config.sample
+index 2921e64..069aa92 100644
+--- a/dotfiles/notmuch/notmuch-config.sample
++++ b/dotfiles/notmuch/notmuch-config.sample
+@@ -21,8 +21,11 @@ primary_email=you@example.com
+ [new]
+ tags=
+ 
++# Superseded threads are hidden from searches, so only the current
++# version of each series shows. A query naming the tag still finds
++# them, e.g. tag:superseded.
+ [search]
+-exclude_tags=deleted
++exclude_tags=deleted;superseded
+ 
+ # Patches carry their commit's jj change id in a Change-Id header, the
+ # same across every version of a patch.  changeid:<id> finds them all.
+-- 
+2.56.0
+
