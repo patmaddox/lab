@@ -1,0 +1,68 @@
+From: Pat Maddox <pat@patmaddox.com>
+To: claude <claude@p7x.dev>
+Cc: lab-devel@p7x.dev
+Subject: Re: [PATCH] dotfiles/notmuch: Spec reading and sending through
+ lab-mail
+In-Reply-To: <6a8666348ab2db603875801d7405324720ecf6ae.1791972093.git.claude@p7x.dev>
+References: <6a8666348ab2db603875801d7405324720ecf6ae.1791972093.git.claude@p7x.dev>
+Date: Wed, 14 Oct 2026 03:12:59 -0700
+Message-ID: <m2pkxcd1zo.fsf@beastie.p7x.dev>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+claude <claude@p7x.dev> writes:
+
+> Pat reads and sends lab-devel mail from notmuch-emacs on beastie, but
+> only through the jj maildir. lab-mail now serves the list over IMAP
+> and relays mail to Fastmail, so the client can use real mail without
+> holding a credential on beastie. A standalone spec settles the design
+> before anything is built, as the lab-mail spec did.
+>
+> Sending as pat@p7x.dev keeps the credential for Pat's primary account
+> off beastie entirely. A second notmuch profile lets the new client be
+> built and tested while the jj maildir keeps working, and the work
+> lands in three phases so each step is small and reversible.
+>
+> The switch must wait for the agent's workflow to move as well. Once
+> Emacs sends over SMTP, Pat's mail stops reaching the jj maildir the
+> agent reads, so the spec makes that ordering explicit.
+> ---
+> change-id: sxmtrkovmkrwqknlsmnsxzumuxuwzzww
+>
+>  dotfiles/notmuch/spec.org | 190 ++++++++++++++++++++++++++++++++++++++
+>  1 file changed, 190 insertions(+)
+>  create mode 100644 dotfiles/notmuch/spec.org
+>
+> diff --git a/dotfiles/notmuch/spec.org b/dotfiles/notmuch/spec.org
+> new file mode 100644
+> index 0000000..20ec76a
+> --- /dev/null
+> +++ b/dotfiles/notmuch/spec.org
+> @@ -0,0 +1,190 @@
+> +#+TITLE: Pat's mail client on beastie: read and send through lab-mail
+> +
+> +artifact: the mail client config in =dotfiles/notmuch= and
+> +=dotfiles/emacs=, the packages it needs in
+> +=infra/hosts/beastie/ports=, and one allowed sender in lab-mail's
+> +smtprelay config.
+> +
+> +goal: Pat reads the list and sends mail from notmuch-emacs on beastie
+> +through lab-mail, as pat@p7x.dev. beastie holds no mail credential;
+> +lab-mail holds the only one. See =jails/instances/lab-mail/spec.org=.
+> +
+> +provider: set up by the operator on Fastmail, outside the repo.
+> +- pat@p7x.dev is a sending identity on the Fastmail account behind
+> +  lab-mail's =mail-creds=, as claude@p7x.dev is.
+> +- Mail sent to the list, lab-devel@p7x.dev, is filed into the folder
+> +  =lists= by the rule that files all list mail there.
+> +
+> +phases: the work lands in three phases, in order. Each phase may take
+> +several commits, and the tree works after each one.
+
+I haven't read the rest of the spec because I stopped here.
+
+The spec should not have an implementation plan like this. A spec is
+fully declarative of the end result.
+
+This kind of information belongs in the email thread. The actual commit
+history will reveal that this was how the work was organized.
