@@ -1,0 +1,94 @@
+From: claude <claude@p7x.dev>
+Subject: Re: [PATCH 0/3] Install dependencies from FreeBSD-ports in lab-claude
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+In-Reply-To: <m24ieoaze5.fsf@beastie.p7x.dev>
+References: <cover.1792003653.git.claude@p7x.dev>
+	<m24ieoaze5.fsf@beastie.p7x.dev>
+Message-ID: <1792005673.db4279e7de9b@p7x.dev>
+Date: Wed, 14 Oct 2026 19:21:17 +0000
+
+On Wed, 14 Oct 2026 11:52:02 -0700, Pat Maddox wrote:
+
+> claude <claude@p7x.dev> writes:
+>
+>> Patch 1 adds the doas rule. doas matches a command's arguments
+>> exactly, so a rule for "pkg install -r FreeBSD-ports" would allow only
+>> that line with no package names, while "cmd pkg" alone would also
+>
+> Are you 100% sure about that? I thought that doas permits arg prefixes,
+> so that `pkg install -r FreeBSD-ports` is sufficient for you to add `-y
+> <pkgname>` at the end. I could be wrong - but I want you to verify with
+> docs and/or source code and show me the evidence.
+
+I checked all three: the man page, the source, and doas itself. They
+agree that the arguments must match exactly, so a prefix is not
+enough. The jail has security/doas 6.4 installed, which is the port of
+Jesse Smith's doas from codeberg.org/thejessesmith/doas.
+
+doas.conf(5), as installed in the jail, says:
+
+    args [argument ...]
+                 Arguments to command.  The command arguments provided by the
+                 user need to match those specified.  The keyword args alone
+                 means that command must be run without any arguments.
+
+The source settles what "match" means. In doas.c, match() (near line
+113) compares the rule's arguments with the ones given:
+
+    if (r->cmdargs) {
+            /* if arguments were given, they should match explicitly */
+            for (i = 0; r->cmdargs[i]; i++) {
+                    if (!cmdargs[i])
+                            return 0;
+                    if (strcmp(r->cmdargs[i], cmdargs[i]))
+                            return 0;
+            }
+            if (cmdargs[i])
+                    return 0;
+    }
+
+The loop does check the rule's arguments as a prefix of the ones
+given. The last test then rejects the rule if any argument is left
+over, so you cannot add anything after the prefix. When the rule has
+no args at all, this block is skipped and any arguments pass. That is
+why a bare "cmd /usr/sbin/pkg" would also allow pkg delete.
+
+Last, doas -C checks a config file against a command line without
+running anything. I tested the rule you described with the doas
+installed in the jail:
+
+    $ cat doas.conf
+    permit nopass claude as root cmd /usr/sbin/pkg args install -r FreeBSD-ports
+    $ doas -C doas.conf /usr/sbin/pkg install -r FreeBSD-ports
+    permit nopass
+    $ doas -C doas.conf /usr/sbin/pkg install -r FreeBSD-ports -y jq
+    deny
+    $ doas -C doas.conf /usr/sbin/pkg install -r FreeBSD-ports jq
+    deny
+    $ doas -C doas.conf /usr/sbin/pkg install -r FreeBSD-ports -- jq
+    deny
+
+I meant to run the same test against a rule with no args to show pkg
+delete being allowed, but the sandbox I run in blocked it. That case
+rests on the source above, where no args skips the whole check.
+
+The wrapper script is the only way I found to allow "install from
+FreeBSD-ports" with any package names while still blocking everything
+else. Writing one rule per package would also work, but then every
+new package needs a doas.conf change, which defeats the point.
+
+>> Patch 3 declares lang/python. lang/go and textproc/jq are also
+>> installed but not declared. I left them out because I do not know
+>> whether you meant them to stay; say so and I will add them.
+>
+> Yes I want them all in the jail to start.
+
+That is already done in v2, "[PATCH v2 0/3] Install dependencies from
+FreeBSD-ports in lab-claude" [1]. I sent it shortly before your reply
+arrived. Its patch 3 declares lang/python, lang/go, and textproc/jq,
+and CLAUDE.md now says that every installed package belongs in
+instance.conf. Patch 1 is unchanged in v2, so the evidence above
+applies to it too. Please review v2 rather than this one.
+
+[1] id:cover.1792003709.git.claude@p7x.dev
