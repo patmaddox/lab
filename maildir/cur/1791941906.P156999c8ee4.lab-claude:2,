@@ -1,0 +1,146 @@
+Message-ID: <5f7d85c552bc47bb2b23e2510437f859ddafa4cc.1791941898.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Date: Wed, 14 Oct 2026 01:38:12 +0000
+Subject: [PATCH] jails/instances/lab-mail: Initial spec
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+Change-Id: rlrysuruvryxyvntzzsmyzxntuyxxkuv
+
+Agents need to send and read p7x.dev mail, but the Fastmail
+credentials should not live in any jail an agent works in. A
+standalone spec settles what the relay jail does before anything is
+built, so the design can be reviewed and changed in one place.
+
+It records the decisions made so far: bind to loopback and rely on
+inherit networking instead of pf, restrict recipients but not
+senders, and pull lists/ into a local copy so that read-only access
+to Fastmail holds by construction. The open questions are the ones
+only the account owner can answer.
+---
+change-id: rlrysuruvryxyvntzzsmyzxntuyxxkuv
+
+The comparison of alternatives behind each choice is in my reply to
+"Re: p7x mail relay jail" [1], which cites this patch.
+
+[1] id:m2pkxdm5gk.fsf@beastie.p7x.dev
+
+ jails/instances/lab-mail/spec.org | 105 ++++++++++++++++++++++++++++++
+ 1 file changed, 105 insertions(+)
+ create mode 100644 jails/instances/lab-mail/spec.org
+
+diff --git a/jails/instances/lab-mail/spec.org b/jails/instances/lab-mail/spec.org
+new file mode 100644
+index 0000000..917a690
+--- /dev/null
++++ b/jails/instances/lab-mail/spec.org
+@@ -0,0 +1,105 @@
++#+TITLE: lab-mail: a mail relay jail for p7x.dev
++
++artifact: a jail instance in this dir, built and operated like the
++other instances in =jails/instances=.
++
++goal: agents in jails on beastie send and read p7x.dev mail without
++holding the mail credentials. lab-mail holds them, and it is the only
++thing that talks to the mail provider.
++
++provider: p7x.dev and lists.p7x.dev are hosted on Fastmail.
++- IMAP: imap.fastmail.com, port 993, implicit TLS
++- SMTP submission: smtp.fastmail.com, port 465, implicit TLS
++- Fastmail requires an app password for IMAP and SMTP.
++
++access:
++- lab-mail uses =ip4 = inherit=, like the client jails. A jail with
++  its own address has its own 127.0.0.1, which the other jails cannot
++  reach.
++- lab-mail listens on 127.0.0.1 only: SMTP on port 25, IMAP on port
++  143. It never listens on an external address.
++- So beastie, and every jail on it that uses =ip4 = inherit=, can use
++  lab-mail, and nothing off beastie can. That is the security
++  boundary. No pf rules are needed.
++- Clients do not authenticate to send. IMAP has no anonymous mode,
++  so lab-mail accepts any user name and password at login.
++- No TLS between clients and lab-mail. The traffic stays on loopback.
++
++credentials:
++- The operator creates them on the host in
++  =/jails/data/lab-mail/secrets/=. They never enter the repo.
++- nullfs-mounted read-only into lab-mail, and into no other jail.
++- Inside lab-mail, readable only by the daemons that use them.
++- The instance documents how the operator creates them.
++
++sending:
++- Software: OpenSMTPD (mail/opensmtpd).
++- lab-mail relays the mail it accepts to Fastmail SMTP, logging in
++  with the stored credentials.
++- It checks each envelope recipient (RCPT TO) against this list:
++  - =pat@patmaddox.com=
++  - any address at =p7x.dev=
++  - any address at =lists.p7x.dev=
++- Domains match exactly and without regard to case. =p7x.dev= does
++  not match its subdomains. That is why =lists.p7x.dev= is listed on
++  its own.
++- A recipient that is not on the list is rejected with a 5xx reply
++  to its RCPT TO, so the client sees the rejection in the session.
++  The other recipients of the same message are still accepted.
++- lab-mail does not check or rewrite the sender, the headers, or the
++  body. Fastmail decides which senders it accepts.
++- lab-mail queues mail before relaying it. When Fastmail rejects a
++  message, the client has already received 250. lab-mail then sends a
++  bounce to the envelope sender, which is on the recipient list when
++  the sender is at p7x.dev.
++
++reading:
++- Software: isync (mail/isync) for mbsync, and Dovecot (mail/dovecot)
++  for IMAP.
++- mbsync in lab-mail pulls the Fastmail folder =lists/= into a local
++  maildir at least once a minute. =lists/= is a single folder with no
++  subfolders.
++- mbsync only pulls. It never sends new messages, flag changes, or
++  deletions to Fastmail. This is the read-only guarantee: whatever a
++  client does, nothing reaches Fastmail.
++- The local maildir lives in =/jails/data/lab-mail/mail/=, mounted
++  read-write into lab-mail only, so a rebuild of the jail does not
++  fetch the folder again.
++- Dovecot serves the local maildir as one read-only mailbox named
++  =lists=. Clients can list, fetch, and search it. Attempts to set
++  flags, append, copy into it, or expunge leave the maildir unchanged.
++- Reading keeps working from the local copy while Fastmail is down.
++
++acceptance test: run from lab-claude.
++1. pat@patmaddox.com sends a message to lab@lists.p7x.dev.
++2. Within two minutes the message can be fetched from the =lists=
++   mailbox at 127.0.0.1:143.
++3. The agent replies as claude@p7x.dev to pat@patmaddox.com and
++   lab@lists.p7x.dev, through 127.0.0.1:25.
++4. pat@patmaddox.com receives the reply.
++5. A message to someone@example.com through 127.0.0.1:25 is rejected
++   at RCPT TO.
++6. An IMAP STORE of \Deleted followed by EXPUNGE on =lists= leaves the
++   message in place, both in lab-mail and on Fastmail.
++
++out of scope:
++- The lab-devel list and the process-email workflow. They keep using
++  the maildir in jj.
++- Restricting which jails or local users may use lab-mail.
++- Per-jail sender addresses. For now every client sends as
++  claude@p7x.dev.
++
++questions:
++- Is claude@p7x.dev a sending identity on the Fastmail account?
++  Fastmail is likely to reject a sender it does not know, and with a
++  queuing relay that rejection only comes back as a bounce.
++- Where does mail to claude@p7x.dev land? Bounces go there. If a
++  Fastmail rule files it into =lists/=, the agent sees its bounces.
++- Can a Fastmail app password be limited to SMTP, or to IMAP? If so,
++  lab-mail should hold one of each, so that a leaked credential does
++  as little as possible.
++- How does a client jail read the =lists= mailbox? The agent works
++  from a maildir with notmuch, so lab-claude would need an IMAP client
++  such as mbsync (mail/isync) in its packages.
++- Does anything on beastie already listen on 127.0.0.1:25 or :143?
++  Sendmail did by default before FreeBSD 14.
+
+base-commit: 23c5779575deee14b294b1a99db19ebecef4fd69
+-- 
+2.56.0
+
