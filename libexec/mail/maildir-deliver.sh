@@ -12,8 +12,13 @@
 # leading mbox "From " separator line is dropped.
 #
 # The From header is kept as composed; the sender's mail config sets
-# it.  A Date header is added if the message lacks one, so a message
-# never lands undated (which sorts as the epoch).
+# it.  The Date header is always the delivery time, replacing any Date
+# the message carries.  git format-patch dates each patch with its
+# commit's author date, which can be days old, so a series would
+# otherwise sort by when its commits were written rather than when it
+# was posted.  Each delivery is dated at least a second after the
+# newest message already in the maildir, so a series delivered in one
+# burst sorts in the order it was delivered.
 #
 # git is the transport: the message is only saved, not sent.  Commit it
 # and push; notmuch new indexes it wherever the branch is checked out.
@@ -45,14 +50,15 @@ die() {
 }
 
 main() {
-	local maildir name
+	local maildir stamp name
 	maildir="$(resolve_maildir)"
 	mkdir -p "${maildir}/tmp" "${maildir}/cur" "${maildir}/new"
 
 	# Write under tmp/ first and rename into cur/ so a reader never
 	# sees a partial message.
-	name="$(unique_name)"
-	add_headers >"${maildir}/tmp/${name}"
+	stamp="$(delivery_time "${maildir}")"
+	name="$(unique_name "${stamp}")"
+	add_headers "${stamp}" >"${maildir}/tmp/${name}"
 	mv "${maildir}/tmp/${name}" "${maildir}/cur/${name}:2,"
 }
 
@@ -77,23 +83,40 @@ resolve_maildir() {
 	die "no maildir: set MAILDIR or configure notmuch database.mail_root"
 }
 
-# Add a Date if the message has none.  A leading mbox "From "
-# separator is dropped.  in_header is true until the blank line that
-# ends the headers.
+# The epoch time to date this delivery with: now, or one second after
+# the newest message in the maildir if that is later.  A maildir
+# filename starts with its delivery time, so the newest is read from
+# the names without opening any message.
+delivery_time() {
+	local maildir now
+	maildir="${1}"
+	now="$(date +%s)"
+	ls "${maildir}/cur" "${maildir}/new" | awk -v now="${now}" '
+		BEGIN { t = now }
+		/^[0-9]+\./ { n = $0; sub(/\..*/, "", n); if (n + 1 > t) t = n + 1 }
+		END { print t }
+	'
+}
+
+# Replace any Date with the delivery time, given as epoch seconds.  A
+# leading mbox "From " separator is dropped.  in_header is true until
+# the blank line that ends the headers; in_date is true on a Date
+# header and its continuation lines.
 add_headers() {
-	awk -v date="$(date '+%a, %d %b %Y %H:%M:%S %z')" '
+	awk -v date="$(date -r "${1}" '+%a, %d %b %Y %H:%M:%S %z')" '
 		BEGIN { in_header = 1 }
 		NR == 1 && /^From / { next }			# mbox separator
 		!in_header { print; next }			# body
 		/^$/ {						# end of headers
-			if (!date_done) print "Date: " date
+			print "Date: " date
 			in_header = 0
 			print
 			next
 		}
+		in_date && /^[ \t]/ { next }			# folded Date
 		{
-			if (tolower($0) ~ /^date:/) date_done = 1
-			print
+			in_date = tolower($0) ~ /^date:/
+			if (!in_date) print
 		}
 	'
 }
@@ -101,7 +124,7 @@ add_headers() {
 # Generate a unique maildir filename: <time>.P<pid><rand>.<host>.
 unique_name() {
 	printf '%s.P%s%s.%s' \
-	    "$(date +%s)" "$$" "$(rand)" "$(hostname -s 2>/dev/null || hostname)"
+	    "${1}" "$$" "$(rand)" "$(hostname -s 2>/dev/null || hostname)"
 }
 
 rand() {

@@ -39,15 +39,17 @@ transport instead of SMTP**.
 files one message into the maildir:
 
 - It keeps the From the sender's mail config set.
-- It adds a `Date` header if the message lacks one.
+- It sets the `Date` header to the delivery time, replacing any Date
+  the message carries, at least a second after the newest message in
+  the maildir so a series sorts in delivery order.
 - The destination is `$MAILDIR`, else notmuch's configured mail root.
 
 Two front ends feed it:
 
 - **Composed mail** (a reply): message-mode / notmuch calls
   `maildir-deliver.sh` directly as its sendmail program.  A composed
-  message already carries its Message-ID, Date, and threading, so
-  nothing else is needed.
+  message already carries its Message-ID and threading, so nothing
+  else is needed.
 - **A patch series**: `libexec/mail/mail-send.sh <range>` wraps
   `git send-email --sendmail-cmd=maildir-deliver.sh`, which runs
   format-patch and threads the mails.  (Requires git send-email's
