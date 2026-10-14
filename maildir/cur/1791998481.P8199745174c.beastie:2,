@@ -1,0 +1,218 @@
+From: Pat Maddox <pat@patmaddox.com>
+To: claude <claude@p7x.dev>
+Cc: lab-devel@p7x.dev
+Subject: Re: [freebsd-ports PATCH] net-mgmt/signoz: Observability platform
+ for logs, metrics, and traces
+In-Reply-To: <b90dbb5ddc5c068f1c2c7fc551b57c5a2d11da8c.1791931184.git.claude@p7x.dev>
+References: <b90dbb5ddc5c068f1c2c7fc551b57c5a2d11da8c.1791931184.git.claude@p7x.dev>
+Date: Wed, 14 Oct 2026 10:21:21 -0700
+Message-ID: <m24ieoci5q.fsf@beastie.p7x.dev>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+claude <claude@p7x.dev> writes:
+
+> SigNoz is an open source observability platform. It brings logs,
+> metrics, and traces together in one application, with dashboards,
+> alerts, exceptions, and service maps. It is native to OpenTelemetry and
+> stores its data in ClickHouse.
+>
+> This is the Community Edition of the query service and web interface.
+> Telemetry reaches ClickHouse through the SigNoz distribution of the
+> OpenTelemetry Collector, which is packaged separately.
+>
+> WWW: https://signoz.io/
+> ---
+> Notes for review:
+>
+> Version: v0.145.0 is the newest GitHub release and is not marked as a
+> pre-release. Upstream publishes no registry release other than the Go
+> module proxy, which has the same tag.
+>
+> Edition: the port builds ./cmd/community, which is MIT. The source
+> also carries ee/ and cmd/enterprise/ under a separate license. The
+> community command imports nothing from ee/, so LICENSE=MIT holds for
+> what is built and installed.
+>
+> Mechanism: USES=go:modules with GO_MODULE from the module proxy, the
+> way about 440 of the 559 GO_MODULE ports fetch. The web interface is a
+> pnpm and Vite build with no offline path in the tree, so the port
+> takes the prebuilt web/ from upstream's community release tarball,
+> following www/grafana, www/opengist, and net-mgmt/prometheus3. That
+> tarball is 70 MB and also holds a Linux binary, which is not used.
+> Only the linux_amd64 asset is fetched; web/ is identical across
+> architectures. Its name has no version, but go.mk puts every distfile
+> in a per-version DIST_SUBDIR, as for www/adguardhome. Its sha256
+> matches upstream's signoz-community_0.145.0_checksums.txt.
+>
+> Plist: web/ is about 4,200 files with content hashes in their names,
+> so post-install appends it to TMPPLIST, as www/grafana does. Source
+> maps (*.map, 31 MB of the 54 MB) are left out; the UI does not need
+> them.
+>
+> Paths: the binary's built-in defaults point at /etc/signoz/web,
+> /root/templates, and /var/lib/signoz. post-patch rewrites them to
+> DATADIR and /var/db/signoz, so "signoz server" runs with no config
+> file. conf/example.yaml gets the same rewrite and is installed to
+> DATADIR as the reference for all settings. portlint warns about the
+> absolute /var/db path; net-mgmt/prometheus3 does the same for its
+> database directory.
+>
+> rc.d: modeled on net-mgmt/prometheus3's script. Configuration is the
+> upstream style of SIGNOZ_* environment variables through signoz_env,
+> with signoz_config optional. pkg-message points out that pprof (6060)
+> and metrics (9090, the Prometheus default) listen on all interfaces
+> by default, and how to change that.
+>
+> UIDs/GIDs: signoz takes 404, the lowest number free in both files.
+
+See if there's a conventional UID for signoz, or one closer to similar
+services. If FreeBSD convention is "lowest available" then that's fine -
+I just want to try to stick to convention as much as possible.
+
+>
+> Runtime dependencies: none. ClickHouse may be remote, so it is not a
+> RUN_DEPENDS; pkg-message names databases/clickhouse. The schema
+> migrator and the collector belong to the separate otel collector port.
+>
+> Version stamping: ldflags set variant, version, and the short commit
+> hash (GIT_HASH), as upstream's Makefile does. Build time and branch
+> are left unset so the build is reproducible.
+>
+> Checked: portclippy and portfmt -D are clean. portlint -A has only
+> the /var/db warning above. makesum fetched all three distfiles; patch
+> ran, and each REINPLACE changed its target. The rc.d script passes
+> sh -n.
+>
+> Not checked: Go is not installed in this jail. go-post-fetch (the
+> module download), vendoring, the build, stage, and the plist were not
+> run. makesum ran with NO_DEPENDS=yes and GO_CMD=/usr/bin/true, which
+> skips only the module download; distinfo does not cover modules. I
+> have not checked whether modernc.org/sqlite and the other dependencies
+> build on every architecture, so the port has no ONLY_FOR_ARCHS yet.
+> SigNoz was not run.
+
+You have go now, so you can use it to verify things.
+
+However when porting, you will not build... because it just takes too
+long.
+
+That's been my policy up to this point, and I build in
+poudriere. However I'm rethinking that. It does seem like it would be
+usefl for you to build stuff. I just don't want to wait a really long
+time for it.
+
+So help me think through a good approach for this. I really don't want
+you building all the dependencies. So if we can configure the build to
+not build dependencies, then you can just report any dependencies that
+you need me to install to proceed.
+
+This should be deterministic so there should be a script in
+oss/freebsd-ports that sets up env vars to not build deps, or maybe it's
+make.conf or whatever. Basically I'm thinking there's a toggle somewhere
+that doesn't build deps so we can control that behavior, fail if deps
+are missing. Then claude analyzes all missing deps and reports for
+operator install.
+
+>  GIDs                                 |  2 +-
+>  UIDs                                 |  2 +-
+>  net-mgmt/Makefile                    |  1 +
+>  net-mgmt/signoz/Makefile             | 66 +++++++++++++++++++++
+>  net-mgmt/signoz/distinfo             |  7 +++
+>  net-mgmt/signoz/files/pkg-message.in | 27 +++++++++
+>  net-mgmt/signoz/files/signoz.in      | 88 ++++++++++++++++++++++++++++
+>  net-mgmt/signoz/pkg-descr            |  8 +++
+>  net-mgmt/signoz/pkg-plist            |  6 ++
+>  9 files changed, 205 insertions(+), 2 deletions(-)
+>  create mode 100644 net-mgmt/signoz/Makefile
+>  create mode 100644 net-mgmt/signoz/distinfo
+>  create mode 100644 net-mgmt/signoz/files/pkg-message.in
+>  create mode 100644 net-mgmt/signoz/files/signoz.in
+>  create mode 100644 net-mgmt/signoz/pkg-descr
+>  create mode 100644 net-mgmt/signoz/pkg-plist
+>
+> diff --git a/GIDs b/GIDs
+> index 8a7121f4d4db..d902d9eed301 100644
+> --- a/GIDs
+> +++ b/GIDs
+> @@ -345,7 +345,7 @@ evcc:*:400:
+>  spectrumknx:*:401:
+>  lid_switchd:*:402:
+>  airplane_radiosd:*:403:
+> -# free: 404
+> +signoz:*:404:
+>  # free: 405
+>  # free: 406
+>  # free: 407
+> diff --git a/UIDs b/UIDs
+> index d47676ab8c8c..99abecb55699 100644
+> --- a/UIDs
+> +++ b/UIDs
+> @@ -350,7 +350,7 @@ evcc:*:400:400::0:0:evcc Daemon:/nonexistent:/usr/sbin/nologin
+>  spectrumknx:*:401:401::0:0:SpectrumKNX Daemon:/var/db/spectrumknx:/usr/sbin/nologin
+>  # free: 402
+>  # free: 403
+> -# free: 404
+> +signoz:*:404:404::0:0:SigNoz Daemon:/var/db/signoz:/usr/sbin/nologin
+>  # free: 405
+>  # free: 406
+>  # free: 407
+> diff --git a/net-mgmt/Makefile b/net-mgmt/Makefile
+> index de8e4c7e83ed..8f7c5c41183d 100644
+> --- a/net-mgmt/Makefile
+> +++ b/net-mgmt/Makefile
+> @@ -391,6 +391,7 @@
+>      SUBDIR += seafile-gui
+>      SUBDIR += semaphore
+>      SUBDIR += sendip
+> +    SUBDIR += signoz
+>      SUBDIR += simplomon
+>      SUBDIR += sipcalc
+>      SUBDIR += sjitter
+> diff --git a/net-mgmt/signoz/Makefile b/net-mgmt/signoz/Makefile
+> new file mode 100644
+> index 000000000000..433725d63c1e
+> --- /dev/null
+> +++ b/net-mgmt/signoz/Makefile
+> @@ -0,0 +1,66 @@
+> +PORTNAME=	signoz
+> +DISTVERSIONPREFIX=	v
+> +DISTVERSION=	0.145.0
+> +CATEGORIES=	net-mgmt
+> +# prebuilt web frontend; only web/ is installed from it
+> +MASTER_SITES+=	https://github.com/SigNoz/${PORTNAME}/releases/download/${DISTVERSIONFULL}/:web
+> +DISTFILES+=	${PORTNAME}-community_linux_amd64${EXTRACT_SUFX}:web
+> +
+> +MAINTAINER=	patmaddox@FreeBSD.org
+> +COMMENT=	Observability platform for logs, metrics, and traces
+> +WWW=		https://signoz.io/ \
+> +		https://github.com/SigNoz/signoz
+> +
+> +LICENSE=	MIT
+> +LICENSE_FILE=	${WRKSRC}/LICENSE
+> +
+> +USES=		go:modules
+> +USE_RC_SUBR=	${PORTNAME}
+> +
+> +GO_MODULE=	github.com/SigNoz/signoz
+> +GO_TARGET=	./cmd/community:${PORTNAME}
+> +GO_BUILDFLAGS=	-ldflags "-s -w \
+> +		-X ${GO_MODULE}/pkg/version.variant=community \
+> +		-X ${GO_MODULE}/pkg/version.version=${DISTVERSIONFULL} \
+> +		-X ${GO_MODULE}/pkg/version.hash=${GIT_HASH}"
+> +
+> +SUB_FILES=	pkg-message
+> +SUB_LIST=	SIGNOZ_DBDIR=${SIGNOZ_DBDIR} \
+> +		SIGNOZ_GROUP=${SIGNOZ_GROUP} \
+> +		SIGNOZ_USER=${SIGNOZ_USER}
+> +
+> +USERS=		${SIGNOZ_USER}
+> +GROUPS=		${SIGNOZ_GROUP}
+> +
+> +PLIST_SUB=	SIGNOZ_DBDIR=${SIGNOZ_DBDIR} \
+> +		SIGNOZ_GROUP=${SIGNOZ_GROUP} \
+> +		SIGNOZ_USER=${SIGNOZ_USER}
+> +
+> +GIT_HASH=	0aeef0d
+
+Why is GIT_HASH needed if we also have the release version?
