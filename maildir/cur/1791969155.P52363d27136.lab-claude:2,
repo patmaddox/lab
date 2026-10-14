@@ -1,0 +1,172 @@
+Message-ID: <2f13c3c89d66dae869234d90dd52eef4819f3f8d.1791969110.git.claude@p7x.dev>
+In-Reply-To: <cover.1791969110.git.claude@p7x.dev>
+References: <cover.1791969110.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Date: Wed, 14 Oct 2026 06:33:55 +0000
+Subject: [PATCH v11 3/8] jails/instances/lab-mail: Relay mail to Fastmail with
+ smtprelay
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+Change-Id: nplnvkkrlsomxnuwxrupuklwsxvyqrmk
+
+Agents need to send mail without the credentials, and to learn at
+once whether a message was accepted. A queuing MTA answers before
+Fastmail has seen the message, so a rejection comes back later as a
+bounce nobody reads. smtprelay relays each message during the
+client's session and hands back Fastmail's answer, so every failure
+reaches the sender as an SMTP reply.
+
+The sender and recipient allowlists stop a mistaken address before
+it leaves beastie. The Fastmail login reaches smtprelay only through
+its environment, built from mail-creds at start, so no config file
+carries it. smtprelay takes the login as part of a URL, where an
+"@", ":", "/" or "#" in the password would end the field early, so
+jq percent-encodes the login and password on the way in and any app
+password works.
+
+If mail-creds lacks the login or the password, smtprelay refuses to
+start and names the file. Otherwise the fault would surface only at
+the first send, as a Fastmail login failure handed to whichever agent
+happened to send first.
+
+remotes.env runs from rc(8), whose PATH at boot leaves out
+/usr/local/bin, so it names jq in full. The README describes the path
+a message takes from a client through smtprelay to Fastmail.
+---
+change-id: nplnvkkrlsomxnuwxrupuklwsxvyqrmk
+
+ jails/instances/lab-mail/README.org           | 18 +++++++++++++++++
+ jails/instances/lab-mail/dist.mtree           |  7 +++++++
+ .../lab-mail/dist/etc/rc.conf.d/smtprelay     |  4 ++++
+ .../dist/usr/local/etc/smtprelay/remotes.env  | 19 ++++++++++++++++++
+ .../usr/local/etc/smtprelay/smtprelay.ini     | 20 +++++++++++++++++++
+ jails/instances/lab-mail/instance.conf        |  9 +++++++++
+ 6 files changed, 77 insertions(+)
+ create mode 100644 jails/instances/lab-mail/dist.mtree
+ create mode 100644 jails/instances/lab-mail/dist/etc/rc.conf.d/smtprelay
+ create mode 100644 jails/instances/lab-mail/dist/usr/local/etc/smtprelay/remotes.env
+ create mode 100644 jails/instances/lab-mail/dist/usr/local/etc/smtprelay/smtprelay.ini
+
+diff --git a/jails/instances/lab-mail/README.org b/jails/instances/lab-mail/README.org
+index 5a24b92..0e65dfa 100644
+--- a/jails/instances/lab-mail/README.org
++++ b/jails/instances/lab-mail/README.org
+@@ -19,6 +19,24 @@ Two host directories are mounted into the jail, and into no other:
+ The credentials never leave =/data/secrets=. Only the services that
+ talk to Fastmail can read them, as members of the =mailcred= group.
+ 
++** sending
++#+BEGIN_EXAMPLE
++client --SMTP--> smtprelay 127.0.0.1:2525 --SMTPS--> smtp.fastmail.com:465
++#+END_EXAMPLE
++
++smtprelay is the only way out. rc(8) starts it when the jail starts,
++under daemon(8) as the user =smtprelay=; its config is
++=/usr/local/etc/smtprelay/smtprelay.ini=. Before it starts,
++=remotes.env= reads =mail-creds= and passes the Fastmail login to it
++in its environment.
++
++A client connects without logging in. smtprelay checks the envelope
++sender and each recipient against the allowlists in =smtprelay.ini=,
++and refuses any address that is not on them. It then logs in to
++Fastmail and relays the message while the client waits, so the
++client gets Fastmail's answer. Nothing is queued: a message that
++fails is not sent, and the client must send it again.
++
+ * setup
+ The operator stores the Fastmail login and app password on the host,
+ in =/jails/data/lab-mail/secrets/mail-creds=. They never enter the
+diff --git a/jails/instances/lab-mail/dist.mtree b/jails/instances/lab-mail/dist.mtree
+new file mode 100644
+index 0000000..baba0e3
+--- /dev/null
++++ b/jails/instances/lab-mail/dist.mtree
+@@ -0,0 +1,7 @@
++/set type=file uname=root gname=wheel mode=0644
++
++./etc/rc.conf.d type=dir mode=0755
++./etc/rc.conf.d/smtprelay
++./usr/local/etc/smtprelay type=dir mode=0755
++./usr/local/etc/smtprelay/remotes.env
++./usr/local/etc/smtprelay/smtprelay.ini
+diff --git a/jails/instances/lab-mail/dist/etc/rc.conf.d/smtprelay b/jails/instances/lab-mail/dist/etc/rc.conf.d/smtprelay
+new file mode 100644
+index 0000000..85b8cd2
+--- /dev/null
++++ b/jails/instances/lab-mail/dist/etc/rc.conf.d/smtprelay
+@@ -0,0 +1,4 @@
++smtprelay_enable="YES"
++# daemon(8) options; they come before the smtprelay command line.
++smtprelay_flags="-u smtprelay -l mail -T smtprelay"
++smtprelay_env_file="/usr/local/etc/smtprelay/remotes.env"
+diff --git a/jails/instances/lab-mail/dist/usr/local/etc/smtprelay/remotes.env b/jails/instances/lab-mail/dist/usr/local/etc/smtprelay/remotes.env
+new file mode 100644
+index 0000000..adb8bae
+--- /dev/null
++++ b/jails/instances/lab-mail/dist/usr/local/etc/smtprelay/remotes.env
+@@ -0,0 +1,19 @@
++# Sourced by rc.subr(8) as root when smtprelay starts. The remote
++# carries the Fastmail login, so it is built from mail-creds here and
++# handed to smtprelay in its environment, never written to a file.
++#
++# mail-creds holds the login on line 1 and the password on line 2.
++# Both are percent-encoded, since an "@", ":", "/" or "#" in them
++# would otherwise end its field in the URL. jq is named in full: at
++# boot, rc(8) runs with a PATH that leaves out /usr/local/bin.
++_login="$(sed -n 1p /data/secrets/mail-creds)"
++_password="$(sed -n 2p /data/secrets/mail-creds)"
++if [ -z "${_login}" ] || [ -z "${_password}" ]; then
++	err 1 "/data/secrets/mail-creds needs the login on line 1" \
++	    "and the password on line 2"
++fi
++SMTPRELAY_REMOTES="smtps://\
++$(printf '%s\n' "${_login}" | /usr/local/bin/jq -Rr @uri):\
++$(printf '%s\n' "${_password}" | /usr/local/bin/jq -Rr @uri)\
++@smtp.fastmail.com:465"
++unset _login _password
+diff --git a/jails/instances/lab-mail/dist/usr/local/etc/smtprelay/smtprelay.ini b/jails/instances/lab-mail/dist/usr/local/etc/smtprelay/smtprelay.ini
+new file mode 100644
+index 0000000..974ce24
+--- /dev/null
++++ b/jails/instances/lab-mail/dist/usr/local/etc/smtprelay/smtprelay.ini
+@@ -0,0 +1,20 @@
++; smtprelay for lab-mail; see spec.org.
++;
++; Each message is relayed to Fastmail during the client's session, so
++; the client gets Fastmail's answer. The remote comes from
++; SMTPRELAY_REMOTES; see remotes.env.
++
++hostname = lab-mail.p7x.dev
++log_format = plain
++
++; Loopback on a non-standard port, so only beastie and the jails that
++; share its addresses can reach it, and no tool finds it by default.
++listen = 127.0.0.1:2525
++allowed_nets = 127.0.0.0/8
++
++; Envelope allowlists, checked at MAIL FROM and RCPT TO before
++; Fastmail is contacted. Domains match exactly and without regard to
++; case; p7x.dev does not match its subdomains. To allow an address,
++; add an alternative to the line.
++allowed_sender = (?i)^claude@p7x\.dev$
++allowed_recipients = (?i)^(pat@patmaddox\.com|[^@]+@p7x\.dev|[^@]+@lists\.p7x\.dev)$
+diff --git a/jails/instances/lab-mail/instance.conf b/jails/instances/lab-mail/instance.conf
+index a78103f..5a0ff28 100644
+--- a/jails/instances/lab-mail/instance.conf
++++ b/jails/instances/lab-mail/instance.conf
+@@ -3,3 +3,12 @@
+ readonly groups="
+ mailcred:15100
+ "
++
++readonly users="
++smtprelay:15101:15101:mailcred
++"
++
++readonly packages="
++mail/smtprelay
++textproc/jq
++"
+-- 
+2.56.0
+

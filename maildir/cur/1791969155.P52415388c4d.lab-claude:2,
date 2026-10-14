@@ -1,0 +1,216 @@
+Message-ID: <fd0870fd859453fa8268fa38e621726418e32ade.1791969110.git.claude@p7x.dev>
+In-Reply-To: <cover.1791969110.git.claude@p7x.dev>
+References: <cover.1791969110.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Date: Wed, 14 Oct 2026 09:10:13 +0000
+Subject: [PATCH v11 7/8] jails/instances/lab-mail: Add a check that the
+ services run
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+Change-Id: qlnvvlskllkmtxrsqnmyrztkxvrrkvyq
+
+Nothing tells the operator whether lab-mail works short of sending
+and fetching mail, and when it does not, which part failed. smtprelay
+can be down while Dovecot keeps serving old mail, and a fetch that
+stopped looks the same as a quiet list.
+
+just check runs, from beastie, one check per part of the setup: the
+jail, the credentials and who can read them, the mail state owners,
+each service and its port, the age of the last successful fetch, and
+the log files. Each prints ok or FAIL, and the exit status is 0 only
+if all pass, so a script can act on it without parsing the output.
+
+The fetch job now touches a file after each successful pull. Its age
+shows that fetching works even when no mail arrives.
+---
+change-id: qlnvvlskllkmtxrsqnmyrztkxvrrkvyq
+
+ jails/instances/lab-mail/Justfile             | 16 +++-
+ jails/instances/lab-mail/README.org           | 26 ++++++
+ jails/instances/lab-mail/dist.mtree           |  1 +
+ .../dist/usr/local/libexec/lab-mail/check     | 82 +++++++++++++++++++
+ .../dist/usr/local/libexec/lab-mail/fetch     |  4 +
+ 5 files changed, 128 insertions(+), 1 deletion(-)
+ mode change 120000 => 100644 jails/instances/lab-mail/Justfile
+ create mode 100755 jails/instances/lab-mail/dist/usr/local/libexec/lab-mail/check
+
+diff --git a/jails/instances/lab-mail/Justfile b/jails/instances/lab-mail/Justfile
+deleted file mode 120000
+index 0775fd5..0000000
+--- a/jails/instances/lab-mail/Justfile
++++ /dev/null
+@@ -1 +0,0 @@
+-../../share/_Justfile
+\ No newline at end of file
+diff --git a/jails/instances/lab-mail/Justfile b/jails/instances/lab-mail/Justfile
+new file mode 100644
+index 0000000..803ea7d
+--- /dev/null
++++ b/jails/instances/lab-mail/Justfile
+@@ -0,0 +1,15 @@
++import '../../share/_Justfile'
++
++# A recipe here would otherwise become the default, ahead of help.
++[private]
++default: help
++
++# Check that lab-mail is set up and running
++check:
++  #!/bin/sh
++  if ! jls -j lab-mail >/dev/null 2>&1; then
++    echo "FAIL the jail is running"
++    exit 1
++  fi
++  echo "ok the jail is running"
++  exec doas jexec -l lab-mail /usr/local/libexec/lab-mail/check
+diff --git a/jails/instances/lab-mail/README.org b/jails/instances/lab-mail/README.org
+index 249448a..474d2e4 100644
+--- a/jails/instances/lab-mail/README.org
++++ b/jails/instances/lab-mail/README.org
+@@ -131,3 +131,29 @@ just start
+ 
+ The build starts the jail before it installs the config, so restart
+ the jail after a build that changes the config.
++
++* check
++=just check= checks that lab-mail is set up and running. It prints
++one line per check, ok or FAIL, and exits non-zero if any check
++fails:
++#+BEGIN_EXAMPLE
++$ just check
++ok the jail is running
++ok /data/secrets/mail-creds exists
++...
++FAIL smtprelay is running
++FAIL smtprelay accepts connections on 127.0.0.1:2525
++...
++#+END_EXAMPLE
++
++It checks the jail, =mail-creds= and who can read it, the owners of
++the mail state directories, that syslogd, cron, smtprelay, and
++Dovecot are running, that smtprelay and Dovecot accept connections,
++that a fetch succeeded within the last five minutes, and that the log
++files exist. The fetch job touches =/data/mail/mbsync/last-fetch=
++after each successful pull, so a quiet list still passes. The
++check only reads, so it is safe to run at any time;
++=/usr/local/libexec/lab-mail/check= in the jail does the work.
++
++When a check fails, the service's log under =/var/log/lab-mail/=
++usually says why.
+diff --git a/jails/instances/lab-mail/dist.mtree b/jails/instances/lab-mail/dist.mtree
+index f8f203c..b0c835f 100644
+--- a/jails/instances/lab-mail/dist.mtree
++++ b/jails/instances/lab-mail/dist.mtree
+@@ -18,5 +18,6 @@
+ ./usr/local/etc/smtprelay/remotes.env
+ ./usr/local/etc/smtprelay/smtprelay.ini
+ ./usr/local/libexec/lab-mail type=dir mode=0755
++./usr/local/libexec/lab-mail/check mode=0755
+ ./usr/local/libexec/lab-mail/fetch mode=0755
+ ./var/log/lab-mail type=dir mode=0755
+diff --git a/jails/instances/lab-mail/dist/usr/local/libexec/lab-mail/check b/jails/instances/lab-mail/dist/usr/local/libexec/lab-mail/check
+new file mode 100755
+index 0000000..479123c
+--- /dev/null
++++ b/jails/instances/lab-mail/dist/usr/local/libexec/lab-mail/check
+@@ -0,0 +1,82 @@
++#!/bin/sh
++# Check that lab-mail's services are set up and running; spec.org
++# lists what is checked. Run as root in the jail; just check runs it
++# from beastie. Prints one line per check and exits 1 if any fails.
++# It only reads.
++set -u
++PATH=/sbin:/bin:/usr/sbin:/usr/bin:/usr/local/sbin:/usr/local/bin
++
++readonly creds=/data/secrets/mail-creds
++readonly stamp=/data/mail/mbsync/last-fetch
++
++failed=0
++
++# check <what> <command> [args]: run the command, and report what was
++# checked by its exit status.
++check() {
++	local what="${1}"; shift
++	if "${@}" >/dev/null 2>&1; then
++		echo "ok ${what}"
++	else
++		echo "FAIL ${what}"
++		failed=1
++	fi
++}
++
++has_line() {
++	[ -n "$(sed -n "${1}p" ${creds})" ]
++}
++
++# can_read and cannot_read run test(1) as the user, so a missing user
++# fails both.
++can_read() {
++	su -m "${1}" -c "test -r ${creds}"
++}
++
++cannot_read() {
++	su -m "${1}" -c "test ! -r ${creds}"
++}
++
++owned_by() {
++	[ -d "${1}" ] && [ "$(stat -f %u "${1}")" = "${2}" ]
++}
++
++listening() {
++	nc -z -w 5 127.0.0.1 "${1}"
++}
++
++# find prints the stamp only if it changed in the last five minutes.
++fetched_recently() {
++	[ -n "$(find ${stamp} -mmin -5)" ]
++}
++
++check "${creds} exists" test -f ${creds}
++check "${creds} has the login on line 1" has_line 1
++check "${creds} has the password on line 2" has_line 2
++check "smtprelay can read ${creds}" can_read smtprelay
++check "mbsync can read ${creds}" can_read mbsync
++check "vmail cannot read ${creds}" cannot_read vmail
++
++check "/data/mail/maildir is owned by mbsync (15102)" \
++    owned_by /data/mail/maildir 15102
++check "/data/mail/mbsync is owned by mbsync (15102)" \
++    owned_by /data/mail/mbsync 15102
++check "/data/mail/dovecot is owned by vmail (15103)" \
++    owned_by /data/mail/dovecot 15103
++
++for s in syslogd cron smtprelay dovecot; do
++	check "${s} is running" service ${s} status
++done
++
++check "smtprelay accepts connections on 127.0.0.1:2525" listening 2525
++check "dovecot accepts connections on 127.0.0.1:2143" listening 2143
++
++check "the last successful fetch was within five minutes" \
++    fetched_recently
++
++for l in smtprelay fetch dovecot; do
++	check "/var/log/lab-mail/${l}.log exists" \
++	    test -f /var/log/lab-mail/${l}.log
++done
++
++exit ${failed}
+diff --git a/jails/instances/lab-mail/dist/usr/local/libexec/lab-mail/fetch b/jails/instances/lab-mail/dist/usr/local/libexec/lab-mail/fetch
+index 6c64598..2422191 100755
+--- a/jails/instances/lab-mail/dist/usr/local/libexec/lab-mail/fetch
++++ b/jails/instances/lab-mail/dist/usr/local/libexec/lab-mail/fetch
+@@ -30,6 +30,10 @@ if [ ${after} -gt ${before} ]; then
+ fi
+ if [ ${rc} -ne 0 ]; then
+ 	echo "mbsync failed with exit status ${rc}"
++else
++	# The check reads this file's age to see that fetching works,
++	# even while the list is quiet.
++	touch /data/mail/mbsync/last-fetch
+ fi
+ 
+ exit ${rc}
+-- 
+2.56.0
+

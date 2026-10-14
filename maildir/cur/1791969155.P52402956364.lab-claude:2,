@@ -1,0 +1,164 @@
+Message-ID: <88e4e636c3a6b6eb27f7ce096d3c699082350c2f.1791969110.git.claude@p7x.dev>
+In-Reply-To: <cover.1791969110.git.claude@p7x.dev>
+References: <cover.1791969110.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Date: Wed, 14 Oct 2026 09:08:57 +0000
+Subject: [PATCH v11 6/8] jails/instances/lab-mail: Log each service to its own
+ file
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+Change-Id: powrnnlxmppmpmktmkzxnttsurxpxtxl
+
+smtprelay, the fetch job, and Dovecot all log to the mail facility,
+so their lines land interleaved in /var/log/maillog, and nothing says
+so. Following one service there means filtering by tag by hand. A
+successful fetch logged nothing at all, so the log could not show
+that mail had arrived.
+
+Each service now has its own file under /var/log/lab-mail/, rotated
+like maillog, which still gets everything. The fetch job reports how
+many messages each pull brought and names mbsync's exit status when
+it fails.
+
+syslogd in the jail opens no network socket. lab-mail shares
+beastie's addresses, so a socket would contend for UDP port 514 with
+every other jail's syslogd, and nothing needs remote logging here.
+---
+change-id: powrnnlxmppmpmktmkzxnttsurxpxtxl
+
+ jails/instances/lab-mail/README.org             | 15 +++++++++++++++
+ jails/instances/lab-mail/dist.mtree             |  6 ++++++
+ .../dist/etc/newsyslog.conf.d/lab-mail.conf     |  5 +++++
+ .../lab-mail/dist/etc/rc.conf.d/syslogd         |  3 +++
+ .../lab-mail/dist/etc/syslog.d/lab-mail.conf    |  9 +++++++++
+ .../dist/usr/local/libexec/lab-mail/fetch       | 17 +++++++++++++++++
+ 6 files changed, 55 insertions(+)
+ create mode 100644 jails/instances/lab-mail/dist/etc/newsyslog.conf.d/lab-mail.conf
+ create mode 100644 jails/instances/lab-mail/dist/etc/rc.conf.d/syslogd
+ create mode 100644 jails/instances/lab-mail/dist/etc/syslog.d/lab-mail.conf
+
+diff --git a/jails/instances/lab-mail/README.org b/jails/instances/lab-mail/README.org
+index 0ba34dc..249448a 100644
+--- a/jails/instances/lab-mail/README.org
++++ b/jails/instances/lab-mail/README.org
+@@ -73,6 +73,21 @@ Dovecot never talks to Fastmail. A client reads only what the last
+ fetch brought, so new list mail reaches it within a minute or two,
+ and reading keeps working while Fastmail is down.
+ 
++** logs
++Each service logs through syslogd(8) in the jail, to a file of its
++own under =/var/log/lab-mail/=, and all of them to =/var/log/maillog=:
++- =smtprelay.log=: each session, with the client, the envelope, and
++  Fastmail's reply.
++- =fetch.log=: each pull that brought mail, and every fetch failure.
++- =dovecot.log=: each IMAP login, and every error.
++
++A fetch that brings nothing logs nothing, so a quiet =fetch.log= is
++normal. The routing is in =/etc/syslog.d/lab-mail.conf=, and
++newsyslog(8) rotates the files daily and keeps a week. From beastie:
++#+BEGIN_EXAMPLE
++doas tail -f /jails/instances/lab-mail/var/log/lab-mail/fetch.log
++#+END_EXAMPLE
++
+ * setup
+ The operator stores the Fastmail login and app password on the host,
+ in =/jails/data/lab-mail/secrets/mail-creds=. They never enter the
+diff --git a/jails/instances/lab-mail/dist.mtree b/jails/instances/lab-mail/dist.mtree
+index 6923d75..f8f203c 100644
+--- a/jails/instances/lab-mail/dist.mtree
++++ b/jails/instances/lab-mail/dist.mtree
+@@ -2,9 +2,14 @@
+ 
+ ./etc/cron.d type=dir mode=0755
+ ./etc/cron.d/lab-mail
++./etc/newsyslog.conf.d type=dir mode=0755
++./etc/newsyslog.conf.d/lab-mail.conf
+ ./etc/rc.conf.d type=dir mode=0755
+ ./etc/rc.conf.d/dovecot
+ ./etc/rc.conf.d/smtprelay
++./etc/rc.conf.d/syslogd
++./etc/syslog.d type=dir mode=0755
++./etc/syslog.d/lab-mail.conf
+ ./usr/local/etc/dovecot type=dir mode=0755
+ ./usr/local/etc/dovecot/dovecot-acl
+ ./usr/local/etc/dovecot/dovecot.conf
+@@ -14,3 +19,4 @@
+ ./usr/local/etc/smtprelay/smtprelay.ini
+ ./usr/local/libexec/lab-mail type=dir mode=0755
+ ./usr/local/libexec/lab-mail/fetch mode=0755
++./var/log/lab-mail type=dir mode=0755
+diff --git a/jails/instances/lab-mail/dist/etc/newsyslog.conf.d/lab-mail.conf b/jails/instances/lab-mail/dist/etc/newsyslog.conf.d/lab-mail.conf
+new file mode 100644
+index 0000000..5bc0e8f
+--- /dev/null
++++ b/jails/instances/lab-mail/dist/etc/newsyslog.conf.d/lab-mail.conf
+@@ -0,0 +1,5 @@
++# Rotated like /var/log/maillog. C creates each file at boot, since
++# syslogd logs only to files that exist.
++/var/log/lab-mail/smtprelay.log	640	7	*	@T00	JC
++/var/log/lab-mail/fetch.log	640	7	*	@T00	JC
++/var/log/lab-mail/dovecot.log	640	7	*	@T00	JC
+diff --git a/jails/instances/lab-mail/dist/etc/rc.conf.d/syslogd b/jails/instances/lab-mail/dist/etc/rc.conf.d/syslogd
+new file mode 100644
+index 0000000..7e2791e
+--- /dev/null
++++ b/jails/instances/lab-mail/dist/etc/rc.conf.d/syslogd
+@@ -0,0 +1,3 @@
++# No network socket. The jail shares beastie's addresses, so one would
++# contend for UDP port 514 with the other jails' syslogd.
++syslogd_flags="-ss"
+diff --git a/jails/instances/lab-mail/dist/etc/syslog.d/lab-mail.conf b/jails/instances/lab-mail/dist/etc/syslog.d/lab-mail.conf
+new file mode 100644
+index 0000000..26d7e18
+--- /dev/null
++++ b/jails/instances/lab-mail/dist/etc/syslog.d/lab-mail.conf
+@@ -0,0 +1,9 @@
++# Each lab-mail service also logs to a file of its own. maillog still
++# gets all of them, through the mail.info line in syslog.conf.
++!smtprelay
++*.*					/var/log/lab-mail/smtprelay.log
++!lab-mail-fetch
++*.*					/var/log/lab-mail/fetch.log
++!dovecot
++*.*					/var/log/lab-mail/dovecot.log
++!*
+diff --git a/jails/instances/lab-mail/dist/usr/local/libexec/lab-mail/fetch b/jails/instances/lab-mail/dist/usr/local/libexec/lab-mail/fetch
+index 5fefd74..6c64598 100755
+--- a/jails/instances/lab-mail/dist/usr/local/libexec/lab-mail/fetch
++++ b/jails/instances/lab-mail/dist/usr/local/libexec/lab-mail/fetch
+@@ -4,15 +4,32 @@
+ # mbsync creates mail mode 0600 and folders 0700, whatever the umask.
+ # Dovecot reads the maildir as vmail, which must not be able to write
+ # it, so the new files are opened up for reading after each pull.
++#
++# cron sends the output to the fetch log. mbsync -q prints only
++# errors, so the job says itself what each pull brought.
+ set -u
+ 
+ readonly maildir=/data/mail/maildir
+ 
++messages() {
++	find ${maildir} -type f \( -path '*/new/*' -o -path '*/cur/*' \) |
++	    wc -l
++}
++
++before=$(($(messages)))
+ rc=0
+ /usr/local/bin/mbsync -q -c /usr/local/etc/mbsyncrc lists || rc=${?}
++after=$(($(messages)))
+ 
+ find ${maildir} \
+     \( -type d ! -perm -0055 -exec chmod go+rx {} + \) -o \
+     \( -type f ! -perm -0044 -exec chmod go+r {} + \)
+ 
++if [ ${after} -gt ${before} ]; then
++	echo "fetched $((after - before)) new messages"
++fi
++if [ ${rc} -ne 0 ]; then
++	echo "mbsync failed with exit status ${rc}"
++fi
++
+ exit ${rc}
+-- 
+2.56.0
+
