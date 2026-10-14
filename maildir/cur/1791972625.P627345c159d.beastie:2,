@@ -1,0 +1,66 @@
+From: Pat Maddox <pat@patmaddox.com>
+To: claude <claude@p7x.dev>, lab-devel@p7x.dev
+Subject: Re: How to configure beastie to use lab-mail
+In-Reply-To: <1791972118.654039ece7db@p7x.dev>
+References: <m2o6cwei1o.fsf@beastie.p7x.dev>
+ <1791971028.8e7f3eb2a8e4@p7x.dev> <m2h5ioeh8s.fsf@beastie.p7x.dev>
+ <1791972118.654039ece7db@p7x.dev>
+Date: Wed, 14 Oct 2026 03:10:25 -0700
+Message-ID: <m2tsmod23y.fsf@beastie.p7x.dev>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+claude <claude@p7x.dev> writes:
+
+> On Wed, 14 Oct 2026 02:58:11 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+>> > a) Reading: should Emacs move off the jj maildir for lab-devel? Or
+>> >    should the IMAP mirror sit beside it as a second notmuch profile? The
+>> >    patch workflow, process-email included, reads the jj maildir. If
+>> >    you move, your mail stops reaching the list through jj, so the
+>> >    moderated-delivery step in zib/patch-review-workflow.org changes.
+>>
+>> Yes this will switch from the jj maildir to synced maildir. I think it
+>> would be fine as a second profile, at least to start. Here's how I'd
+>> generally like the work to go (where each phase may have multiple
+>> commits if needed):
+>>
+>> 1. update to support lab-mail server
+>> 2. switch to lab-mail server config
+>> 3. clean up vestigial jj maildir
+>
+> Thanks. The spec is posted as "[PATCH] dotfiles/notmuch: Spec reading
+> and sending through lab-mail" [1], in dotfiles/notmuch/spec.org. It
+> uses your three phases as its structure. Phase 1 adds a "lists"
+> notmuch profile, mbsync and msmtp config, the two packages, and
+> pat@p7x.dev as an allowed sender. Phase 1 changes nothing the jj
+> maildir client uses. Phase 2 points Emacs at the profile and sends
+> through msmtp. Phase 3 removes maildir-deliver.sh from dotfiles/emacs.
+>
+> One finding sets the order, and the spec states it as a rule. Phase 2
+> lands only after process-email reads and sends through lab-mail too.
+> [inference] Once Emacs sends over SMTP, your mail no longer reaches
+> the jj maildir. I read only that maildir, so I would stop seeing your
+> mail, and my replies would stop reaching you. Moving process-email is
+> a separate spec, and I can write it next. Phase 1 does not depend on
+> it.
+
+Sounds like we'll need to do that then. The goal of this chunk of work
+is to replace the jj maildir with the fastmail maildir. I have a working
+setup, but I want to replace it with something a bit more automated and
+robust.
+
+>> > c) Loopback trust: is it acceptable that any process on beastie,
+>> >    lab-claude included, can send as you? If not, do you prefer
+>> >    per-user auth on smtprelay or a separate IP for lab-claude?
+>> I'm open to suggestions but I think this is a yes. Ultimately we should
+>> be able to restore the entire message status from the list data - but
+>> storing the message will mark it as sent right away, which is an over
+>> all lower latency process.
+>
+> Agreed. Fcc goes to ~/mail/sent, beside the mirror and not inside it,
+> because mbsync owns ~/mail/lists. Tags still come only from the list's
+> contents. Acceptance step 7 checks your point: it rebuilds the
+> database and expects the same sent, inbox and replied tags.
+
+This is good but there should be a subdir for the username, so
+~/mail/pat_at_p7x.dev/sent and lists.
