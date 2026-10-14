@@ -1,0 +1,154 @@
+From: claude <claude@p7x.dev>
+Subject: Re: How to configure beastie to use lab-mail
+To: Pat Maddox <pat@patmaddox.com>, lab-devel@p7x.dev
+In-Reply-To: <m2o6cwei1o.fsf@beastie.p7x.dev>
+References: <m2o6cwei1o.fsf@beastie.p7x.dev>
+Message-ID: <1791971028.8e7f3eb2a8e4@p7x.dev>
+Date: Wed, 14 Oct 2026 09:44:01 +0000
+
+On Wed, 14 Oct 2026 02:40:51 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+> Now I want to complete the loop and use it from beastie, to read the
+> mailing list and send email using notmuch-emacs.
+>
+> Research, analyze, and plan how to set this up. Review how we approached
+> the lab-mail development process so you can see things like asking
+> questions, writing a spec, not sending a patch and questions together.
+
+This reply has research and questions only, so there is no spec and no
+patch. The lab-mail thread set that order. You asked for questions
+first [1], then for no open questions in a spec [2], then for "reply
+with an updated patch ... or reply with questions, but not both" [3].
+Once you answer the questions below, I will post a spec for beastie's
+client. It will carry an alternatives section, and the implementation
+follows after you approve it.
+
+Each claim below is marked [fact] (checked in the tree or on the list)
+or [inference] (my reasoning, not verified).
+
+Where things stand today:
+
+- [fact] lab-mail is not on trunk yet. The latest series is "[PATCH v11
+  0/8] jails/instances/lab-mail: Build the mail relay jail" [4]. Its
+  spec puts your client out of scope.
+- [fact] smtprelay listens on 127.0.0.1:2525 with allowed_nets
+  127.0.0.0/8 and no client auth. allowed_sender matches only
+  claude@p7x.dev
+  (jails/instances/lab-mail/dist/usr/local/etc/smtprelay/smtprelay.ini
+  lines 12-19).
+- [fact] Dovecot serves the "lists" mirror read-only on
+  127.0.0.1:2143. It accepts any user name and password.
+- [fact] Emacs on beastie sends through libexec/maildir-deliver.sh,
+  which drops the message into the jj maildir (dotfiles/emacs/init.el
+  line 575). Nothing goes over SMTP.
+- [fact] infra/hosts/beastie/ports lists notmuch, notmuch-emacs, and
+  password-store, but not msmtp or isync.
+
+> One question I have is: how do I keep my mail credentials secure? If
+> it's pat@patmaddox.com - well that's my main mail account. How do other
+> mail clients keep credentials secure? I guess they must just save them
+> somewhere?
+
+If beastie sends through lab-mail, beastie holds no credential at all.
+[fact] The one Fastmail app password lives in
+/jails/data/lab-mail/secrets/mail-creds on the host. It is mounted
+read-only into lab-mail and readable only by group mailcred. [fact]
+smtprelay takes unauthenticated SMTP on loopback. So Emacs would call
+msmtp with "auth off" against 127.0.0.1:2525, exactly as lab-claude's
+.msmtprc already does, and there is no password to store.
+
+To your general question: yes, clients store the secret somewhere, and
+the common setups differ in where and in how much the secret can do.
+[inference, from the clients' documentation as I know it; I have not
+tested these here]
+
+- An app password rather than the account password. Fastmail and Gmail
+  both issue them. One app password can be revoked alone, and on
+  Fastmail it can be limited to SMTP. This matters more than where it
+  is stored.
+- A password manager the client calls when it sends. msmtp has
+  "passwordeval", e.g. "pass show mail/fastmail-smtp", and
+  git-send-email takes a credential helper. Emacs reads
+  ~/.authinfo.gpg through auth-source. The secret rests encrypted
+  under GPG or the OS keychain, and it is decrypted only at send time.
+- A local MTA with a smarthost, such as dma, OpenSMTPD, or postfix,
+  with the credential in a root-only file. Clients send to localhost
+  with no auth. This is the lab-mail design.
+
+> Perhaps I use the mail relay for notmuch and do pat@p7x.dev as the
+> outgoing? That way I don't have to use my main account.
+
+The relay is a good fit, and it holds the credential, so your client
+holds none whichever address you send from. Two things to settle first.
+
+- [fact] pat@p7x.dev is not an allowed sender, so it needs a line in
+  allowed_sender. [inference] It also needs a Fastmail sending
+  identity on the account behind mail-creds, as claude@p7x.dev has.
+  Otherwise Fastmail may reject the From or rewrite it.
+- [inference] The relay trusts all of 127.0.0.0/8, and every
+  ip4=inherit jail on beastie shares that loopback, lab-claude among
+  them. Once pat@p7x.dev is allowed, I could send mail as you from
+  lab-claude, and nothing would stop me. Today that holds only for
+  claude@p7x.dev. Fixing it means separate client credentials on the
+  relay. I believe smtprelay's allowed_users file can tie each user to
+  the sender addresses they may use, but I have not checked it.
+  Another fix gives lab-claude its own IP, which you said would come
+  later.
+
+> Though - tons of developers use notmuch or something similar for sending
+> emails to the mailing list. Research to find out how they configure it.
+
+[inference, from the projects' docs and common practice] The usual
+kernel and git contributor setup has three parts.
+
+- Reading: a local maildir indexed by notmuch, filled by mbsync or
+  offlineimap from IMAP, or by lei/b4 straight from lore. notmuch never
+  talks to the network itself.
+- Sending: notmuch-emacs uses message-mode with
+  message-send-mail-with-sendmail and sendmail-program set to msmtp.
+  Patches go through git send-email, which can use the same msmtp
+  account. msmtp's password comes from passwordeval or a 0600 file.
+- No credential at all: b4's web submission endpoint takes patches
+  signed with a patatt key, so no SMTP password is needed. Our relay
+  gets the same result with less work.
+
+Your plan matches that pattern, with lab-mail as both the IMAP source
+and the smarthost. This is the plan I would spec.
+
+1. beastie installs mail/msmtp and mail/isync. These are new
+   dependencies for infra/hosts/beastie/ports.
+2. mbsync pulls "lists" from 127.0.0.1:2143 into a local maildir. A
+   notmuch profile indexes it, as lab-claude does.
+3. Emacs sends through msmtp to 127.0.0.1:2525 with no auth, from
+   whichever address you choose below.
+4. smtprelay allows that address as a sender, after we settle the
+   loopback trust issue.
+
+Questions before I write the spec:
+
+a) Reading: should Emacs move off the jj maildir for lab-devel? Or
+   should the IMAP mirror sit beside it as a second notmuch profile? The
+   patch workflow, process-email included, reads the jj maildir. If
+   you move, your mail stops reaching the list through jj, so the
+   moderated-delivery step in zib/patch-review-workflow.org changes.
+b) Sending address: pat@p7x.dev or pat@patmaddox.com? Is either one
+   already a sending identity on the Fastmail account behind
+   mail-creds?
+c) Loopback trust: is it acceptable that any process on beastie,
+   lab-claude included, can send as you? If not, do you prefer
+   per-user auth on smtprelay or a separate IP for lab-claude?
+d) Sent copies: should a sent message also land in a local maildir
+   through an Fcc, so it shows up in notmuch before the mirror pulls
+   it back from the list?
+
+The deferred "[PATCH] todo: Send as Pat through lab-mail later" [5]
+covers part of this. I will fold it into the spec and not send it
+separately.
+
+[1] "Re: p7x mail relay jail"
+    id:m2pkxdm5gk.fsf@beastie.p7x.dev
+[2] "Re: p7x mail relay jail"
+    id:m21p9tm4ev.fsf@beastie.p7x.dev
+[3] "Re: p7x mail relay jail"
+    id:m27bjlkoum.fsf@beastie.p7x.dev
+[4] id:cover.1791969110.git.claude@p7x.dev
+[5] id:3392fc1fe384930c729e4616a7fd4355f965064b.1791958269.git.claude@p7x.dev
