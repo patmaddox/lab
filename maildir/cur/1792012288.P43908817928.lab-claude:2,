@@ -1,0 +1,95 @@
+From: claude <claude@p7x.dev>
+Subject: Re: thinking through how to provide context to the tool
+To: Pat Maddox <pat@patmaddox.com>, lab-devel@p7x.dev
+In-Reply-To: <m2bj8w9ew4.fsf@beastie.p7x.dev>
+References: <m2bj8w9ew4.fsf@beastie.p7x.dev>
+Message-ID: <1792012280.7931ab973825@p7x.dev>
+Date: Wed, 14 Oct 2026 21:11:28 +0000
+
+On Wed, 14 Oct 2026 14:00:11 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+> For the commits specifically, we can think of them as being differing
+> degrees of formal, mature, or durable:
+>
+> - trunk@upstream - commits published for the world to see
+> - b/dev@upstream - my personal tree, published for interested parties,
+>   but not guaranteed to be maintained as is
+> - mail@upstream - commits that have been shared. Some applied, some
+>   rejected, some not yet really considered
+[...]
+> I bring this up because I want this idea represented in the code or
+> prompt or config. Not necessarily the formality - but that there are
+> three sources. The tool should prompt agent with that info, so it knows
+> that it can e.g. consult with mail@upstream for other work, but not
+> necessarily rely on it.
+
+I posted this as "[PATCH] src/lab-process-mail: Name the three sources
+of work" [1]. It adds a Sources section to prompt.md that lists the
+three branches from most settled to least. It tells the agent to
+consult all three, to rely on each only as far as it is settled, and
+to prefer what is already on the base, since the aim is a series
+accepted as first posted.
+
+I put it in the prompt rather than the script because the script has
+nothing to do with the sources yet. It only needs the base, which
+LAB_BASE_BRANCH already provides. If you would rather have the three
+named as settings too, e.g. LAB_SOURCES, I can do that. For now I
+would leave them out, since a setting nothing reads is just noise.
+
+> Also, there's thinking about input / output channels. Essentially right
+> now mail@upstream is a duplex io channel. That's fine, and I don't
+> necessarily have any plans to change it or add other channels over
+> time. But I want that abstraction to be represented in the system, and
+> not have a hard coupling to email.
+
+I would like to agree on the shape before writing code. This one
+touches the script, the tests, and most of prompt.md. Today the
+coupling is in these places:
+
+- lab-process-mail: get_up_to_date rebases the mail outbox and runs
+  notmuch new, oldest_inbox_message picks the next item, and the check
+  after each pass asks notmuch whether the message left the inbox.
+- The WORK revset leaves out ::mail@upstream by name.
+- prompt.md: steps 2, 5, 6, 7 and 8 are all email (notmuch,
+  format-patch, maildir-deliver, the mail workspace).
+
+Here is what I propose. A channel is a duplex queue with four
+operations, each a small executable under
+libexec/lab-process-mail/channels/<name>/:
+
+- sync - bring the channel up to date (today: rebase the outbox onto
+  mail@upstream and run notmuch new).
+- next - print the id of the oldest item awaiting an answer, or
+  nothing.
+- pending <id> - exit 0 if the item still awaits an answer. The loop
+  uses this as its success signal, so control still rests on state
+  the model does not author.
+- revset - print the revset of the channel's own commits, so WORK can
+  leave them out without naming mail@upstream.
+
+LAB_CHANNEL picks the channel, and defaults to mail. prompt.md splits
+in two: a core that is the same for every channel (sources, settling
+your work, doing the work), and prompt-<channel>.md, which says how to
+read an item, post a series, reply, and verify. The script joins them
+when it builds the prompt.
+
+Note that the list then plays two roles. mail@upstream is a source of
+commits, which [1] covers, and it is also the channel. These are
+different things, and I would keep them separate in the code. Another
+channel could still name the list as a source.
+
+The series would be:
+
+1. Split prompt.md into the core prompt and prompt-mail.md, with no
+   change in what the agent is told.
+2. Move sync, next, and pending into channels/mail, and have the loop
+   call them through LAB_CHANNEL.
+3. Derive the WORK exclusion from the channel's revset.
+
+Each step keeps the tests passing, and with only one channel nothing
+changes in behavior. Shall I go ahead? I would also like your view on
+two things: whether "channel" is the name you want, and whether a
+directory of executables suits you better than a sourced shell file
+per channel. I chose executables because they keep each channel's
+tools, notmuch here, out of the main script.
+
+[1] id:a0238178364df97b0852d8e714df220d18d5255d.1792012246.git.claude@p7x.dev
