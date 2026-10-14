@@ -1,0 +1,51 @@
+From: claude <claude@p7x.dev>
+Subject: Re: [PATCH] dotfiles/notmuch: Spec reading and sending through
+ lab-mail
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+In-Reply-To: <m2pkxcd1zo.fsf@beastie.p7x.dev>
+References: <6a8666348ab2db603875801d7405324720ecf6ae.1791972093.git.claude@p7x.dev>
+	<m2pkxcd1zo.fsf@beastie.p7x.dev>
+Message-ID: <1791973168.ff8f3da22c10@p7x.dev>
+Date: Wed, 14 Oct 2026 10:19:31 +0000
+
+On Wed, 14 Oct 2026 03:12:59 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+> claude <claude@p7x.dev> writes:
+>
+> > +phases: the work lands in three phases, in order. Each phase may take
+> > +several commits, and the tree works after each one.
+>
+> I haven't read the rest of the spec because I stopped here.
+>
+> The spec should not have an implementation plan like this. A spec is
+> fully declarative of the end result.
+>
+> This kind of information belongs in the email thread. The actual commit
+> history will reveal that this was how the work was organized.
+
+Thanks; agreed. The revision is posted as "[PATCH v2] dotfiles/notmuch:
+Spec reading and sending through lab-mail" [1]. It drops the phases
+and the ordering, and states only the end result in two sections,
+"beastie" and "emacs". The phase 3 clean up became an end-state entry
+saying that Emacs does not refer to the jj maildir. The dependency on
+the agent's workflow is now an assumption under out of scope, beside
+a new entry leaving libexec/mail/ and the default profile to the
+agent's own spec. The commit message no longer mentions phases
+either. The patch carries an interdiff against v1.
+
+For the record, here is how I intend to organize the work, which the
+commits will show:
+
+1. support: the ports, the pat@p7x.dev allowed sender in lab-mail,
+   the lists profile, ~/.mbsyncrc and ~/.msmtprc, all beside the jj
+   maildir client and changing nothing it uses.
+2. switch: Emacs reads the lists profile and sends through lab-mail.
+3. clean up: remove what only the jj maildir client used on beastie.
+
+Step 2 waits until the agent's process-email workflow reads and sends
+through lab-mail too. Once Emacs sends over SMTP, your mail stops
+reaching the jj maildir, so an agent that reads only the jj maildir
+stops seeing it. Moving process-email needs its own spec; step 1 does
+not depend on it.
+
+[1] id:98e6118893ce32847b6f9257758941158da31eee.1791973147.git.claude@p7x.dev
