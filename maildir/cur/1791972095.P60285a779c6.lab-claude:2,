@@ -1,0 +1,230 @@
+Message-ID: <6a8666348ab2db603875801d7405324720ecf6ae.1791972093.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Date: Wed, 14 Oct 2026 10:01:29 +0000
+Subject: [PATCH] dotfiles/notmuch: Spec reading and sending through lab-mail
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+Change-Id: sxmtrkovmkrwqknlsmnsxzumuxuwzzww
+
+Pat reads and sends lab-devel mail from notmuch-emacs on beastie, but
+only through the jj maildir. lab-mail now serves the list over IMAP
+and relays mail to Fastmail, so the client can use real mail without
+holding a credential on beastie. A standalone spec settles the design
+before anything is built, as the lab-mail spec did.
+
+Sending as pat@p7x.dev keeps the credential for Pat's primary account
+off beastie entirely. A second notmuch profile lets the new client be
+built and tested while the jj maildir keeps working, and the work
+lands in three phases so each step is small and reversible.
+
+The switch must wait for the agent's workflow to move as well. Once
+Emacs sends over SMTP, Pat's mail stops reaching the jj maildir the
+agent reads, so the spec makes that ordering explicit.
+---
+change-id: sxmtrkovmkrwqknlsmnsxzumuxuwzzww
+
+ dotfiles/notmuch/spec.org | 190 ++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 190 insertions(+)
+ create mode 100644 dotfiles/notmuch/spec.org
+
+diff --git a/dotfiles/notmuch/spec.org b/dotfiles/notmuch/spec.org
+new file mode 100644
+index 0000000..20ec76a
+--- /dev/null
++++ b/dotfiles/notmuch/spec.org
+@@ -0,0 +1,190 @@
++#+TITLE: Pat's mail client on beastie: read and send through lab-mail
++
++artifact: the mail client config in =dotfiles/notmuch= and
++=dotfiles/emacs=, the packages it needs in
++=infra/hosts/beastie/ports=, and one allowed sender in lab-mail's
++smtprelay config.
++
++goal: Pat reads the list and sends mail from notmuch-emacs on beastie
++through lab-mail, as pat@p7x.dev. beastie holds no mail credential;
++lab-mail holds the only one. See =jails/instances/lab-mail/spec.org=.
++
++provider: set up by the operator on Fastmail, outside the repo.
++- pat@p7x.dev is a sending identity on the Fastmail account behind
++  lab-mail's =mail-creds=, as claude@p7x.dev is.
++- Mail sent to the list, lab-devel@p7x.dev, is filed into the folder
++  =lists= by the rule that files all list mail there.
++
++phases: the work lands in three phases, in order. Each phase may take
++several commits, and the tree works after each one.
++1. support: add what the lab-mail client needs, beside the jj maildir
++   client, and change nothing the jj maildir client uses.
++2. switch: Emacs reads the =lists= profile and sends through lab-mail.
++3. clean up: remove what only the jj maildir client used on beastie.
++
++order: phase 2 lands only after the agent's process-email workflow
++reads and sends through lab-mail too. Once Emacs sends over SMTP,
++Pat's mail no longer reaches the jj maildir, so an agent that reads
++only the jj maildir stops seeing it, and Pat stops seeing the agent's
++replies. Moving process-email is a separate spec. Phase 1 has no such
++dependency.
++
++* phase 1: support
++
++packages:
++- =infra/hosts/beastie/ports= gains mail/isync and mail/msmtp.
++
++lab-mail:
++- smtprelay's =allowed_sender= gains pat@p7x.dev, beside
++  claude@p7x.dev. Nothing else in lab-mail changes.
++
++profile: the =dotfiles/notmuch= package adds a second notmuch profile,
++=lists=, used with =NOTMUCH_PROFILE=lists=. The default profile, the
++jj maildir, stays as it is.
++- Its config is =~/.config/notmuch/lists/config=:
++  - =mail_root= is =~/mail=, and the database path is
++    =~/.local/share/notmuch/lists=, set explicitly so the profile can
++    never index into the default profile's database.
++  - =primary_email= is pat@p7x.dev, and =other_email= is
++    pat@patmaddox.com, so the tag hook counts mail from either as
++    sent.
++  - It adds no tags on =notmuch new=, indexes =Change-Id= as
++    =changeid:=, keeps flag sync off, and ignores mbsync's state
++    files, as the default profile and lab-claude's =lists= profile do.
++- Its hooks are in =~/.config/notmuch/lists/hooks=, notmuch's hook dir
++  for the profile.
++  - post-new runs the same =mail-tag.sh= as the default profile, so
++    sent, inbox and replied are derived the same way.
++  - pre-new runs =mbsync lists= and then removes deleted drafts, as
++    the default pre-new does. A =notmuch new= in the profile, or a
++    refresh in Emacs, fetches and indexes in one step.
++  - If mbsync fails, pre-new exits non-zero and =notmuch new= stops
++    with mbsync's error, so a fetch that failed is never silent.
++- The package installs the config like the default one: only if none
++  exists, and removed on deinstall only if unedited.
++
++fetch:
++- =~/.mbsyncrc= pulls the =lists= mailbox from lab-mail,
++  127.0.0.1:2143, into =~/mail/lists=. It is pull-only: no expunge,
++  no remove, and no flags pushed. lab-mail accepts any login, so the
++  user and password in it are placeholders, as in lab-claude's.
++
++send:
++- =~/.msmtprc= sends through lab-mail, 127.0.0.1:2525, with no auth
++  and no TLS, from pat@p7x.dev. It holds no password.
++- msmtp sends without a queue. When lab-mail refuses an address, or
++  Fastmail refuses the message or cannot be reached, msmtp exits
++  non-zero with the server's reply, and the message goes to no one.
++
++dotfiles: the package installs =~/.mbsyncrc= and =~/.msmtprc= the way
++it installs the notmuch config: only if absent, and removed on
++deinstall only if unedited. A home that already has either file keeps
++it, and the operator merges the account in by hand.
++
++* phase 2: switch
++
++read:
++- Emacs sets =NOTMUCH_PROFILE= to =lists= at startup, so
++  notmuch-emacs, and every notmuch it runs, use the =lists= profile.
++- Refreshing in Emacs runs =notmuch new=, which fetches through the
++  profile's pre-new hook.
++
++send:
++- message-mode sends with msmtp as its sendmail program. The envelope
++  sender is the From header.
++- From is pat@p7x.dev, the profile's =primary_email=.
++- A failed send signals an error with msmtp's output and keeps the
++  compose buffer, so the message is not lost and can be sent again.
++
++sent copies:
++- Each sent message is filed with Fcc into =~/mail/sent= and tagged
++  sent at once, so it shows in its thread without waiting for the
++  list to bring it back.
++- =~/mail/sent= is beside =~/mail/lists=, not in it. mbsync owns
++  =~/mail/lists=.
++- When the list copy arrives, notmuch indexes both files under one
++  Message-ID, so the thread shows the message once.
++- The Fcc copy only lowers latency. The tags come from the list's
++  contents on each =notmuch new=, so a database rebuilt from
++  =~/mail/lists= alone gets the same sent, inbox and replied tags.
++
++drafts: drafts go in =~/mail/drafts=, notmuch-emacs's default folder
++under the profile's =mail_root=. The tag hook already leaves drafts
++untagged, and pre-new removes deleted ones.
++
++* phase 3: clean up
++
++- Emacs no longer refers to the jj maildir: =dotfiles/emacs= drops
++  its =maildir-deliver.sh= and the settings that point at it.
++- Pieces the agent's workflow still uses stay until it moves:
++  =libexec/mail/= and the default profile in =dotfiles/notmuch=.
++
++* acceptance test
++
++Run on beastie as Pat, after phase 2, with lab-mail running.
++1. A message sent to lab-devel@p7x.dev shows up in Emacs within two
++   minutes of sending, after a refresh.
++2. A reply to it from Emacs is sent with From pat@p7x.dev, and
++   msmtp exits 0. Its copy is in =~/mail/sent= and tagged sent before
++   the next refresh.
++3. After the list brings the reply back and Emacs refreshes, the
++   thread shows the reply once, and the message it answers is tagged
++   replied.
++4. A message to someone@example.com fails to send. Emacs shows
++   smtprelay's refusal and keeps the compose buffer.
++5. With lab-mail stopped, sending fails and keeps the buffer, and a
++   refresh reports mbsync's error.
++6. No file in Pat's home holds a mail password: =~/.msmtprc= has
++   =auth off=, and =~/.mbsyncrc= has only the placeholder.
++7. After removing =~/.local/share/notmuch/lists= and running
++   =NOTMUCH_PROFILE=lists notmuch new=, every message has the same
++   sent, inbox and replied tags as before.
++
++After phase 1 alone, step 7 and =NOTMUCH_PROFILE=lists notmuch new=
++work, and Emacs still reads and sends through the jj maildir.
++
++* out of scope
++
++- Moving the agent's process-email workflow off the jj maildir. It is
++  a separate spec, and phase 2 waits for it.
++- Sending as pat@patmaddox.com. It takes a Fastmail identity on the
++  account behind =mail-creds= and one more allowed sender, and
++  nothing in this spec depends on the address.
++- Restricting who on beastie can send as pat@p7x.dev. Every process on
++  beastie and in its =ip4 = inherit= jails can reach smtprelay, so
++  any of them can send as any allowed sender. That is accepted for
++  now; per-user auth on smtprelay or a separate address for lab-claude
++  would close it later.
++- git send-email from beastie. =libexec/mail/= keeps delivering
++  series into the jj maildir until the agent's workflow moves.
++
++* alternatives considered
++
++- pat@p7x.dev through lab-mail, not pat@patmaddox.com with its own
++  app password. pat@patmaddox.com is Pat's primary account, and any
++  credential for it on beastie, even an app password in pass, is one
++  more secret on disk. pat@p7x.dev is already a Fastmail identity on
++  the relay's account, and lab-mail already holds that credential.
++- A second profile, not replacing the default one. The jj maildir
++  keeps working while the new client is built and tested, and the
++  switch is one Emacs setting that can be undone.
++- Fetch from the profile's pre-new hook, not on a timer. Mail is
++  fetched when Pat looks, with no daemon or cron entry on beastie, and
++  an Emacs refresh both fetches and indexes. A timer can be added
++  later if waiting for the fetch on refresh is too slow.
++- msmtp, not Emacs's built-in smtpmail. msmtp is what lab-claude uses
++  against the same relay, so both clients behave and fail the same
++  way, and git send-email can use the same account later. smtpmail
++  needs no package, but it is one more client config to keep in step.
++- No queue in the client (msmtpq), for the reason the lab-mail spec
++  gives: a queue answers "sent" before Fastmail has the message, and a
++  failed send in Emacs keeps the compose buffer.
++- Fcc into =~/mail/sent=, not into =~/mail/lists=, and not no Fcc. A
++  file mbsync did not write in its maildir is a state mbsync does not
++  expect. Without an Fcc, a sent message is missing from its thread
++  until the next fetch after the list delivers it.
++- The dotfiles as package samples, not files the package owns. A home
++  may already have its own =~/.mbsyncrc= or =~/.msmtprc= with other
++  accounts, and the package must not overwrite them.
++- Profile name =lists=, not a new one. lab-claude's profile for the
++  same mailbox has that name, so one command works in both places.
+
+base-commit: 36eea3c167cd3cdafc23ec2e9c6f333a2bf5f3a7
+-- 
+2.56.0
+
