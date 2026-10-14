@@ -1,0 +1,152 @@
+Message-ID: <a64f993ac96cddd86865d5c90d5df9670302fa79.1792018497.git.claude@p7x.dev>
+In-Reply-To: <cover.1792018497.git.claude@p7x.dev>
+References: <cover.1792018497.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Subject: [PATCH 1/2] notmuch: Tag threads approved or rejected by trailer
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+Change-Id: ovqnvyuopttwworplyusmpqvpsxmprut
+Date: Wed, 14 Oct 2026 22:55:10 +0000
+
+Pat needs a way to settle a series on the list that does not depend on
+anyone keeping tags by hand, so the state survives rebuilding the
+notmuch database from the maildir. A reply that ends in an Approved:
+or Rejected: trailer records the verdict in the list itself, and the
+optional value carries a note or the reason for a rejection.
+
+A verdict covers the whole thread, which is as fine-grained as review
+needs for now. A thread can be reconsidered, so only the latest
+verdict counts: the one in the latest message, and the last one within
+that message. A trailer wrapped without indenting its continuation
+lines is not a trailer to git, so it does not count.
+
+Neither tag is hidden from searches yet. Pat will filter them by hand
+until the tags have proved reliable.
+---
+change-id: ovqnvyuopttwworplyusmpqvpsxmprut
+
+ dotfiles/notmuch/hooks/mail-tag.sh | 61 +++++++++++++++++++++++-------
+ 1 file changed, 48 insertions(+), 13 deletions(-)
+
+diff --git a/dotfiles/notmuch/hooks/mail-tag.sh b/dotfiles/notmuch/hooks/mail-tag.sh
+index 9d6ce21..11e9660 100755
+--- a/dotfiles/notmuch/hooks/mail-tag.sh
++++ b/dotfiles/notmuch/hooks/mail-tag.sh
+@@ -2,16 +2,18 @@
+ #
+ # mail-tag.sh -- derive notmuch tags from the contents of the list.
+ #
+-# The sent, inbox, replied, committed and superseded tags are
+-# recomputed from the messages on every run, so the database holds no
+-# state of its own: rebuild it from the maildir and the same tags come
+-# back.
++# The sent, inbox, replied, committed, superseded, approved and
++# rejected tags are recomputed from the messages on every run, so the
++# database holds no state of its own: rebuild it from the maildir and
++# the same tags come back.
+ #
+ #   sent        from the user (notmuch user.primary_email or other_email)
+ #   inbox       from someone else, and the user has not replied to it
+ #   replied     from someone else, and the user has replied to it
+ #   committed   a patch that a message on the list reports committed
+ #   superseded  every message in a series a later version replaces
++#   approved    every message in a thread whose latest verdict approves
++#   rejected    every message in a thread whose latest verdict rejects
+ #
+ # "Replied to" means a message from the user names it in In-Reply-To.
+ # "Reports committed" means a message from anyone names it in a
+@@ -23,7 +25,11 @@
+ # superseded. So is the thread of any message whose closing trailers,
+ # as git interpret-trailers finds them, include Superseded-by. That
+ # covers a series that a different one replaces, with no Link line.
+-# Reading trailers needs git.
++#
++# A verdict is an Approved or Rejected key in a message's closing
++# trailers. It applies to the whole thread the message sits in. When a
++# thread holds several, the one in the latest message wins, and within
++# one message the last trailer does. Reading trailers needs git.
+ #
+ # Runs from the notmuch post-new hook, so notmuch new applies it.
+ 
+@@ -33,11 +39,11 @@ set -o pipefail
+ readonly drafts='path:drafts/**'
+ 
+ main() {
+-	local me id
++	local me id verdict thread
+ 	me="$(me_query)"
+ 
+ 	{
+-		echo "-committed -superseded -- *"
++		echo "-committed -superseded -approved -rejected -- *"
+ 		echo "-sent -inbox -replied -- ${drafts}"
+ 		echo "+sent -inbox -replied -- (${me}) and not ${drafts}"
+ 		echo "-sent +inbox -replied -- not (${me}) and not ${drafts}"
+@@ -54,6 +60,9 @@ main() {
+ 		superseded_by_ids | while read -r id; do
+ 			echo "+superseded -- thread:{id:\"${id}\"} and not ${drafts}"
+ 		done
++		verdicts | while read -r verdict thread; do
++			echo "+${verdict} -- ${thread} and not ${drafts}"
++		done
+ 	} | notmuch tag --batch
+ }
+ 
+@@ -110,22 +119,48 @@ link_ids() {
+ }
+ 
+ # The Message-ID of each message with a Superseded-by trailer. Only
+-# the closing trailer block counts, so a quoted trailer does not. A
+-# signature below the trailers is dropped first, or git would not find
+-# them.
++# the closing trailer block counts, so a quoted trailer does not.
+ superseded_by_ids() {
+ 	notmuch search --output=messages \
+ 	    "body:\"superseded by\" and not ${drafts}" |
+ 	    while read -r id; do
+-		if notmuch show --format=raw --part=1 "${id}" |
+-		    sed '/^-- $/,$d' |
+-		    git interpret-trailers --parse |
++		if trailers "${id}" |
+ 		    grep -i '^superseded-by: *[^ ]' >/dev/null; then
+ 			echo "${id#id:}"
+ 		fi
+ 	done
+ }
+ 
++# The closing trailers of a message, as git interpret-trailers finds
++# them, one per line with continuation lines unfolded. A signature
++# below the trailers is dropped first, or git would not find them.
++trailers() {
++	notmuch show --format=raw --part=1 "${1}" |
++	    sed '/^-- $/,$d' |
++	    git interpret-trailers --parse
++}
++
++# The latest verdict on each thread, as "approved thread:<id>" or
++# "rejected thread:<id>". Messages are read oldest first, so a later
++# verdict on a thread replaces an earlier one.
++verdicts() {
++	local id verdict
++	notmuch search --sort=oldest-first --output=messages \
++	    "(body:approved or body:rejected) and not ${drafts}" |
++	    while read -r id; do
++		verdict="$(trailers "${id}" | awk '
++			tolower($0) ~ /^approved:/ { v = "approved" }
++			tolower($0) ~ /^rejected:/ { v = "rejected" }
++			END { print v }
++		')"
++		[ -n "${verdict}" ] || continue
++		echo "${verdict} $(notmuch search --output=threads "${id}")"
++	done | awk '
++		{ v[$2] = $1 }
++		END { for (t in v) print v[t], t }
++	'
++}
++
+ die() {
+ 	echo "${0##*/}: ${*}" >&2
+ 	exit 1
+-- 
+2.56.0
+

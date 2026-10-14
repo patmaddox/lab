@@ -1,0 +1,98 @@
+Message-ID: <fb6fc3b22a9e3aaed08238c8a8367ee33f4cda4a.1792018497.git.claude@p7x.dev>
+In-Reply-To: <cover.1792018497.git.claude@p7x.dev>
+References: <cover.1792018497.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Subject: [PATCH 2/2] zib: Patch review workflow - Status trailers
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+Change-Id: opsykxytwzwlslqywntrzzptmznpvxmk
+Date: Wed, 14 Oct 2026 22:55:11 +0000
+
+Approved:, Rejected: and Superseded-by: now set tags on the list, but
+only the hook's comments say how to write them, and a trailer written
+slightly wrong is ignored without a word. A wrapped line without an
+indent, for one, voids every trailer in the block. Writing the
+protocol down next to the indexing rules lets a reviewer get it right
+the first time, and says what each key means so that the tags mean the
+same thing to everyone.
+---
+change-id: opsykxytwzwlslqywntrzzptmznpvxmk
+
+ zib/patch-review-workflow.org | 61 +++++++++++++++++++++++++++++++++++
+ 1 file changed, 61 insertions(+)
+
+diff --git a/zib/patch-review-workflow.org b/zib/patch-review-workflow.org
+index 3914398..2a828ed 100644
+--- a/zib/patch-review-workflow.org
++++ b/zib/patch-review-workflow.org
+@@ -161,6 +161,67 @@ The rules are simple:
+ ~just index~ in the =mail= jj workspace runs =notmuch new=, which
+ applies the tags that it can and does whatever post-processing it
+ needs.
++* Status trailers
++The state of a series is written on the list, in trailers at the end
++of a reply. The indexer derives a tag from each one, so the state
++comes back whenever the database is rebuilt. Nobody tags a thread by
++hand.
++
++A trailer is a =Key: value= line in the last paragraph of the
++message, as =git interpret-trailers --parse= finds it:
++
++#+BEGIN_SRC
++Thanks, this is what I wanted.
++
++Approved:
++#+END_SRC
++
++The rules:
++- Trailers go in the last paragraph, below everything else you
++  write. A signature below them, after a =--= line, is fine.
++- Every line of that paragraph must be a trailer or a continuation.
++  One other line voids the whole block, and no trailer counts.
++- Quoted lines never count, so quoting someone's trailer does not
++  repeat it.
++- Keys match without regard to case.
++- A value may continue on following lines that begin with a space or
++  tab. git joins them into one line. A paragraph wrapped without that
++  indent is not a trailer, so indent continuation lines or put a long
++  explanation in the prose above:
++
++#+BEGIN_SRC
++Rejected: the hook belongs in the mail workspace, where
++  the list is indexed
++#+END_SRC
++
++The keys:
++- =Superseded-by: id:<message-id>= :: the thread this message sits in
++  is replaced by the named message, usually the cover letter of the
++  new series. Use it when a different series replaces this one.
++- =Approved:= :: the thread is approved as-is. The value is optional
++  and free, e.g. thanks or an idea for follow-up. It never adds a
++  condition; approval with a condition is not yet approval.
++- =Rejected: <reason>= :: the thread is rejected. Give the reason,
++  e.g. =Rejected: withdrawn, scope moved to <subject>=.
++
++Each applies to the whole thread the reply sits in, not only the
++message it answers. Approved and rejected exclude each other: the
++latest message with either wins, and within one message the last
++trailer does. Anyone may write a trailer.
++
++A revised series needs no trailer. Its cover letter, or its only
++patch, ends with a =- Link to v(N-1): id:<message-id>= line, and the
++thread it names is superseded.
++
++The indexer sets these tags:
++- ~superseded~ :: a Link to vN line or a Superseded-by names the thread
++- ~approved~ :: the thread's latest verdict is Approved
++- ~rejected~ :: the thread's latest verdict is Rejected
++
++The sample notmuch config hides superseded threads through
++=search.exclude_tags=, and a search naming the tag still finds them.
++Approved and rejected threads stay visible; filter them in a search,
++e.g. =tag:inbox and not tag:rejected=.
+ * Shared repo setup
+ Two repos shared across jails:
+ - =/jails/share/lab.git= owned by host user =patmaddox=
+-- 
+2.56.0
+

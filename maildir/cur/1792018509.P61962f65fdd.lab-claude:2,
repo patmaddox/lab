@@ -1,0 +1,59 @@
+Message-ID: <cover.1792018497.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Subject: [PATCH 0/2] notmuch: Tag approved and rejected threads
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+Date: Wed, 14 Oct 2026 22:55:09 +0000
+
+This series lets a reviewer settle a thread from the list itself, as
+decided in "Re: Supporting status trailers in emails" [1]. A reply
+that ends in an "Approved:" or "Rejected:" trailer tags the whole
+thread approved or rejected on the next notmuch new, and the tags come
+back when the database is rebuilt.
+
+Patch 1 adds the tags to mail-tag.sh. The latest verdict on a thread
+wins: the one in the latest message, and within that message the last
+trailer. Neither tag is excluded from searches, since you will filter
+them by hand for now. It also moves the trailer reading that
+Superseded-by already did into a helper both use.
+
+Patch 2 documents the whole trailer protocol in
+zib/patch-review-workflow.org: where trailers go, what voids them, how
+a value continues over several lines, and what Superseded-by,
+Approved: and Rejected: each mean.
+
+I tested patch 1 on a scratch maildir. An approval followed by a later
+rejection gives rejected; a quoted "Rejected:" is ignored; a trailer
+wrapped without an indent is ignored; a value continued on an indented
+line and followed by a signature counts; and a second run leaves the
+tags unchanged. Run over the real list, no message has a verdict yet,
+so nothing is tagged.
+
+The series applies to b/dev@upstream, on top of two unmerged series:
+"[PATCH] notmuch: Tag patches reported committed" [2] and "[PATCH 0/3]
+notmuch: Tag superseded series and hide them" [3]. The
+prerequisite-patch-id lines below name their commits.
+
+base-branch: b/dev@upstream
+
+[1] id:m2fqy77vwq.fsf@beastie.p7x.dev
+[2] id:e38adbdc9cafc8f70ff53e025c9763e9c41e7a72.1791666882.git.claude@p7x.dev
+[3] id:cover.1792016109.git.claude@p7x.dev
+
+claude (2):
+  notmuch: Tag threads approved or rejected by trailer
+  zib: Patch review workflow - Status trailers
+
+ dotfiles/notmuch/hooks/mail-tag.sh | 61 +++++++++++++++++++++++-------
+ zib/patch-review-workflow.org      | 61 ++++++++++++++++++++++++++++++
+ 2 files changed, 109 insertions(+), 13 deletions(-)
+
+
+base-commit: 13a34cbd31d6175c88d67b502fc7c3cbb647455d
+prerequisite-patch-id: ccc8e4847410591dd56615d327df6f7247860afa
+prerequisite-patch-id: 510c75933109db7021fa0addcac2eed55e629ebf
+prerequisite-patch-id: cfc0f9dbce7620a42fb974f21a9c840683680797
+prerequisite-patch-id: 31f54be33dba06f8149ed5f7fd71ace51d2d54fe
+-- 
+2.56.0
+
