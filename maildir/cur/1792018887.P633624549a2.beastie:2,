@@ -1,0 +1,99 @@
+From: Pat Maddox <pat@patmaddox.com>
+To: claude <claude@p7x.dev>
+Cc: lab-devel@p7x.dev
+Subject: Re: [freebsd-ports PATCH] net-mgmt/signoz: Observability platform
+ for logs, metrics, and traces
+In-Reply-To: <1792000251.b4ad44894faa@p7x.dev>
+References: <b90dbb5ddc5c068f1c2c7fc551b57c5a2d11da8c.1791931184.git.claude@p7x.dev>
+ <m24ieoci5q.fsf@beastie.p7x.dev> <1792000251.b4ad44894faa@p7x.dev>
+Date: Wed, 14 Oct 2026 16:01:27 -0700
+Message-ID: <m2v7736g54.fsf@beastie.p7x.dev>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+claude <claude@p7x.dev> writes:
+
+> On Wed, 14 Oct 2026 10:21:21 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+>> > UIDs/GIDs: signoz takes 404, the lowest number free in both files.
+>>
+>> See if there's a conventional UID for signoz, or one closer to similar
+>> services. If FreeBSD convention is "lowest available" then that's fine -
+>> I just want to try to stick to convention as much as possible.
+>
+> There is no conventional UID for signoz. The Porter's Handbook (6.29,
+> "Adding Users and Groups") asks only for a unique ID from 50 to 999,
+> the same for user and group, and the header of UIDs says "Please pick
+> an empty slot when available". Neither asks for lowest-first or for
+> grouping. Related services are scattered across the range: tempo 349,
+> prometheus 478, alertmanager 479, clickhouse 800, grafana 904, and
+> loki 916.
+>
+> So 404 follows convention. If you would rather keep it near its
+> neighbours, 485 is free in both files on current main. It comes right
+> after prometheus 478, alertmanager 479, and promxy 481. Unless you say
+> otherwise I will use 485 in v2.
+
+485 is good
+
+>> You have go now, so you can use it to verify things.
+>>
+>> However when porting, you will not build... because it just takes too
+>> long.
+>>
+>> That's been my policy up to this point, and I build in
+>> poudriere. However I'm rethinking that. It does seem like it would be
+>> usefl for you to build stuff. I just don't want to wait a really long
+>> time for it.
+>>
+>> So help me think through a good approach for this. I really don't want
+>> you building all the dependencies. So if we can configure the build to
+>> not build dependencies, then you can just report any dependencies that
+>> you need me to install to proceed.
+>>
+>> This should be deterministic so there should be a script in
+>> oss/freebsd-ports that sets up env vars to not build deps, or maybe it's
+>> make.conf or whatever. Basically I'm thinking there's a toggle somewhere
+>> that doesn't build deps so we can control that behavior, fail if deps
+>> are missing. Then claude analyzes all missing deps and reports for
+>> operator install.
+>
+> The ports framework already has that toggle. With STRICT_DEPENDS set,
+> each depends phase checks its dependencies and fails rather than
+> building a missing one. It stops at the first phase with a gap,
+> though, so on its own it reports the missing dependencies a phase at a
+> time.
+>
+> I posted a script and the skill change as "[PATCH 0/2] Build ports
+> without building their dependencies" [1]:
+>
+> - oss/freebsd-ports/scripts/port-make.sh (and "just port-make") checks
+>   the port's direct dependencies against pkg info before make runs.
+>   If any are missing, it prints them all with one pkg install line
+>   and exits 2. Otherwise it runs make with STRICT_DEPENDS set as a
+>   backstop. The default targets are stage and check-plist.
+> - The freebsd-port skill then builds, stages, and checks the plist
+>   through it. When dependencies are missing, it answers with the list
+>   instead of posting.
+
+Great. And there's a patch floating on the list that gives you
+permission to install packages yourself. So assume that lands in some
+form - maybe with revision - and that you're able to install the
+dependencies you need.
+
+>> > +GIT_HASH=	0aeef0d
+>>
+>> Why is GIT_HASH needed if we also have the release version?
+>
+> It is not needed. signoz reads the hash in two places only: the
+> "starting signoz" log line, as commit=, and the build.hash field of
+> its usage analytics. Unset, both read "<unset>". Upstream stamps it
+> because its Makefile also builds untagged branches, where the version
+> alone does not identify the source. For a tagged release the version
+> does, and a hand-copied hash is one more thing to get wrong on every
+> update. I will drop it in v2; the net-mgmt/uptrace patch also stamps
+> only its version.
+
+Good. We also need to update instructions so you don't cargo cult. Every
+line in a Makefile must be there to support the desired outcome of a
+working package. You can get ideas from other ports, but don't cargo
+cult.
