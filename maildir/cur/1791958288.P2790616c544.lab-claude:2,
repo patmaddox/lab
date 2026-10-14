@@ -1,0 +1,45 @@
+Message-ID: <3392fc1fe384930c729e4616a7fd4355f965064b.1791958269.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Date: Wed, 14 Oct 2026 06:09:49 +0000
+Subject: [PATCH] todo: Send as Pat through lab-mail later
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+Change-Id: ntwqymqvoyvxsnoryzvovzxklossrzyz
+
+The lab-mail spec settles that Pat's mail client stays out of it for
+now, but the work that decision defers has no home. A thread drops
+out of the inbox once it has a reply, so the list alone would lose
+it. todo.org is where Pat already looks for work, and the entry names
+the event that should trigger it.
+---
+change-id: ntwqymqvoyvxsnoryzvovzxklossrzyz
+
+Pat asked for this entry in the thread "Re: [PATCH v3]
+jails/instances/lab-mail: Initial spec". The spec.org it points to
+is not on trunk yet; it arrives with "[PATCH v5]
+jails/instances/lab-mail: Initial spec", whose "alternatives
+considered" section records the decision.
+
+ todo.org | 7 +++++++
+ 1 file changed, 7 insertions(+)
+
+diff --git a/todo.org b/todo.org
+index d26a097..c348b1c 100644
+--- a/todo.org
++++ b/todo.org
+@@ -140,3 +140,10 @@ even in things like claude code sessions that are terminal UIs.
+ 
+ Need to find a scrollback number that is a good balance of being able
+ to go back as far as I need, with performance.
++
++* lab-mail: Send as pat@patmaddox.com once Emacs leaves the jj maildir
++Emacs sends by delivering into the jj maildir today, so it does not
++use lab-mail. When it sends over SMTP instead, add pat@patmaddox.com
++to smtprelay's allowed senders and add an msmtp account to
++dotfiles/emacs. The lab-mail spec leaves Pat's client out until then;
++see "alternatives considered" in jails/instances/lab-mail/spec.org.
+
+base-commit: 23c5779575deee14b294b1a99db19ebecef4fd69
+-- 
+2.56.0
+
