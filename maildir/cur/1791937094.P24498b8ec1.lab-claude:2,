@@ -1,0 +1,79 @@
+From: claude <claude@p7x.dev>
+Subject: Re: p7x mail relay jail
+To: Pat Maddox <pat@patmaddox.com>, lab-devel@p7x.dev
+In-Reply-To: <m2ik35npbo.fsf@beastie.p7x.dev>
+References: <m2ik35npbo.fsf@beastie.p7x.dev>
+Message-ID: <1791937094.8bb36fc859c3@p7x.dev>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=utf-8
+Date: Wed, 14 Oct 2026 00:18:14 +0000
+
+On Tue, 13 Oct 2026 16:38:51 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+> Goal: Create a jail config for a mail relay to access mail for p7x.dev.
+>
+> The purpose is to provide a jail that holds onto the mail credentials,
+> so that agents can send and read email, but not have the credentials
+> themselves.
+
+Thanks, the goal is clear. I have a design to propose, but a few
+facts decide its shape and I would be guessing at them, so I am
+asking before I send a patch.
+
+The proposal is a new instance, jails/instances/lab-mail, built the
+same way as lab-claude:
+
+- OpenSMTPD (mail/opensmtpd) accepts mail from the jails without
+  auth and relays it to the provider with the stored credentials.
+- Dovecot (mail/dovecot) with the imapc backend proxies IMAP to the
+  provider and exposes only lists/ to the jails, read-only.
+- The credentials live in /jails/data/lab-mail/ on the host, mounted
+  read-only with nullfs like lab-claude's state. They never enter
+  the repo, and no other jail mounts them.
+
+> - jails can connect with no authentication
+
+This is the part I cannot do safely with the current setup. Every
+instance uses "ip4 = inherit", so a connection from lab-claude
+arrives from the host's own address. The relay cannot tell a jail
+from any other process on the host, and if it listens on the host's
+external address, from anything that can reach beastie.
+
+I propose giving lab-mail its own address, with the relay listening
+only there, and moving the client jails off "inherit" to their own
+addresses on the jails bridge. pf then passes 25 and 143 to lab-mail
+only from those addresses. That changes lab-claude and lab-devel
+networking, so I want your agreement first. Would you rather keep
+"inherit" and accept that "the jails" means "anything on the host"?
+Or would you prefer vnet jails like snapper on andre?
+
+> - imap subdir lists/ is available for jails to fetch / read
+
+Who hosts p7x.dev mail, and what are its IMAP and SMTP submission
+endpoints (host, port, TLS mode, and password or app-specific
+token)? I will write the config against those and leave the secret
+itself in /jails/data/lab-mail/.
+
+Is lists/ a folder on the provider's account, with subfolders per
+list? Should jails be able to set flags (e.g. \Seen), or only read?
+I would start read-only.
+
+Would you rather have a local copy? mbsync into a local maildir
+served by Dovecot keeps working when the provider is down, at the
+cost of one more moving part. I would start with the imapc proxy.
+
+> - outbound email can only go to pat@patmaddox.com and
+> - *@lists.p7x.dev. all other email is rejected
+
+The list today is lab-devel@p7x.dev, and reply-all addresses it
+there. Under this rule those replies would be rejected. Is the list
+moving to lab-devel@lists.p7x.dev, or should lab-devel@p7x.dev also
+be allowed?
+
+Which sender addresses may jails use? I would rewrite or reject
+anything that is not <user>@p7x.dev, since the provider will likely
+refuse a From it does not own. Should it be one address per jail
+(e.g. claude@p7x.dev) or one shared address?
+
+Once these are settled I will send the lab-mail instance as one
+series. The networking change will be a separate patch in front of
+it.
