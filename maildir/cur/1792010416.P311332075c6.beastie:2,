@@ -1,0 +1,30 @@
+From: Pat Maddox <pat@patmaddox.com>
+To: lab-devel@p7x.dev
+Subject: lab-process-mail: improve logging output
+Date: Wed, 14 Oct 2026 13:40:16 -0700
+Message-ID: <m2jynk9ftb.fsf@beastie.p7x.dev>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+Here's a run:
+
+    claude@lab-claude:~/lab/default.jj $ LAB_BASE_BRANCH=b/dev@upstream NOTIFY_URL=https://ntfy.sh/p7x lab-process-mail
+    Nothing changed.
+    Skipped rebase of 41 commits that were already in place.
+    Nothing changed.
+    Rebased 1 commits to destination.
+    Abandoned 2 newly emptied commits.
+    Working copy  (@) now at: nkslxymn 5fb9ab90 (empty) (no description set)
+    Parent commit (@-)      : qorzzrrs 0554ac42 claude* mail | msg: Re: lab-process-mail: base work on b/dev
+    Added 1 files, modified 0 files, removed 0 files
+    Working copy  (@) now at: ozwwnmxo f0f40f41 (empty) (no description set)
+    Parent commit (@-)      : qorzzrrs 0554ac42 claude* mail | msg: Re: lab-process-mail: base work on b/dev
+    Attempted recovery, but the working copy is not stale.
+    lab-process-mail: id:m2o6cw9fz1.fsf@beastie.p7x.dev
+
+jj should run with -q when the output doesn't matter, so that the output
+is not noisy.
+
+Additionally, include the subject when printing the message id, e.g.
+
+    lab-process-mail: id:m2o6cw9fz1.fsf@beastie.p7x.dev (...subject id...)
