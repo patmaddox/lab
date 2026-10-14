@@ -1,0 +1,74 @@
+From: claude <claude@p7x.dev>
+Subject: Re: Supporting status trailers in emails
+To: Pat Maddox <pat@patmaddox.com>, lab-devel@p7x.dev
+In-Reply-To: <m2fqy77vwq.fsf@beastie.p7x.dev>
+References: <m21p9s9ejd.fsf@beastie.p7x.dev>
+	<1792012556.c12ca97c38b9@p7x.dev> <m2fqy87xia.fsf@beastie.p7x.dev>
+	<m2zewg6ilz.fsf@beastie.p7x.dev> <1792016442.ace58274f00c@p7x.dev>
+	<m2fqy77vwq.fsf@beastie.p7x.dev>
+Message-ID: <1792018527.b0931f9bc7b6@p7x.dev>
+Date: Wed, 14 Oct 2026 22:55:37 +0000
+
+On Wed, 14 Oct 2026 15:35:33 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+> Okay I like this. One note: the "Approved: once the doas question is
+> settled" is a bad example. It's additional a condition to this, and the
+> whole point is that it's deterministic. If there's an "Approved:"
+> trailer, it's approved.
+
+Agreed, and that example was wrong. The documentation in the series
+below says so outright: Approved: means approved as-is, the value is
+an optional note such as thanks or a follow-up idea, and it never adds
+a condition.
+
+> Let's do approved, superseded, rejected at the thread level for the time
+> being. If I need to get more granular, I will.
+
+Done. Approved: and Rejected: tag every message in the thread the
+reply sits in, just as Superseded-by does.
+
+> No, I'll manually filter them for the time being. Once it's
+> demonstrating reliable value I can config notmuch to hide automatically.
+
+Approved and rejected are not excluded. One question back: "[PATCH
+3/3] notmuch: Hide superseded threads from searches" [1] still adds
+superseded to search.exclude_tags in the sample config. If "them"
+covers superseded too, I will drop that patch and send v2 of that
+series.
+
+> Can trailers be multiline? How does that work? I'm imagining that I
+> might type a paragraph and it will word wrap.
+
+Yes, if every continuation line starts with a space or a tab. git
+interpret-trailers joins them into one value:
+
+    Rejected: the hook belongs in the mail workspace, where
+      the list is indexed
+
+A line that wraps back to column 0 is not a trailer, though, and one
+such line voids the whole block. That also drops any Superseded-by
+in it. I checked both cases with git 2.56.0. So fill-paragraph with
+no indent loses the verdict without a word. If you write a long reason,
+either indent the continuation lines or put the paragraph in the prose
+above and keep the trailer short.
+
+> Fine if not... in any case, the whole trailer protocol needs to be
+> documented.
+
+The series is "[PATCH 0/2] notmuch: Tag approved and rejected
+threads" [2]. Patch 1 adds the approved and rejected tags to
+mail-tag.sh. The latest verdict on a thread wins, and within one
+message the last trailer wins. Patch 2 adds a "Status trailers"
+section to zib/patch-review-workflow.org. It says where trailers go,
+what voids them, how values continue, and what each key means. It
+builds on "[PATCH 0/3] notmuch: Tag superseded series and hide them"
+[3] and on "[PATCH] notmuch: Tag patches reported committed" [4].
+
+I tested it on a scratch maildir: a later rejection overrides an
+earlier approval, quoted and badly wrapped trailers are ignored, and a
+second run changes nothing. No message on the list has a verdict yet,
+so applying it tags nothing until you write one.
+
+[1] id:3dd2c9890ced3ef7293a5487fbc00c69c0a5bf56.1792016109.git.claude@p7x.dev
+[2] id:cover.1792018497.git.claude@p7x.dev
+[3] id:cover.1792016109.git.claude@p7x.dev
+[4] id:e38adbdc9cafc8f70ff53e025c9763e9c41e7a72.1791666882.git.claude@p7x.dev
