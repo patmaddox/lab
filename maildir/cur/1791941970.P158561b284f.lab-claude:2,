@@ -1,0 +1,181 @@
+From: claude <claude@p7x.dev>
+Subject: Re: p7x mail relay jail
+To: Pat Maddox <pat@patmaddox.com>, lab-devel@p7x.dev
+In-Reply-To: <m2pkxdm5gk.fsf@beastie.p7x.dev>
+References: <m2ik35npbo.fsf@beastie.p7x.dev>
+	<1791937094.8bb36fc859c3@p7x.dev> <m2pkxdm5gk.fsf@beastie.p7x.dev>
+Message-ID: <1791941956.9ee36bfce7f8@p7x.dev>
+Date: Wed, 14 Oct 2026 01:39:30 +0000
+
+On Tue, 13 Oct 2026 18:33:15 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+> I want to adjust this a bit and do a spec-driven workflow. So the first
+> goal of this thread is to produce a spec, that is implementable.
+
+The spec is posted as "[PATCH] jails/instances/lab-mail: Initial
+spec" [1]. It adds jails/instances/lab-mail/spec.org, written to stand
+alone, in the same style as the lazy-jail spec. It records what you
+settled here and ends with the questions I still cannot answer. Once
+you have edited it, the spec-report skill can tell us whether it is
+ready to implement. The reasoning you asked for is below.
+
+>> - OpenSMTPD (mail/opensmtpd) accepts mail from the jails without
+>>   auth and relays it to the provider with the stored credentials.
+>
+> Sounds good, but I'd like to know what alternatives there are, and make
+> a deliberate choice - i.e. what's the reasoning for using opensmtpd over
+> others?
+
+The relay has to listen on SMTP, filter by envelope recipient, and
+relay with auth to Fastmail. The candidates:
+
+- OpenSMTPD. The whole job is a short smtpd.conf: one listen line, a
+  table of allowed recipients, and one match rule with a relay action
+  that logs in to Fastmail. Anything that matches no rule is rejected
+  at RCPT TO. It is small and privilege-separated, from OpenBSD.
+- Postfix. It is the most widely used and best documented, and it
+  does the same job with relayhost, smtp_sasl_password_maps and
+  check_recipient_access. That job is spread across main.cf and
+  several lookup tables, with many more knobs than we need.
+- Sendmail. It can do this, but its m4 config gives no benefit here.
+- dma (base) and msmtp. Neither listens on the network; they send
+  from the local machine. Each client jail would need its own copy
+  with the credentials, which is what we are trying to avoid.
+
+I chose OpenSMTPD because its config is the shortest to read and
+review. Postfix would be my second choice. The one thing neither of
+them does is pass Fastmail's rejection through to the client, which
+you ask about below.
+
+>> - Dovecot (mail/dovecot) with the imapc backend proxies IMAP to the
+>>   provider and exposes only lists/ to the jails, read-only.
+>
+> ditto
+
+For the IMAP server, Dovecot is the standard choice on FreeBSD. It
+serves a maildir with a few lines of config, and it can make a
+mailbox read-only. Cyrus and Courier each bring their own mail store
+and admin model, which we do not need for one folder.
+
+There is also an option with no IMAP server: nullfs-mount the local
+maildir read-only into the client jails, and let notmuch read it
+directly. That has fewer moving parts, but it does not give you "IMAP
+available to jails", so I left it out of the spec. The spec asks how
+the client jails will read the mailbox, and that answer decides it.
+
+>> This is the part I cannot do safely with the current setup. Every
+>> instance uses "ip4 = inherit", so a connection from lab-claude
+>> arrives from the host's own address.
+[...]
+> It could listen on localhost on beastie, and thus still be accessible to
+> any jails with inherit networking, right?
+
+Right. A jail with "ip4 = inherit" uses the host's addresses,
+including the real 127.0.0.1. One detail: lab-mail must also use
+inherit. A jail with its own address gets its own private 127.0.0.1,
+which the other jails would not reach. A dedicated address would also
+work, but binding to loopback is simpler and enough.
+
+> I don't think the client jails need to move off "inherit", do they?
+[...]
+> is necessary. Here's a security rule I can live with: the mail server is
+> accessible via beastie, and any jails that run on it. I think we can do
+> that by limiting where it binds, not necessarily having to use pf
+> anywhere.
+
+Agreed. No pf rules and no networking change; the spec states the
+boundary in those words. Any local user on beastie can then send as
+claude@p7x.dev and read lists/. That fits your rule, but I wanted to
+spell it out.
+
+One thing to check on the host: nothing else may already listen on
+127.0.0.1:25. Sendmail did that by default before FreeBSD 14.
+
+> p7x.dev and lists.p7x.dev is hosted on fastmail.
+
+The spec uses imap.fastmail.com:993 and smtp.fastmail.com:465, both
+implicit TLS, and an app password. Fastmail requires app passwords for
+IMAP and SMTP.
+
+> The IMAP connection should be read-only. In fact if there's a way to
+> guarantee that in the mail server connection, that would be good.
+
+As far as I know, Fastmail app passwords cannot be made read-only for
+IMAP. So the guarantee has to come from lab-mail, and that decides
+the next question.
+
+> Give me an overview of the two different implementation approaches. I
+> like the idea of it working even if connection to fastmail is
+> down. However, the main thing I'm interested in right now is getting a
+> working example going, then I can iterate on it.
+
+imapc proxy: Dovecot forwards each client command to Fastmail as it
+arrives.
+- One component and no local copy. Clients see new mail at once.
+- If Fastmail is down, reading stops.
+- Read-only depends on Dovecot's config. Dovecot holds a read-write
+  login to Fastmail, so a config mistake could let a client set flags
+  or expunge on Fastmail.
+
+mbsync copy: mbsync pulls lists/ into a local maildir on a timer, and
+Dovecot serves only that copy.
+- One more component, plus a cron job. New mail can take up to a
+  minute to show up.
+- If Fastmail is down, reading keeps working from the copy.
+- Read-only holds by construction. mbsync is configured to pull only,
+  and clients never talk to anything that reaches Fastmail. Whatever
+  a client does, at worst it changes the local copy, and Dovecot
+  makes even that read-only.
+
+The spec uses mbsync. It is the only one of the two that gives you
+the guarantee you asked for, and it also works offline. It is barely
+more work for a first working example.
+
+> The first test is pretty simple: I send an email from pat@patmaddox.com
+> to lab@lists.p7x.dev. The agent reads the email and responds as
+> claude@p7x.dev.
+
+That is the spec's acceptance test, plus two negative checks: a
+message to an outside address is rejected, and an expunge from a
+client leaves Fastmail unchanged.
+
+For the agent to read the mail, lab-claude needs an IMAP client that
+feeds notmuch, e.g. mbsync. That means adding mail/isync to
+lab-claude's packages. This is one of the spec's questions.
+
+> - pat@patmaddox.com
+> - @p7x.dev
+> - @lists.p7x.dev
+
+In the spec. Domains match exactly, so @p7x.dev does not cover
+lists.p7x.dev; that is why both stay listed. Recipients are checked
+one at a time. If a message goes to pat@patmaddox.com and to
+someone@example.com, the second is rejected and the first still goes
+out. Most MTAs behave this way. If you would rather reject the whole
+message, say so and I will change the spec.
+
+> Don't rewrite. What happens if upstream provider rejects it? Will the
+> rejection be passed through to the client? That would be useful if so.
+
+No, not with a queuing relay, and here I found a gap. OpenSMTPD (or
+Postfix) puts the message in its queue and answers 250 before it
+talks to Fastmail. If Fastmail then rejects the message, e.g. for a
+sender it does not own, the client has already moved on. lab-mail
+sends a bounce to the envelope sender, claude@p7x.dev, and that
+bounce lands wherever Fastmail delivers claude@p7x.dev. If it is not
+in lists/, the agent never sees it. The spec asks where that mail
+lands. A Fastmail rule that files it into lists/ would close the gap.
+
+Rejections can only reach the client directly through a proxy that
+holds the client's session open while it talks to Fastmail. Dovecot's
+submission service works that way. However, it needs the client to
+log in, and I have not confirmed it can enforce a recipient allowlist.
+Without one it would fail your outbound rule, so I did not pick it.
+Before your first test, it would also help to confirm that
+claude@p7x.dev is a sending identity on the Fastmail account. That
+avoids the most likely rejection.
+
+> For now it will be claude@p7x.dev since that's what we're working with.
+
+In the spec. lab-mail does not check the sender; Fastmail decides.
+
+[1] id:5f7d85c552bc47bb2b23e2510437f859ddafa4cc.1791941898.git.claude@p7x.dev
