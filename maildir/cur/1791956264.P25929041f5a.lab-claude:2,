@@ -1,0 +1,82 @@
+From: claude <claude@p7x.dev>
+Subject: Re: [PATCH v3] jails/instances/lab-mail: Initial spec
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+In-Reply-To: <m2pkxcj17u.fsf@beastie.p7x.dev>
+References: <4d40a245c49a3ec0631f80c5a65bf85497dadf6a.1791944336.git.claude@p7x.dev>
+	<m2ik34kh3f.fsf@beastie.p7x.dev> <1791954885.8f2eda621d8a@p7x.dev>
+	<m25wz4kgd1.fsf@beastie.p7x.dev> <1791955518.cdf0f5f4ee56@p7x.dev>
+	<m2pkxcj17u.fsf@beastie.p7x.dev>
+Message-ID: <1791956260.17661cb9c3c5@p7x.dev>
+Date: Wed, 14 Oct 2026 05:37:44 +0000
+
+On Tue, 13 Oct 2026 22:33:09 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+> This is good reasoning and should be included in the spec. As a rule,
+> specs should have alternatives considered as well. Essentially when
+> reading the spec we should be able to answer 1) what are we doing and
+> why and 2) what are we not doing and why?
+
+Done in "[PATCH v5] jails/instances/lab-mail: Initial spec" [1]. It
+adds an "alternatives considered" section that takes each decision in
+turn: what the spec does, what it rejects, and why. It covers the
+queuing MTA, the client-side queue (the reasoning above, nearly word
+for word), the other relays, sender and recipient checks, imapc
+against mbsync, IMAP against a shared mount, ip4 = inherit, the
+ports, the single app password, and leaving your client out. Every
+entry is a choice made in this thread or in "p7x mail relay jail";
+none is new.
+
+I will add the same section to any spec I write from now on.
+
+> When posting new versions, also include an interdiff so I can clearly
+> see the changes. I think interdiff is the right word.
+
+Yes, that is the word. v5 has one below the diff, from git
+format-patch --interdiff against v4. It covers the spec file only, so
+the "Changes in v5" notes mention the new commit message paragraph. I
+checked that git am still applies v5 to trunk with the interdiff in
+place, and that the result matches my commit exactly.
+
+> Good thinking. What's a good way to track these sorts of things? Is it a
+> follow up in the spec? Add to todo.org? Or just leave it on the list and
+> let a secretary bring it up later?
+
+I suggest splitting the decision from the task.
+
+- The decision goes in the spec. v5 records it as the last
+  alternative: your client is left out, and sending as you takes one
+  more allowed sender and an msmtp entry. A spec describes the end
+  state, so a "follow-up" section would be a to-do list living in the
+  wrong place.
+- The task goes in todo.org, with the event that should trigger it:
+  "when Emacs moves off the jj maildir, send through lab-mail as
+  pat@patmaddox.com". That is the file you already work from.
+- Do not rely on the list alone. A thread leaves the inbox once it
+  has a reply, and nothing brings it back. A secretary would have to
+  find the item again in the archive each time, and could not tell
+  whether it was still open.
+
+If that suits you, I will send a one-line todo.org patch.
+
+> hrm are you sure about that? I just went to install it and it said it's
+> already installed. You're on lab-claude.p7x.dev right?
+
+You are right, and I was wrong. This is lab-claude.p7x.dev, and pkg
+info shows notmuch-emacs-0.40_10 with emacs-nox-31.1. I ran Emacs
+with -Q, which leaves /usr/local/share/emacs/site-lisp/notmuch off
+load-path, so (require 'notmuch) failed. I took that as the package
+being missing and did not check pkg.
+
+I have now tested the patch. I made a notmuch database holding one
+message and ran notmuch-mua-reply on it in batch Emacs:
+
+- notmuch-message-replied-tags nil: no tag change queued.
+- default ("+replied"): (("id:t1@x" "+replied")) queued.
+
+So "[PATCH] emacs: Leave the replied tag to notmuch new" [2] does what
+it says. I could not load the whole init.el in batch, because it
+needs the packages that patmaddox-emacs.pkg installs. I loaded only
+notmuch and set the variable the same way init.el does.
+
+[1] id:1df25c0fd73b313bd0bc4c758b4c255c7417dbff.1791956202.git.claude@p7x.dev
+[2] id:7d576466e07439fd2059007caf327e87a609493d.1791955493.git.claude@p7x.dev
