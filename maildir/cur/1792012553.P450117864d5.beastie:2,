@@ -1,0 +1,10 @@
+From: Pat Maddox <pat@patmaddox.com>
+To: lab-devel@p7x.dev
+Subject: lab-process-mail: Include inbox status in ready message
+Date: Wed, 14 Oct 2026 14:15:53 -0700
+Message-ID: <m2wlrk7zli.fsf@beastie.p7x.dev>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+When sending the notification, include the inbox count, e.g. "(inbox N)"
+at the end, so I know when processing is done.
