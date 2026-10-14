@@ -8,6 +8,9 @@
 # https://bugs.freebsd.org/bugzilla/show_bug.cgi?id=298878
 # https://bugs.freebsd.org/bugzilla/show_bug.cgi?id=299200
 #
+# The path is the default class's plus ~/local/bin, where packages
+# installed as this user with "pkg -r ~/local" put their commands.
+#
 # getcap(3) does not allow comments inside a record, so they all
 # live up here.
 
@@ -29,4 +32,5 @@ me:\
 	CLAUDE_CODE_ENABLE_PROMPT_SUGGESTION=false,\
 	CLAUDE_CODE_GLOB_NO_IGNORE=false,\
 	CLAUDE_CODE_NATIVE_CURSOR=1,\
-	USE_BUILTIN_RIPGREP=0:
+	USE_BUILTIN_RIPGREP=0:\
+	:path=/sbin /bin /usr/sbin /usr/bin /usr/local/sbin /usr/local/bin ~/bin ~/local/bin:
