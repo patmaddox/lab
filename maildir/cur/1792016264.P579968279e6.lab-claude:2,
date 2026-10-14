@@ -1,0 +1,154 @@
+Message-ID: <e7f2aee8e65f579a259cba9a0f527f100d086a3c.1792016256.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Subject: [PATCH v2] src/lab-process-mail: Quiet jj and name each message
+To: Pat Maddox <pat@patmaddox.com>
+Change-Id: squtuollnpsntswzurnrpnxuosnsmpyu
+Date: Wed, 14 Oct 2026 22:17:44 +0000
+
+Each pass printed a page of jj status lines (rebase counts, working
+copy summaries, "Attempted recovery, but the working copy is not
+stale.") before the one line that matters, the message it is about to
+answer. The id alone does not say what that message is, so the
+operator had to look it up to follow the run.
+
+Run the jj commands that keep the workspaces up to date with --quiet;
+their errors still reach stderr. Print the message's subject beside
+its id.
+---
+change-id: squtuollnpsntswzurnrpnxuosnsmpyu
+base-branch: b/dev@upstream
+
+Changes in v2:
+- Rebase onto b/dev e98145ce, where "src/lab-process-mail: Report the
+  inbox count in each notice" changed the answers_message test and v1
+  no longer applied. No change in behavior.
+- Link to v1: id:b2d0bbb32fcb7ea186fd5fcb34141e6eff5b9dd9.1792010878.git.claude@p7x.dev
+
+ src/lab-process-mail/lab-process-mail      | 21 ++++++++---------
+ src/lab-process-mail/lab-process-mail_test | 26 +++++++++++++++++-----
+ 2 files changed, 32 insertions(+), 15 deletions(-)
+
+diff --git a/src/lab-process-mail/lab-process-mail b/src/lab-process-mail/lab-process-mail
+index 5d2ba71..bc5ce6c 100755
+--- a/src/lab-process-mail/lab-process-mail
++++ b/src/lab-process-mail/lab-process-mail
+@@ -58,21 +58,22 @@ die() {
+ # Settling those is the agent's job.
+ get_up_to_date() {
+ 	# Both workspaces share one repo, so one fetch covers them.
+-	jj -R "${trunk}" git fetch --all-remotes
++	jj --quiet -R "${trunk}" git fetch --all-remotes
+ 
+ 	# Move each stack from its base, not from your first commit in it,
+ 	# so work built on someone else's unmerged patch keeps that patch.
+-	jj -R "${trunk}" rebase -s "roots(::(${WORK}) ~ ::(${BASE}))" \
+-	    -d "${BASE}" --skip-emptied
++	jj --quiet -R "${trunk}" rebase \
++	    -s "roots(::(${WORK}) ~ ::(${BASE}))" -d "${BASE}" --skip-emptied
+ 
+ 	# A bookmark with no pending mail, missing or merged in full, has
+ 	# nothing to rebase; point it at the list's tip instead.
+ 	if [ -z "$(jj -R "${mail}" log --no-graph -T commit_id \
+ 	    -r "bookmarks(exact:${me}) ~ ::mail@upstream")" ]; then
+-		jj -R "${mail}" bookmark set "${me}" -r mail@upstream
++		jj --quiet -R "${mail}" bookmark set "${me}" -r mail@upstream
+ 	fi
+-	jj -R "${mail}" rebase -b "${me}" -d mail@upstream --skip-emptied
+-	jj -R "${mail}" new "${me}"
++	jj --quiet -R "${mail}" rebase -b "${me}" -d mail@upstream \
++	    --skip-emptied
++	jj --quiet -R "${mail}" new "${me}"
+ 
+ 	notmuch new --quiet
+ }
+@@ -82,10 +83,10 @@ get_up_to_date() {
+ # its working-copy commit, so bring the files in line with it.
+ prepare_workspace() {
+ 	if [ ! -d "${ws}" ]; then
+-		jj -R "${trunk}" workspace add --name "$(basename "${ws}" .jj)" \
+-		    -r "${BASE}" "${ws}"
++		jj --quiet -R "${trunk}" workspace add \
++		    --name "$(basename "${ws}" .jj)" -r "${BASE}" "${ws}"
+ 	fi
+-	jj -R "${ws}" workspace update-stale
++	jj --quiet -R "${ws}" workspace update-stale
+ }
+ 
+ oldest_inbox_message() {
+@@ -129,7 +130,7 @@ main() {
+ 		[ -n "${id}" ] || break
+ 		subject="$(notmuch search "${id}" |
+ 		    sed -e 's/^[^;]*; //' -e 's/ ([^()]*)$//')"
+-		echo "${PROGNAME}: ${id}"
++		echo "${PROGNAME}: ${id} (${subject})"
+ 		(cd "${ws}" &&
+ 		    claude --permission-mode auto -p "$(cat "${prompt}")
+ 
+diff --git a/src/lab-process-mail/lab-process-mail_test b/src/lab-process-mail/lab-process-mail_test
+index 2b13917..ba1019b 100755
+--- a/src/lab-process-mail/lab-process-mail_test
++++ b/src/lab-process-mail/lab-process-mail_test
+@@ -4,6 +4,7 @@ atf_init_test_cases() {
+ 	atf_add_test_case no_args
+ 	atf_add_test_case empty_inbox
+ 	atf_add_test_case answers_message
++	atf_add_test_case quiet_update
+ 	atf_add_test_case passes_prompt_and_id
+ 	atf_add_test_case drains_oldest_first
+ 	atf_add_test_case stuck_message
+@@ -188,12 +189,27 @@ answers_message_body() {
+ 	setup
+ 	echo 'id:a@x Hello there' > inbox
+ 	export STUB_ANSWER=1 NOTIFY_URL=https://ntfy.example/topic
+-	atf_check -s exit:0 -o inline:"lab-process-mail: id:a@x\n" \
++	atf_check -s exit:0 \
++	    -o inline:"lab-process-mail: id:a@x (Hello there)\n" \
+ 	    -e ignore "${PROCESS_MAIL}"
+ 	atf_check -o match:"answered: Hello there \\(inbox 0\\)" cat curl.log
+ 	atf_check -o match:"https://ntfy.example/topic" cat curl.log
+ }
+ 
++atf_test_case quiet_update
++quiet_update_head() {
++	atf_set descr "Getting up to date prints nothing"
++}
++quiet_update_body() {
++	setup
++	echo 'id:a@x Hello there' > inbox
++	export STUB_ANSWER=1
++	atf_check -s exit:0 -o ignore -e ignore "${PROCESS_MAIL}"
++	echo 'id:b@x Again' > inbox
++	atf_check -s exit:0 -o inline:"lab-process-mail: id:b@x (Again)\n" \
++	    -e empty "${PROCESS_MAIL}"
++}
++
+ atf_test_case passes_prompt_and_id
+ passes_prompt_and_id_body() {
+ 	setup
+@@ -213,9 +229,9 @@ drains_oldest_first_body() {
+ 	setup
+ 	printf 'id:a@x First\nid:b@x Second\n' > inbox
+ 	export STUB_ANSWER=1
+-	atf_check -s exit:0 \
+-	    -o inline:"lab-process-mail: id:a@x\nlab-process-mail: id:b@x\n" \
+-	    -e ignore "${PROCESS_MAIL}"
++	printf '%s\n' 'lab-process-mail: id:a@x (First)' \
++	    'lab-process-mail: id:b@x (Second)' > expout
++	atf_check -s exit:0 -o file:expout -e ignore "${PROCESS_MAIL}"
+ 	atf_check -o inline:"2\n" grep -c '^cwd ' claude.log
+ }
+ 
+@@ -224,7 +240,7 @@ stuck_message_body() {
+ 	setup
+ 	printf 'id:a@x First\nid:b@x Second\n' > inbox
+ 	export NOTIFY_URL=https://ntfy.example/topic
+-	atf_check -s exit:1 -o inline:"lab-process-mail: id:a@x\n" \
++	atf_check -s exit:1 -o inline:"lab-process-mail: id:a@x (First)\n" \
+ 	    -e match:"id:a@x is still in the inbox" "${PROCESS_MAIL}"
+ 	atf_check -o inline:"1\n" grep -c '^cwd ' claude.log
+ 	atf_check -o match:"stuck: First \\(inbox 2\\)" cat curl.log
+
+base-commit: e98145ce3999e69b68bfee6b5dc57025ce920a57
+-- 
+2.56.0
+
