@@ -1,0 +1,113 @@
+From: claude <claude@p7x.dev>
+Subject: Re: Supporting status trailers in emails
+To: Pat Maddox <pat@patmaddox.com>, lab-devel@p7x.dev
+In-Reply-To: <m25wz37ve2.fsf@beastie.p7x.dev>
+References: <m21p9s9ejd.fsf@beastie.p7x.dev>
+	<1792012556.c12ca97c38b9@p7x.dev> <m2fqy87xia.fsf@beastie.p7x.dev>
+	<1792016195.922937034816@p7x.dev> <m25wz37ve2.fsf@beastie.p7x.dev>
+Message-ID: <1792018722.5477a7ac2a99@p7x.dev>
+Date: Wed, 14 Oct 2026 22:58:47 +0000
+
+On Wed, 14 Oct 2026 15:46:45 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+> That makes sense. I think a "What's cooking?" report would be cool here
+> too. Commits in b/dev are particularly interesting because they're
+> likely to be promoted to trunk soon. Then a section for the pending
+> patch series, and maybe discussion topics.
+
+All three sections can be generated from state we already have, so the
+report needs no bookkeeping of its own:
+
+- On b/dev: trunk()..b/dev@upstream, one entry per commit. Each commit
+  carries the change id that format-patch.sh puts in its patch, so
+  "notmuch search changeid:<id>" finds the series it came from, and the
+  entry can cite its subject and Message-ID the way git's "source:"
+  line does.
+- Pending series: cover letters and lone patches that mail-tag.sh has
+  not tagged superseded, committed or rejected, and whose commits are
+  not on b/dev. Approved ones go first, since they wait only on you.
+- Discussion: threads with no patch that had a message in the last two
+  weeks, newest first, with whoever spoke last.
+
+I would write it as a script that prints the report, plus a step that
+delivers it to the list as an ordinary message. Two questions before I
+build it. Who sends it and how often: you by hand, or a pass that I run
+when you ask? And should discussion threads you have archived (below)
+drop out of it?
+
+> There's one thing I'm not sure of: discussions, or messages that don't
+> warrant a reply. Consider the replies that you send when you send a
+> patch series. You post the patch series, will ultimately be resolved
+> somehow. You also post a reply to the discussion thread - and so now it
+> remains in my inbox. There's no way for me to dispose of it.
+>
+> I think that's where some kind of personal database becomes
+> necessary... maybe a dedicated notmuch-git branch with archive tags?
+
+I agree. "I have read this and owe nothing" is your judgment, and no
+hook can derive it from the list. It is also yours alone; my inbox
+should not change when you archive something. The shared archive/
+folder from "[PATCH v2 0/2] Archive messages that need no answer" [1]
+got that wrong, since one move closed the message for everyone. It also
+needs a shared maildir, which real email will not give you. I would
+drop that series.
+
+notmuch-git(1) fits, as you suggested in "Re: need some way to close
+the loop on threads" [2]. The shape I would propose:
+
+- One personal tag under a prefix, e.g. "me::archived". notmuch-git
+  commits only tags matching git.tag_prefix, so the derived tags
+  (inbox, replied, superseded, ...) never enter it, and checkout never
+  fights mail-tag.sh over them.
+- mail-tag.sh treats it as an input, the way it treats your address:
+  "-inbox -- tag:me::archived". Today it re-adds inbox on every run,
+  which is why "a" in emacs never sticks. That one line is the only
+  change to the derived tags, and it keeps inbox exclusive of archived.
+- It works per message, so a new reply in an archived thread still
+  lands in your inbox.
+- The repo stores one empty file per tag, tags/<msgid>/<tag>, and
+  knows nothing else about the mail. It can be a bare repo on your
+  machine, pushed to a branch of lab.git for backup, e.g. tags/pat.
+  Nobody else reads it, so it never merges.
+
+The archive is then "notmuch tag +me::archived" (or "a" in emacs)
+followed by "notmuch git commit". Rebuilding the database loses
+nothing: notmuch new derives the shared tags, and "notmuch git
+checkout" restores yours. No service is involved, only a git repo.
+
+One dependency to check first. On this host the notmuch 0.40 package
+installs the notmuch-git(1) man page but not the notmuch-git script
+itself; "which notmuch-git" finds nothing. Please check whether your
+host has it. If not, it needs a port fix or an install from the notmuch
+source tree, which I cannot do here. I have not checked what Python
+modules it needs.
+
+Per "Claude doesn't archive email" [3], I would not use this for my
+own inbox; I keep answering everything. If that sounds right, I will
+send a series for the mail-tag.sh line, a "just" recipe for
+archive-and-commit, and the workflow doc, and withdraw [1].
+
+> Is there any reason to bring b4 into the mix for my workflow?
+
+Not now, in my view. b4 is not installed here, so the following comes
+from its documentation as I know it, not from trying it.
+
+What b4 gives a maintainer is fetching a series by Message-ID from
+lore, folding Reviewed-by and Acked-by replies into the commits, a
+range-diff between versions, and "b4 ty" thank-you mail. Most of that
+is either already in our tooling or does not apply:
+
+- The series is already local, in the maildir.
+- format-patch.sh already writes the change-id, base-commit and
+  "Link to vN" lines b4 prep would write.
+- Our verdicts are thread state (Approved, Rejected, Superseded-by),
+  not commit trailers, so there is nothing for b4 to fold in.
+- Applying with b4 means git am in a git working tree, which sits
+  awkwardly beside jj.
+
+It would become worth a look if reviewers other than you start sending
+Reviewed-by and you want those recorded in trunk's commits. Until
+then it adds a dependency for little gain.
+
+[1] id:cover.1791652315.git.claude@p7x.dev
+[2] id:m2ld85wpae.fsf@beastie.p7x.dev
+[3] id:m2cxthv6yf.fsf@beastie.p7x.dev
