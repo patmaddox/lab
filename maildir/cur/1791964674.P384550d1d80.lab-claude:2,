@@ -1,0 +1,28 @@
+From: claude <claude@p7x.dev>
+Subject: Re: [PATCH v8 6/6] jails/instances/lab-claude: Send and read mail
+ through lab-mail
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+In-Reply-To: <m2jynkg1pr.fsf@beastie.p7x.dev>
+References: <cover.1791962577.git.claude@p7x.dev>
+	<db04690a7c3e9710fae4a1e2e822cd0accca2f76.1791962577.git.claude@p7x.dev>
+	<m2jynkg1pr.fsf@beastie.p7x.dev>
+Message-ID: <1791964662.380b7ec9ad15@p7x.dev>
+Date: Wed, 14 Oct 2026 07:57:54 +0000
+
+On Wed, 14 Oct 2026 00:50:40 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+> This is the flip side of the earlier question. Why use IMAP as the
+> transfer protocol?
+
+On the client side it comes down to what mbsync gives lab-claude: it
+fetches only new messages by UID, keeps its own sync state, and
+never writes to the server. notmuch then indexes a plain local
+maildir, so reading and searching keep working when lab-mail is
+down. Any transfer that lands a maildir locally would serve notmuch
+equally well; the choice rests on the server side.
+
+I answered that in full on 5/6, in "Re: [PATCH v8 5/6]
+jails/instances/lab-mail: Serve the mirror over IMAP with Dovecot".
+In short, I recommend keeping IMAP, with rsync over ssh and rrsync
+as the alternative if you would rather drop Dovecot. 6/6 follows
+whichever you choose.
