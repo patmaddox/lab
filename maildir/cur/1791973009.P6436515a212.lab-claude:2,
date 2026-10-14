@@ -1,0 +1,85 @@
+From: claude <claude@p7x.dev>
+Subject: Re: How to configure beastie to use lab-mail
+To: Pat Maddox <pat@patmaddox.com>, lab-devel@p7x.dev
+In-Reply-To: <m2tsmod23y.fsf@beastie.p7x.dev>
+References: <m2o6cwei1o.fsf@beastie.p7x.dev>
+	<1791971028.8e7f3eb2a8e4@p7x.dev> <m2h5ioeh8s.fsf@beastie.p7x.dev>
+	<1791972118.654039ece7db@p7x.dev> <m2tsmod23y.fsf@beastie.p7x.dev>
+Message-ID: <1791972996.459b93eb1b3f@p7x.dev>
+Date: Wed, 14 Oct 2026 10:16:49 +0000
+
+On Wed, 14 Oct 2026 03:10:25 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+> > One finding sets the order, and the spec states it as a rule. Phase 2
+> > lands only after process-email reads and sends through lab-mail too.
+> > [inference] Once Emacs sends over SMTP, your mail no longer reaches
+> > the jj maildir. I read only that maildir, so I would stop seeing your
+> > mail, and my replies would stop reaching you. Moving process-email is
+> > a separate spec, and I can write it next. Phase 1 does not depend on
+> > it.
+>
+> Sounds like we'll need to do that then. The goal of this chunk of work
+> is to replace the jj maildir with the fastmail maildir. I have a working
+> setup, but I want to replace it with something a bit more automated and
+> robust.
+
+Understood. This reply has questions only. You said a spec goes out
+only when no questions are left, and moving my side raises the ones
+below. I will not send a revised spec until they are settled. Your
+review of the spec itself, that it must declare the end state and not
+carry phases [1], gets its own answer in that thread.
+
+Where my side stands [fact, checked on trunk]: lab-mail is merged.
+lab-claude already has an mbsync "lists" channel, an msmtp account
+for claude@p7x.dev, and a "lists" notmuch profile, but none of it
+feeds process-email. The skill, the get-up-to-date and
+get-oldest-inbox-message recipes, maildir-deliver.sh, and mail-send.sh
+all read or write ~/lab/mail.jj. The lab-mail spec puts the list and
+process-email out of scope ("They keep using the maildir in jj").
+
+e) One spec or two? Since the goal is to replace the jj maildir, I
+   would write one spec whose end state is "the list lives in the
+   Fastmail lists folder, and both clients read it through lab-mail and
+   send through it". The ordering I raised then stays in this thread,
+   where you said it belongs. Is one spec what you want?
+
+f) Moderation. Today my mail reaches the list only after you take it
+   from submissions into the mail bookmark. Through smtprelay, a
+   message I send to lab-devel@p7x.dev is on the list at once.
+   [inference] Fastmail can only hold it if a rule files my mail
+   somewhere other than "lists". Do you accept direct posting, so I
+   become what zib/patch-review-workflow.org calls a trusted member
+   with no moderation queue? Or should my mail be held for review, and
+   if so, where?
+
+g) The jj history. The mail bookmark holds the list so far. Without it
+   in Fastmail, old threads lose their context, and a rebuild can no
+   longer give the old mail its replied tags. lab-mail's Dovecot is
+   read-only, so I cannot copy it there. Should you import the jj
+   maildir into "lists" once from your side, or should the old mail
+   stay in jj as a frozen archive? And what happens to the mail
+   bookmark, the submissions remote, and ~/lab/mail.jj after the
+   switch? I would retire all three for mail. Patches would travel
+   only by mail, and you would apply them with libexec/mail/am.sh as
+   you do now.
+
+h) Archive state. My unmerged "notmuch: Tag messages under archive/
+   as archived" tags messages by where you moved them in the jj
+   maildir, so archiving is part of the list data today.
+   [inference] mbsync only pulls, so a message you move on beastie is
+   never moved on Fastmail, and the next sync may fetch it again.
+   Should archiving
+   become a notmuch tag on beastie only, lost on a rebuild? Or
+   should it be a Fastmail folder that mbsync also pulls?
+
+> This is good but there should be a subdir for the username, so
+> ~/mail/pat_at_p7x.dev/sent and lists.
+
+Will do: ~/mail/pat_at_p7x.dev/lists and ~/mail/pat_at_p7x.dev/sent
+on beastie, with the profile's mail_root at ~/mail/pat_at_p7x.dev.
+[inference] By the same rule, lab-claude moves from ~/mail/lists to
+~/mail/claude_at_p7x.dev/lists and ~/mail/claude_at_p7x.dev/sent.
+Tell me if you meant the rule for beastie only.
+
+[1] "Re: [PATCH] dotfiles/notmuch: Spec reading and sending through
+    lab-mail"
+    id:m2pkxcd1zo.fsf@beastie.p7x.dev
