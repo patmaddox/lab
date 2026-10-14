@@ -1,0 +1,68 @@
+From: claude <claude@p7x.dev>
+Subject: Re: email message time stamps are way off
+To: Pat Maddox <pat@patmaddox.com>, lab-devel@p7x.dev
+In-Reply-To: <m2zewgb3b1.fsf@beastie.p7x.dev>
+References: <m2zewgb3b1.fsf@beastie.p7x.dev>
+Message-ID: <1792005362.8b91ed16ac87@p7x.dev>
+Date: Wed, 14 Oct 2026 19:16:34 +0000
+
+On Wed, 14 Oct 2026 10:27:30 -0700, Pat Maddox wrote:
+> When using jj maildir-based delivery, I notice that the timestamps are
+> often way off. Look at thread "[PATCH v3 0/6] Add just process-email" as
+> an example:
+
+The Date on a patch is its commit's author date, not when it was
+sent. git format-patch writes each commit's author date into the Date
+header so that git am can restore it, and jj keeps the author date
+across every rebase and rewrite. maildir-deliver.sh then kept any Date
+a message already had and only added one when it was missing.
+
+The v3 thread shows it. All seven files were delivered in the same
+second, 17:11:50 UTC (the maildir file names start with 1791997910).
+Their Date headers say otherwise:
+
+- 0/6, Wed 17:11:01 UTC: when format-patch ran
+- 1/6, Sat 18:09:30 UTC: author date of ktpzmqru
+- 2/6, Sat 18:10:21 UTC
+- 3/6, Sat 19:11:41 UTC
+- 4/6, Sat 19:12:16 UTC
+- 5/6, Wed 10:07:40 UTC (03:07 in your listing)
+- 6/6, Wed 10:08:26 UTC
+
+Each one matches its commit's author timestamp in jj log. ktpzmqru,
+for example, was authored on 2026-10-10 18:09:30 and committed on
+2026-10-14 17:10:27.
+
+> This makes it hard to find recent messages, or sometimes the patch order
+> is off, and it's all just very confusing.
+
+The order has a second cause. Even with correct dates, a series is
+delivered in one loop and lands within one second, and notmuch orders
+messages with equal dates arbitrarily.
+
+> All messages should have the timestamp of when they are delivered. I'm
+> not sure why this is even a thing. Thoroughly analyze the issue, report
+> on root cause, and provide a deterministic fix so that messages have the
+> time they're actually sent.
+
+The fix is posted as "[PATCH] libexec/mail: Date each message when it
+is delivered" [1]. maildir-deliver.sh now always replaces Date with
+the delivery time, and dates each delivery at least one second after
+the newest file in the maildir, so a series sorts in the order it was
+delivered. It needs no state, because maildir file names already
+start with their delivery time. It also updates the delivery agent
+section of doc/mail-workflow.md and the process-email skill. The
+patch itself was delivered with the new script.
+
+A side effect is that git am takes the author date from Date, so an
+applied patch is dated when it was posted. git send-email behaves the
+same way, since it also rewrites Date to the send time. A burst of N
+messages can be dated up to N seconds ahead of the clock, and a file
+name from a host whose clock runs fast pushes later dates after it.
+
+The prompt.md in "[PATCH 0/6] Answer the inbox with lab-process-mail"
+[2] still says delivery "adds a Date". I will fix that wording in its
+next revision.
+
+[1] id:bd2021ae8e96c84331c04893e0a48b4a85224604.1792005323.git.claude@p7x.dev
+[2] id:cover.1792003466.git.claude@p7x.dev
