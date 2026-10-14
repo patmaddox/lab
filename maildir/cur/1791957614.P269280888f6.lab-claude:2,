@@ -1,0 +1,71 @@
+Message-ID: <dd343aa9ce1ab2c69f2ba8dae9a94235272e8839.1791957604.git.claude@p7x.dev>
+In-Reply-To: <cover.1791957604.git.claude@p7x.dev>
+References: <cover.1791957604.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Date: Wed, 14 Oct 2026 05:59:38 +0000
+Subject: [PATCH 1/2] claude: Keep earlier quote levels in replies
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+Change-Id: wvotuklwpvtnoqrqwrxsznltvvnxxrum
+
+Replies trimmed the quote to the lines they answered and dropped the
+levels above them. An answer then sat under a question whose subject
+had been cut, so the reader had to open earlier messages to learn
+what was being discussed. That defeats the reason for working by
+mail, where each reply carries the conversation with it.
+
+State that trimming removes passages, not quote levels, and that each
+message must make sense read alone.
+---
+change-id: wvotuklwpvtnoqrqwrxsznltvvnxxrum
+
+ .claude/skills/process-email/SKILL.md |  7 ++++---
+ CLAUDE.md                             | 14 +++++++++++---
+ 2 files changed, 15 insertions(+), 6 deletions(-)
+
+diff --git a/.claude/skills/process-email/SKILL.md b/.claude/skills/process-email/SKILL.md
+index 2bf352b..472c000 100644
+--- a/.claude/skills/process-email/SKILL.md
++++ b/.claude/skills/process-email/SKILL.md
+@@ -234,9 +234,10 @@ reply that leaves it out is lost to everyone else.
+ 
+ Add a Message-ID header, e.g.
+ `Message-ID: <$(date +%s).$(openssl rand -hex 6)@p7x.dev>`. Write the
+-body by CLAUDE.md's quoting rules: trim the quote to what you answer,
+-never reword it, and put each answer beneath the lines it answers.
+-Wrap at 72.
++body by CLAUDE.md's quoting rules: trim the quote vertically to what
++you answer, keep every earlier quote level that gives it context, never
++reword it, and put each answer beneath the lines it answers. Wrap at
++72.
+ 
+ If you posted a series, summarize what it does and cite it by its full
+ subject with the Message-ID in a footnote, as CLAUDE.md describes, so
+diff --git a/CLAUDE.md b/CLAUDE.md
+index b4d76c5..8d769f1 100644
+--- a/CLAUDE.md
++++ b/CLAUDE.md
+@@ -85,9 +85,17 @@ client does. Do not paraphrase what someone wrote. Quote it.
+ Open with an attribution line, e.g. "On <date>, <name> wrote:". Prefix
+ every quoted line with "> ". Interleave your responses beneath the
+ lines they answer, so the thread reads point then answer, top to
+-bottom. Do not top-post. Trim the quote to the parts you actually
+-answer, and never reword the text you keep. Your own words carry no
+-"> " prefix.
++bottom. Do not top-post. Your own words carry no "> " prefix.
++
++Trim vertically, never horizontally. Cut the passages you do not
++answer, but keep every level of quoting above the lines you do
++answer: the question, and the earlier text the question was about.
++Never strip a whole indentation level. Mark a cut with "[...]" when
++it helps. Never reword the text you keep.
++
++Every message must read on its own. A reader who sees only your reply
++should know what each answer responds to, without opening another
++message. Keep enough of the earlier levels for that, and no more.
+ 
+ ## Read the whole batch before working
+ 
+-- 
+2.56.0
+

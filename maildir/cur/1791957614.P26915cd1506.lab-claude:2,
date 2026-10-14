@@ -1,0 +1,34 @@
+Message-ID: <cover.1791957604.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Date: Wed, 14 Oct 2026 06:00:04 +0000
+Subject: [PATCH 0/2] claude: Learn from two mistakes on the list
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+
+Two corrections from review of "[PATCH v3] jails/instances/lab-mail:
+Initial spec" [1], each turned into a rule so it does not recur.
+
+Patch 1 keeps earlier quote levels in replies. Replies cut whole
+indentation levels, so an answer could sit under a question whose
+subject was gone. The rule now says to trim vertically, never
+horizontally, and that each message must read on its own.
+
+Patch 2 says to ask pkg before calling a package missing. I reported
+notmuch-emacs as not installed because (require 'notmuch) failed
+under emacs -Q, without checking pkg. It was installed.
+
+[1] id:4d40a245c49a3ec0631f80c5a65bf85497dadf6a.1791944336.git.claude@p7x.dev
+
+claude (2):
+  claude: Keep earlier quote levels in replies
+  claude: Check pkg before calling a package missing
+
+ .claude/skills/process-email/SKILL.md |  7 ++++---
+ CLAUDE.md                             | 19 ++++++++++++++++---
+ 2 files changed, 20 insertions(+), 6 deletions(-)
+
+
+base-commit: 23c5779575deee14b294b1a99db19ebecef4fd69
+-- 
+2.56.0
+

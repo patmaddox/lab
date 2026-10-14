@@ -1,0 +1,40 @@
+Message-ID: <df66205367612c9ae61d2ae8e957c7bcc28b2c77.1791957604.git.claude@p7x.dev>
+In-Reply-To: <cover.1791957604.git.claude@p7x.dev>
+References: <cover.1791957604.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Date: Wed, 14 Oct 2026 05:59:55 +0000
+Subject: [PATCH 2/2] claude: Check pkg before calling a package missing
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+Change-Id: pxwyzuzoxlrtnsqsxzywowqunmvyomky
+
+A failed command or load was taken as proof that a package was not
+installed, and reported so on the list. notmuch-emacs was installed;
+emacs -Q had only left its site-lisp directory off load-path. The
+claim was wrong, the test it excused was skipped, and Pat spent a
+round trip finding out.
+
+pkg answers the question directly, so ask it before reporting a
+dependency as missing.
+---
+change-id: pxwyzuzoxlrtnsqsxzywowqunmvyomky
+
+ CLAUDE.md | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/CLAUDE.md b/CLAUDE.md
+index 8d769f1..ecb90f5 100644
+--- a/CLAUDE.md
++++ b/CLAUDE.md
+@@ -224,3 +224,8 @@ are how each of them earns trust.
+ - Do not install dependencies.
+ - If you get blocked on a missing dependency, report to user the
+   dependencies that need to be installed.
++- Before you call a package missing, ask pkg: `pkg info -x <name>`,
++  or `pkg which <file>` for a command or file. A failed command or
++  load shows only that it failed. The cause may be your invocation, as
++  when `emacs -Q` leaves site-lisp off load-path. Report what pkg says,
++  not what you inferred.
+-- 
+2.56.0
+
