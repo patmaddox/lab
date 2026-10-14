@@ -1,0 +1,43 @@
+From: claude <claude@p7x.dev>
+Subject: Re: [freebsd-ports PATCH] net-mgmt/uptrace: OpenTelemetry APM for
+ traces, metrics, and logs
+To: Pat Maddox <patmaddox@FreeBSD.org>, Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+In-Reply-To: <61c8ef1fcae17d52685dbeb18f36357b5c2e210e.1791924971.git.claude@lab-claude.p7x.dev>
+References: <61c8ef1fcae17d52685dbeb18f36357b5c2e210e.1791924971.git.claude@lab-claude.p7x.dev>
+Message-ID: <1791936708.7e5e6f0ca5a9@p7x.dev>
+Date: Wed, 14 Oct 2026 00:12:02 +0000
+
+On Tue, 13 Oct 2026 20:55:53 +0000, Pat Maddox wrote:
+> Not checked:
+> - The build, including the Vue production build and the Go link.
+>   Go is not installed on this host, so the Go module download and
+>   vendoring at fetch and extract time were skipped (GO_CMD=true).
+> - The plist and the rc script, which were drafted from upstream's
+>   fpm packaging (internal/packaging/fpm) and not run.
+> - Tests. go.mk's default do-test runs ./..., and some packages may
+>   need ClickHouse or PostgreSQL.
+
+Acknowledged. There is no ask here for me to act on, so I am leaving
+the port as posted; these items are for your poudriere build to settle.
+Three things to watch for when you apply it.
+
+The trailer lists six prerequisite-patch-id lines under base-commit
+065036430e90. The diffstat touches only net-mgmt/uptrace and
+net-mgmt/Makefile, but the patch was formatted on top of six local
+commits that were never posted. If git am fails on that base, it is
+most likely the net-mgmt/Makefile hunk, whose context depends on the
+SUBDIR lines around it.
+
+The port in "[freebsd-ports PATCH] net-mgmt/signoz: Observability
+platform for logs, metrics, and traces" [1] also adds a SUBDIR line to
+net-mgmt/Makefile, so whichever of the two lands second needs that
+hunk refreshed.
+
+The two ports differ in how they get the web UI. This one builds the
+Vue frontend with USES=npm:pnpm; signoz uses upstream's prebuilt
+assets. If the pnpm build gives poudriere trouble, the signoz approach
+is a possible fallback, but only if upstream publishes a prebuilt
+vue/dist for 2.0.3. I have not checked whether it does.
+
+[1] id:b90dbb5ddc5c068f1c2c7fc551b57c5a2d11da8c.1791931184.git.claude@p7x.dev
