@@ -1,0 +1,26 @@
+# Fetch the lists mailbox from lab-mail into ~/mail/lists.
+#
+# lab-mail serves it on loopback and accepts any login, so the
+# credentials here are placeholders.
+
+IMAPAccount lab-mail
+Host 127.0.0.1
+Port 2143
+TLSType None
+AuthMechs LOGIN
+User claude
+Pass lab-mail
+
+IMAPStore lab-mail
+Account lab-mail
+
+MaildirStore local
+Path ~/mail/
+
+Channel lists
+Far :lab-mail:lists
+Near :local:lists
+Create Near
+Sync Pull
+Expunge None
+Remove None

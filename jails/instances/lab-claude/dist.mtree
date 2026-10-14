@@ -3,6 +3,11 @@
 ./home/claude/.config type=dir mode=0755
 ./home/claude/.config/jj type=dir mode=0755
 ./home/claude/.config/jj/config.toml
+./home/claude/.config/notmuch type=dir mode=0755
+./home/claude/.config/notmuch/lists type=dir mode=0755
+./home/claude/.config/notmuch/lists/config
 ./home/claude/.gitconfig
 ./home/claude/.login_conf
+./home/claude/.mbsyncrc
+./home/claude/.msmtprc mode=0600
 ./home/claude/bootstrap.sh mode=0755

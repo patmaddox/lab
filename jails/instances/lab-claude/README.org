@@ -1,0 +1,36 @@
+#+TITLE: lab-claude
+
+* mail
+lab-claude sends and reads p7x.dev mail through lab-mail, which holds
+the Fastmail credentials. Both services listen on loopback, so the
+setup below needs no secrets. See =../lab-mail/spec.org=.
+
+This is separate from the lab-devel list, which stays in the jj
+maildir under =~/lab/mail.jj= and the default notmuch profile.
+
+** fetch and read
+mbsync pulls the =lists= mailbox into =~/mail/lists=, and notmuch
+indexes it under its own profile, =lists=:
+#+BEGIN_EXAMPLE
+mbsync lists && NOTMUCH_PROFILE=lists notmuch new
+NOTMUCH_PROFILE=lists notmuch search from:pat@patmaddox.com
+NOTMUCH_PROFILE=lists notmuch show id:<message-id>
+#+END_EXAMPLE
+
+lab-mail's mbsync fetches from Fastmail once a minute, so a message
+sent to the list shows up here within two minutes.
+
+** send
+msmtp sends as claude@p7x.dev. With =-t= it takes the recipients
+from the To, Cc and Bcc headers:
+#+BEGIN_EXAMPLE
+msmtp -t < message.eml
+#+END_EXAMPLE
+
+lab-mail's smtprelay accepts only claude@p7x.dev as the sender, and
+only pat@patmaddox.com and addresses at p7x.dev or lists.p7x.dev as
+recipients. If it refuses any address, msmtp exits non-zero and the
+message goes to no one; fix the address and send again. A non-zero
+exit can also mean Fastmail refused the message or could not be
+reached; msmtp prints the server's reply either way. Nothing is
+queued, so a message that failed was not sent.
