@@ -1,0 +1,76 @@
+From: Pat Maddox <pat@patmaddox.com>
+To: claude <claude@p7x.dev>
+Cc: lab-devel@p7x.dev
+Subject: Re: [PATCH v2 3/7] just: Add just process-email
+In-Reply-To: <3a8cebc7a583b0785cf7147d7488d05e759ba8c9.1791972607.git.claude@p7x.dev>
+References: <cover.1791972607.git.claude@p7x.dev>
+ <3a8cebc7a583b0785cf7147d7488d05e759ba8c9.1791972607.git.claude@p7x.dev>
+Date: Wed, 14 Oct 2026 09:25:48 -0700
+Message-ID: <m2jynkckqb.fsf@beastie.p7x.dev>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+claude <claude@p7x.dev> writes:
+
+> Draining the inbox meant asking one claude session to loop the skill,
+> so the session's own judgment decided when to stop. All the passes also
+> shared one context, which grew with every thread.
+>
+> just process-email runs the loop from outside the model. It picks each
+> message with get-oldest-inbox-message and gives it to a fresh claude -p.
+> It ends when the inbox is empty. claude's output goes to /dev/null, so
+> control never depends on what the model prints. Whether a pass worked
+> is read from the notmuch index: if its message is still in the inbox,
+> the loop stops instead of retrying that message forever.
+> ---
+> change-id: xvnlmpwlrqonwvmusyprlolnwuyqqylx
+>
+>  .claude/skills/process-email/SKILL.md |  7 +++++--
+>  Justfile                              | 18 ++++++++++++++++++
+>  2 files changed, 23 insertions(+), 2 deletions(-)
+>
+> diff --git a/.claude/skills/process-email/SKILL.md b/.claude/skills/process-email/SKILL.md
+> index f1d9518..5598bc2 100644
+> --- a/.claude/skills/process-email/SKILL.md
+> +++ b/.claude/skills/process-email/SKILL.md
+> @@ -289,8 +289,11 @@ the commits differ, the push failed. Fix it before stopping.
+>  
+>  ## Modes
+>  
+> -- One pass: answer the oldest inbox message, then stop.
+> -- Loop: repeat until step 2 finds an empty inbox.
+> +- One pass: answer the named message, or the oldest inbox message,
+> +  then stop.
+> +- Loop: `just process-email` runs one pass per message, oldest first,
+> +  each a fresh `claude -p` given the message's id, until the inbox is
+> +  empty. It stops early if a pass leaves its message in the inbox.
+
+It should not have a loop mode. It only processes one at a time.
+
+>  ## Missing dependencies
+>  - Do not install missing dependencies
+> diff --git a/Justfile b/Justfile
+> index fb9938d..fb70c43 100644
+> --- a/Justfile
+> +++ b/Justfile
+> @@ -75,3 +75,21 @@ reauthor *revset:
+>  # print the oldest message in the lab-devel inbox, if any
+>  @get-oldest-inbox-message:
+>    notmuch search --sort=oldest-first --output=messages --limit=1 tag:inbox
+> +
+> +# answer the lab-devel inbox, one claude pass per message, oldest first
+> +process-email:
+> +  #!/bin/sh
+> +  set -eu
+> +  while :; do
+> +    notmuch new --quiet
+> +    id="$(just get-oldest-inbox-message)"
+> +    [ -n "${id}" ] || break
+> +    echo "process-email: ${id}"
+> +    claude --permission-mode auto -p "/process-email ${id}" \
+> +      </dev/null >/dev/null
+> +    notmuch new --quiet
+> +    if [ "$(notmuch count "${id} and tag:inbox")" -ne 0 ]; then
+> +      echo "process-email: ${id} is still in the inbox" >&2
+
+Nice login, but prefix error messages with "E: " so it's obvious.
