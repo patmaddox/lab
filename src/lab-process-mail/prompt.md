@@ -27,6 +27,9 @@ each pass, from whether the message left the inbox.
 
 - `${ws}` - your workspace, named near the end of this prompt. The
   pass starts there, and you develop patches in it.
+- `${lab_base}` - the revset your work is based on, also named near
+  the end of this prompt. It is trunk() unless the operator chose
+  another, such as their staging branch b/dev@upstream.
 - `~/lab/default.jj` - the operator's trunk workspace. Leave its
   working copy alone.
 - `~/lab/mail.jj` - mail workspace; its `maildir/` is the list.
@@ -43,14 +46,15 @@ message is what moves it out of your inbox.
 
 Before starting you, lab-process-mail brought in everything that has
 landed since the last pass, on both trunk and the list. It fetched
-every remote, rebased your unmerged trunk work (`${work}`) onto
-trunk@upstream, rebased your outbox onto mail@upstream, started a
+every remote, rebased your unmerged work (`${work}`) onto
+`${lab_base}`, rebased your outbox onto mail@upstream, started a
 fresh change in the mail workspace, and indexed the list, so messages
 you already answered count as replied:
 
     me="$(whoami)"
-    work='mine() ~ ::trunk@upstream ~ (::mail@upstream ~ root())::
-        ~ (immutable() ~ ::trunk@upstream)::'
+    lab_base='<revset>'    # from "Your base is" near the end
+    work="mine() ~ ::(${lab_base}) ~ (::mail@upstream ~ root())::
+        ~ (immutable() ~ ::(${lab_base}))::"
 
 That update makes no judgements, so settle what its rebase left:
 
@@ -65,7 +69,7 @@ That update makes no judgements, so settle what its rebase left:
   note that it needs a revised version.
 
 When `jj log -r "${work}"` shows only open work, every commit is
-conflict-free, and nothing landed is left, trunk is current.
+conflict-free, and nothing landed is left, your work is current.
 
 ## 2. Take the message
 
@@ -128,13 +132,13 @@ Decide whether the message needs code changes, or only a reply.
 For code changes, work in your workspace on a fresh change:
 
     cd "${ws}"
-    jj new trunk@upstream
+    jj new "${lab_base}"
 
 Follow CLAUDE.md for commit messages and patch scope: one logical
 change per commit, each message explaining why, and the series
-self-contained against trunk. Test the change and review your own diff
-before sending it. If you cannot finish, send a reply that says what
-blocked you and what you need.
+self-contained against `${lab_base}`. Test the change and review your
+own diff before sending it. If you cannot finish, send a reply that
+says what blocked you and what you need.
 
 ## 5. Post the series
 
@@ -149,29 +153,37 @@ Change-Id header and a `change-id:` line under the `---`. The patches
 come from the commit author, your address:
 
     cd "${ws}"
-    base="$(jj log -r trunk@upstream --no-graph -T commit_id)"
+    base="$(jj log -r "${lab_base}" --no-graph -T commit_id)"
     head="$(jj log -r @- --no-graph -T commit_id)"
     rm -rf /tmp/series
     "${ws}"/libexec/mail/format-patch.sh -o /tmp/series \
         --thread=shallow --base="${base}" \
         --to="<sender's From>" "${base}..${head}"
 
-`--base` adds a `base-commit:` line naming the trunk commit the series
+`--base` adds a `base-commit:` line naming the commit the series
 applies to. Always pass it.
+
+**Base branch.** The series applies to `${lab_base}`. When that is
+not trunk(), the series requires every commit between trunk and the
+base. Do not post those commits, since the `base-commit:` line already
+names them. Make the base obvious with a `base-branch:` line, in the
+cover letter or below the `---` of a single patch:
+
+    base-branch: b/dev@upstream
 
 **Cover letter.** For more than one patch add `--cover-letter` and
 fill in its subject and blurb. Put the explanation of the work there,
 or below the `---` line of a single patch.
 
-**Prerequisites.** Base new work on trunk. If it truly needs another
-unmerged series of yours, build on that series and format only your
-own commits, with the prerequisite's head as the range start:
+**Prerequisites.** If new work truly needs another unmerged series of
+yours, build on that series and format only your own commits, with the
+prerequisite's head as the range start:
 
     ... --base="${base}" "${prereq_head}..${head}"
 
 git then adds `prerequisite-patch-id:` lines for the commits between
-trunk and the series. Name the prerequisite series in the cover letter
-by its full subject, with its Message-ID in a footnote.
+the base and the series. Name the prerequisite series in the cover
+letter by its full subject, with its Message-ID in a footnote.
 
 **Revisions.** For a revised series add `-v N`. Address every review
 point the list researcher found unaddressed, or say why not. End the

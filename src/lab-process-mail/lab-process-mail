@@ -4,7 +4,7 @@
 # message, oldest first.
 #
 # The loop is deterministic and the agent is not, so the two are kept
-# apart. Before each pass this script fetches, rebases trunk work and
+# apart. Before each pass this script fetches, rebases your work and
 # the mail outbox, and picks the oldest inbox message. It then runs a
 # fresh claude with the prompt shipped beside it and that message's id.
 # The agent's output goes to /dev/null; whether the pass worked is read
@@ -18,19 +18,24 @@
 # outcome is posted to the ntfy topic ${NOTIFY_URL}, if set. The prompt
 # is ${LAB_PROCESS_MAIL_PROMPT}, or share/lab-process-mail/prompt.md in
 # the prefix this script is installed under.
+#
+# Work is based on the revset ${LAB_BASE_BRANCH}, or trunk(). An
+# operator's own assistant can set it to their staging branch, such as
+# b/dev@upstream, to see the tree as they do.
 
 set -eu
 set -o pipefail
 
 readonly PROGNAME="${0##*/}"
+readonly BASE="${LAB_BASE_BRANCH:-trunk()}"
 
-# Your commits off trunk, less everything descended from the list.
-# Trunk and the list share no commit but root(), so the outbox is left
-# out however far the list has moved since it was built on. Anything
-# built on a published head other than trunk, such as b/dev, is left
-# where it is; that covers your own patches once Pat publishes them.
-readonly WORK='mine() ~ ::trunk@upstream ~ (::mail@upstream ~ root())::
-    ~ (immutable() ~ ::trunk@upstream)::'
+# Your commits off the base, less everything descended from the list.
+# The base and the list share no commit but root(), so the outbox is
+# left out however far the list has moved since it was built on.
+# Anything built on a published head other than the base is left where
+# it is; that covers your own patches once Pat publishes them.
+readonly WORK="mine() ~ ::(${BASE}) ~ (::mail@upstream ~ root())::
+    ~ (immutable() ~ ::(${BASE}))::"
 
 err() {
 	echo "E: ${PROGNAME}: ${*}" >&2
@@ -45,7 +50,7 @@ die() {
 	exit 1
 }
 
-# Fetch every remote, rebase trunk work onto trunk@upstream and the
+# Fetch every remote, rebase your work onto the base and the
 # outbox onto mail@upstream, and index the list. This judges nothing:
 # a rebase that conflicts leaves the conflict in the commit, and a
 # patch applied upstream with edits survives as a redundant commit.
@@ -56,8 +61,8 @@ get_up_to_date() {
 
 	# Move each stack from its base, not from your first commit in it,
 	# so work built on someone else's unmerged patch keeps that patch.
-	jj -R "${trunk}" rebase -s "roots(::(${WORK}) ~ ::trunk@upstream)" \
-	    -d trunk@upstream --skip-emptied
+	jj -R "${trunk}" rebase -s "roots(::(${WORK}) ~ ::(${BASE}))" \
+	    -d "${BASE}" --skip-emptied
 
 	# A bookmark with no pending mail, missing or merged in full, has
 	# nothing to rebase; point it at the list's tip instead.
@@ -77,7 +82,7 @@ get_up_to_date() {
 prepare_workspace() {
 	if [ ! -d "${ws}" ]; then
 		jj -R "${trunk}" workspace add --name "$(basename "${ws}" .jj)" \
-		    -r trunk@upstream "${ws}"
+		    -r "${BASE}" "${ws}"
 	fi
 	jj -R "${ws}" workspace update-stale
 }
@@ -124,6 +129,7 @@ main() {
 		    claude --permission-mode auto -p "$(cat "${prompt}")
 
 Your workspace is ${ws}.
+Your base is ${BASE}.
 The message to answer is ${id}." </dev/null >/dev/null)
 		notmuch new --quiet
 		if [ "$(notmuch count "${id} and tag:inbox")" -ne 0 ]; then

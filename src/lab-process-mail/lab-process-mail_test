@@ -11,6 +11,8 @@ atf_init_test_cases() {
 	atf_add_test_case leaves_trunk_working_copy
 	atf_add_test_case silent_without_notify_url
 	atf_add_test_case rebases_work_onto_trunk
+	atf_add_test_case rebases_work_onto_base
+	atf_add_test_case follows_rewritten_base
 	atf_add_test_case keeps_work_on_its_prerequisite
 	atf_add_test_case rebases_outbox_onto_list
 }
@@ -25,7 +27,7 @@ setup() {
 	export TRUNK_WORKSPACE="${PWD}/default.jj"
 	export MAIL_WORKSPACE="${PWD}/mail.jj"
 	export WORK_WORKSPACE="${PWD}/work.jj"
-	unset NOTIFY_URL
+	unset NOTIFY_URL LAB_BASE_BRANCH
 
 	export JJ_CONFIG="${PWD}/jj.toml"
 	cat > jj.toml <<-'EOF'
@@ -144,6 +146,20 @@ advance_trunk() {
 	) >/dev/null 2>&1 || atf_fail "cannot advance trunk"
 }
 
+# Push a staging branch b/dev upstream, one commit off trunk, as Pat
+# would. Run again after advance_trunk, it rebuilds b/dev on the new
+# trunk, leaving the old b/dev commit behind.
+publish_dev() {
+	(
+		cd seed.jj
+		jj new trunk
+		echo staged > staged
+		jj commit -m 'dev: staged'
+		jj bookmark set b/dev --allow-backwards -r @-
+		jj git push --remote upstream --bookmark b/dev
+	) >/dev/null 2>&1 || atf_fail "cannot publish b/dev"
+}
+
 # Print the description of rev's parent in the trunk workspace.
 parent_of() {
 	jj -R default.jj log --no-graph -T 'description.first_line()' \
@@ -183,6 +199,7 @@ passes_prompt_and_id_body() {
 	atf_check -o match:"^cwd ${WORK_WORKSPACE}\$" cat claude.log
 	atf_check -o match:"^arg # Process one lab-devel message" cat claude.log
 	atf_check -o match:"^Your workspace is ${WORK_WORKSPACE}\\.\$" cat claude.log
+	atf_check -o match:'^Your base is trunk\(\)\.$' cat claude.log
 	atf_check -o match:"^The message to answer is id:a@x\.\$" \
 	    tail -n 1 claude.log
 }
@@ -250,6 +267,44 @@ rebases_work_onto_trunk_body() {
 	atf_check -s exit:0 -o ignore -e ignore "${PROCESS_MAIL}"
 	atf_check_equal "trunk: two" \
 	    "$(parent_of 'description(substring:"work: mine")')"
+}
+
+atf_test_case rebases_work_onto_base
+rebases_work_onto_base_body() {
+	setup
+	(
+		cd default.jj
+		echo mine > mine
+		jj commit -m 'work: mine'
+	) >/dev/null 2>&1
+	publish_dev
+	export LAB_BASE_BRANCH=b/dev@upstream
+	atf_check -s exit:0 -o ignore -e ignore "${PROCESS_MAIL}"
+	atf_check_equal "dev: staged" \
+	    "$(parent_of 'description(substring:"work: mine")')"
+}
+
+atf_test_case follows_rewritten_base
+follows_rewritten_base_body() {
+	setup
+	publish_dev
+	jj -R default.jj git fetch >/dev/null 2>&1
+	(
+		cd default.jj
+		jj new b/dev@upstream
+		echo mine > mine
+		jj commit -m 'work: mine'
+	) >/dev/null 2>&1
+	advance_trunk
+	publish_dev
+	export LAB_BASE_BRANCH=b/dev@upstream
+	atf_check -s exit:0 -o ignore -e ignore "${PROCESS_MAIL}"
+	new="$(jj -R default.jj log --no-graph -T commit_id -r b/dev@upstream)"
+	atf_check_equal "${new}" "$(jj -R default.jj log --no-graph \
+	    -T commit_id -r 'description(substring:"work: mine")-')"
+	# The old b/dev commit is dropped, not carried along as a copy.
+	atf_check_equal "x" "$(jj -R default.jj log --no-graph -T '"x"' \
+	    -r 'description(substring:"dev: staged")')"
 }
 
 atf_test_case keeps_work_on_its_prerequisite
