@@ -1,0 +1,270 @@
+Message-ID: <cover.1791962577.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Date: Wed, 14 Oct 2026 07:22:57 +0000
+Subject: [PATCH v8 0/6] jails/instances/lab-mail: Build the mail relay jail
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+
+Agents need to send and read p7x.dev mail without holding the
+Fastmail credentials. This series builds lab-mail, the relay jail
+that holds them, and points lab-claude's mail clients at it.
+
+Patch 1 is the spec. Patches 2 to 5 build lab-mail one service at a
+time: the jail and its credential mount, smtprelay for sending,
+mbsync for the append-only copy of the lists folder, and Dovecot to
+serve that copy read-only over IMAP. Patch 6 sets up msmtp, mbsync
+and a separate notmuch profile in lab-claude, so the lab-devel list
+keeps its jj maildir.
+
+Testing. None of the services has run. smtprelay, mbsync, msmtp and
+Dovecot are not installed in lab-claude, and I cannot build or start
+a jail from here, so the acceptance test in the spec is still to do
+on beastie. What I did check here: the userinfo script in patch 3
+percent-encodes a login and password containing a space, "@", ":",
+"/", "#", "?", "%" and a UTF-8 letter, and fails with a message on a
+line with no space or an empty file; the two sed commands in patch 4
+split the same line into the login and the full password.
+
+That smtprelay decodes the percent-escapes is inference, not tested:
+it parses its remote with Go's net/url, whose Userinfo returns
+decoded values.
+
+Changes in v8:
+- The spec names the credentials file mail-creds, not creds, as Pat
+  asked. Nothing else in the spec changed.
+- The implementation follows the v7 spec, where the earlier posting
+  of patches 2 to 6 followed an older one. The README, smtprelay and
+  mbsync read the one mail-creds line in place of separate user and
+  password files.
+- smtprelay's remote is built by a new script, userinfo, which
+  percent-encodes the login and password. The earlier version put
+  them in the URL raw, so a password with "@", ":", "/" or "#" broke
+  it, against the spec's "the password is the rest of the line".
+- Link to v7 of the spec: id:9480e8c6bfeafcf6a37fce4a2f7e508bc3031423.1791961946.git.claude@p7x.dev
+- Link to the earlier posting of the series: id:cover.1791959849.git.claude@p7x.dev
+
+Interdiff of the spec against v7:
+
+diff --git a/jails/instances/lab-mail/spec.org b/jails/instances/lab-mail/spec.org
+index e417efe1f3..4ed2fa6306 100644
+--- a/jails/instances/lab-mail/spec.org
++++ b/jails/instances/lab-mail/spec.org
+@@ -39,12 +39,12 @@
+ 
+ credentials:
+ - The operator stores the Fastmail login and app password on the host
+-  in one file, =/jails/data/lab-mail/secrets/creds=. It is the only
+-  secret, and it never enters the repo.
+-- =creds= holds one line: the login, one space, and the app password.
+-  The login is an email address and has no space in it, so the login
+-  runs to the first space and the app password is the rest of the
+-  line.
++  in one file, =/jails/data/lab-mail/secrets/mail-creds=. It is the
++  only secret, and it never enters the repo.
++- =mail-creds= holds one line: the login, one space, and the app
++  password. The login is an email address and has no space in it, so
++  the login runs to the first space and the app password is the rest
++  of the line.
+ - nullfs-mounted read-only into lab-mail, and into no other jail.
+ - Inside lab-mail, readable only by smtprelay and mbsync.
+ - The instance documents how the operator stores it.
+@@ -200,7 +200,7 @@
+   loopback the other jails share.
+ - Ports 2525 and 2143, not 25 and 143, so no tool finds lab-mail by
+   default and sends or reads mail by accident.
+-- The login and app password in one =creds= file, not the login in
++- The login and app password in one =mail-creds= file, not the login in
+   the repo config and the password in a file of its own. The login is
+   not secret, but keeping both together gives the operator one file
+   to manage, and one line that smtprelay and mbsync split the same
+
+Interdiff of patches 2 to 6 against the earlier posting:
+
+diff --git a/jails/instances/lab-mail/README.org b/jails/instances/lab-mail/README.org
+index 599aa18ad1..9dce86efee 100644
+--- a/jails/instances/lab-mail/README.org
++++ b/jails/instances/lab-mail/README.org
+@@ -6,28 +6,23 @@
+ 
+ * setup
+ The operator stores the Fastmail login and app password on the host,
+-in =/jails/data/lab-mail/secrets/=. They never enter the repo. The
+-jail mounts the directory read-only at =/data/secrets=, and no other
+-jail mounts it.
+-
+-Each file holds one line:
+-- =user= :: the Fastmail login
+-- =password= :: the app password, with IMAP and SMTP access
+-
+-Fastmail app passwords are letters and digits. lab-mail puts the
+-login and password into a URL without escaping them, so a password
+-with other characters will not work.
++in =/jails/data/lab-mail/secrets/mail-creds=. They never enter the
++repo. The jail mounts the directory read-only at =/data/secrets=, and
++no other jail mounts it.
++
++=mail-creds= holds one line: the Fastmail login, one space, and an
++app password with IMAP and SMTP access. The line splits at the first
++space, so the password is the rest of the line, whatever it contains.
+ 
+ Inside the jail, only members of the =mailcred= group (gid 15100) may
+-read them. The host knows the group only by number:
++read it. The host knows the group only by number:
+ #+BEGIN_EXAMPLE
+ mkdir -p /jails/data/lab-mail/secrets
+ cd /jails/data/lab-mail/secrets
+-printf '%s\n' 'login@example.com' > user
+-printf '%s\n' 'app-password' > password
++printf '%s %s\n' 'login@example.com' 'app-password' > mail-creds
+ chown -R 0:15100 .
+ chmod 0750 .
+-chmod 0640 user password
++chmod 0640 mail-creds
+ #+END_EXAMPLE
+ 
+ =/jails/data/lab-mail/mail/= holds mail state that must survive a
+diff --git a/jails/instances/lab-mail/dist/usr/local/etc/mbsyncrc b/jails/instances/lab-mail/dist/usr/local/etc/mbsyncrc
+index e182c4dc55..9ca1831c3a 100644
+--- a/jails/instances/lab-mail/dist/usr/local/etc/mbsyncrc
++++ b/jails/instances/lab-mail/dist/usr/local/etc/mbsyncrc
+@@ -8,8 +8,8 @@
+ Host imap.fastmail.com
+ Port 993
+ TLSType IMAPS
+-UserCmd "cat /data/secrets/user"
+-PassCmd "cat /data/secrets/password"
++UserCmd "sed 's/ .*//' /data/secrets/mail-creds"
++PassCmd "sed 's/^[^ ]* //' /data/secrets/mail-creds"
+ 
+ IMAPStore fastmail
+ Account fastmail
+diff --git a/jails/instances/lab-mail/dist/usr/local/etc/smtprelay/remotes.env b/jails/instances/lab-mail/dist/usr/local/etc/smtprelay/remotes.env
+index f00586b1ec..fa05916985 100644
+--- a/jails/instances/lab-mail/dist/usr/local/etc/smtprelay/remotes.env
++++ b/jails/instances/lab-mail/dist/usr/local/etc/smtprelay/remotes.env
+@@ -1,4 +1,4 @@
+ # Sourced by rc.subr(8) as root when smtprelay starts. The remote
+-# carries the Fastmail login, so it is built from the secrets here and
++# carries the Fastmail login, so it is built from mail-creds here and
+ # handed to smtprelay in its environment, never written to a file.
+-SMTPRELAY_REMOTES="smtps://$(cat /data/secrets/user):$(cat /data/secrets/password)@smtp.fastmail.com:465"
++SMTPRELAY_REMOTES="smtps://$(/usr/local/libexec/lab-mail/userinfo)@smtp.fastmail.com:465"
+diff --git a/jails/instances/lab-mail/dist/usr/local/libexec/lab-mail/userinfo b/jails/instances/lab-mail/dist/usr/local/libexec/lab-mail/userinfo
+new file mode 100755
+index 0000000000..b6ba3d4012
+--- /dev/null
++++ b/jails/instances/lab-mail/dist/usr/local/libexec/lab-mail/userinfo
+@@ -0,0 +1,42 @@
++#!/bin/sh
++# Print the login and app password from mail-creds as URL userinfo,
++# login:password, for smtprelay's remote. The line splits at its
++# first space, and the password is the rest of the line. Both are
++# percent-encoded, so any character in them survives the URL.
++set -eu
++
++LC_ALL=C exec awk '
++BEGIN {
++	for (i = 1; i < 256; i++)
++		ord[sprintf("%c", i)] = i
++}
++
++function encode(s,    out, c, i) {
++	out = ""
++	for (i = 1; i <= length(s); i++) {
++		c = substr(s, i, 1)
++		if (c ~ /[A-Za-z0-9._~-]/)
++			out = out c
++		else
++			out = out sprintf("%%%02X", ord[c])
++	}
++	return out
++}
++
++NR == 1 {
++	done = 1
++	n = index($0, " ")
++	if (n == 0) {
++		print "mail-creds: no space after the login" > "/dev/stderr"
++		exit 1
++	}
++	printf "%s:%s\n", encode(substr($0, 1, n - 1)), encode(substr($0, n + 1))
++}
++
++END {
++	if (!done) {
++		print "mail-creds: empty" > "/dev/stderr"
++		exit 1
++	}
++}
++' /data/secrets/mail-creds
+diff --git a/jails/instances/lab-mail/dist.mtree b/jails/instances/lab-mail/dist.mtree
+index 6923d75304..82d934394f 100644
+--- a/jails/instances/lab-mail/dist.mtree
++++ b/jails/instances/lab-mail/dist.mtree
+@@ -14,3 +14,4 @@
+ ./usr/local/etc/smtprelay/smtprelay.ini
+ ./usr/local/libexec/lab-mail type=dir mode=0755
+ ./usr/local/libexec/lab-mail/fetch mode=0755
++./usr/local/libexec/lab-mail/userinfo mode=0755
+
+claude (6):
+  jails/instances/lab-mail: Initial spec
+  jails/instances/lab-mail: Add the jail instance
+  jails/instances/lab-mail: Relay mail to Fastmail with smtprelay
+  jails/instances/lab-mail: Mirror the lists folder with mbsync
+  jails/instances/lab-mail: Serve the mirror over IMAP with Dovecot
+  jails/instances/lab-claude: Send and read mail through lab-mail
+
+ jails/instances/lab-claude/README.org         |  36 +++
+ jails/instances/lab-claude/dist.mtree         |   5 +
+ .../home/claude/.config/notmuch/lists/config  |  18 ++
+ .../lab-claude/dist/home/claude/.mbsyncrc     |  26 +++
+ .../lab-claude/dist/home/claude/.msmtprc      |  14 ++
+ jails/instances/lab-claude/instance.conf      |   2 +
+ jails/instances/lab-mail/Justfile             |   1 +
+ jails/instances/lab-mail/README.org           |  40 ++++
+ jails/instances/lab-mail/clean.do             |   1 +
+ jails/instances/lab-mail/dist.mtree           |  17 ++
+ .../lab-mail/dist/etc/cron.d/lab-mail         |   3 +
+ .../lab-mail/dist/etc/rc.conf.d/dovecot       |   1 +
+ .../lab-mail/dist/etc/rc.conf.d/smtprelay     |   4 +
+ .../dist/usr/local/etc/dovecot/dovecot-acl    |   2 +
+ .../dist/usr/local/etc/dovecot/dovecot.conf   |  54 +++++
+ .../lab-mail/dist/usr/local/etc/mbsyncrc      |  28 +++
+ .../dist/usr/local/etc/smtprelay/remotes.env  |   4 +
+ .../usr/local/etc/smtprelay/smtprelay.ini     |  20 ++
+ .../dist/usr/local/libexec/lab-mail/fetch     |  18 ++
+ .../dist/usr/local/libexec/lab-mail/userinfo  |  42 ++++
+ jails/instances/lab-mail/instance.conf        |  18 ++
+ jails/instances/lab-mail/jail.conf            |  19 ++
+ jails/instances/lab-mail/jail.log.do          |   1 +
+ jails/instances/lab-mail/spec.org             | 213 ++++++++++++++++++
+ 24 files changed, 587 insertions(+)
+ create mode 100644 jails/instances/lab-claude/README.org
+ create mode 100644 jails/instances/lab-claude/dist/home/claude/.config/notmuch/lists/config
+ create mode 100644 jails/instances/lab-claude/dist/home/claude/.mbsyncrc
+ create mode 100644 jails/instances/lab-claude/dist/home/claude/.msmtprc
+ create mode 120000 jails/instances/lab-mail/Justfile
+ create mode 100644 jails/instances/lab-mail/README.org
+ create mode 120000 jails/instances/lab-mail/clean.do
+ create mode 100644 jails/instances/lab-mail/dist.mtree
+ create mode 100644 jails/instances/lab-mail/dist/etc/cron.d/lab-mail
+ create mode 100644 jails/instances/lab-mail/dist/etc/rc.conf.d/dovecot
+ create mode 100644 jails/instances/lab-mail/dist/etc/rc.conf.d/smtprelay
+ create mode 100644 jails/instances/lab-mail/dist/usr/local/etc/dovecot/dovecot-acl
+ create mode 100644 jails/instances/lab-mail/dist/usr/local/etc/dovecot/dovecot.conf
+ create mode 100644 jails/instances/lab-mail/dist/usr/local/etc/mbsyncrc
+ create mode 100644 jails/instances/lab-mail/dist/usr/local/etc/smtprelay/remotes.env
+ create mode 100644 jails/instances/lab-mail/dist/usr/local/etc/smtprelay/smtprelay.ini
+ create mode 100755 jails/instances/lab-mail/dist/usr/local/libexec/lab-mail/fetch
+ create mode 100755 jails/instances/lab-mail/dist/usr/local/libexec/lab-mail/userinfo
+ create mode 100644 jails/instances/lab-mail/instance.conf
+ create mode 100644 jails/instances/lab-mail/jail.conf
+ create mode 120000 jails/instances/lab-mail/jail.log.do
+ create mode 100644 jails/instances/lab-mail/spec.org
+
+
+base-commit: 23c5779575deee14b294b1a99db19ebecef4fd69
+-- 
+2.56.0
+
