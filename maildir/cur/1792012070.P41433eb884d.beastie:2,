@@ -1,0 +1,33 @@
+From: Pat Maddox <pat@patmaddox.com>
+To: lab-devel@p7x.dev
+Subject: Supporting status trailers in emails
+Date: Wed, 14 Oct 2026 14:07:50 -0700
+Message-ID: <m21p9s9ejd.fsf@beastie.p7x.dev>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+When we have multiple versions of patch series, earlier versions clog up
+my notmuch view.
+
+I would like to introduce "Overcome by" trailer processing. The idea is
+that when posting v2 of a patch, a reply can also be sent to the first
+email of the v1 series. It would have a trailer section, and if one of
+the trailers is: "Overcome by: id:<msgid>" then it indicates that that
+thread has been overcome. It would receive an overcome notmuch tag,
+which I would exclude from view.
+
+Additionally I want "Approved by" and "Rejected by" at the commit and
+thread level.
+
+Though I realize now I'm probably proposing a workflow similar to what
+LKML, OpenBSD, Postgres projects do.
+
+So, research how they track versions of patch series, and how they
+indicate states like approved, rejected, etc. Report on what you find so
+that we can develop a workflow.
+
+Again a goal of this workflow is to have the current state of the list
+be derivable from the contents of the list. So I won't tag things as
+overcome or accepted - those need to be derived from the
+contents. Supporting trailers - or a similar mechanism - lets me add
+metadata to emails after the fact.
