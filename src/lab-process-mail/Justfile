@@ -1,0 +1,13 @@
+help:
+  just -l
+
+pkg:
+  redo-ifchange lab-process-mail.pkg
+
+test:
+  kyua test
+
+# install under ~/local, as pkg would under LOCALBASE
+install: pkg
+  mkdir -p ~/local
+  INSTALL_AS_USER=yes REPOS_DIR=/dev/null pkg -r ~/local install -y -U $(realpath lab-process-mail.pkg)
