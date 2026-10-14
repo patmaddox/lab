@@ -30,6 +30,10 @@ if [ ${after} -gt ${before} ]; then
 fi
 if [ ${rc} -ne 0 ]; then
 	echo "mbsync failed with exit status ${rc}"
+else
+	# The check reads this file's age to see that fetching works,
+	# even while the list is quiet.
+	touch /data/mail/mbsync/last-fetch
 fi
 
 exit ${rc}

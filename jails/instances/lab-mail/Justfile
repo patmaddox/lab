@@ -1,1 +1,15 @@
-../../share/_Justfile
+import '../../share/_Justfile'
+
+# A recipe here would otherwise become the default, ahead of help.
+[private]
+default: help
+
+# Check that lab-mail is set up and running
+check:
+  #!/bin/sh
+  if ! jls -j lab-mail >/dev/null 2>&1; then
+    echo "FAIL the jail is running"
+    exit 1
+  fi
+  echo "ok the jail is running"
+  exec doas jexec -l lab-mail /usr/local/libexec/lab-mail/check

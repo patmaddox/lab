@@ -1,0 +1,82 @@
+#!/bin/sh
+# Check that lab-mail's services are set up and running; spec.org
+# lists what is checked. Run as root in the jail; just check runs it
+# from beastie. Prints one line per check and exits 1 if any fails.
+# It only reads.
+set -u
+PATH=/sbin:/bin:/usr/sbin:/usr/bin:/usr/local/sbin:/usr/local/bin
+
+readonly creds=/data/secrets/mail-creds
+readonly stamp=/data/mail/mbsync/last-fetch
+
+failed=0
+
+# check <what> <command> [args]: run the command, and report what was
+# checked by its exit status.
+check() {
+	local what="${1}"; shift
+	if "${@}" >/dev/null 2>&1; then
+		echo "ok ${what}"
+	else
+		echo "FAIL ${what}"
+		failed=1
+	fi
+}
+
+has_line() {
+	[ -n "$(sed -n "${1}p" ${creds})" ]
+}
+
+# can_read and cannot_read run test(1) as the user, so a missing user
+# fails both.
+can_read() {
+	su -m "${1}" -c "test -r ${creds}"
+}
+
+cannot_read() {
+	su -m "${1}" -c "test ! -r ${creds}"
+}
+
+owned_by() {
+	[ -d "${1}" ] && [ "$(stat -f %u "${1}")" = "${2}" ]
+}
+
+listening() {
+	nc -z -w 5 127.0.0.1 "${1}"
+}
+
+# find prints the stamp only if it changed in the last five minutes.
+fetched_recently() {
+	[ -n "$(find ${stamp} -mmin -5)" ]
+}
+
+check "${creds} exists" test -f ${creds}
+check "${creds} has the login on line 1" has_line 1
+check "${creds} has the password on line 2" has_line 2
+check "smtprelay can read ${creds}" can_read smtprelay
+check "mbsync can read ${creds}" can_read mbsync
+check "vmail cannot read ${creds}" cannot_read vmail
+
+check "/data/mail/maildir is owned by mbsync (15102)" \
+    owned_by /data/mail/maildir 15102
+check "/data/mail/mbsync is owned by mbsync (15102)" \
+    owned_by /data/mail/mbsync 15102
+check "/data/mail/dovecot is owned by vmail (15103)" \
+    owned_by /data/mail/dovecot 15103
+
+for s in syslogd cron smtprelay dovecot; do
+	check "${s} is running" service ${s} status
+done
+
+check "smtprelay accepts connections on 127.0.0.1:2525" listening 2525
+check "dovecot accepts connections on 127.0.0.1:2143" listening 2143
+
+check "the last successful fetch was within five minutes" \
+    fetched_recently
+
+for l in smtprelay fetch dovecot; do
+	check "/var/log/lab-mail/${l}.log exists" \
+	    test -f /var/log/lab-mail/${l}.log
+done
+
+exit ${failed}

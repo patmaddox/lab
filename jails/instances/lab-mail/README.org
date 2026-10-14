@@ -131,3 +131,29 @@ just start
 
 The build starts the jail before it installs the config, so restart
 the jail after a build that changes the config.
+
+* check
+=just check= checks that lab-mail is set up and running. It prints
+one line per check, ok or FAIL, and exits non-zero if any check
+fails:
+#+BEGIN_EXAMPLE
+$ just check
+ok the jail is running
+ok /data/secrets/mail-creds exists
+...
+FAIL smtprelay is running
+FAIL smtprelay accepts connections on 127.0.0.1:2525
+...
+#+END_EXAMPLE
+
+It checks the jail, =mail-creds= and who can read it, the owners of
+the mail state directories, that syslogd, cron, smtprelay, and
+Dovecot are running, that smtprelay and Dovecot accept connections,
+that a fetch succeeded within the last five minutes, and that the log
+files exist. The fetch job touches =/data/mail/mbsync/last-fetch=
+after each successful pull, so a quiet list still passes. The
+check only reads, so it is safe to run at any time;
+=/usr/local/libexec/lab-mail/check= in the jail does the work.
+
+When a check fails, the service's log under =/var/log/lab-mail/=
+usually says why.
