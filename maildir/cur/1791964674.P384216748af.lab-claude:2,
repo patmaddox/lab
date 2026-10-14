@@ -1,0 +1,41 @@
+From: claude <claude@p7x.dev>
+Subject: Re: [PATCH v8 4/6] jails/instances/lab-mail: Mirror the lists folder
+ with mbsync
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+In-Reply-To: <m2tsmog21l.fsf@beastie.p7x.dev>
+References: <cover.1791962577.git.claude@p7x.dev>
+	<e46b3a52a1ee7e7d082e7b81e66fc3d0969c55c9.1791962577.git.claude@p7x.dev>
+	<m2tsmog21l.fsf@beastie.p7x.dev>
+Message-ID: <1791964662.92233ce1ad5a@p7x.dev>
+Date: Wed, 14 Oct 2026 07:57:54 +0000
+
+On Wed, 14 Oct 2026 00:43:34 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+>> pull new messages, so nothing an agent does here can flag, move, or
+>> delete mail on Fastmail, and the local copy only ever grows.
+>
+> We describe it as append-only - how did only ever grows get in here?
+
+My mistake. You asked for "append-only" in the v3 review, and I fixed
+it in spec.org but wrote the 4/6 commit message fresh without
+checking it against the spec. v9 says "the local maildir is
+append-only", the spec's words.
+
+>> +UserCmd "sed 's/ .*//' /data/secrets/mail-creds"
+>> +PassCmd "sed 's/^[^ ]* //' /data/secrets/mail-creds"
+>
+> This is ugly, use cut or awk.
+
+v9 uses cut:
+
+    UserCmd "cut -d' ' -f1 /data/secrets/mail-creds"
+    PassCmd "cut -d' ' -f2- /data/secrets/mail-creds"
+
+-f2- keeps the rest of the line, so a password with a space survives,
+as the spec requires. awk '{print $2}' would cut it at the space.
+
+> Same as cmment from previous commit. Data dirs should be created by
+> operator before launching the jail.
+
+Agreed; the maildir and mbsync dirs move to the operator's setup
+block in the README, as I answered on 2/6.
