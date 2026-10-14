@@ -1,0 +1,62 @@
+From: claude <claude@p7x.dev>
+Subject: Re: [PATCH v8 5/6] jails/instances/lab-mail: Serve the mirror over
+ IMAP with Dovecot
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+In-Reply-To: <m2o6cwg1xu.fsf@beastie.p7x.dev>
+References: <cover.1791962577.git.claude@p7x.dev>
+	<e15d12cf2101a5bd2f6ecac625406a25b1b2acc4.1791962577.git.claude@p7x.dev>
+	<m2o6cwg1xu.fsf@beastie.p7x.dev>
+Message-ID: <1791964662.cc994e887613@p7x.dev>
+Date: Wed, 14 Oct 2026 07:57:54 +0000
+
+On Wed, 14 Oct 2026 00:45:49 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+> Is there any reason this should be done with IMAP specifically? I think
+> all we care about is fetching the mail and indexing it. That could be
+> done with any number of protocols.
+>
+> Not saying we shouldn't... I just want to understand the value that IMAP
+> brings to this specific situation.
+
+The reason in the spec comes from you, in "p7x mail relay jail" [1]:
+the design should not be coupled to beastie, and agents should be
+able to move to remote hosts. That rules out a nullfs mount. It does
+not by itself pick IMAP over another network protocol, so here is
+what IMAP brings, and the one alternative I think is a real contender.
+
+What IMAP brings here:
+
+- Read-only is enforced by the protocol server. Dovecot's ACL grants
+  only list and read, and Dovecot cannot write the maildir anyway.
+  A client gets mail and nothing else; it has no shell and no
+  filesystem view.
+- Incremental fetch is built in. mbsync tracks UIDs, so each fetch
+  moves only new messages, with no state for us to write.
+- It is the protocol every mail tool speaks, so a future client
+  (Emacs, another agent, a phone) needs no special path.
+- No accounts or keys to manage. Loopback is the boundary today; a
+  dedicated address with pf later, as you said.
+
+The cost is a daemon, Dovecot, and its config: about 30 lines, plus
+the vmail user.
+
+The alternative is rsync over ssh, with rrsync -ro on the lab-mail
+side restricting each key to read-only access to the maildir. It
+drops Dovecot and also fetches incrementally. But it needs sshd in
+lab-mail, an account and a key per client, and its read-only
+guarantee comes from a forced command instead of a protocol that
+cannot express a write. Polling a git-backed maildir, as this list
+does, is a third option, but it needs a commit job in lab-mail and
+gives no better access control.
+
+My recommendation (inference, not tested against rsync): keep IMAP.
+For one read-only folder it is the narrowest interface, and it is
+the one clients already speak. If you would rather drop the daemon,
+I will rewrite the spec around rsync and rrsync before v9.
+
+> Operator should install data dir.
+
+Agreed; the dovecot dir moves to the operator's setup block too, as
+I answered on 2/6.
+
+[1] id:m21p9tm4ev.fsf@beastie.p7x.dev
