@@ -1,0 +1,89 @@
+From: claude <claude@p7x.dev>
+Subject: Re: [PATCH v3] jails/instances/lab-mail: Initial spec
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+In-Reply-To: <m2ik34kh3f.fsf@beastie.p7x.dev>
+References: <4d40a245c49a3ec0631f80c5a65bf85497dadf6a.1791944336.git.claude@p7x.dev>
+	<m2ik34kh3f.fsf@beastie.p7x.dev>
+Message-ID: <1791954885.8f2eda621d8a@p7x.dev>
+Date: Wed, 14 Oct 2026 05:14:51 +0000
+
+On Tue, 13 Oct 2026 22:04:52 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+> "that only grows" is awkward. Better to describe it as "append-only."
+
+Agreed. The next version says "append-only" in both places, the
+commit message and the reading section. I am holding it back because
+your questions below may change the design, and you asked for either
+a patch or questions, not both.
+
+>> +  When Fastmail rejects a message, the client gets Fastmail's code
+>> +  and text. When Fastmail cannot be reached, the client gets a 4xx
+>> +  reply. smtprelay never accepts a message it has not handed to
+>> +  Fastmail, and never sends a bounce.
+>
+> Interesting, so this is the tradeoff I guess? With a queueing server, I
+> can deliver emails from the client offline.
+
+Yes, that is the tradeoff. A queue answers 250 to everything it can
+hold, so it is also what hides a later rejection from the sender. The
+relay keeps the failure in the client's session, and the cost is that
+nothing holds mail while Fastmail is down. I will state that cost in
+the commit message.
+
+> How does this scenario work when I can't reach the remote server? I
+> anticipate notmuch-emacs will be my primary client for working with this
+> system.
+
+smtprelay answers 4xx and msmtp exits non-zero. Emacs then does what
+it does for any failed send. I checked message.el in Emacs 31.1 and
+notmuch-mua.el on this host:
+
+- message-send-mail-with-sendmail pops up the " sendmail errors"
+  buffer with msmtp's output, and signals "Sending...failed".
+- The error leaves message-send before it reaches message-do-fcc, so
+  no sent copy is written, and the compose buffer stays open with your
+  text in it.
+- To send later, either leave the buffer open and press C-c C-c again,
+  or press C-c C-p (notmuch-draft-postpone). That saves the message in
+  notmuch tagged draft; resume it from the message with "e" and send.
+
+So nothing is lost, but nothing retries for you either. If you want
+mail written offline to go out by itself, the queue has to live in
+your client, not in lab-mail. msmtp ships msmtpq, a wrapper that
+queues locally when the network is down and sends the queue later.
+I have not checked how it treats a 5xx. It must not queue a permanent
+rejection, or it brings back the problem the relay solves.
+
+One more thing to know. lab-mail listens on beastie's loopback only,
+so your Emacs must run on beastie, or in a jail on it, to send through
+lab-mail at all. A laptop that is offline cannot reach lab-mail
+whether it queues or not.
+
+Questions:
+
+1. Where will your notmuch-emacs run: on beastie, in a jail on
+   beastie, or on another machine? If another machine, the access
+   section has to change.
+
+2. When Fastmail is down, is it enough for your client to keep the
+   draft and let you send again by hand, or do you want a client-side
+   queue? If a queue, should your client and its queue be in this
+   spec, next to lab-claude?
+
+>> +  server rejects any recipient, msmtp sends no DATA and exits non-zero
+>> +  with the server's reply, so the whole message is abandoned.
+>
+> How does notmuch-email respond in this case?
+
+The same way as above. msmtp exits non-zero with smtprelay's reply,
+for example the 5xx for someone@example.com. Emacs shows it in the
+" sendmail errors" buffer, signals the error, writes no sent copy,
+and leaves the buffer open. You fix the recipient and press C-c C-c.
+No recipient gets the message, because msmtp never sent DATA.
+
+There is one wrinkle. notmuch tags the message you are replying to
+with notmuch-message-replied-tags ("+replied" by default) from
+message-send-hook. That hook runs before the send, so a failed reply
+still marks the original replied. If you add "-inbox" to that list,
+a failed reply also drops the original from your inbox. That is a
+notmuch-emacs behavior, not something lab-mail can fix.
