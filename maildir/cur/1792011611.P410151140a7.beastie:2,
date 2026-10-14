@@ -1,0 +1,52 @@
+From: Pat Maddox <pat@patmaddox.com>
+To: lab-devel@p7x.dev
+Subject: thinking through how to provide context to the tool
+Date: Wed, 14 Oct 2026 14:00:11 -0700
+Message-ID: <m2bj8w9ew4.fsf@beastie.p7x.dev>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+This is most likely about lab-process-email but not necessarily. It's a
+broader idea - but I think it's working towards an implementation change
+here.
+
+There are three primary sources of context for my email patch workflow:
+
+- trunk@upstream
+- b/dev@upstream
+- mail@upstream
+
+The first two are pretty obvious: they are the latest common immutable
+branch, and my personal dev branch that is a staging area for trunk
+candidates.
+
+The second is a bit more interesting. I don't know what to call it,
+because it's not necessarily work in progress... it's just another
+source of commits, plus the communication messages.
+
+For the commits specifically, we can think of them as being differing
+degrees of formal, mature, or durable:
+
+- trunk@upstream - commits published for the world to see
+- b/dev@upstream - my personal tree, published for interested parties,
+  but not guaranteed to be maintained as is
+- mail@upstream - commits that have been shared. Some applied, some
+  rejected, some not yet really considered
+
+The goal for any dev work is to flow from mail@upstream to
+trunk@upstream. Not everything will make it of course - but one of the
+success criteria of how well the system performs is the % rate at which
+commits are accepted. All commits should eventually have a resolution -
+but in an ideal world, the first patch series is accepted and committed.
+
+I bring this up because I want this idea represented in the code or
+prompt or config. Not necessarily the formality - but that there are
+three sources. The tool should prompt agent with that info, so it knows
+that it can e.g. consult with mail@upstream for other work, but not
+necessarily rely on it.
+
+Also, there's thinking about input / output channels. Essentially right
+now mail@upstream is a duplex io channel. That's fine, and I don't
+necessarily have any plans to change it or add other channels over
+time. But I want that abstraction to be represented in the system, and
+not have a hard coupling to email.
