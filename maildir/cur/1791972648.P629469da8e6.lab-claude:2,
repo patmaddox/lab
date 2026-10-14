@@ -1,0 +1,71 @@
+From: claude <claude@p7x.dev>
+Subject: Re: deterministic just process-email task for claude
+To: Pat Maddox <pat@patmaddox.com>, lab-devel@p7x.dev
+In-Reply-To: <m28q40egzm.fsf@beastie.p7x.dev>
+References: <m28q40egzm.fsf@beastie.p7x.dev>
+Message-ID: <1791972643.2778a408439a@p7x.dev>
+Date: Wed, 14 Oct 2026 10:10:48 +0000
+
+On Wed, 14 Oct 2026 03:03:41 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+> Add a `just process-email` just task that does the work
+> deterministically. It should:
+
+It is posted as "[PATCH v2 0/7] Add just process-email" [1]. Most of
+it was already on the list, unreviewed, in "[PATCH 0/3] Add just
+process-email" [2] and "[PATCH 0/2] Get up to date deterministically
+before process-email" [3]. v2 folds both into one series against
+trunk and adds the notification. The loop takes no control signal
+from claude's output, which goes to /dev/null; it reads the inbox
+from notmuch.
+
+> 1. update the jj mail dir
+> 2. notmuch index
+
+Each pass starts with `just get-up-to-date`. It fetches every remote,
+rebases my trunk work and my mail outbox onto upstream, starts a fresh
+change in the mail workspace, and runs notmuch new.
+
+> 3. check for inbox messages. if there are any, process them one at a time,
+> oldest first. for each one, notify ${NOTIFY_URL}
+
+It takes the oldest inbox message and runs a fresh
+`claude --permission-mode auto -p "/process-email <id>"` on it. Then
+it checks with notmuch that the message left the inbox. The loop, not
+the model, posts "answered: <subject>" to the topic, since only the
+loop knows from the inbox whether the pass worked. A post that fails
+or takes over ten seconds only warns.
+
+> 4. when there are no inbox messages, exit
+
+It exits 0 when the inbox is empty. There is one more exit: if a pass
+leaves its message in the inbox, it notifies "stuck: <subject>" and
+exits 1. Without that, it would run claude on the same message
+forever. Tell me if you would rather it skip the message and go on.
+
+> NOTIFY_URL will be provided as a secret, similar to how we provide mail
+> secrets for lab-mail jail.
+
+lab-claude now mounts /jails/data/lab-claude/secrets read-only at
+/data/secrets, the way lab-mail does, and the loop reads the URL from
+notify-url there. NOTIFY_URL in the environment overrides the file.
+With neither set, it posts nothing. To set it up on beastie, then
+restart lab-claude:
+
+    mkdir -p /jails/data/lab-claude/secrets
+    cd /jails/data/lab-claude/secrets
+    printf '%s\n' 'https://ntfy.sh/<topic>' > notify-url
+    chown -R 0:15000 .
+    chmod 0750 .
+    chmod 0640 notify-url
+
+The series also declares ftp/curl in lab-claude's packages. curl is
+already installed in the jail, but only as another package's
+dependency.
+
+Then the loop you run today becomes:
+
+    just process-email
+
+[1] id:cover.1791972607.git.claude@p7x.dev
+[2] id:cover.1791655833.git.claude@p7x.dev
+[3] id:cover.1791659541.git.claude@p7x.dev
