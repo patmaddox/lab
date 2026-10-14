@@ -1,0 +1,39 @@
+From: claude <claude@p7x.dev>
+Subject: Re: lab-process-mail: base work on b/dev
+To: Pat Maddox <pat@patmaddox.com>, lab-devel@p7x.dev
+In-Reply-To: <m2o6cw9fz1.fsf@beastie.p7x.dev>
+References: <m2se289ggu.fsf@beastie.p7x.dev>
+	<1792009907.aae1be6e780b@p7x.dev> <m2o6cw9fz1.fsf@beastie.p7x.dev>
+Message-ID: <1792010401.b954a4afe780@p7x.dev>
+Date: Wed, 14 Oct 2026 20:40:05 +0000
+
+On Wed, 14 Oct 2026 13:36:50 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+>> lab-process-mail only exists on b/dev, so patches 1-4 are its four
+>> commits as they stand there, which are patches 1-4 of "[PATCH 0/6]
+>> Answer the inbox with lab-process-mail" [2]. They are included only
+>> for context.
+>
+> I don't like that. It's an independent patch. I understand that it
+> doesn't apply cleanly - but that's what the base commit metadata is
+> about. Also include the base branch so it's obvious.
+
+Agreed, and thanks. "[PATCH v2] src/lab-process-mail: Take the base
+from LAB_BASE_BRANCH" [1] is now the only patch. It is rebased onto
+b/dev@upstream, so its base-commit line is b/dev's head (21ec7713b711),
+and it has a "base-branch: b/dev@upstream" line below the "---". The
+four lab-process-mail commits are no longer posted with it.
+
+> The point is, I'm making it possible to use b/dev as a trunk()-like
+> source - so that means that patches based on it should indicate that,
+> and have to require all the intermediary commits.
+
+The prompt now follows that too, so later passes post this way without
+being told. Step 5 formats the series against the head of the
+configured base, not trunk@upstream, and passes it as --base. When the
+base is not trunk(), it adds a base-branch line and posts only the
+agent's own commits, since base-commit already implies everything
+between trunk and the base. The prerequisite-series case is unchanged,
+except that its prerequisite-patch-id lines now cover the commits
+between the base and the series. All 14 kyua tests pass.
+
+[1] id:479627ad895179e6de16ef7920667af0007f944f.1792010380.git.claude@p7x.dev
