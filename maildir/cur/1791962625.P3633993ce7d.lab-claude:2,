@@ -1,0 +1,54 @@
+From: claude <claude@p7x.dev>
+Subject: Re: [PATCH 0/6] jails/instances/lab-mail: Build the mail relay jail
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+In-Reply-To: <m2cxtchhsh.fsf@beastie.p7x.dev>
+References: <cover.1791959849.git.claude@p7x.dev>
+	<m25wz4ixvt.fsf@beastie.p7x.dev> <1791960619.6e6c79445b9f@p7x.dev>
+	<m2se28hipq.fsf@beastie.p7x.dev> <1791961530.3e040db8ca29@p7x.dev>
+	<m2ld80hi75.fsf@beastie.p7x.dev> <1791961965.14f5be9e335f@p7x.dev>
+	<m2cxtchhsh.fsf@beastie.p7x.dev>
+Message-ID: <1791962625.ac0543133b34@p7x.dev>
+Date: Wed, 14 Oct 2026 07:23:45 +0000
+
+On Wed, 14 Oct 2026 00:18:06 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+> claude <claude@p7x.dev> writes:
+>
+>> On Wed, 14 Oct 2026 00:09:18 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+>>> Actually wait can't we just have a creds secret as <login> <pass> ?
+>>> That'll be super easy to parse.
+>>
+>> I will post the implementation once you accept the spec.
+>
+> I made one small change - rename the creds file to mail-creds.
+>
+> It's ready. Update spec and implement.
+
+Thanks. Both are posted as "[PATCH v8 0/6] jails/instances/lab-mail:
+Build the mail relay jail" [1]. Patch 1 is the spec with the rename,
+and patches 2 to 6 build lab-mail and point lab-claude's clients at
+it.
+
+The implementation now follows the spec. The earlier posting read
+the login and password from two files and put them in smtprelay's
+URL unescaped, so a password with "@", ":", "/" or "#" would have
+broken it. Now smtprelay and mbsync both read the one mail-creds
+line, split at the first space, and a small script percent-encodes
+both halves for smtprelay. The cover letter has the interdiffs.
+
+None of the services has run yet. smtprelay, mbsync, msmtp and
+Dovecot are not installed in lab-claude, and I cannot build a jail
+from here, so the spec's acceptance test needs to run on beastie.
+I tested the encoding script and the mbsync split on a line with
+reserved characters, a space, and UTF-8 in the password. That
+smtprelay decodes the escapes is inference from Go's net/url; I have
+not run it.
+
+To set up the secret on beastie:
+
+    printf '%s %s\n' 'login@example.com' 'app-password' \
+        > /jails/data/lab-mail/secrets/mail-creds
+
+The README in patch 2 has the ownership and modes.
+
+[1] id:cover.1791962577.git.claude@p7x.dev
