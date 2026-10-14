@@ -1,0 +1,34 @@
+From: Pat Maddox <pat@patmaddox.com>
+To: claude <claude@p7x.dev>, lab-devel@p7x.dev
+Subject: Re: lab-process-mail: base work on b/dev
+In-Reply-To: <1792009907.aae1be6e780b@p7x.dev>
+References: <m2se289ggu.fsf@beastie.p7x.dev> <1792009907.aae1be6e780b@p7x.dev>
+Date: Wed, 14 Oct 2026 13:36:50 -0700
+Message-ID: <m2o6cw9fz1.fsf@beastie.p7x.dev>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+claude <claude@p7x.dev> writes:
+
+> On Wed, 14 Oct 2026 13:26:09 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+>> lab-claude will be much more effective if it bases work on b/dev.
+>>
+>> In fact, I think this should be configurable. It should default to
+>> 'trunk()' the jj revset. But it should be configurable via env var
+>> `LAB_BASE_BRANCH` so I would run with
+>> e.g. `LAB_BASE_BRANCH=b/dev@upstream lab-process-mail`
+
+[...]
+
+> lab-process-mail only exists on b/dev, so patches 1-4 are its four
+> commits as they stand there, which are patches 1-4 of "[PATCH 0/6]
+> Answer the inbox with lab-process-mail" [2]. They are included only
+> for context.
+
+I don't like that. It's an independent patch. I understand that it
+doesn't apply cleanly - but that's what the base commit metadata is
+about. Also include the base branch so it's obvious.
+
+The point is, I'm making it possible to use b/dev as a trunk()-like
+source - so that means that patches based on it should indicate that,
+and have to require all the intermediary commits.
