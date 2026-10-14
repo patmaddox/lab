@@ -1,0 +1,81 @@
+From: claude <claude@p7x.dev>
+Subject: Re: email message time stamps are way off
+To: Pat Maddox <pat@patmaddox.com>, lab-devel@p7x.dev
+In-Reply-To: <m2zewg9jbw.fsf@beastie.p7x.dev>
+References: <m2zewgb3b1.fsf@beastie.p7x.dev>
+	<1792005362.8b91ed16ac87@p7x.dev> <m2zewg9jbw.fsf@beastie.p7x.dev>
+Message-ID: <1792006040.021e919e5dfd@p7x.dev>
+Date: Wed, 14 Oct 2026 19:27:26 +0000
+
+On Wed, 14 Oct 2026 12:24:19 -0700, Pat Maddox wrote:
+> Interesting, so I just want to make sure - the normal git-send-email
+> feature rewrites dates, right? Because I assume the mailing lists are
+> not full of commits with dates from a while back. Basically there's a
+> difference between the message delivery time, and the commit authorship
+> time.
+
+Yes. I checked the git send-email shipped with our git 2.56.0
+(/usr/local/libexec/git-core/git-send-email). It does three things
+with Date:
+
+- It drops any Date the input carries. The header parser keeps other
+  headers but skips Date ("elsif (!/^Date:\s/i && ...)"), so the
+  author date that format-patch wrote never goes out.
+
+- It writes a fresh Date for every message from a clock it starts
+  before sending: "$time = time - scalar $#files;". For N files that
+  is now minus N-1 seconds.
+
+- It advances that clock one second per message
+  ("format_2822_time($time++)"), so a series goes out in strictly
+  increasing seconds, and the last message is dated about now.
+
+It also does not carry the author date anywhere else. When the author
+differs from the sender it adds an in-body "From:" line, but no
+in-body Date. So the author date is lost in transit, and git am records
+the send time as the author date. That is why kernel and git history
+mostly show patches dated when they were mailed, not when they were
+written. Fact: the code above. Inference: the claim about kernel and
+git history, which I could not check directly, because lore.kernel.org
+refused my fetch.
+
+> I want to do what mailing lists do. So double check the behavior of the
+> open source lists and make sure we match.
+
+The list servers themselves (Mailman, mlmmj, public-inbox) pass Date
+through as sent. MTAs such as Postfix and sendmail add a Date only when
+one is missing. So the Date a reader sees is the one the sending client
+set, and for patches that client is git send-email. Inference: this is
+from those projects' documented behavior, which I did not test here.
+
+Our delivery script stands in for both the client and the MTA, so
+matching send-email is what matters. "[PATCH] libexec/mail: Date each
+message when it is delivered" [1] matches it on the points that count:
+
+- The commit's author date is dropped and replaced with the time the
+  message is posted.
+- A series is dated in one-second steps, in the order it was sent.
+- git am then records the posting time as the author date.
+
+There is one difference. send-email knows how many messages it will
+send, so it starts N-1 seconds in the past and ends at now.
+maildir-deliver.sh gets one message per call and never knows N, so it
+starts at now and steps forward. Each delivery is also dated at least a
+second after the newest message already in the maildir. A series of N
+can therefore be dated up to N-1 seconds in the future, where
+send-email's is up to N-1 seconds in the past. send-email has no such
+floor across runs. Two runs in the same second can share timestamps,
+and their messages then interleave.
+
+I suggest keeping the patch as it is. A few seconds of skew either way
+does not matter to a reader. The floor also keeps a series in order
+against the reply that follows it in the same pass, which send-email
+does not promise. mail-send.sh, which runs git send-email with this
+script as its sendmail, still gets increasing dates in order. The
+script replaces send-email's Date with its own, which is never earlier.
+
+If you would rather match send-email exactly, I can do that in a v2.
+Delivery would take the whole series in one call, so it knows N and can
+back-date the series to end at now. Let me know and I will send it.
+
+[1] id:bd2021ae8e96c84331c04893e0a48b4a85224604.1792005323.git.claude@p7x.dev
