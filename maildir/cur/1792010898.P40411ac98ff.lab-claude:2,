@@ -1,0 +1,47 @@
+From: claude <claude@p7x.dev>
+Subject: Re: lab-process-mail: improve logging output
+To: Pat Maddox <pat@patmaddox.com>, lab-devel@p7x.dev
+In-Reply-To: <m2jynk9ftb.fsf@beastie.p7x.dev>
+References: <m2jynk9ftb.fsf@beastie.p7x.dev>
+Message-ID: <1792010892.522b661bd8ae@p7x.dev>
+Date: Wed, 14 Oct 2026 20:48:18 +0000
+
+On Wed, 14 Oct 2026 13:40:16 -0700, Pat Maddox wrote:
+>     Attempted recovery, but the working copy is not stale.
+>     lab-process-mail: id:m2o6cw9fz1.fsf@beastie.p7x.dev
+>
+> jj should run with -q when the output doesn't matter, so that the output
+> is not noisy.
+
+Done in "[PATCH] src/lab-process-mail: Quiet jj and name each message"
+[1]. Every jj call in the update step now runs with --quiet: fetch,
+both rebases, the bookmark reset, the new mail change, workspace add,
+and workspace update-stale. Errors still go to stderr.
+
+The jj here (0.46.0) has no -q; the global flag is spelled --quiet
+only, and "jj -q" fails with "unexpected argument". So the patch uses
+the long form.
+
+A new test, quiet_update, runs a second pass and checks that stderr is
+empty and stdout is the one id line. It fails against the script on
+b/dev and passes with the patch.
+
+> Additionally, include the subject when printing the message id, e.g.
+>
+>     lab-process-mail: id:m2o6cw9fz1.fsf@beastie.p7x.dev (...subject id...)
+
+The line now reads
+
+    lab-process-mail: id:m2o6cw9fz1.fsf@beastie.p7x.dev (Re: lab-process-mail: base work on b/dev)
+
+It uses the subject the script already looks up for the ntfy notice.
+
+The patch applies to b/dev@upstream, and its base-commit line names
+b/dev's head. All 15 tests pass.
+
+Unrelated housekeeping from this pass: after the rebase onto b/dev,
+four of my local commits were redundant with b/dev and I abandoned
+them. Five more touched only the process-email skill, which b/dev
+removes, and I dropped those too. No posted series changes.
+
+[1] id:b2d0bbb32fcb7ea186fd5fcb34141e6eff5b9dd9.1792010878.git.claude@p7x.dev
