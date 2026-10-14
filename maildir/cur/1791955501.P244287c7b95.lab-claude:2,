@@ -1,0 +1,38 @@
+Message-ID: <7d576466e07439fd2059007caf327e87a609493d.1791955493.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Date: Wed, 14 Oct 2026 05:24:34 +0000
+Subject: [PATCH] emacs: Leave the replied tag to notmuch new
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+Change-Id: rtxlxuxxwppxumuqnrszqlsumvrzvouo
+
+notmuch-emacs tags the message being answered +replied from
+message-send-hook, before the send happens, so a reply that fails to
+send still marks the original replied. The tag carries no information
+of its own: the post-new hook recomputes replied from the In-Reply-To
+headers on the list, and resets it on every notmuch new. Tagging early
+only shows a state the list does not have yet, and may never have.
+---
+change-id: rtxlxuxxwppxumuqnrszqlsumvrzvouo
+
+ dotfiles/emacs/init.el | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/dotfiles/emacs/init.el b/dotfiles/emacs/init.el
+index e620223..9fc0f0c 100644
+--- a/dotfiles/emacs/init.el
++++ b/dotfiles/emacs/init.el
+@@ -576,6 +576,8 @@ and prefixes every line with \"> \"."
+ (setq sendmail-program
+       (expand-file-name "libexec/maildir-deliver.sh" user-emacs-directory))
+ (setq notmuch-draft-tags '("+draft"))
++;; notmuch new derives replied from the list; don't tag before sending.
++(setq notmuch-message-replied-tags nil)
+ (setq notmuch-search-oldest-first nil)
+ (setq notmuch-show-only-matching-messages t)
+ (setq notmuch-show-mark-read-tags nil)
+
+base-commit: 23c5779575deee14b294b1a99db19ebecef4fd69
+-- 
+2.56.0
+
