@@ -1,0 +1,163 @@
+From: Pat Maddox <pat@patmaddox.com>
+To: claude <claude@p7x.dev>, lab-devel@p7x.dev
+Subject: Re: Research incremental upgrade procedure in ports tree
+In-Reply-To: <1792105592.867c44fa07b3@p7x.dev>
+References: <m2a4oe1sby.fsf@beastie.p7x.dev> <1792105592.867c44fa07b3@p7x.dev>
+Date: Thu, 15 Oct 2026 16:39:48 -0700
+Message-ID: <m2zewezg6z.fsf@beastie.p7x.dev>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+claude <claude@p7x.dev> writes:
+
+> On Thu, 15 Oct 2026 16:01:37 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+>> There are some service (e.g. Gerrit, SigNoz - neither in ports tree)
+>> that require you to do incremental upgrades from one version to the
+>> next. i.e. they can't go 5 -> 8, they have to go 5 -> 6 -> 7 -> 8.
+>>
+>> This seems to conflict with the ports tree design, which is a version
+>> snapshot in time. However, it's not uncommon.
+>
+> It has come up before, and ports have dealt with it, but only port by
+> port. Neither the framework nor pkg has a general mechanism. I read
+> UPDATING (which only goes back to 20210113), every pkg-message and
+> pkg-install in a ports checkout at 05ffd241e (2026-10-15), Mk/, the
+> Porter's Handbook, and the FreeBSD forums. I searched the mailing
+> lists and Bugzilla but found no thread or PR on a general policy.
+> That search was not exhaustive.
+>
+>> Thoroughly research ports tree, ports framework, porter's handbook, and
+>> mailing lists to see if there are any ports for services that require
+>> these incremental upgrades. I want to know if this problem has been
+>> solved in the ports tree before.
+>
+> Short answer: there is no enforced solution. There are three
+> conventions, and the first two are often combined.
+>
+> 1. Warning text in UPDATING and pkg-message (most common)
+>
+> www/gitlab is the closest match to Gerrit and SigNoz. It is a single
+> port that tracks upstream with no versioned copies. Its maintainer,
+> mfechner@, posts an UPDATING entry for each of GitLab's required
+> upgrade stops:
+>
+>   20210621: "You must upgrade first to 13.12."
+>   20231004: "Before you upgrade to version 16.4.x or higher, make sure
+>             you did the upgrade to 16.3.x!"
+>   20240521: "Make sure you upgrade first to 16.11.x before you upgrade
+>             to the today released version 17.0.0."
+>
+> He also held 14.0.0 back from the quarterly branch "to give you some
+> time for the upgrade to 13.12". So the stop was really provided by
+> timing. Each version stayed in some repo long enough for users to
+> stop there. www/gitlab/pkg-message adds a generic `type: upgrade`
+> message that links to his per-step guides, plus one gated with
+> `maximum_version: "11.9.7"`.
+>
+> net/rabbitmq does the same. UPDATING 20240316 says "users *must*
+> enable all feature flags before upgrading stepwise to v3.12.13, to be
+> able to migrate later to v3.13.0", and its pkg-message repeats the
+> step for 4.0.4. net-mgmt/netbox gates its migration notes on
+> `maximum_version: 3.6.1` and `3.7.0`.
+>
+> The Handbook defines the tools but does not mention upgrade stops.
+> UPDATING is for upgrades needing "special steps like changing
+> configuration files or running a specific program" [a]. With
+> `type: upgrade`, `maximum_version` shows a message only when the
+> installed version is "strictly lower than the version specified", and
+> `minimum_version` and `maximum_version` "can be combined" [b]. These
+> keys control only whether a message is shown; they never block the
+> upgrade.
+>
+> 2. Versioned parallel ports (when upstream keeps major branches)
+>
+> databases/mongodb70, mongodb80 and mongodb90 each set
+> `PKGNAMESUFFIX= ${DISTVERSION:R:S/.//}` and
+> `CONFLICTS_INSTALL= mongodb[0-9][0-9]`. Users step through the
+> majors by swapping one port for the next. Each EOL entry in UPDATING
+> spells out the step, e.g. 20240927 and 20250520:
+>
+>   In-place upgrades are supported from version 6.0 to 7.0.
+>   For an in-place upgrade it is important that the
+>   'featureCompatibilityVersion' is set to 6.0 before the upgrade.
+>
+> net-mgmt/unifi8 repeats the FCV step for its embedded MongoDB. The
+> gap is that old majors expire through MOVED, so someone more than
+> one major behind has no package to stop at. unifi7's 20230310 entry
+> works around that with a backup, wipe and restore instead.
+>
+> postgresql, mysql/mariadb, zabbix, opensearch, mediawiki, redmine,
+> cassandra and forgejo are versioned the same way. None of them
+> documents a stop: their versioning is there for parallel support, not
+> for upgrade paths. PostgreSQL does not need stops, since pg_upgrade
+> can skip majors.
+>
+> 3. Old repos, informally
+>
+> When a port has already moved past a stop, users are sent to the
+> quarterly repo or an older ports checkout. The forum thread "Skipped
+> a nextcloud major release which seems to be a big no-no" [c] (Dec
+> 2023) hit "Updates between multiple major versions and downgrades are
+> unsupported." The answer was "Quarterly repository has 27.1.0":
+> install 27 from quarterly, run occ upgrade, then go back to latest.
+> www/nextcloud itself warns about none of this. Its pkg-message says
+> only to run occ upgrade.
+>
+> What does not exist (verified in the tree):
+>
+> - No Mk/ mechanism. PKGPREUPGRADE, PKGPOSTUPGRADE and PKGUPGRADE
+>   appear only in the subpackage helper list at Mk/bsd.port.mk:2642.
+>   No port ships one, and nothing else reads them.
+> - No port's pkg-install checks the installed version and refuses the
+>   upgrade. A grep of all 2,812 pkg-message and pkg-install files for
+>   "intermediate", "upgrade first", "stepwise", "upgrade path" and
+>   similar wording turns up only the ports above.
+> - pkg-lock(8) is the only user-side way to hold a version. Inference,
+>   not checked in pkg's source: pkg has no "upgrade only from >= X"
+>   rule a port could declare.
+>
+> For net-mgmt/signoz [1] the precedent suggests the www/gitlab
+> pattern. When an upstream release is a required stop, add an UPDATING
+> entry naming it and a `type: upgrade` pkg-message gated with
+> `maximum_version` on the last version before the stop. Then time the
+> commit so the stop version has shipped in a quarterly branch before
+> the next one lands. If SigNoz later keeps several majors under
+> support, the mongodbNN layout with PKGNAMESUFFIX and CONFLICTS_INSTALL
+> is the established alternative. I have not checked SigNoz's own
+> upgrade notes for real stops. That is the next step if you want this
+> applied to the port.
+>
+> [1] "[freebsd-ports PATCH v10] net-mgmt/signoz: Observability platform
+>     for logs, metrics, and traces"
+>     id:69c6aeed91d2a7643f5d17abc900d0804128f0e6.1792088188.git.claude@p7x.dev
+>
+> [a] https://docs.freebsd.org/en/books/porters-handbook/upgrading/#moved-and-updating-updating
+> [b] https://docs.freebsd.org/en/books/porters-handbook/pkg-files/#porting-message-ucl
+> [c] https://forums.freebsd.org/threads/skipped-a-nextcloud-major-release-which-seems-to-be-a-big-no-no.91652/
+
+The UPDATING approach seems risky. I have to keep an eye on the ports
+tree, watch out for every release, and upgrade each one. If I miss a
+required one, I'm hosed, right?
+
+Here's what I have in mind:
+
+- a slave port (I think that's the name / mechanism in ports?) or a
+  virtual port that does nothing but include info about how to upgrade
+- a port for every stop point, or maybe a flavor for every stop point
+- package message that shows how to upgrade
+- stop points are retired after some period of time (6 months, a year?)
+
+A challenge is that we don't necessarily know what is a stop point until
+after the fact. It's only when a new release comes out that we know it's
+a stop point.
+
+I want to come up with a way that is operationally responsible. The
+reality of the current way is that you cannot run GitLab unless you
+build it yourself and stop at versions - otherwise there's too much risk
+in missing a necessary upgrade.
+
+Do some more research to see if anyone has thought about this in more
+depth than just some notes in UPDATING. Also research how this problem
+is approached in other ecosystems. I would like to think through this
+and see if there's a way to provide a reliable upgrade path for tools
+that require upgrade stops.
