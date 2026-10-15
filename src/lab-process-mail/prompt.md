@@ -157,8 +157,13 @@ For code changes, work in your workspace on a fresh change:
 Follow CLAUDE.md for commit messages and patch scope: one logical
 change per commit, each message explaining why, and the series
 self-contained against `${lab_base}`. Test the change and review your
-own diff before sending it. If you cannot finish, send a reply that
-says what blocked you and what you need.
+own diff before sending it.
+
+Finish the work in this pass. Nothing runs between passes, so a reply
+that promises work for later only stalls it until Pat writes again.
+If you cannot finish, the reply says what blocked you and gives Pat
+something to act on: what you need from him, or the options you found,
+each with its cost, and the one you recommend.
 
 ## 5. Post the series
 
