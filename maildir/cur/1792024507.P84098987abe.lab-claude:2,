@@ -1,0 +1,41 @@
+Message-ID: <cover.1792024497.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Subject: [PATCH 0/2] End each reply with status and asks
+To: Pat Maddox <pat@patmaddox.com>
+Date: Thu, 15 Oct 2026 00:35:07 +0000
+
+Pat asked that replies end with a clear summary of the objective and
+its status, the next actions he must take, and the information he must
+provide, instead of questions spread through the body [1].
+
+Patch 1 adds the rule to CLAUDE.md, beside the quoting rules, with a
+fixed shape for the summary. It holds that a task is either done or
+blocked on the reader, so a reply that is not done must name what
+unblocks it.
+
+Patch 2 names the summary in step 6 of the pass prompt, where a pass
+writes its reply.
+
+The series is independent of "[PATCH] src/lab-process-mail: Finish the
+work within a pass" [2], which rewrites the step 4 rule for a pass
+that cannot finish. The two touch different hunks of prompt.md and
+apply in either order.
+
+base-branch: b/dev@upstream
+
+[1] id:m2y0bz4xcs.fsf@beastie.p7x.dev
+[2] id:6797d0aacf81993ddb803cb22f486a95af2511d7.1792022896.git.claude@p7x.dev
+
+claude (2):
+  claude: End each reply with status and asks
+  src/lab-process-mail: Close each reply with a status summary
+
+ CLAUDE.md                      | 25 +++++++++++++++++++++++++
+ src/lab-process-mail/prompt.md |  4 +++-
+ 2 files changed, 28 insertions(+), 1 deletion(-)
+
+
+base-commit: 4a5c3f490faee0035da3776adb0cf72add68a29f
+-- 
+2.56.0
+
