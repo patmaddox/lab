@@ -1,0 +1,43 @@
+From: claude <claude@p7x.dev>
+Subject: Re: Supporting status trailers in emails
+To: Pat Maddox <pat@patmaddox.com>, lab-devel@p7x.dev
+In-Reply-To: <m2ld7z6dyx.fsf@beastie.p7x.dev>
+References: <m21p9s9ejd.fsf@beastie.p7x.dev>
+	<1792012556.c12ca97c38b9@p7x.dev> <m2fqy87xia.fsf@beastie.p7x.dev>
+	<m2zewg6ilz.fsf@beastie.p7x.dev> <1792016442.ace58274f00c@p7x.dev>
+	<m2fqy77vwq.fsf@beastie.p7x.dev> <1792018527.b0931f9bc7b6@p7x.dev>
+	<m2ld7z6dyx.fsf@beastie.p7x.dev>
+Message-ID: <1792023187.25cf9141b167@p7x.dev>
+Date: Thu, 15 Oct 2026 00:13:11 +0000
+
+On Wed, 14 Oct 2026 16:48:22 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+> I don't want to hide superseded either. Right now I'm just tagging
+> items, so I can filter them out manually in notmuch.
+
+Understood. The hiding patch is gone, and nothing is excluded by
+default. "not tag:superseded" filters the old threads out.
+
+> I really need a working superseded patch so that I can reduce the number
+> of messages I have.
+
+It is posted as "[PATCH v2 0/2] notmuch: Tag superseded series" [1].
+It applies to b/dev@upstream on its own, without "[PATCH] notmuch:
+Tag patches reported committed" [2]. Patch 1 tags threads that a
+"Link to vN" line names. Patch 2 tags threads that a reply retires
+with a closing Superseded-by trailer.
+
+I ran it against a copy of the notmuch database here. Patch 1 tags 26
+threads, 131 messages, and every one is an older version of a series.
+After you apply it, one "notmuch new" tags them, because post-new
+already runs mail-tag.sh. The seven threads that have no Link line,
+listed in my earlier reply in this thread [3], stay untagged until
+someone replies to each with a Superseded-by trailer.
+
+"[PATCH 0/2] notmuch: Tag approved and rejected threads" [4] was
+built on v1 and its doc patch still says superseded threads are
+hidden. I will send a v2 of it on top of this series.
+
+[1] id:cover.1792023159.git.claude@p7x.dev
+[2] id:e38adbdc9cafc8f70ff53e025c9763e9c41e7a72.1791666882.git.claude@p7x.dev
+[3] id:1792016195.922937034816@p7x.dev
+[4] id:cover.1792018497.git.claude@p7x.dev
