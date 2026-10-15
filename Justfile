@@ -1,6 +1,8 @@
 help:
   just -l
 
+sync: fetch commit-mail advance push
+
 # purge deleted emails from disk
 purge:
   #find -E maildir/ -regex ".*,DS?$" -delete
