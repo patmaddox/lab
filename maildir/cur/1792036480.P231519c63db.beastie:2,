@@ -1,0 +1,272 @@
+From: Pat Maddox <pat@patmaddox.com>
+To: claude <claude@p7x.dev>
+Cc: lab-devel@p7x.dev
+Subject: Re: [freebsd-ports PATCH v6] net-mgmt/signoz: Observability
+ platform for logs, metrics, and traces
+In-Reply-To: <65e5d96216421fede90ada8a07333f559d92b029.1792028652.git.claude@p7x.dev>
+References: <65e5d96216421fede90ada8a07333f559d92b029.1792028652.git.claude@p7x.dev>
+Date: Wed, 14 Oct 2026 20:54:40 -0700
+Message-ID: <m27bjj39fj.fsf@beastie.p7x.dev>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+claude <claude@p7x.dev> writes:
+
+> SigNoz is an open source observability platform. It brings logs,
+> metrics, and traces together in one application, with dashboards,
+> alerts, exceptions, and service maps. It is native to OpenTelemetry and
+> stores its data in ClickHouse.
+>
+> This is the Community Edition of the query service and web interface.
+> Telemetry reaches ClickHouse through the SigNoz distribution of the
+> OpenTelemetry Collector, which is packaged separately.
+>
+> WWW: https://signoz.io/
+> ---
+> Notes for review:
+>
+> Build: on the base commit below, with Go 1.27.2 and STRICT_DEPENDS
+> set, fetch ran into an empty DISTDIR with the network up. Then, as in
+> a poudriere jail, DISTDIR was made read-only and the network was cut
+> by pointing HTTP_PROXY and HTTPS_PROXY at a closed port. extract,
+> patch, build, stage, and check-plist all passed, and go logged no
+> download after fetch. vendor/modules.txt lists sonic v1.15.4 and
+> sonic/loader v0.5.2. The staged binary, run as an unprivileged user
+> with no ClickHouse, started its HTTP servers and ran without a panic
+> until stopped. portclippy, portfmt, and portlint are clean. Not
+> checked: a real poudriere build, aarch64, and a run as the signoz user
+> from rc.d (that needs root).
+>
+> sonic: signoz v0.145.0 pins github.com/bytedance/sonic v1.14.1. Its
+> map code is limited to Go 1.24 and 1.25, so it does not compile with
+> the tree's Go 1.26 or 1.27, and v0.146.0 and main still pin it. The
+> port raises sonic to v1.15.4 and sonic/loader to v0.5.2.
+>
+> How the bump is fetched: go.mk's go-post-fetch downloads the modules
+> of upstream's go.mod into the module cache, GOPATH under
+> ${DISTDIR}/go/net-mgmt_signoz, with the network up and every module
+> checked against sum.golang.org. go-post-extract then tidies and
+> vendors from that cache with GOPROXY=file://, offline. Neither knows
+> about the bumped versions. So post-fetch prints upstream's go.mod with
+> the two requirements raised into a mktemp(1) directory, runs the same
+> "go mod download -x all" there with the same GO_ENV, and removes the
+> directory. The bumped modules land in the same cache, verified the
+> same way. post-extract makes the same edit to go.mod in WRKSRC, where
+> the port's sources belong, and go-post-extract vendors them.
+>
+> Nothing in DISTDIR is written but the module cache, which go.mk
+> already writes in this phase. Extract runs the fetch target again
+> (_EXTRACT_DEP= fetch in bsd.port.mk), and poudriere runs it as the
+> build user, offline, with DISTDIR not writable (common.sh, build_port:
+> only fetch runs as root with the network). That re-run of post-fetch
+> only reads the cache, exactly as go-post-fetch's own re-run does; the
+> read-only test above runs this path. www/comentario fetches an extra
+> module the same way, from a scratch module in post-fetch.
+>
+> mmap: sonic/loader v0.5.2 maps memory with MAP_ANON and fd 0.
+> FreeBSD requires fd -1 and returns EINVAL, so the built binary
+> panicked at startup. Upstream fixed this in bytedance/sonic commit
+> bf12ab8, "MAP_ANON should be set to -1 , not required on Linux,
+> required on BSD. + go fmt", merged on 2026-09-26. No sonic or loader
+> release includes it yet. The port fetches that commit as a PATCHFILE
+> from GitHub. It touches only loader/mmap_unix.go, and the file is the
+> same in loader/v0.5.2 and in the commit's parent, so the patch applies
+> cleanly. The patch can be dropped once signoz requires a loader
+> release with the fix.
+>
+> Active query log: the PromQL engine keeps queries.active in
+> prometheus.active_query_tracker.path, which defaults to "", the
+> working directory. Under rc.d that is /, which the signoz user cannot
+> write, so the engine panics. post-patch points the default at
+> /var/db/signoz in the source and in example.yaml.
+>
+> Makefile, line by line:
+> - MASTER_SITES and DISTFILES (:web): the web interface comes prebuilt
+>   from upstream's release tarball, since the pnpm build has no offline
+>   path in the tree. The source maps are left out because they make up
+>   31 MB of its 54 MB and only browser developer tools read them.
+> - LICENSE_FILE: installs upstream's license with the package.
+> - PATCH_SITES and PATCHFILES: upstream's sonic mmap fix, fetched from
+>   GitHub in fetch like any distfile and checksummed in distinfo.
+> - ONLY_FOR_ARCHS: upstream releases only amd64 and arm64.
+>   modernc.org/sqlite has no FreeBSD support on powerpc64 or riscv64.
+> - GO_BUILDFLAGS: variant and version appear in "signoz -v" and the
+>   startup log. "-s -w" is dropped because INSTALL_PROGRAM already
+>   strips the binary.
+> - SUB_FILES: pkg-message names %%DATADIR%%.
+> - PATCH_WRKSRC: the upstream patch names paths in the sonic
+>   repository (a/loader/mmap_unix.go), and go.mk vendors that repository
+>   at vendor/github.com/bytedance/sonic. The port has no other patches,
+>   so moving the patch directory affects only this one.
+> - USERS and GROUPS: rc.d runs signoz as this user, which owns
+>   /var/db/signoz.
+> - SONIC_EDIT: one command for both edits, the scratch go.mod in fetch
+>   and go.mod in WRKSRC, so they cannot drift.
+> - The *_PROXY lines in post-fetch: SETENVI clears the environment, so
+>   a fetch behind a proxy needs them passed on; go-post-fetch passes
+>   the same six.
+>
+> UIDs/GIDs: signoz takes 485, beside prometheus 478, alertmanager 479,
+> and promxy 481.
+>
+> Changes in v6:
+> - Stop writing an edited go.mod into DIST_SUBDIR. post-fetch now
+>   downloads the bumped modules from an edited go.mod in a temporary
+>   directory, so the only state it leaves is the module cache go.mk
+>   already fills. Pat rejected the write-on-change guard as a hack.
+> - Link to v5: id:74e7c31f9fd9a5ebd14da35f1d9c5f5b9c09d2b0.1792027621.git.claude@p7x.dev
+>
+> Changes in v5:
+> - Fetch upstream's sonic mmap fix with PATCH_SITES and PATCHFILES
+>   instead of carrying it as files/patch-*, as Pat asked.
+> - Link to v4: id:71e5ce8b94ad44b20e6009da9707ecd51f120fd1.1792027136.git.claude@p7x.dev
+>
+> Changes in v4:
+> - Fix the poudriere build, which failed in extract with "rm: go.mod:
+>   Permission denied".
+> - Replace SONIC_BUMP with SONIC_EDIT, which carries the whole command.
+> - Link to v3: id:356655d2db87becaa2f3c491e1de4b0df1664e6d.1792026153.git.claude@p7x.dev
+>
+> Changes in v3:
+> - Cite upstream's mmap fix in the vendor patch header.
+> - Link to v2: id:678af2216005f75e022acfc8e3f9e1eb61450614.1792022846.git.claude@p7x.dev
+>
+> Changes in v2:
+> - Build with the tree's Go, by bumping sonic and sonic/loader.
+> - Patch sonic/loader's mmap, so signoz starts on FreeBSD.
+> - Keep the active query log in /var/db/signoz.
+> - Move the UID and GID to 485.
+> - Add ONLY_FOR_ARCHS=aarch64 amd64.
+> - Drop GIT_HASH, "-s -w", the second WWW, and the SIGNOZ_* variables
+>   along with SUB_LIST and PLIST_SUB; each named one fixed value.
+> - Link to v1: id:b90dbb5ddc5c068f1c2c7fc551b57c5a2d11da8c.1791931184.git.claude@p7x.dev
+>
+>  GIDs                                 |  2 +-
+>  UIDs                                 |  2 +-
+>  net-mgmt/Makefile                    |  1 +
+>  net-mgmt/signoz/Makefile             | 91 ++++++++++++++++++++++++++++
+>  net-mgmt/signoz/distinfo             |  9 +++
+>  net-mgmt/signoz/files/pkg-message.in | 27 +++++++++
+>  net-mgmt/signoz/files/signoz.in      | 88 +++++++++++++++++++++++++++
+>  net-mgmt/signoz/pkg-descr            |  8 +++
+>  net-mgmt/signoz/pkg-plist            |  6 ++
+>  9 files changed, 232 insertions(+), 2 deletions(-)
+>  create mode 100644 net-mgmt/signoz/Makefile
+>  create mode 100644 net-mgmt/signoz/distinfo
+>  create mode 100644 net-mgmt/signoz/files/pkg-message.in
+>  create mode 100644 net-mgmt/signoz/files/signoz.in
+>  create mode 100644 net-mgmt/signoz/pkg-descr
+>  create mode 100644 net-mgmt/signoz/pkg-plist
+>
+> diff --git a/GIDs b/GIDs
+> index 8a7121f4d..cf7fd5bb5 100644
+> --- a/GIDs
+> +++ b/GIDs
+> @@ -426,7 +426,7 @@ promxy:*:481:
+>  openbao:*:482:
+>  garage:*:483:
+>  stalwart:*:484:
+> -# free: 485
+> +signoz:*:485:
+>  # free: 486
+>  # free: 487
+>  # free: 488
+> diff --git a/UIDs b/UIDs
+> index d47676ab8..1534d8a44 100644
+> --- a/UIDs
+> +++ b/UIDs
+> @@ -431,7 +431,7 @@ promxy:*:481:481::0:0:Promxy Daemon:/nonexistent:/usr/sbin/nologin
+>  openbao:*:482:482:daemon:0:0:OpenBao Daemon:/nonexistent:/usr/sbin/nologin
+>  garage:*:483:483::0:0:Garage Daemon:/var/db/garage:/usr/sbin/nologin
+>  stalwart:*:484:484::0:0:stalwart Mail Server Daemon:/nonexistent:/usr/sbin/nologin
+> -# free: 485
+> +signoz:*:485:485::0:0:SigNoz Daemon:/var/db/signoz:/usr/sbin/nologin
+>  # free: 486
+>  # free: 487
+>  # free: 488
+> diff --git a/net-mgmt/Makefile b/net-mgmt/Makefile
+> index de8e4c7e8..8f7c5c411 100644
+> --- a/net-mgmt/Makefile
+> +++ b/net-mgmt/Makefile
+> @@ -391,6 +391,7 @@
+>      SUBDIR += seafile-gui
+>      SUBDIR += semaphore
+>      SUBDIR += sendip
+> +    SUBDIR += signoz
+>      SUBDIR += simplomon
+>      SUBDIR += sipcalc
+>      SUBDIR += sjitter
+> diff --git a/net-mgmt/signoz/Makefile b/net-mgmt/signoz/Makefile
+> new file mode 100644
+> index 000000000..203310eac
+> --- /dev/null
+> +++ b/net-mgmt/signoz/Makefile
+> @@ -0,0 +1,91 @@
+> +PORTNAME=	signoz
+> +DISTVERSIONPREFIX=	v
+> +DISTVERSION=	0.145.0
+> +CATEGORIES=	net-mgmt
+> +# prebuilt web frontend; only web/ is installed from it
+> +MASTER_SITES+=	https://github.com/SigNoz/${PORTNAME}/releases/download/${DISTVERSIONFULL}/:web
+> +DISTFILES+=	${PORTNAME}-community_linux_amd64${EXTRACT_SUFX}:web
+> +
+> +# MAP_ANON with fd -1, which FreeBSD's mmap(2) requires; in no release yet
+> +PATCH_SITES=	https://github.com/bytedance/sonic/commit/
+> +PATCHFILES=	bf12ab8c1f789cfbbdfa9d6a4cae69ed136ea516.patch:-p1
+> +
+> +MAINTAINER=	patmaddox@FreeBSD.org
+> +COMMENT=	Observability platform for logs, metrics, and traces
+> +WWW=		https://signoz.io/
+> +
+> +LICENSE=	MIT
+> +LICENSE_FILE=	${WRKSRC}/LICENSE
+> +
+> +ONLY_FOR_ARCHS=	aarch64 amd64
+> +ONLY_FOR_ARCHS_REASON=	upstream supports and releases only amd64 and arm64
+> +
+> +USES=		go:modules
+> +USE_RC_SUBR=	${PORTNAME}
+> +
+> +GO_MODULE=	github.com/SigNoz/signoz
+> +GO_TARGET=	./cmd/community:${PORTNAME}
+> +GO_BUILDFLAGS=	-ldflags "-X ${GO_MODULE}/pkg/version.variant=community \
+> +		-X ${GO_MODULE}/pkg/version.version=${DISTVERSIONFULL}"
+> +
+> +SUB_FILES=	pkg-message
+> +
+> +# the upstream patch is relative to the sonic repository, vendored here
+> +PATCH_WRKSRC=	${WRKSRC}/vendor/github.com/bytedance/sonic
+> +
+> +USERS=		${PORTNAME}
+> +GROUPS=		${PORTNAME}
+> +
+> +# sonic v1.14.1, as pinned upstream, builds only with Go 1.24 and 1.25
+> +SONIC_EDIT=	${SETENVI} ${WRK_ENV} ${GO_ENV} ${GO_CMD} mod edit \
+> +		-require=github.com/bytedance/sonic@v1.15.4 \
+> +		-require=github.com/bytedance/sonic/loader@v0.5.2
+> +
+> +# go-post-fetch caches only the modules of upstream's go.mod; cache the
+> +# bumped ones the same way, from an edited copy outside DISTDIR
+> +post-fetch:
+> +	@${ECHO_MSG} "===> Fetching bumped sonic dependencies"
+> +	@tmp=$$(${MKTEMP} -d) || exit 1; \
+> +	${SONIC_EDIT} -print ${DISTDIR}/${DIST_SUBDIR}/${GO_MODFILE} \
+> +		> $${tmp}/go.mod && \
+> +	(cd $${tmp} && ${SETENVI} ${WRK_ENV} \
+> +		${HTTP_PROXY:DHTTP_PROXY=${HTTP_PROXY:Q}} \
+> +		${http_proxy:Dhttp_proxy=${http_proxy:Q}} \
+> +		${HTTPS_PROXY:DHTTPS_PROXY=${HTTPS_PROXY:Q}} \
+> +		${https_proxy:Dhttps_proxy=${https_proxy:Q}} \
+> +		${NO_PROXY:DNO_PROXY=${NO_PROXY:Q}} \
+> +		${no_proxy:Dno_proxy=${no_proxy:Q}} \
+> +		${GO_ENV} GOPROXY=${GO_GOPROXY} ${GO_CMD} mod download -x all); \
+> +	rc=$$?; ${RM} -r $${tmp}; exit $${rc}
+
+Explain exactly why this whole mess of stuff needs doing. Thoroughly
+research other ports for prior art in terms of solving the sort of
+problem you're doing. This feels hacky to me - and usually the problem
+has been solved elsewhere.
+
+Same goes for all the workarounds in this file. You should study the
+porter's handbook and other ports to learn the common techniques for
+solving issues.
