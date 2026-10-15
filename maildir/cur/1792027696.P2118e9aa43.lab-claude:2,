@@ -1,0 +1,83 @@
+From: claude <claude@p7x.dev>
+Subject: Re: [freebsd-ports PATCH] net-mgmt/signoz: Observability platform for
+ logs, metrics, and traces
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+In-Reply-To: <m2wlrj3h4v.fsf@beastie.p7x.dev>
+References: <b90dbb5ddc5c068f1c2c7fc551b57c5a2d11da8c.1791931184.git.claude@p7x.dev>
+	<m24ieoci5q.fsf@beastie.p7x.dev> <1792000251.b4ad44894faa@p7x.dev>
+	<m2v7736g54.fsf@beastie.p7x.dev> <1792019350.f56a7fe08e33@p7x.dev>
+	<m2qzhr6e58.fsf@beastie.p7x.dev> <1792022920.cecec92bbf5c@p7x.dev>
+	<m2o6cv4x3z.fsf@beastie.p7x.dev> <1792026194.c33970003b9f@p7x.dev>
+	<m2wlrj3h4v.fsf@beastie.p7x.dev>
+Message-ID: <1792027692.fd13b8308f0f@p7x.dev>
+Date: Thu, 15 Oct 2026 01:28:16 +0000
+
+On Wed, 14 Oct 2026 18:08:16 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+> claude <claude@p7x.dev> writes:
+>> When I cloned sonic to write the patch, I found upstream already has
+>> the fix. I should have checked this before I offered to file it.
+>> Commit bf12ab8, "MAP_ANON should be set to -1 , not required on Linux,
+>> required on BSD. + go fmt", by Gregory Boddin, was merged to main on
+>> 2026-09-26. It makes the same change as our vendor patch. No tag
+>> includes it yet; the newest loader release is loader/v0.5.2, from
+>> 2026-07-30, which is the version the port uses.
+>
+> Ports tree has a mechanism where it can refer to a github patch and pull
+> it. Use that instead.
+
+Done in "[freebsd-ports PATCH v5] net-mgmt/signoz: Observability
+platform for logs, metrics, and traces" [1]. The local vendor patch is
+gone. PATCH_SITES and PATCHFILES fetch the upstream commit's .patch
+from GitHub during fetch, and distinfo checksums it like any other
+distfile, so the network rule holds.
+
+The upstream patch names loader/mmap_unix.go, a path in the sonic
+repository, while the port vendors sonic at
+vendor/github.com/bytedance/sonic. PATCH_WRKSRC points there, with
+-p1. The port has no other patches, so that setting affects only this
+one. The commit touches only that file, which is identical in
+loader/v0.5.2 and in the commit's parent, so the patch, go fmt
+changes included, applies cleanly.
+
+I rebuilt the port the same way as v4: fetch and makesum online, then
+extract through check-plist with DISTDIR read-only and the network
+cut. All passed. I also ran the staged binary as an unprivileged user
+with no ClickHouse. It started without a panic, served the web
+interface on port 8080, and answered /api/v1/health with
+{"status":"ok"}.
+
+> The status can't be done if there are next actions for me. Those two are
+> mutually exclusive. You reported a fine-grained objective. I mean the
+> primary objective from the thread, the end goal we're trying to
+> reach. Not one little step along the way.
+>
+> Given that there are next actions for me - what do you think is the objective?
+
+The objective is to get net-mgmt/signoz into the ports tree as a
+working package: it passes your poudriere testport, and the service
+starts as the signoz user. It is not done, because it waits on your
+test.
+
+The rule I wrote in "[PATCH 0/2] End each reply with status and asks"
+[2] caused this. It defined the objective as "the task you were
+given", and it said a done task lists what the reader does with the
+result. Both are wrong by your account, so I posted
+"[PATCH v2 0/2] End each reply with status and asks" [3]. The
+objective is now the thread's end goal, and done is reserved for a
+reached goal with nothing left for the reader.
+
+Objective: Get net-mgmt/signoz into the ports tree as a working
+package that passes your poudriere testport and starts as the signoz
+user.
+Status: Waiting on your poudriere testport and boot test of v5 [1].
+Next actions for you:
+- Run poudriere testport on v5 [1] and "service signoz onestart" from
+  the installed package, and report the result.
+- Review "[PATCH v2 0/2] End each reply with status and asks" [3].
+Information needed from you:
+- none
+
+[1] id:74e7c31f9fd9a5ebd14da35f1d9c5f5b9c09d2b0.1792027621.git.claude@p7x.dev
+[2] id:cover.1792024497.git.claude@p7x.dev
+[3] id:cover.1792027663.git.claude@p7x.dev
