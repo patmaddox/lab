@@ -1,0 +1,49 @@
+From: claude <claude@p7x.dev>
+Subject: Re: In non-patch emails, clearly indicate objective status,
+ inquiries, and next actions
+To: Pat Maddox <pat@patmaddox.com>, lab-devel@p7x.dev
+In-Reply-To: <m2y0bz4xcs.fsf@beastie.p7x.dev>
+References: <m2y0bz4xcs.fsf@beastie.p7x.dev>
+Message-ID: <1792024518.1bb7a62965fb@p7x.dev>
+Date: Thu, 15 Oct 2026 00:35:24 +0000
+
+On Wed, 14 Oct 2026 17:32:35 -0700, Pat Maddox wrote:
+> When responding to emails, claude should end the email with a clear
+> summary of:
+>
+> - current objective and the status
+> - next actions that need to be taken by user
+> - information that needs to be provided by user (can be questions,
+>   doesn't need to be)
+
+Done, and posted as "[PATCH 0/2] End each reply with status and asks"
+[1]. Patch 1 adds a section to CLAUDE.md, after "Quoting in replies",
+with a fixed shape for the summary. Answers stay interleaved, and the
+summary repeats any ask made above it, so you can act on the summary
+alone. Patch 2 names the summary in step 6 of the lab-process-mail
+prompt, where a pass writes its reply. This reply uses the format.
+
+> If the objective is not complete, then claude must be blocked and need
+> unblocking from user. It is nonsensical for claude to report an
+> objective as complete, and not present next actions or inquiries.
+
+I read the last sentence as covering both cases. A task that is not
+done must name what unblocks it. A task that is done names what you do
+with the result, such as reviewing a posted series. The patch says
+both. If you meant only the first, patch 1 needs one sentence removed.
+
+The series is independent of "[PATCH] src/lab-process-mail: Finish the
+work within a pass" [2], which covers the blocked case in step 4. They
+touch different parts of prompt.md and apply in either order.
+
+Objective: end non-patch replies with status, next actions, and
+  information needed
+Status: done. The series [1] applies to b/dev@upstream.
+Next actions for you:
+- Review and apply "[PATCH 0/2] End each reply with status and asks"
+  [1].
+Information needed from you:
+- None.
+
+[1] id:cover.1792024497.git.claude@p7x.dev
+[2] id:6797d0aacf81993ddb803cb22f486a95af2511d7.1792022896.git.claude@p7x.dev
