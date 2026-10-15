@@ -1,0 +1,96 @@
+From: claude <claude@p7x.dev>
+Subject: Re: [freebsd-ports PATCH v5] net-mgmt/signoz: Observability platform
+ for logs, metrics, and traces
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+In-Reply-To: <m2o6cv3fws.fsf@beastie.p7x.dev>
+References: <74e7c31f9fd9a5ebd14da35f1d9c5f5b9c09d2b0.1792027621.git.claude@p7x.dev>
+	<m2o6cv3fws.fsf@beastie.p7x.dev>
+Message-ID: <1792028697.1325f7a1c8c9@p7x.dev>
+Date: Thu, 15 Oct 2026 01:45:06 +0000
+
+On Wed, 14 Oct 2026 18:34:43 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+> claude <claude@p7x.dev> writes:
+> 
+> > Changes in v4:
+> > - Fix the poudriere build, which failed in extract with "rm: go.mod:
+> >   Permission denied": post-fetch now writes go.mod in DIST_SUBDIR only
+> >   when its content changes, so the unprivileged re-run of fetch in
+> >   extract writes nothing.
+> 
+> That seems like a BS hack that will fail in a different condition. Am I
+> misunderstanding?
+
+No, you are right. The guard only hid the real fault, which was that
+the port wrote an edited go.mod into DISTDIR at all. DISTDIR holds
+what upstream publishes, checked against distinfo; the edited file was
+derived from the port, unchecksummed, and outlived the build.
+
+One condition where it fails: go.mk links go.mod in DIST_SUBDIR only
+if none exists ("[ -e go.mod ] || ${RLN} ${GO_MODFILE} go.mod" in
+go-post-fetch). Once v4 had replaced that link with the edited file,
+a later version of the port that drops the bump, without a new
+DISTVERSION, would leave the stale file in place on any persistent
+DISTDIR, and go-post-fetch would silently download the old bumped
+graph. Two ports trees that share a DISTDIR and differ in the bump
+would also overwrite each other's file.
+
+> We need this port to work. If a file needs to be modified, it needs to
+> be modified correctly.
+> 
+> Thoroughly analyze porter's handbook, poudriere docs and source
+> code. Produce a real fix, not hacky workarounds that will fail as soon
+> as something changes.
+
+The fix is posted as "[freebsd-ports PATCH v6] net-mgmt/signoz:
+Observability platform for logs, metrics, and traces" [1]. The port no
+longer writes into DIST_SUBDIR. The only file it modifies is go.mod in
+WRKSRC, which is where the Porter's Handbook puts changes to the
+sources, and that edit is unchanged.
+
+What I read, and what it established:
+
+- bsd.port.mk: _EXTRACT_DEP= fetch, so every phase after fetch runs
+  the fetch sequence again, post-fetch and go-post-fetch included.
+- poudriere's common.sh, build_port(): only fetch runs as root with
+  the network. It starts with an empty /portdistfiles, with symlinks
+  into the read-only cache for files already there. extract and later
+  phases run as PORTBUILD_USER, offline. After checksum,
+  gather_distfiles copies back only the port's ALLFILES, so neither
+  the edited go.mod nor the module cache ever reached the shared
+  distfiles cache.
+- Mk/Uses/go.mk: go-post-fetch runs "go mod download -x all" against
+  upstream's go.mod, with GOPATH in ${DISTDIR}/go/<origin>, so modules
+  land in that module cache, verified against sum.golang.org.
+  go-post-extract tidies and vendors from it with GOPROXY=file://.
+
+v6 uses that same mechanism for the two bumped modules. post-fetch
+writes the edited go.mod into a mktemp(1) directory, runs the same
+"go mod download" there with the same GO_ENV, and removes the
+directory. The bumped modules land in the same cache, checked the same
+way. In extract, the re-run only reads the cache, exactly as
+go-post-fetch's own re-run does; it holds no state and tests no
+condition. www/comentario fetches an extra module the same way. I also
+looked at the GH_TUPLE route that the golang/sys bumps took, for
+example games/neo-cowsay. It would mean replacing vendored directories
+and patching vendor/modules.txt by hand, and every signoz update would
+have to redo that.
+
+I tested it the way poudriere runs it. fetch ran into an empty
+DISTDIR with the network up. Then DISTDIR was made read-only and the
+network cut, and extract through stage and check-plist passed with no
+download logged. The vendored sonic is v1.15.4 and loader v0.5.2, and
+the staged binary ran its HTTP servers without a panic. A real
+poudriere run is still the one test I cannot do here.
+
+Objective: net-mgmt/signoz accepted into the ports tree
+Status: waiting on your poudriere build and review of v6
+Next actions for you:
+- Build v6 in poudriere (just testport net-mgmt/signoz), and send the
+  log if it fails
+- The rc.d start as the signoz user that you offered to run, once it
+  builds
+Information needed from you:
+- none
+
+[1] id:65e5d96216421fede90ada8a07333f559d92b029.1792028652.git.claude@p7x.dev
