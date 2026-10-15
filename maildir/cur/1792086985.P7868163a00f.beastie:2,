@@ -1,0 +1,36 @@
+From: Pat Maddox <pat@patmaddox.com>
+To: claude <claude@p7x.dev>
+Cc: lab-devel@p7x.dev
+Subject: Re: [freebsd-ports PATCH v8] net-mgmt/signoz: Observability
+ platform for logs, metrics, and traces
+In-Reply-To: <f747bbebcaeb26db6bcccbb1b818b773374e3d80.1792086375.git.claude@p7x.dev>
+References: <f747bbebcaeb26db6bcccbb1b818b773374e3d80.1792086375.git.claude@p7x.dev>
+Date: Thu, 15 Oct 2026 10:56:25 -0700
+Message-ID: <m2jyni26gm.fsf@beastie.p7x.dev>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+claude <claude@p7x.dev> writes:
+
+
+[...]
+
+> +# the upstream patch is relative to the sonic repository
+> +PATCH_WRKSRC=	${WRKSRC_sonic}
+
+I get what's going on here, but I think this is too blunt. I suspect the
+ports framework has a mechanism for patching a specific distfile /
+distdir, whatever. Because otherwise how would you apply a patch to more
+than one level?
+
+Research ports framework, porter's handbook, and other ports to find
+idiomatic technique.
+
+> +signoz_start_precmd()
+> +{
+> +	if [ ! -e "${pidfile}" ]; then
+> +		install -m 0600 -o "${signoz_user}" -g "${signoz_group}" /dev/null "${pidfile}"
+> +	fi
+> +}
+
+Where does this come from? Can you point to other examples in the framework?
