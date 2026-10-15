@@ -1,0 +1,282 @@
+From: claude <claude@p7x.dev>
+Subject: Re: Research incremental upgrade procedure in ports tree
+To: Pat Maddox <pat@patmaddox.com>, lab-devel@p7x.dev
+In-Reply-To: <m2zewezg6z.fsf@beastie.p7x.dev>
+References: <m2a4oe1sby.fsf@beastie.p7x.dev>
+	<1792105592.867c44fa07b3@p7x.dev> <m2zewezg6z.fsf@beastie.p7x.dev>
+Message-ID: <1792108437.e84520fb3e60@p7x.dev>
+Date: Thu, 15 Oct 2026 23:54:05 +0000
+
+On Thu, 15 Oct 2026 16:39:48 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+> The UPDATING approach seems risky. I have to keep an eye on the ports
+> tree, watch out for every release, and upgrade each one. If I miss a
+> required one, I'm hosed, right?
+
+Yes, and it is worse than a missed note. By the time you see the
+problem, pkg has already replaced the old package. pkg shows a
+`type: upgrade` message only after it installs the new one
+(libpkg/pkg_add.c:1805-1821, pkg at 34da047). GitLab's own
+schema_version_check then refuses to migrate the database, so the
+service is down on code that will not run against your data.
+
+There is also nothing to go back to. pkg.freebsd.org keeps only
+latest, the current quarterly, and the release_N snapshots. A named
+old quarter such as FreeBSD:14:amd64/2025Q4/ returns 404. The forum
+thread "GitLab skip major version update not possible but cannot find
+old mid versions packages" [a] (May 2025) is this exact case: 15 to 17
+with no 16 package anywhere. The advice there was to check out an old
+ports revision and build it in a jail.
+
+I need to correct my last reply. I said nothing in pkg could block an
+upgrade, but that is too strong. pkg has no declarative rule, but a
+pre-install script can refuse. A nonzero exit from pkg-pre-install, or
+an error from pkg-pre-install.lua, is fatal (libpkg/scripts.c:309-314,
+lua_scripts.c:113-121). Both run before anything is extracted
+(pkg_add.c:1700-1708), and the framework already packages them
+(Mk/bsd.port.mk:1940). No port in the tree uses one to check versions.
+GitLab's own deb and rpm packages do, though. Their preinst sets
+MIN_VERSION and exits 1 with "It is required to upgrade to the latest
+${MIN_VERSION}.x version first" [b].
+
+> Here's what I have in mind:
+>
+> - a slave port (I think that's the name / mechanism in ports?) or a
+>   virtual port that does nothing but include info about how to upgrade
+
+Slave port is the right name; the mechanism is MASTERDIR. For example,
+games/openbor3482 pins an older games/openbor with its own
+PORTVERSION, PKGNAMESUFFIX, and distinfo.
+
+I would not put the upgrade info in a separate port, though. It is
+only useful at the moment pkg is about to upgrade, and the only scripts
+that run then belong to the package being upgraded. It belongs in that
+package's guard, so the refusal itself names the stop and says how to
+install it.
+
+> - a port for every stop point, or maybe a flavor for every stop point
+
+I recommend a slave port per stop. A flavor can carry its own
+DISTVERSION if you set it by hand, as devel/libclc does with
+DISTVERSION=${DISTVERSION_${FLAVOR}}. But the flavor helpers vary
+only DESCR, PLIST, and the package name (Mk/bsd.port.mk:1486-1497).
+All flavors share one distinfo, one files/, and one dependency list,
+and those are exactly what differ between stops. A slave owns its
+distinfo and files/, and you can delete it without touching the
+master.
+
+> - package message that shows how to upgrade
+
+Keep it, but as the second line of defense. It is shown after the
+install, so it cannot stop anything. The text that matters is the
+guard's refusal. A pkg pull request adding a message shown before
+installation [c] has been open since 2020.
+
+> - stop points are retired after some period of time (6 months, a year?)
+
+I answer this at the end, because the guard changes what retirement
+costs.
+
+> A challenge is that we don't necessarily know what is a stop point until
+> after the fact. It's only when a new release comes out that we know it's
+> a stop point.
+
+A guard handles this well, because the floor belongs to the newer
+package. When N+1 ships saying "you must come from N", the port update
+to N+1 adds "floor N". N's package never changes, and nobody has to
+predict stops. Every system I found that enforces stops puts the check
+in the newer version:
+- GitLab's preinst;
+- Nextcloud's $OC_VersionCanBeUpgradedFrom allowlist [d], which its
+  Docker entrypoint enforces too;
+- OpenShift's update graph, which adds and blocks upgrade edges after
+  release in a separate data repo [e].
+
+The hard part is the other side. Once you learn that N is a stop, a
+package for N has to exist. If the port has already moved past N, the
+only way back is to build N from ports git. Every quarterly branch
+since 2014Q1 is still there, so this is always possible, but it is not
+a pkg install.
+
+For GitLab most of the surprise is gone. Since 17.5 its stops fall at
+x.2, x.5, x.8, and x.11, "to provide a predictable upgrade schedule"
+[f]. They are listed in config/upgrade_path.yml in the GitLab source
+[g], so a port could read its floor from the distfile instead of
+keeping it by hand. I have not checked that www/gitlab's distfile
+carries that file.
+
+SigNoz stops are not predictable. v0.86 is mandatory for its SQL
+migrations [h], and v0.113 replaced the schema migrator [i]. SigNoz
+publishes an Upgrade Path Tool, but I found no machine-readable list
+behind it.
+
+> I want to come up with a way that is operationally responsible. The
+> reality of the current way is that you cannot run GitLab unless you
+> build it yourself and stop at versions - otherwise there's too much risk
+> in missing a necessary upgrade.
+
+Agreed. FreeBSD users report the same thing, in the thread above and
+in "pkg upgrade package to intermediate version" [j], about the 13.12
+stop. The answer there was that pkg offers only what the repo has.
+
+> Do some more research to see if anyone has thought about this in more
+> depth than just some notes in UPDATING. Also research how this problem
+> is approached in other ecosystems.
+
+Within FreeBSD I found nothing deeper. I checked ports at 8d0e75871
+(2026-10-15), pkg's source and GitHub issues, Bugzilla, and the forums.
+For the mailing lists I relied on web searches and did not read the
+archives directly, so treat that "nothing" as weak. The closest items:
+- pkg issue #1573, multiple versions of a package in one repo, is
+  still open [k];
+- pkg PR #1910 [c] is the pre-install message above;
+- Bug 247616, a broken gitlab-ce 12.9 to 13.1 upgrade, ended with a
+  pointer to upstream's per-step guides.
+Every versioned port in the tree (mongodbNN, postgresqlNN, and so on)
+exists for parallel support. None is kept as an upgrade stop.
+
+Other ecosystems, from most to least relevant:
+
+- GitLab does it in three layers. A data file lists the stops [g].
+  The omnibus preinst refuses a skipped stop [b]. The app refuses to
+  migrate a schema older than its oldest shipped migration. Every
+  version stays on packages.gitlab.com, and users pin each hop with
+  `apt install gitlab-ee=<version>`.
+
+- NixOS is the closest match to a ports tree. Nextcloud is packaged
+  as nextcloudNN, one package per major, and the default comes from
+  system.stateVersion, so a rebuild never moves you a major on its
+  own. The module warns which major comes next. When a major is
+  removed, its name stays behind as an alias that fails with the
+  stop, e.g. "if you were on Nextcloud 31 you have to upgrade to
+  Nextcloud 32 first on 26.05" [l]. A retired stop still tells you
+  where it is.
+
+- Nextcloud also refuses multi-major jumps in the app [d] and in its
+  Docker image. Its snap has one track per major (27/stable), so a
+  user steps through with `snap refresh --channel=`.
+
+- OpenShift's Cincinnati is a formal upgrade graph. Releases are
+  nodes and allowed upgrades are edges. The client walks it one hop at
+  a time, and edges can be blocked after release [e]. Kubernetes OLM
+  does the same for operators with `replaces` and `skipRange` [m].
+
+- Debian, Fedora, and Arch make the distribution release the stop,
+  and you may not skip releases. Majors that need it ship as parallel
+  packages (postgresql-NN; Arch's postgresql-old-upgrade always runs
+  one major behind). A Debian preinst receives the old version as $2,
+  so it could refuse, but I found no package that does. RPM %pre can
+  refuse but is not told the old version. Homebrew has foo@X
+  formulae and no stop mechanism.
+
+I found no general write-up of the problem: nothing on LWN and no
+talk. The best design discussion is GitLab's own, in the merge request
+that introduced scheduled stops [n] and the issue on keeping stops
+from piling up [o].
+
+> I would like to think through this
+> and see if there's a way to provide a reliable upgrade path for tools
+> that require upgrade stops.
+
+I propose three parts.
+
+1. Refuse in the main port. Add a pkg-pre-install guard that compares
+   the version the data was last migrated at with the port's floor.
+   If the data is older, it exits 1 with a message naming the stop
+   and how to get it. "Hosed" becomes "pkg upgrade failed and nothing
+   changed". The floor is a single Makefile variable, substituted into
+   the script with SUB_FILES.
+
+   Where the old version comes from matters. pkg does not tell scripts
+   which version they replace. It knows (pkg_jobs.c:2086) but exports
+   only PKG_UPGRADE=true (scripts.c:106-107). In a split upgrade the
+   old package is deleted before the new pre-install runs
+   (pkg_add.c:1741-1745), so a file from the old plist may be gone
+   already. I would therefore keep a stamp in the state directory,
+   e.g. /var/db/signoz/version, written by the rc script after a
+   successful migration and left out of the plist. It records what
+   actually matters, which is the version the data is at. It also
+   catches a reinstall over old data after a pkg delete.
+
+   It has limits. `pkg upgrade -I` or RUN_SCRIPTS=no bypasses it, so
+   it is a guard, not a lock. From my reading of pkg_jobs.c:2208-2248,
+   pkg stops the job at the first failure but does not roll back
+   packages already upgraded in that run. GitLab's dependencies, like
+   gitaly, are separate packages and could move anyway; SigNoz is a
+   single package, so that does not apply. I could not test any of
+   this, because pkg needs root even for a scratch rootdir, so all of
+   it is read from source.
+
+2. Supply stops as slave ports, as you suggested. For example,
+   net-mgmt/signoz086 would set MASTERDIR=../signoz and carry its own
+   DISTVERSION, distinfo, PKGNAMESUFFIX, and CONFLICTS_INSTALL.
+   Binary packages carry no conflicts and pkg never swaps one package
+   name for another, so the hop is explicit, and the guard can print
+   it verbatim:
+
+     pkg delete signoz && pkg install signoz086
+     service signoz start # migrates; stamp moves to 0.86
+     pkg delete signoz086 && pkg install signoz
+
+   That works for SigNoz, whose Go modules are vendored per version,
+   so a stop builds from its own distfiles. It does not work for
+   GitLab. A GitLab stop needs the rubygem ports as they were at the
+   time, and the tree has moved on, so each stop port would drag a
+   frozen copy of hundreds of dependencies with it.
+
+   For GitLab, and for the lab in general, a stop repo is the better
+   fit. Your poudriere builds the port from the quarterly branch or
+   ports commit where it sat at the stop version, into its own repo,
+   under the same package name. The hop is then `pkg install -r
+   <stop-repo> gitlab-ce` followed by a normal upgrade. There are no
+   name swaps, and the dependencies match their tree. This is what
+   GitLab's package server and NixOS's release branches amount to: an
+   older snapshot kept on purpose. The official ports tree cannot
+   offer it, but the guard can still name the branch to build.
+
+3. Retire stops with a tombstone. When a stop port is removed, the
+   guard keeps refusing, and its message names the stop and how to
+   build it, e.g. "build net-mgmt/signoz from branch 2026Q3". That is
+   the NixOS alias. After retirement nobody is hosed; they just take
+   a slower path. So the retirement period is a convenience, not a
+   safety margin. I suggest counting it in quarterly branches, not
+   months, and keeping a stop until four have shipped past it, about a
+   year. At GitLab's four stops a year, that means at most four stop
+   ports at once, which is another reason to use repos for GitLab.
+
+My recommendation is to try parts 1 and 3 on net-mgmt/signoz first.
+You accepted v10 [1], and its rc script is already where migrations
+are about to land, per the collector plan in "Re: [freebsd-ports PATCH
+v10] net-mgmt/signoz: Observability platform for logs, metrics, and
+traces" [2]. That plan runs "migrate sync check" from start_precmd, and
+writing the stamp belongs right next to it. The current floor would be
+empty, since the port starts at 0.145.0, so the patch would add the
+mechanism and a test of the refusal in your poudriere jail, where pkg
+runs as root. Part 2 waits until a real stop shows up.
+
+What I need from you is a choice:
+(a) fold the guard and stamp into the collector series;
+(b) send them as their own patch on top of v10;
+(c) prototype on a toy port first, outside signoz.
+I recommend (b). It keeps the collector series about the collector, and
+it lets you judge the mechanism by itself.
+
+[1] "[freebsd-ports PATCH v10] net-mgmt/signoz: Observability platform
+    for logs, metrics, and traces"
+    id:69c6aeed91d2a7643f5d17abc900d0804128f0e6.1792088188.git.claude@p7x.dev
+[2] id:1792107818.41231538fd6e@p7x.dev
+
+[a] https://forums.freebsd.org/threads/gitlab-skip-major-version-update-not-possible-but-cannot-find-old-mid-versions-packages.97969/
+[b] https://gitlab.com/gitlab-org/omnibus-gitlab/-/raw/master/config/templates/package-scripts/preinst.erb
+[c] https://github.com/freebsd/pkg/pull/1910
+[d] https://raw.githubusercontent.com/nextcloud/server/master/lib/private/Updater.php
+[e] https://github.com/openshift/cincinnati-graph-data
+[f] https://docs.gitlab.com/update/upgrade_paths/
+[g] https://gitlab.com/gitlab-org/gitlab/-/raw/master/config/upgrade_path.yml
+[h] https://signoz.io/docs/operate/migration/upgrade-0.86
+[i] https://signoz.io/docs/operate/migration/upgrade-0-113/
+[j] https://forums.freebsd.org/threads/pkg-upgrade-package-to-intermediate-version.82548/
+[k] https://github.com/freebsd/pkg/issues/1573
+[l] https://raw.githubusercontent.com/NixOS/nixpkgs/master/pkgs/top-level/aliases.nix
+[m] https://olm.operatorframework.io/docs/concepts/olm-architecture/operator-catalog/creating-an-update-graph/
+[n] https://gitlab.com/gitlab-org/gitlab/-/merge_requests/110468
+[o] https://gitlab.com/gitlab-org/gitlab/-/issues/412696
