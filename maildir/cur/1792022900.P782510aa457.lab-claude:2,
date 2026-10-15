@@ -1,0 +1,49 @@
+Message-ID: <6797d0aacf81993ddb803cb22f486a95af2511d7.1792022896.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Subject: [PATCH] src/lab-process-mail: Finish the work within a pass
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+Change-Id: vrykpvoortuqxuxywvqoxtokxtlnuypu
+Date: Thu, 15 Oct 2026 00:08:20 +0000
+
+A pass that ends with a plan for later work leaves that work undone,
+because nothing runs between passes; it waits until Pat writes again
+and asks why nothing happened. When a pass truly cannot finish, a bare
+status report gives him nothing to decide. Naming what is needed, or
+the options with their costs and a recommendation, lets one reply from
+him unblock the work.
+---
+change-id: vrykpvoortuqxuxywvqoxtokxtlnuypu
+base-branch: b/dev@upstream
+
+This came out of review of the signoz port, where a pass answered with
+a plan instead of the work.
+
+ src/lab-process-mail/prompt.md | 9 +++++++--
+ 1 file changed, 7 insertions(+), 2 deletions(-)
+
+diff --git a/src/lab-process-mail/prompt.md b/src/lab-process-mail/prompt.md
+index c7121e3..233e750 100644
+--- a/src/lab-process-mail/prompt.md
++++ b/src/lab-process-mail/prompt.md
+@@ -157,8 +157,13 @@ For code changes, work in your workspace on a fresh change:
+ Follow CLAUDE.md for commit messages and patch scope: one logical
+ change per commit, each message explaining why, and the series
+ self-contained against `${lab_base}`. Test the change and review your
+-own diff before sending it. If you cannot finish, send a reply that
+-says what blocked you and what you need.
++own diff before sending it.
++
++Finish the work in this pass. Nothing runs between passes, so a reply
++that promises work for later only stalls it until Pat writes again.
++If you cannot finish, the reply says what blocked you and gives Pat
++something to act on: what you need from him, or the options you found,
++each with its cost, and the one you recommend.
+ 
+ ## 5. Post the series
+ 
+
+base-commit: 4a5c3f490faee0035da3776adb0cf72add68a29f
+-- 
+2.56.0
+
