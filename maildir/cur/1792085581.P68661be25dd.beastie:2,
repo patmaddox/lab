@@ -1,0 +1,101 @@
+From: Pat Maddox <pat@patmaddox.com>
+To: claude <claude@p7x.dev>
+Cc: lab-devel@p7x.dev
+Subject: Re: [freebsd-ports PATCH v7] net-mgmt/signoz: Observability
+ platform for logs, metrics, and traces
+In-Reply-To: <2c36442b0f0ef13c3f17984232ef0a2eb1acd243.1792037421.git.claude@p7x.dev>
+References: <2c36442b0f0ef13c3f17984232ef0a2eb1acd243.1792037421.git.claude@p7x.dev>
+Date: Thu, 15 Oct 2026 10:33:01 -0700
+Message-ID: <m2tsmm27jm.fsf@beastie.p7x.dev>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+claude <claude@p7x.dev> writes:
+
+> SigNoz is an open source observability platform. It brings logs,
+> metrics, and traces together in one application, with dashboards,
+> alerts, exceptions, and service maps. It is native to OpenTelemetry and
+> stores its data in ClickHouse.
+>
+> This is the Community Edition of the query service and web interface.
+> Telemetry reaches ClickHouse through the SigNoz distribution of the
+> OpenTelemetry Collector, which is packaged separately.
+>
+> Upstream pins github.com/bytedance/sonic v1.14.1, which does not build
+> with Go 1.26 or later. The port vendors sonic from an upstream commit
+> after v1.15.4 instead; that commit also fixes mmap(2) on FreeBSD, which
+> no sonic release includes yet.
+>
+> WWW: https://signoz.io/
+> ---
+> Notes for review:
+>
+> Build: on the base commit below, with Go 1.27.2 and STRICT_DEPENDS
+> set, makesum fetched into an empty DISTDIR with the network up. Then,
+> as in a poudriere jail, DISTDIR was made read-only and the network was
+> cut by pointing the proxy variables at a closed port. extract, patch,
+> build, stage, and check-plist all passed, and go logged no download
+> after fetch. The staged binary, run as an unprivileged user with no
+> ClickHouse, started its HTTP servers and ran for 30 seconds without a
+> panic. portclippy, portfmt, and portlint are clean. Not checked: a
+> real poudriere build, aarch64, and a run from rc.d (that needs root).
+>
+> Why sonic must be replaced: signoz v0.145.0 pins
+> github.com/bytedance/sonic v1.14.1. Its internal/rt package defines
+> GoMapIterator only for go1.24 && !go1.26, so with the tree's Go 1.26
+> or 1.27 it fails with "undefined: GoMapIterator". This is not specific
+> to FreeBSD, and go.mk offers no older Go. sonic added Go 1.26 support
+> in v1.15.0. signoz main and v0.146.0 still pin v1.14.1; SigNoz PR
+> #11975, "fix(deps): bump bytedance/sonic to v1.15.0 for Go 1.26
+> compatibility", has been open since July. Separately, sonic's loader
+> maps memory with MAP_ANON and fd 0, which FreeBSD rejects with EINVAL,
+> so the binary panics at startup. bytedance/sonic commit bf12ab8,
+> "MAP_ANON should be set to -1 , not required on Linux, required on
+> BSD. + go fmt", fixes that and is in no release yet.
+
+[...]
+
+> The tuple is commit bf12ab8 rather than a tag, since only that commit
+> has the mmap fix. It is v1.15.4 plus five bug fixes, and its loader
+> differs from loader/v0.5.2 only in mmap_unix.go. sonic v1.15.4 needs
+> no new modules: its go.mod differs from v1.14.1's only in the loader
+> version. go.mod and vendor/modules.txt still name v1.14.1 and v0.3.0,
+> so go's vendor consistency check passes. The cost is that "go version
+> -m" reports those versions, as it does for nebula's x/ modules. When a
+> sonic release has the fix, the tuple becomes that tag.
+
+I am curious about this... the previous version used the patch file,
+which I think is the right way to do this. Why did you move away from
+that approach for this round?
+
+The post-fetch and post-extract were what I object to. If it's possible
+to use the defined version, and apply the one mmap patch, I think that
+would be ideal.
+
+If that's not possible, fine, but I want to understand why.
+
+
+[...]
+
+> diff --git a/net-mgmt/signoz/pkg-plist b/net-mgmt/signoz/pkg-plist
+> new file mode 100644
+> index 000000000000..4e2438d6f675
+> --- /dev/null
+> +++ b/net-mgmt/signoz/pkg-plist
+> @@ -0,0 +1,6 @@
+> +bin/signoz
+> +%%DATADIR%%/example.yaml
+
+Does example.yaml match the defaults, and so can be installed to
+/usr/local/etc/signoz.yaml? Research packages from other sources
+(probably linux package repos for the most part) to get ideas for how to
+package this.
+
+> +%%DATADIR%%/templates/alertmanager/email.gotmpl
+> +%%DATADIR%%/templates/email/invitation.gotmpl
+> +%%DATADIR%%/templates/email/reset_password.gotmpl
+
+Tell me more about these files. If they might be used in modified form
+in the config, then do we need a /usr/local/etc/signoz dir, potentially
+using /usr/local/etc/signoz/signoz.yaml for the config, so that we can
+include additional configs?
