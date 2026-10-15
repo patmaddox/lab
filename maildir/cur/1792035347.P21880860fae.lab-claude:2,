@@ -1,0 +1,77 @@
+From: claude <claude@p7x.dev>
+Subject: Re: New patch series must have an interdiff
+To: Pat Maddox <pat@patmaddox.com>, lab-devel@p7x.dev
+In-Reply-To: <m2ecdr3aq6.fsf@beastie.p7x.dev>
+References: <m2ecdr3aq6.fsf@beastie.p7x.dev>
+Message-ID: <1792035343.107b4626e57a@p7x.dev>
+Date: Thu, 15 Oct 2026 03:35:47 +0000
+
+On Wed, 14 Oct 2026 20:26:41 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+> Several patch series have had new versions recently that do not have
+> interdiffs. This makes it difficult to understand what changed between
+> the two versions.
+
+The signoz revisions slipped past because the freebsd-port skill
+formats ports patches with plain git format-patch, so no check saw
+them. "[PATCH 0/2] Require an interdiff on revised series" [1] would
+not have caught them either, and it was never applied.
+
+> We should be able to do the interdiff deterministically rather than via
+> inference. The previous version is known, so it's possible to fetch the
+> SHA, or apply the patches if necessary, to get the old version and
+> perform the interdiff with the new version.
+
+Posted as "[PATCH v2 0/4] Require an interdiff on revised series" [2],
+on b/dev@upstream. It applies the patches rather than fetching the
+SHA. The commits behind a posted version are often rewritten or never
+existed in our trees, while the mail always exists and is what you
+reviewed.
+
+- series-rebuild.sh takes the Message-ID of a cover letter or a
+  single patch. It applies the posted patches onto their base-commit,
+  or onto another commit with -o, and prints the range. Each commit
+  is dated from its message, so the same mail always rebuilds to the
+  same ids.
+- format-patch.sh refuses -v N for N > 1 without --previous=<id>. It
+  rebuilds the previous version onto the new --base and interdiffs
+  against that, so a rebase does not fill the interdiff with
+  everything that landed between the two bases.
+- prompt.md, the mail workflow guide, and the freebsd-port skill say
+  how to use it.
+
+I checked that it is deterministic. Rebuilding each signoz version
+from the list gave a tree identical to the commit it was formatted
+from. v2 was formatted with the new script, and rebuilds to its own
+tree too.
+
+v1 of that series no longer applies to b/dev, because its second
+patch edited the process-email skill, which b/dev removed. So
+format-patch.sh fell back to a range-diff, as designed, and the
+pairing in it is poor. If you would rather have the interdiff across
+both bases even when it is noisy, I can make the fallback emit both.
+
+> Additionally, respond to the cover letters for the signoz patch series
+> with interdiffs, essentially backfilling what should have been there in
+> the first place.
+
+Done. Each signoz revision was a single patch with no cover letter, so
+I replied to the patches of v2 through v6 with an interdiff against
+the version before. v1 to v2 and v5 to v6 crossed a base change, and
+in both cases the older version applied cleanly onto the newer base,
+so each interdiff shows only the revision. The latest is
+"Re: [freebsd-ports PATCH v6] net-mgmt/signoz: Observability platform
+for logs, metrics, and traces" [3].
+
+Objective: every revised series carries an interdiff computed from
+  the list
+Status: waiting on your review of the v2 series [2]
+Next actions for you:
+- Review "[PATCH v2 0/4] Require an interdiff on revised series" [2]
+Information needed from you:
+- Whether the fallback, when the old version no longer applies to the
+  new base, should be a range-diff alone (as posted) or also an
+  interdiff across both bases
+
+[1] id:cover.1792005540.git.claude@p7x.dev
+[2] id:cover.1792035264.git.claude@p7x.dev
+[3] id:1792035318.fb55afbf6ff6@p7x.dev
