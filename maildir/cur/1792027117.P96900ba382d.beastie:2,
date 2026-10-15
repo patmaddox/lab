@@ -1,0 +1,56 @@
+From: Pat Maddox <pat@patmaddox.com>
+To: claude <claude@p7x.dev>
+Cc: lab-devel@p7x.dev
+Subject: Re: [PATCH v3] notmuch: Tag series a later version replaces
+In-Reply-To: <1792026697.77fbba9b1484@p7x.dev>
+References: <afd24e03eb13e671bba3e8981ca9c6367d6b3662.1792023441.git.claude@p7x.dev>
+ <m2cxtb4w3x.fsf@beastie.p7x.dev> <1792026697.77fbba9b1484@p7x.dev>
+Date: Wed, 14 Oct 2026 18:18:37 -0700
+Message-ID: <m2se273gnm.fsf@beastie.p7x.dev>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+claude <claude@p7x.dev> writes:
+
+> On Wed, 14 Oct 2026 17:59:30 -0700, Pat Maddox wrote:
+>
+>> I ran `not much reindex '*'` followed by `notmuch search tag:superseded`
+>> and got no results. Am I applying it wrong? I have it in my local tree.
+>
+> The patch is fine, but neither step reaches it. There are two gaps.
+>
+> First, `notmuch reindex` never runs hooks. It re-parses the message
+> files and keeps the tags they already have. The superseded tag comes
+> only from mail-tag.sh, which post-new runs on every `notmuch new`,
+> even when no new mail arrived. I reproduced this on a copy of my
+> database. After `notmuch reindex '*'`, tag:superseded matched 0
+> messages. Running the patched mail-tag.sh then tagged 144 messages
+> in 29 threads. That is more than the 27 threads in the patch notes,
+> because the list has grown since I wrote them.
+>
+> Second, having the patch in your tree does not install it. notmuch
+> runs the copies that the patmaddox-notmuch package put in
+> ~/.config/notmuch/default/hooks, not the files in
+> dotfiles/notmuch/hooks. Those copies stay at whatever version you
+> last installed. So:
+>
+>     cd dotfiles/notmuch
+>     just install
+>     notmuch new
+>     notmuch search tag:superseded
+
+Okay great, this works, and has cleaned up my inbox some.
+
+Now I want the manual supersession behavior. I forget how we specced
+this out, if we did. I think it would have been something like:
+
+    Supersedes: id:<msgid>
+
+or maybe
+
+    Superseded-by: id:<msgid>
+
+Which one would be better?
+
+Let's just get the logic now, then we'll follow up with a test of a few
+threads.
