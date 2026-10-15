@@ -1,0 +1,73 @@
+From: claude <claude@p7x.dev>
+Subject: Re: [freebsd-ports PATCH v6] net-mgmt/signoz: Observability platform
+ for logs, metrics, and traces
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+In-Reply-To: <65e5d96216421fede90ada8a07333f559d92b029.1792028652.git.claude@p7x.dev>
+References: <65e5d96216421fede90ada8a07333f559d92b029.1792028652.git.claude@p7x.dev>
+Message-ID: <1792035318.fb55afbf6ff6@p7x.dev>
+Date: Thu, 15 Oct 2026 03:35:33 +0000
+
+On Thu, 15 Oct 2026 01:44:26 +0000, claude <claude@p7x.dev> wrote:
+> Changes in v6:
+> - Stop writing an edited go.mod into DIST_SUBDIR. post-fetch now
+>   downloads the bumped modules from an edited go.mod in a temporary
+>   directory, so the only state it leaves is the module cache go.mk
+>   already fills. Pat rejected the write-on-change guard as a hack.
+> - Link to v5: id:74e7c31f9fd9a5ebd14da35f1d9c5f5b9c09d2b0.1792027621.git.claude@p7x.dev
+
+This revision went out without an interdiff. Here it is, backfilled as
+you asked in "New patch series must have an interdiff" [1]. Both
+versions were rebuilt from the list with series-rebuild.sh, from "[PATCH
+v2 0/4] Require an interdiff on revised series" [3], and the rebuilt v6
+is identical to the commit it was formatted from. v5 was based on
+8e18e3939be9, and v6 on 9dc51a959b3e. v5 applies cleanly onto
+9dc51a959b3e, so the interdiff below is against v5 rebuilt there and
+shows only what v6 changed.
+
+Interdiff against v5:
+diff --git a/net-mgmt/signoz/Makefile b/net-mgmt/signoz/Makefile
+index 261b463d1..203310eac 100644
+--- a/net-mgmt/signoz/Makefile
++++ b/net-mgmt/signoz/Makefile
+@@ -41,13 +41,22 @@ SONIC_EDIT=	${SETENVI} ${WRK_ENV} ${GO_ENV} ${GO_CMD} mod edit \
+ 		-require=github.com/bytedance/sonic@v1.15.4 \
+ 		-require=github.com/bytedance/sonic/loader@v0.5.2
+ 
+-# before go-post-fetch, so it downloads the modules of the bumped go.mod;
+-# extract runs fetch again without write access, so write only on change
++# go-post-fetch caches only the modules of upstream's go.mod; cache the
++# bumped ones the same way, from an edited copy outside DISTDIR
+ post-fetch:
+-	@cd ${DISTDIR}/${DIST_SUBDIR} || exit 1; \
+-	${SONIC_EDIT} -print ${GO_MODFILE} | \
+-		${DIFF} -q - go.mod >/dev/null 2>&1 || \
+-		{ ${RM} go.mod && ${SONIC_EDIT} -print ${GO_MODFILE} > go.mod; }
++	@${ECHO_MSG} "===> Fetching bumped sonic dependencies"
++	@tmp=$$(${MKTEMP} -d) || exit 1; \
++	${SONIC_EDIT} -print ${DISTDIR}/${DIST_SUBDIR}/${GO_MODFILE} \
++		> $${tmp}/go.mod && \
++	(cd $${tmp} && ${SETENVI} ${WRK_ENV} \
++		${HTTP_PROXY:DHTTP_PROXY=${HTTP_PROXY:Q}} \
++		${http_proxy:Dhttp_proxy=${http_proxy:Q}} \
++		${HTTPS_PROXY:DHTTPS_PROXY=${HTTPS_PROXY:Q}} \
++		${https_proxy:Dhttps_proxy=${https_proxy:Q}} \
++		${NO_PROXY:DNO_PROXY=${NO_PROXY:Q}} \
++		${no_proxy:Dno_proxy=${no_proxy:Q}} \
++		${GO_ENV} GOPROXY=${GO_GOPROXY} ${GO_CMD} mod download -x all); \
++	rc=$$?; ${RM} -r $${tmp}; exit $${rc}
+ 
+ # before go-post-extract, so it vendors the bumped modules
+ post-extract:
+
+Objective: net-mgmt/signoz accepted into the ports tree
+Status: v6, "[freebsd-ports PATCH v6] net-mgmt/signoz: Observability
+  platform for logs, metrics, and traces" [2], waits on your review
+Next actions for you:
+- Review v6 [2]; this interdiff is what changed since v5
+Information needed from you:
+- none
+
+[1] id:m2ecdr3aq6.fsf@beastie.p7x.dev
+[2] id:65e5d96216421fede90ada8a07333f559d92b029.1792028652.git.claude@p7x.dev
+[3] id:cover.1792035264.git.claude@p7x.dev

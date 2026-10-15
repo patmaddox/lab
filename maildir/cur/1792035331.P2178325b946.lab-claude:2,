@@ -1,0 +1,73 @@
+From: claude <claude@p7x.dev>
+Subject: Re: [freebsd-ports PATCH v4] net-mgmt/signoz: Observability platform
+ for logs, metrics, and traces
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+In-Reply-To: <71e5ce8b94ad44b20e6009da9707ecd51f120fd1.1792027136.git.claude@p7x.dev>
+References: <71e5ce8b94ad44b20e6009da9707ecd51f120fd1.1792027136.git.claude@p7x.dev>
+Message-ID: <1792035318.2f808049c17b@p7x.dev>
+Date: Thu, 15 Oct 2026 03:35:31 +0000
+
+On Thu, 15 Oct 2026 01:19:06 +0000, claude <claude@p7x.dev> wrote:
+> Changes in v4:
+> - Fix the poudriere build, which failed in extract with "rm: go.mod:
+>   Permission denied": post-fetch now writes go.mod in DIST_SUBDIR only
+>   when its content changes, so the unprivileged re-run of fetch in
+>   extract writes nothing.
+> - Replace SONIC_BUMP with SONIC_EDIT, which carries the whole command.
+> - Link to v3: id:356655d2db87becaa2f3c491e1de4b0df1664e6d.1792026153.git.claude@p7x.dev
+
+This revision went out without an interdiff. Here it is, backfilled as
+you asked in "New patch series must have an interdiff" [1]. Both
+versions were rebuilt from the list with series-rebuild.sh, from "[PATCH
+v2 0/4] Require an interdiff on revised series" [3], and the rebuilt v4
+is identical to the commit it was formatted from. v3 and v4 share the
+base 8e18e3939be9, so the interdiff below is the plain diff between the
+two.
+
+Interdiff against v3:
+diff --git a/net-mgmt/signoz/Makefile b/net-mgmt/signoz/Makefile
+index 82a81c589f2b..2b84b2ac713c 100644
+--- a/net-mgmt/signoz/Makefile
++++ b/net-mgmt/signoz/Makefile
+@@ -30,19 +30,21 @@ USERS=		${PORTNAME}
+ GROUPS=		${PORTNAME}
+ 
+ # sonic v1.14.1, as pinned upstream, builds only with Go 1.24 and 1.25
+-SONIC_BUMP=	-require=github.com/bytedance/sonic@v1.15.4 \
++SONIC_EDIT=	${SETENVI} ${WRK_ENV} ${GO_ENV} ${GO_CMD} mod edit \
++		-require=github.com/bytedance/sonic@v1.15.4 \
+ 		-require=github.com/bytedance/sonic/loader@v0.5.2
+ 
+-# before go-post-fetch, so it downloads the modules of the bumped go.mod
++# before go-post-fetch, so it downloads the modules of the bumped go.mod;
++# extract runs fetch again without write access, so write only on change
+ post-fetch:
+-	@(cd ${DISTDIR}/${DIST_SUBDIR} && ${RM} go.mod && \
+-		${CP} ${GO_MODFILE} go.mod && \
+-		${SETENVI} ${WRK_ENV} ${GO_ENV} ${GO_CMD} mod edit ${SONIC_BUMP})
++	@cd ${DISTDIR}/${DIST_SUBDIR} || exit 1; \
++	${SONIC_EDIT} -print ${GO_MODFILE} | \
++		${DIFF} -q - go.mod >/dev/null 2>&1 || \
++		{ ${RM} go.mod && ${SONIC_EDIT} -print ${GO_MODFILE} > go.mod; }
+ 
+ # before go-post-extract, so it vendors the bumped modules
+ post-extract:
+-	@(cd ${WRKSRC} && \
+-		${SETENVI} ${WRK_ENV} ${GO_ENV} ${GO_CMD} mod edit ${SONIC_BUMP})
++	@cd ${WRKSRC} && ${SONIC_EDIT}
+ 
+ post-patch:
+ 	${REINPLACE_CMD} -e 's|/etc/signoz/web|${DATADIR}/web|' \
+
+Objective: net-mgmt/signoz accepted into the ports tree
+Status: v6, "[freebsd-ports PATCH v6] net-mgmt/signoz: Observability
+  platform for logs, metrics, and traces" [2], waits on your review
+Next actions for you:
+- Review v6 [2]; this interdiff is for the record of v4
+Information needed from you:
+- none
+
+[1] id:m2ecdr3aq6.fsf@beastie.p7x.dev
+[2] id:65e5d96216421fede90ada8a07333f559d92b029.1792028652.git.claude@p7x.dev
+[3] id:cover.1792035264.git.claude@p7x.dev

@@ -1,0 +1,99 @@
+From: claude <claude@p7x.dev>
+Subject: Re: [freebsd-ports PATCH v5] net-mgmt/signoz: Observability platform
+ for logs, metrics, and traces
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+In-Reply-To: <74e7c31f9fd9a5ebd14da35f1d9c5f5b9c09d2b0.1792027621.git.claude@p7x.dev>
+References: <74e7c31f9fd9a5ebd14da35f1d9c5f5b9c09d2b0.1792027621.git.claude@p7x.dev>
+Message-ID: <1792035318.6ac90a3d3078@p7x.dev>
+Date: Thu, 15 Oct 2026 03:35:32 +0000
+
+On Thu, 15 Oct 2026 01:27:54 +0000, claude <claude@p7x.dev> wrote:
+> Changes in v5:
+> - Fetch upstream's sonic mmap fix with PATCH_SITES and PATCHFILES
+>   instead of carrying it as files/patch-*, as Pat asked.
+> - Link to v4: id:71e5ce8b94ad44b20e6009da9707ecd51f120fd1.1792027136.git.claude@p7x.dev
+
+This revision went out without an interdiff. Here it is, backfilled as
+you asked in "New patch series must have an interdiff" [1]. Both
+versions were rebuilt from the list with series-rebuild.sh, from "[PATCH
+v2 0/4] Require an interdiff on revised series" [3], and the rebuilt v5
+is identical to the commit it was formatted from. v4 and v5 share the
+base 8e18e3939be9, so the interdiff below is the plain diff between the
+two.
+
+Interdiff against v4:
+diff --git a/net-mgmt/signoz/Makefile b/net-mgmt/signoz/Makefile
+index 2b84b2ac713c..261b463d1a83 100644
+--- a/net-mgmt/signoz/Makefile
++++ b/net-mgmt/signoz/Makefile
+@@ -6,6 +6,10 @@ CATEGORIES=	net-mgmt
+ MASTER_SITES+=	https://github.com/SigNoz/${PORTNAME}/releases/download/${DISTVERSIONFULL}/:web
+ DISTFILES+=	${PORTNAME}-community_linux_amd64${EXTRACT_SUFX}:web
+ 
++# MAP_ANON with fd -1, which FreeBSD's mmap(2) requires; in no release yet
++PATCH_SITES=	https://github.com/bytedance/sonic/commit/
++PATCHFILES=	bf12ab8c1f789cfbbdfa9d6a4cae69ed136ea516.patch:-p1
++
+ MAINTAINER=	patmaddox@FreeBSD.org
+ COMMENT=	Observability platform for logs, metrics, and traces
+ WWW=		https://signoz.io/
+@@ -26,6 +30,9 @@ GO_BUILDFLAGS=	-ldflags "-X ${GO_MODULE}/pkg/version.variant=community \
+ 
+ SUB_FILES=	pkg-message
+ 
++# the upstream patch is relative to the sonic repository, vendored here
++PATCH_WRKSRC=	${WRKSRC}/vendor/github.com/bytedance/sonic
++
+ USERS=		${PORTNAME}
+ GROUPS=		${PORTNAME}
+ 
+diff --git a/net-mgmt/signoz/distinfo b/net-mgmt/signoz/distinfo
+index e05c87e3ce4d..b27bd5815428 100644
+--- a/net-mgmt/signoz/distinfo
++++ b/net-mgmt/signoz/distinfo
+@@ -1,7 +1,9 @@
+-TIMESTAMP = 1791931143
++TIMESTAMP = 1792027422
+ SHA256 (go/net-mgmt_signoz/signoz-v0.145.0/signoz-community_linux_amd64.tar.gz) = 6e0ab5ab34427feffac57523c136508f6b19e25517987a9b51e44e0c93f088e2
+ SIZE (go/net-mgmt_signoz/signoz-v0.145.0/signoz-community_linux_amd64.tar.gz) = 69694238
+ SHA256 (go/net-mgmt_signoz/signoz-v0.145.0/v0.145.0.mod) = 1094fa6359fa7dc7824f18f706f0e2c3675fa4464c21b1473fe16609c96de3d1
+ SIZE (go/net-mgmt_signoz/signoz-v0.145.0/v0.145.0.mod) = 20296
+ SHA256 (go/net-mgmt_signoz/signoz-v0.145.0/v0.145.0.zip) = a3fcd82b1d06929e2e8e7efab8be8b83cfad2e282fb93398de73025722cd8557
+ SIZE (go/net-mgmt_signoz/signoz-v0.145.0/v0.145.0.zip) = 21100973
++SHA256 (go/net-mgmt_signoz/signoz-v0.145.0/bf12ab8c1f789cfbbdfa9d6a4cae69ed136ea516.patch) = f51e707e2e75ef73e7c93cf45ad3092bc259346a17cbeba34bbc3ee00b53b112
++SIZE (go/net-mgmt_signoz/signoz-v0.145.0/bf12ab8c1f789cfbbdfa9d6a4cae69ed136ea516.patch) = 1492
+diff --git a/net-mgmt/signoz/files/patch-vendor_github.com_bytedance_sonic_loader_mmap__unix.go b/net-mgmt/signoz/files/patch-vendor_github.com_bytedance_sonic_loader_mmap__unix.go
+deleted file mode 100644
+index a8add3237d48..000000000000
+--- a/net-mgmt/signoz/files/patch-vendor_github.com_bytedance_sonic_loader_mmap__unix.go
++++ /dev/null
+@@ -1,16 +0,0 @@
+-FreeBSD mmap(2) fails with EINVAL unless fd is -1 for MAP_ANON, so
+-signoz panics at startup.
+-
+-Obtained from:	https://github.com/bytedance/sonic/commit/bf12ab8c1f789cfbbdfa9d6a4cae69ed136ea516
+-
+---- vendor/github.com/bytedance/sonic/loader/mmap_unix.go.orig	2026-10-15 00:02:41 UTC
+-+++ vendor/github.com/bytedance/sonic/loader/mmap_unix.go
+-@@ -31,7 +31,7 @@ func mmap(nb int) uintptr {
+- 
+- 
+- func mmap(nb int) uintptr {
+--    if m, _, e := syscall.RawSyscall6(syscall.SYS_MMAP, 0, uintptr(nb), _RW, _AP, 0, 0); e != 0 {
+-+    if m, _, e := syscall.RawSyscall6(syscall.SYS_MMAP, 0, uintptr(nb), _RW, _AP, ^uintptr(0), 0); e != 0 {
+-         panic(e)
+-     } else {
+-         return m
+
+Objective: net-mgmt/signoz accepted into the ports tree
+Status: v6, "[freebsd-ports PATCH v6] net-mgmt/signoz: Observability
+  platform for logs, metrics, and traces" [2], waits on your review
+Next actions for you:
+- Review v6 [2]; this interdiff is for the record of v5
+Information needed from you:
+- none
+
+[1] id:m2ecdr3aq6.fsf@beastie.p7x.dev
+[2] id:65e5d96216421fede90ada8a07333f559d92b029.1792028652.git.claude@p7x.dev
+[3] id:cover.1792035264.git.claude@p7x.dev
