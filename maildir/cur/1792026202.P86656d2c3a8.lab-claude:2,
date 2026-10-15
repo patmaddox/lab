@@ -1,0 +1,122 @@
+From: claude <claude@p7x.dev>
+Subject: Re: [freebsd-ports PATCH] net-mgmt/signoz: Observability platform for
+ logs, metrics, and traces
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+In-Reply-To: <m2o6cv4x3z.fsf@beastie.p7x.dev>
+References: <b90dbb5ddc5c068f1c2c7fc551b57c5a2d11da8c.1791931184.git.claude@p7x.dev>
+	<m24ieoci5q.fsf@beastie.p7x.dev> <1792000251.b4ad44894faa@p7x.dev>
+	<m2v7736g54.fsf@beastie.p7x.dev> <1792019350.f56a7fe08e33@p7x.dev>
+	<m2qzhr6e58.fsf@beastie.p7x.dev> <1792022920.cecec92bbf5c@p7x.dev>
+	<m2o6cv4x3z.fsf@beastie.p7x.dev>
+Message-ID: <1792026194.c33970003b9f@p7x.dev>
+Date: Thu, 15 Oct 2026 01:03:22 +0000
+
+On Wed, 14 Oct 2026 17:37:52 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+>> The build fix bumps sonic to v1.15.4 and sonic/loader to v0.5.2 with
+>> "go mod edit" in post-fetch and post-extract. Both run just before
+>> go.mk's download and vendor steps, so no GH_TUPLE list is needed and
+>> extract stays offline.
+>
+> My only concern with this is that it will violate the network rule -
+> downloads can only happen in fetch.
+>
+> Explain to me how this works.
+
+It keeps the rule. Only one step downloads anything, and it runs in
+fetch. The two edits never touch the network.
+
+bsd.port.mk runs the fetch phase as _FETCH_SEQ, which puts post-fetch
+at 700. go.mk adds go-post-fetch to the same sequence at 800. Both
+are fetch targets, so in poudriere both run while the network is up.
+
+1. post-fetch (fetch, 700) works in the go.mod in
+   DISTDIR/go/net-mgmt_signoz/signoz-v0.145.0. It copies v0.145.0.mod
+   to go.mod and runs "go mod edit" on the copy. That command only
+   rewrites the require lines in that file. It copies instead of
+   editing in place because go-post-fetch otherwise symlinks go.mod
+   to v0.145.0.mod, and an edit through the symlink would change a
+   checksummed distfile.
+
+2. go-post-fetch (fetch, 800) is go.mk's unchanged
+   "go mod download -x all" against that go.mod, with
+   GOPROXY=proxy.golang.org. It fills the module cache under
+   DISTDIR/go/net-mgmt_signoz/pkg/mod. It is the only download. The
+   bump changes which sonic versions it fetches, not when. As in every
+   GO_MODULE port, sum.golang.org verifies the modules, not distinfo,
+   and the go command caches those lookups in the same module cache.
+
+3. post-extract (extract, 700) runs the same "go mod edit" on
+   WRKSRC/go.mod. It is offline for the same reason as step 1.
+
+4. go-post-extract (extract, 800) is go.mk's unchanged "go mod tidy
+   -e" and "go mod vendor -e", run with
+   GOPROXY=file://DISTDIR/go/net-mgmt_signoz/pkg/mod/cache/download.
+   That proxy is the local cache from step 2, so tidy and vendor read
+   only what fetch already downloaded. The build then runs with
+   GOPROXY=off and -mod=vendor.
+
+There are two edits because fetch and extract each read their own
+go.mod: the one in DISTDIR and the one in WRKSRC. SONIC_BUMP holds
+the versions for both, so they cannot drift. If they ever did, tidy
+would ask the file:// proxy for a module that is not in the cache.
+That fails the build at extract; it does not reach the network.
+
+As the v2 notes say, I ran extract with the network blocked, and
+tidy and vendor both succeeded.
+
+>> 1. A boot test as the signoz user. That needs root, to install the
+>>    package and run "service signoz onestart". I recommend that you run
+>>    it with your poudriere testport, since poudriere is your gate
+>>    anyway. Otherwise, once the package install patch lands, I can do
+>>    it here.
+>
+> I'll do that and report back.
+
+Thanks. Please test "[freebsd-ports PATCH v3] net-mgmt/signoz:
+Observability platform for logs, metrics, and traces" [1]. It differs
+from v2 only in the vendor patch's comment header (see below), so a
+v2 build you have already started still counts.
+
+>> 2. Report the mmap bug to bytedance/sonic. Every FreeBSD user of sonic
+>>    hits it, and an upstream fix lets the port drop its patch later.
+>>    Filing it is a public post on GitHub, so I need your go-ahead.
+>>    Options: (a) I draft the issue and the one-line PR, and you file
+>>    them; (b) you give me a way to file them; or (c) we skip it. I
+>>    recommend (a).
+>
+> Post the patch to the mailing list, with the issue text in the cover
+> letter.
+
+When I cloned sonic to write the patch, I found upstream already has
+the fix. I should have checked this before I offered to file it.
+Commit bf12ab8, "MAP_ANON should be set to -1 , not required on Linux,
+required on BSD. + go fmt", by Gregory Boddin, was merged to main on
+2026-09-26. It makes the same change as our vendor patch. No tag
+includes it yet; the newest loader release is loader/v0.5.2, from
+2026-07-30, which is the version the port uses.
+
+An issue would duplicate a fixed bug, and a PR would duplicate a
+merged commit, so I have not posted either. v3 instead cites the
+upstream commit in the patch header, in an "Obtained from:" line. A
+dry run of the patch against loader/v0.5.2 still applies cleanly. The
+patch can go once signoz requires a loader release that includes the
+fix. Nothing is left to file.
+
+>> 3. ONLY_FOR_ARCHS is aarch64 amd64, the two that upstream releases.
+>
+> Sticking to aarch64 and amd64 is fine for now.
+
+v3 keeps them.
+
+Objective: Answer your question on the network rule, and post the
+sonic mmap fix with its issue text.
+Status: Done. The network question is answered above. The mmap fix is
+already upstream, so v3 cites it instead of an upstream report.
+Next actions for you:
+- Run the poudriere testport and boot test on v3 [1], and report the
+  result.
+Information needed from you:
+- none
+
+[1] id:356655d2db87becaa2f3c491e1de4b0df1664e6d.1792026153.git.claude@p7x.dev
