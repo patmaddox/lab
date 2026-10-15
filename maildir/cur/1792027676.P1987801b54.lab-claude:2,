@@ -1,0 +1,72 @@
+Message-ID: <9823f752e2186dfb88b2546465df600e5c851b0b.1792027663.git.claude@p7x.dev>
+In-Reply-To: <cover.1792027663.git.claude@p7x.dev>
+References: <cover.1792027663.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Subject: [PATCH v2 1/2] claude: End each reply with status and asks
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+Change-Id: smnxsqpxpwusulzttlzowxrlntytkqsv
+Date: Thu, 15 Oct 2026 01:27:56 +0000
+
+Replies interleave answers beneath the quoted lines, so a question or
+request for the reader can sit anywhere in a long mail and be missed.
+Pat then has to read the whole reply to learn where the work stands
+and what he must do next.
+
+A fixed summary at the end answers that in one place. Its objective is
+the thread's end goal, because the step a reply just finished says
+nothing about how far the work is from landing. Done is reserved for a
+reached goal with nothing left for the reader; calling work done while
+asking the reader to test or review it hides that it still waits on
+him. A reply that is not done and asks for nothing shows that the work
+stopped without reason.
+---
+change-id: smnxsqpxpwusulzttlzowxrlntytkqsv
+
+ CLAUDE.md | 30 ++++++++++++++++++++++++++++++
+ 1 file changed, 30 insertions(+)
+
+diff --git a/CLAUDE.md b/CLAUDE.md
+index f5de49f..e362c0a 100644
+--- a/CLAUDE.md
++++ b/CLAUDE.md
+@@ -89,6 +89,36 @@ bottom. Do not top-post. Trim the quote to the parts you actually
+ answer, and never reword the text you keep. Your own words carry no
+ "> " prefix.
+ 
++## End each reply with status and asks
++
++Questions and requests scattered through an interleaved reply are easy
++to miss. End every reply that is not a patch with a short summary, so
++the reader sees at a glance where the work stands and what is asked of
++them:
++
++    Objective: <the end goal of the thread>
++    Status: <done, or what it is waiting on>
++    Next actions for you:
++    - <what the reader must do, or "none">
++    Information needed from you:
++    - <what you need to know, or "none">
++
++The objective is the outcome the thread exists to reach, such as a
++port accepted into the tree. It is not the step this reply finished,
++such as answering a question or posting a revision. Name the same
++objective in every reply on the thread until it is reached.
++
++Done and a next action for the reader exclude each other. The status
++is done only when the objective is reached and nothing is left for the
++reader. While the reader still has to review, test, or decide, the
++objective is not done; the status names what it waits on, and the two
++lists say what the reader must do or provide. A status that is not
++done, with "none" in both lists, means you stopped without cause.
++Finish the work instead.
++
++Interleaved answers stay where they are. The summary repeats any ask
++made above it, so the reader can act on the summary alone.
++
+ ## Read the whole batch before working
+ 
+ When you fetch new mail, read every message in the batch before you
+-- 
+2.56.0
+

@@ -1,0 +1,39 @@
+Message-ID: <25845804baa89a61a01f5dbc5441cea683e26d00.1792027663.git.claude@p7x.dev>
+In-Reply-To: <cover.1792027663.git.claude@p7x.dev>
+References: <cover.1792027663.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Subject: [PATCH v2 2/2] src/lab-process-mail: Close each reply with a status
+ summary
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+Change-Id: upqpysuyqkuxzotsotoovsrxyuvrrqnm
+Date: Thu, 15 Oct 2026 01:27:57 +0000
+
+Step 6 lists what every reply a pass sends must contain, and a pass
+writes its reply from that list. Naming the summary there keeps it
+beside the other reply rules, so a pass does not have to find it in
+CLAUDE.md to apply it.
+---
+change-id: upqpysuyqkuxzotsotoovsrxyuvrrqnm
+
+ src/lab-process-mail/prompt.md | 4 +++-
+ 1 file changed, 3 insertions(+), 1 deletion(-)
+
+diff --git a/src/lab-process-mail/prompt.md b/src/lab-process-mail/prompt.md
+index 233e750..ee2133e 100644
+--- a/src/lab-process-mail/prompt.md
++++ b/src/lab-process-mail/prompt.md
+@@ -253,7 +253,9 @@ Add a Message-ID header, e.g.
+ `Message-ID: <$(date +%s).$(openssl rand -hex 6)@p7x.dev>`. Write the
+ body by CLAUDE.md's quoting rules: trim the quote to what you answer,
+ never reword it, and put each answer beneath the lines it answers.
+-Wrap at 72.
++End it with the status summary from CLAUDE.md's "End each reply with
++status and asks": the objective, its status, the next actions for the
++reader, and the information you need. Wrap at 72.
+ 
+ If you posted a series, summarize what it does and cite it by its full
+ subject with the Message-ID in a footnote, as CLAUDE.md describes, so
+-- 
+2.56.0
+

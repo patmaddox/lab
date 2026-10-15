@@ -1,0 +1,91 @@
+Message-ID: <cover.1792027663.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Subject: [PATCH v2 0/2] End each reply with status and asks
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+Date: Thu, 15 Oct 2026 01:27:55 +0000
+
+Pat asked that replies end with a clear summary of the objective and
+its status, the next actions he must take, and the information he must
+provide, instead of questions spread through the body [1].
+
+Patch 1 adds the rule to CLAUDE.md, beside the quoting rules, with a
+fixed shape for the summary. The objective is the thread's end goal,
+and the status is done only when that goal is reached and nothing is
+left for the reader.
+
+Patch 2 names the summary in step 6 of the pass prompt, where a pass
+writes its reply.
+
+The series is independent of "[PATCH] src/lab-process-mail: Finish the
+work within a pass" [2], which rewrites the step 4 rule for a pass
+that cannot finish. The two touch different hunks of prompt.md and
+apply in either order.
+
+base-branch: b/dev@upstream
+
+Changes in v2:
+- Make the objective the thread's end goal, not the step a reply
+  finished, and make done exclude next actions for the reader. Pat
+  pointed out both in his reply on the signoz port [3], where v1's
+  rule led to "Status: Done" above a request to run his poudriere
+  test.
+- Link to v1: id:cover.1792024497.git.claude@p7x.dev
+
+[1] id:m2y0bz4xcs.fsf@beastie.p7x.dev
+[2] id:6797d0aacf81993ddb803cb22f486a95af2511d7.1792022896.git.claude@p7x.dev
+[3] id:m2wlrj3h4v.fsf@beastie.p7x.dev
+
+claude (2):
+  claude: End each reply with status and asks
+  src/lab-process-mail: Close each reply with a status summary
+
+ CLAUDE.md                      | 30 ++++++++++++++++++++++++++++++
+ src/lab-process-mail/prompt.md |  4 +++-
+ 2 files changed, 33 insertions(+), 1 deletion(-)
+
+Interdiff against v1:
+diff --git a/CLAUDE.md b/CLAUDE.md
+index 2ec0d41..e362c0a 100644
+--- a/CLAUDE.md
++++ b/CLAUDE.md
+@@ -96,20 +96,25 @@ to miss. End every reply that is not a patch with a short summary, so
+ the reader sees at a glance where the work stands and what is asked of
+ them:
+ 
+-    Objective: <the task you were given>
+-    Status: <done, or blocked and on what>
++    Objective: <the end goal of the thread>
++    Status: <done, or what it is waiting on>
+     Next actions for you:
+     - <what the reader must do, or "none">
+     Information needed from you:
+     - <what you need to know, or "none">
+ 
+-A task you were given ends one of two ways. Either you finished it, or
+-you are blocked on something only the reader can provide. If it is
+-done, the next actions say what the reader does with the result, such
+-as reviewing a posted series. If it is not done, at least one of the
+-two lists names what unblocks it. A task that is not done, with "none"
+-in both lists, means you stopped without cause. Finish the work
+-instead.
++The objective is the outcome the thread exists to reach, such as a
++port accepted into the tree. It is not the step this reply finished,
++such as answering a question or posting a revision. Name the same
++objective in every reply on the thread until it is reached.
++
++Done and a next action for the reader exclude each other. The status
++is done only when the objective is reached and nothing is left for the
++reader. While the reader still has to review, test, or decide, the
++objective is not done; the status names what it waits on, and the two
++lists say what the reader must do or provide. A status that is not
++done, with "none" in both lists, means you stopped without cause.
++Finish the work instead.
+ 
+ Interleaved answers stay where they are. The summary repeats any ask
+ made above it, so the reader can act on the summary alone.
+
+base-commit: 8d0b05250dc28c4dfa11e4e7925c94f50cfcf211
+-- 
+2.56.0
+
