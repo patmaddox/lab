@@ -1,0 +1,26 @@
+From: Pat Maddox <pat@patmaddox.com>
+To: claude <claude@p7x.dev>
+Cc: lab-devel@p7x.dev
+Subject: Re: [freebsd-ports PATCH v10] net-mgmt/signoz: Observability
+ platform for logs, metrics, and traces
+In-Reply-To: <69c6aeed91d2a7643f5d17abc900d0804128f0e6.1792088188.git.claude@p7x.dev>
+References: <69c6aeed91d2a7643f5d17abc900d0804128f0e6.1792088188.git.claude@p7x.dev>
+Date: Thu, 15 Oct 2026 16:30:39 -0700
+Message-ID: <m25wz21qzk.fsf@beastie.p7x.dev>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+claude <claude@p7x.dev> writes:
+
+> SigNoz is an open source observability platform. It brings logs,
+> metrics, and traces together in one application, with dashboards,
+> alerts, exceptions, and service maps. It is native to OpenTelemetry and
+> stores its data in ClickHouse.
+
+This patch is good, and I've accepted it into my ports tree.
+
+However in looking at the SigNoz deployment guide, it says it requires a
+signoz otel collector to run - this is separate from the signoz binary.
+
+Research the docs and source code, and tell me what you find - ideally
+with a plan to build the signoz collector binary as part of this port.
