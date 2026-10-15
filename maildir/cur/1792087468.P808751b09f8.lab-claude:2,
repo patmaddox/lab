@@ -1,0 +1,98 @@
+From: claude <claude@p7x.dev>
+Subject: Re: [freebsd-ports PATCH v8] net-mgmt/signoz: Observability platform
+ for logs, metrics, and traces
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+In-Reply-To: <m2jyni26gm.fsf@beastie.p7x.dev>
+References: <f747bbebcaeb26db6bcccbb1b818b773374e3d80.1792086375.git.claude@p7x.dev>
+	<m2jyni26gm.fsf@beastie.p7x.dev>
+Message-ID: <1792087457.92965e451373@p7x.dev>
+Date: Thu, 15 Oct 2026 18:04:28 +0000
+
+On Thu, 15 Oct 2026 10:56:25 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+> > +# the upstream patch is relative to the sonic repository
+> > +PATCH_WRKSRC=	${WRKSRC_sonic}
+>
+> I get what's going on here, but I think this is too blunt. I suspect the
+> ports framework has a mechanism for patching a specific distfile /
+> distdir, whatever. Because otherwise how would you apply a patch to more
+> than one level?
+>
+> Research ports framework, porter's handbook, and other ports to find
+> idiomatic technique.
+
+You were right that PATCH_WRKSRC is too broad. It is the directory for
+every patch, the PATCHFILES and files/patch-* alike. The framework
+has no per-distfile directory. A PATCHFILES entry takes only a strip
+level and a site group, patch[:-pX][:group] (Mk/bsd.port.mk, line 112).
+
+What it does have is a separate argument list for distribution
+patches. Mk/Scripts/do-patch.sh applies PATCHFILES with
+PATCH_DIST_ARGS and files/ patches with PATCH_ARGS. Both run as
+"patch -d ${PATCH_WRKSRC} <args>", so a -d in PATCH_DIST_ARGS moves
+only the PATCHFILES. net/norm does exactly this for an upstream commit
+to its protolib GH_TUPLE:
+
+    PATCHFILES=	ba9ca1ca7d73592268ebfd5a43271303e76f461e.patch:-p1
+    PATCH_DIST_ARGS=	-d ../protolib-702e909
+
+editors/nvi-m17n sets -d there too. They are the only two ports that
+set PATCH_DIST_ARGS, so this is the framework's knob, not a widespread
+habit. The Porter's Handbook does not cover the case.
+
+To your question about more than one level: local patches already
+reach any level, since files/patch-* paths are relative to WRKSRC
+and can name vendor/... or a tuple's directory. Upstream patches for
+several different trees cannot share one -d, and ports that have them
+call ${PATCH} -d per tree in post-patch, as editors/textadept does
+for scintilla, lua, cdk, and termkey.
+
+v9 [1] drops PATCH_WRKSRC and sets
+
+    PATCH_DIST_ARGS=	-d ${WRKSRC_sonic} --suffix ${DISTORIG} --forward \
+    			--quiet -E
+
+net/norm's override drops the default's --forward, --quiet, and -E
+along with its -p0. v9 keeps them and takes the strip level from the
+entry's :-p1 as before. A clean extract and patch applied the commit
+to the sonic tuple, and mmap_unix.go now passes ^uintptr(0) as the
+fd. PATCH_WRKSRC is back at WRKSRC, so a later files/patch-* applies
+to signoz as usual. The lint tools are clean.
+
+> > +signoz_start_precmd()
+> > +{
+> > +	if [ ! -e "${pidfile}" ]; then
+> > +		install -m 0600 -o "${signoz_user}" -g "${signoz_group}" /dev/null "${pidfile}"
+> > +	fi
+> > +}
+>
+> Where does this come from? Can you point to other examples in the framework?
+
+It comes from net-mgmt/prometheus3's rc script, which v1 named as the
+model. The function there is the same line for line
+(files/prometheus.in, line 136), and prometheus2 has carried it since
+5109fb2d069d, "net-mgmt/prometheus2: Update to 2.24.1", in 2021.
+
+The precmd is needed for a reason. With signoz_user set, rc.subr
+runs the whole command as that user through "su -m" (/etc/rc.subr,
+line 1833), so daemon(8) itself runs as signoz, and "-p" then fails
+to create a file in root-owned /var/run. start_precmd still runs as
+root, so it creates the pidfile and gives it to signoz first.
+
+It is the tree's common pattern. 191 rc scripts in ports create the
+pidfile with install from /dev/null, and 129 of those wrap daemon(8),
+e.g. net-mgmt/pushgateway, net-mgmt/mysqld_exporter,
+net-mgmt/nfs-exporter, and comms/aprsd. The v9 notes now explain it.
+
+Still open for you: v9 has not been built, since it changes only the
+patch phase, which I ran. It needs your poudriere testport on amd64
+and aarch64. My questions in the v7 reply about the prebuilt web
+frontend and the /usr/local/etc/signoz layout also have no answer
+yet [2].
+
+[1] "[freebsd-ports PATCH v9] net-mgmt/signoz: Observability platform
+    for logs, metrics, and traces"
+    id:14e9b707392d22bbb276764f811f7eafb1d3cb19.1792087430.git.claude@p7x.dev
+[2] "Re: [freebsd-ports PATCH v7] net-mgmt/signoz: Observability
+    platform for logs, metrics, and traces"
+    id:1792086449.36efa737f03d@p7x.dev
