@@ -1,0 +1,104 @@
+From: claude <claude@p7x.dev>
+Subject: Re: Supporting status trailers in emails
+To: Pat Maddox <pat@patmaddox.com>, lab-devel@p7x.dev
+In-Reply-To: <m2h5in4wcl.fsf@beastie.p7x.dev>
+References: <m21p9s9ejd.fsf@beastie.p7x.dev>
+	<1792012556.c12ca97c38b9@p7x.dev> <m2fqy87xia.fsf@beastie.p7x.dev>
+	<1792016195.922937034816@p7x.dev> <m25wz37ve2.fsf@beastie.p7x.dev>
+	<1792018722.5477a7ac2a99@p7x.dev> <m2cxtb6ds6.fsf@beastie.p7x.dev>
+	<1792023344.dc0427389cd7@p7x.dev> <m2h5in4wcl.fsf@beastie.p7x.dev>
+Message-ID: <1792026562.9db136e5d1ae@p7x.dev>
+Date: Thu, 15 Oct 2026 01:09:30 +0000
+
+On Wed, 14 Oct 2026 17:54:18 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+> I know I won't see your tags. I'm talking about persisting tags to the
+> git repo, which is what notmuch-git does afaik.
+>
+> I use multiple machines and I would like to sync my tags. I also am
+> thinking ahead to a workflow where I have collaborators, and we'll each
+> want to separately mark messages as archived.
+
+I misread the question. Here is how it works in the repo.
+
+Your machines: give yourself one notmuch-git repo, with a remote, and
+clone it on each machine. I tested this with two databases standing in
+for two machines and a bare repo as the remote. Machine A archived two
+messages, machine B archived a third and unarchived one of A's, and
+after a pull on each both held the same result. notmuch-git stores
+one empty file per message and tag, so concurrent archives merge as
+ordinary file adds and deletes; I saw no conflicts.
+
+Setup on each machine:
+
+    notmuch config set git.tag_prefix me::
+    notmuch config set git.safe_fraction 1
+    notmuch git clone <remote>
+    git -C "$(notmuch config get git.path)" config pull.rebase false
+    notmuch git checkout --force
+
+The pull.rebase line is needed. notmuch git pull runs a plain git
+pull, and once two machines have diverged, current git refuses to pull
+until it is told how to reconcile. Without it the pull fails with "Need
+to specify how to reconcile divergent branches". After that, the daily
+loop is to tag, then run "notmuch git commit" and "notmuch git push";
+the other machine runs "notmuch git pull". pull refuses while any me::
+tag is uncommitted, so commit before pulling.
+
+Use a repo of its own, on its default branch, rather than a branch in
+lab.git. notmuch git reset is hard-wired to origin/master.
+
+Collaborators: give each person their own repo. Archiving records
+whether you owe a message anything, which is personal, so nobody needs
+anyone else's archive state. With one repo each, everyone keeps the
+same prefix and the same mail-tag.sh line, "-inbox -- tag:me::archived",
+and "me::" means the person whose repo it is. Shared state such as
+approved or superseded already comes from the list.
+
+A single shared repo works against this. notmuch-git strips the prefix
+when it stores a tag. So with prefixes pat:: and claude::, both
+archives would land as the same tags/<hash>/<msgid>/archived file. I
+infer that from the stored path; I did not test it. To share a repo,
+everyone has to use one common prefix, such as lab::, and put the name
+inside the tag: lab::pat-archived. Then every checkout loads every
+person's archive tags into every database. Each mail-tag.sh would also
+need its owner's name, which is the "me" problem again.
+
+>> I can take it through
+>> oss/freebsd-ports, build it with poudriere and file it with the port's
+>> maintainer, if you want it upstream.
+[...]
+> Submit a ports patch to list.
+
+Posted as "[freebsd-ports PATCH] mail/notmuch-git: Synchronize Notmuch
+tags through a git repository" [1].
+
+It is a new slave port, not the change to mail/notmuch I sketched
+earlier. The script needs Python and git at run time, and mail/notmuch
+has neither, so installing it from the master port would add both to
+every notmuch user's dependencies. The tree already splits notmuch's
+extras this way, with mail/notmuch-mutt as the script-only example,
+and Debian ships notmuch-git as a package of its own. The
+notmuch-git(1) man page stays in mail/notmuch, which installs it
+already.
+
+I was also wrong that there is no ports tree here. The freebsd-port
+skill keeps one in /var/tmp/freebsd-ports. The port's only build
+dependency is pkg, so I staged and packaged it without building
+anything else. stage, check-plist and package pass, and the staged
+notmuch-git runs. The package depends on git, notmuch and python312.
+portlint has one warning, about PORTREVISION=0 in a new port; the
+patch notes explain why that line stays. I have not run it under
+poudriere testport.
+
+Objective: post the mail/notmuch ports patch for notmuch-git, and
+explain how notmuch-git syncs tags across machines and collaborators.
+Status: done.
+Next actions for you:
+- Build "[freebsd-ports PATCH] mail/notmuch-git: Synchronize Notmuch
+  tags through a git repository" [1] with poudriere testport. If it
+  passes, file it upstream; mail/notmuch's maintainer is
+  jrm@FreeBSD.org.
+Information needed from you:
+- none
+
+[1] id:6f094bb91968cf63af145630a4c708fac3f41c38.1792026470.git.claude@p7x.dev
