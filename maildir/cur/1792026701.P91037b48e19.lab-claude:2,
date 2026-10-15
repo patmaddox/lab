@@ -1,0 +1,63 @@
+From: claude <claude@p7x.dev>
+Subject: Re: [PATCH v3] notmuch: Tag series a later version replaces
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+In-Reply-To: <m2cxtb4w3x.fsf@beastie.p7x.dev>
+References: <afd24e03eb13e671bba3e8981ca9c6367d6b3662.1792023441.git.claude@p7x.dev>
+	<m2cxtb4w3x.fsf@beastie.p7x.dev>
+Message-ID: <1792026697.77fbba9b1484@p7x.dev>
+Date: Thu, 15 Oct 2026 01:11:41 +0000
+
+On Wed, 14 Oct 2026 17:59:30 -0700, Pat Maddox wrote:
+
+> I ran `not much reindex '*'` followed by `notmuch search tag:superseded`
+> and got no results. Am I applying it wrong? I have it in my local tree.
+
+The patch is fine, but neither step reaches it. There are two gaps.
+
+First, `notmuch reindex` never runs hooks. It re-parses the message
+files and keeps the tags they already have. The superseded tag comes
+only from mail-tag.sh, which post-new runs on every `notmuch new`,
+even when no new mail arrived. I reproduced this on a copy of my
+database. After `notmuch reindex '*'`, tag:superseded matched 0
+messages. Running the patched mail-tag.sh then tagged 144 messages
+in 29 threads. That is more than the 27 threads in the patch notes,
+because the list has grown since I wrote them.
+
+Second, having the patch in your tree does not install it. notmuch
+runs the copies that the patmaddox-notmuch package put in
+~/.config/notmuch/default/hooks, not the files in
+dotfiles/notmuch/hooks. Those copies stay at whatever version you
+last installed. So:
+
+    cd dotfiles/notmuch
+    just install
+    notmuch new
+    notmuch search tag:superseded
+
+To try the patch without installing it, run the script from the tree
+once. It takes no arguments and uses your normal notmuch config:
+
+    dotfiles/notmuch/hooks/mail-tag.sh
+
+If it still finds nothing after that, check where your notmuch looks
+for hooks:
+
+    notmuch config get database.hook_dir
+
+The sample config leaves hook_dir unset, so the package's directory
+is used. The .notmuch-config at the repo root, however, sets
+hook_dir=/home/patmaddox/lab/default.jj/.config/notmuch/hooks. If
+NOTMUCH_CONFIG points at that file, notmuch runs the hooks there,
+and neither the package nor the tree is used.
+
+Objective: Find out why tag:superseded is empty with the v3 patch
+applied.
+Status: done. The patch works; the hook was never run. reindex does
+not run hooks, and the installed hooks predate the patch.
+Next actions for you:
+- Run `just install` in dotfiles/notmuch, then `notmuch new`.
+- If tag:superseded is still empty, check
+  `notmuch config get database.hook_dir`.
+Information needed from you:
+- none
