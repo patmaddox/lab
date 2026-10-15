@@ -1,0 +1,114 @@
+From: claude <claude@p7x.dev>
+Subject: Re: Supporting status trailers in emails
+To: Pat Maddox <pat@patmaddox.com>, lab-devel@p7x.dev
+In-Reply-To: <m2cxtb6ds6.fsf@beastie.p7x.dev>
+References: <m21p9s9ejd.fsf@beastie.p7x.dev>
+	<1792012556.c12ca97c38b9@p7x.dev> <m2fqy87xia.fsf@beastie.p7x.dev>
+	<1792016195.922937034816@p7x.dev> <m25wz37ve2.fsf@beastie.p7x.dev>
+	<1792018722.5477a7ac2a99@p7x.dev> <m2cxtb6ds6.fsf@beastie.p7x.dev>
+Message-ID: <1792023344.dc0427389cd7@p7x.dev>
+Date: Thu, 15 Oct 2026 00:15:51 +0000
+
+On Wed, 14 Oct 2026 16:52:25 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+> We'll put this on ice for now. It's just an idea, thinking out loud.
+
+Understood; I have parked it.
+
+> Is me a notmuch convention, or something built in, or just something you
+> came up with?
+
+I came up with it. notmuch has no notion of a current user in tags, and
+nothing resolves "me". The only convention is the "::" separator, which
+nmbug uses for its shared "notmuch::" prefix. To notmuch-git a prefix is
+only a filter: it commits the tags that start with it, and stores them
+with the prefix stripped, so "me::archived" lands in the repo as
+tags/<hash>/<msgid>/archived.
+
+> Because I wonder how this would work with multiple
+> people. Imagine I'm working with a team of people (or agents) and
+> everyone has their own archive tag. How does that work? Does me
+> automatically resolve to the current user? Or would we need individual
+> prefixes like pat, claude, etc.
+
+Neither is needed, because tags are not in the mail. They live in each
+reader's own notmuch database. Your database on beastie and mine on
+lab-claude share the maildir's messages and nothing else, so when I tag
+a message the tag exists only in my database. Each person's notmuch-git
+repo is private too. So every reader can use the same tag name, and the
+same mail-tag.sh line "-inbox -- tag:me::archived" works for all of
+them. "me::" reads as "mine, in whoever's database this is". If you
+prefer a plainer name, any fixed prefix works equally well; the choice
+only has to keep the personal tags apart from the derived ones.
+
+Per-user prefixes become necessary only if several people share one
+tag repo, the way nmbug does. Then everyone pulls everyone's tags, and
+the prefix says whose a tag is. That is not what we want for archiving,
+which is personal.
+
+> And if we do that - can we stop those
+> additional tag prefixes from polluting the UI? I don't care to see
+> claude tags.
+
+You will not see them under the scheme above, since my tags never reach
+your database. If shared prefixes ever do arrive, notmuch-emacs can hide
+them: an entry in notmuch-tag-formats with no expressions hides every
+tag its regexp matches. From notmuch-tag.el in notmuch-emacs 0.40, "If
+the list is empty, the tag is simply hidden."
+
+    (add-to-list 'notmuch-tag-formats '("claude::.*"))
+
+On the command line, the tags stay visible in notmuch search output;
+there is no equivalent filter there.
+
+> See if this version ships it, or where to find it. You have access to
+> internet, source code, build tools, etc. Stop acting helpless.
+
+Fair. I fetched the 0.40 release from notmuchmail.org (sha256 matches
+the signed checksum file) and read its build and the FreeBSD port.
+
+notmuch 0.40 does ship it, as notmuch-git.py in the top of the source
+tree. The default make target copies it to notmuch-git, but upstream's
+"make install" installs only the notmuch binary; distributions install
+notmuch-git themselves (Debian has debian/notmuch-git.install). The
+FreeBSD port mail/notmuch never does, so its pkg-plist has the man
+page and no script. That is a port bug, not a missing feature.
+
+The script needs only git and the Python 3 standard library. It
+imports notmuch2 if present and falls back without it. "notmuch git"
+finds it on PATH as notmuch-git, so a copy in ~/local/bin is enough.
+
+I ran it from the tarball against a scratch copy of the list (its own
+NOTMUCH_CONFIG, so neither real database was touched), with
+git.tag_prefix=me::. init, commit, and checkout all worked: I tagged
+two messages, committed, removed every me:: tag, and checkout restored
+both. Two things the man page does not make obvious:
+
+- git.safe_fraction (default 0.1) refuses any commit or checkout that
+  changes more than that fraction of the prefixed tags. With a handful
+  of archive tags, every change trips it. Set it to 1 for a personal
+  archive.
+- After a database rebuild there are no prefixed tags, and checkout
+  refuses to run until given --force. That is the rebuild step, so it
+  reads "notmuch git checkout --force".
+
+The proper fix is in the port. This is the change I would propose for
+mail/notmuch; I have not built it, since there is no ports tree here:
+
+    -USES=		gmake gnome pkgconfig python:build,test
+    +USES=		gmake gnome pkgconfig python shebangfix
+    +SHEBANG_FILES=	notmuch-git.py
+    +RUN_DEPENDS=	git:devel/git
+
+    post-install:
+    +	${INSTALL_SCRIPT} ${WRKSRC}/notmuch-git ${STAGEDIR}${PREFIX}/bin
+
+    pkg-plist:
+    +bin/notmuch-git
+
+It goes inside the ".ifndef MASTERDIR" blocks so that notmuch-emacs
+and the other slave ports are unchanged. I can take it through
+oss/freebsd-ports, build it with poudriere and file it with the port's
+maintainer, if you want it upstream. Until then, a copy of
+notmuch-git.py in ~/local/bin is all either of us needs. I have not
+installed it, since CLAUDE.md says not to install dependencies; say so
+and I will.
