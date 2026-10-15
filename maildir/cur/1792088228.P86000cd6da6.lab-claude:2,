@@ -1,0 +1,72 @@
+From: claude <claude@p7x.dev>
+Subject: Re: [freebsd-ports PATCH v8] net-mgmt/signoz: Observability platform
+ for logs, metrics, and traces
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+In-Reply-To: <m2fqy625sk.fsf@beastie.p7x.dev>
+References: <f747bbebcaeb26db6bcccbb1b818b773374e3d80.1792086375.git.claude@p7x.dev>
+	<m2jyni26gm.fsf@beastie.p7x.dev> <1792087457.92965e451373@p7x.dev>
+	<m2fqy625sk.fsf@beastie.p7x.dev>
+Message-ID: <1792088220.87653b98d79c@p7x.dev>
+Date: Thu, 15 Oct 2026 18:17:08 +0000
+
+On Thu, 15 Oct 2026 11:10:51 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+> claude <claude@p7x.dev> writes:
+>
+>> To your question about more than one level: local patches already
+>> reach any level, since files/patch-* paths are relative to WRKSRC
+>> and can name vendor/... or a tuple's directory. Upstream patches for
+>> several different trees cannot share one -d, and ports that have them
+>> call ${PATCH} -d per tree in post-patch, as editors/textadept does
+>> for scintilla, lua, cdk, and termkey.
+>
+> In that case I would prefer to use post-patch then. Again setting these
+> Makefile-level variables are blunt instruments, and we are doing a
+> highly targeted patch of a dependency. That should be crystal clear in
+> the Makefile.
+
+Done in "[freebsd-ports PATCH v10] net-mgmt/signoz: Observability
+platform for logs, metrics, and traces" [1]. The port no longer sets
+PATCH_WRKSRC, PATCH_DIST_ARGS, PATCH_SITES, or PATCHFILES. The patch
+is one line in post-patch, next to the other source edits:
+
+    ${PATCH} -d ${WRKSRC_sonic} -p1 < ${DISTDIR}/${DIST_SUBDIR}/${SONIC_PATCH}
+
+The commit is still fetched from GitHub and checksummed in distinfo,
+as you asked in the v1 thread [2]. It cannot stay in PATCHFILES,
+because do-patch would apply it to WRKSRC before post-patch runs. So
+it is a distfile in its own :sonic_patch group, and EXTRACT_ONLY keeps
+it out of extraction. sysutils/osquery fetches an upstream GitHub
+commit the same way, a :patches group left out of EXTRACT_ONLY.
+SONIC_PATCH sits beside the sonic GH_TUPLE with the comment saying
+what the fix is, so the dependency, its version, and its patch read
+together.
+
+That needs one Makefile-level variable, EXTRACT_ONLY. The port must
+set it because go.mk's default extracts every DISTFILES entry except
+the .mod file. The other choice is to commit the upstream patch into
+files/ under a name do-patch skips, as databases/mongodb80 does, and
+drop EXTRACT_ONLY. That would undo the v1 decision to fetch the
+commit, so I did not take it. Say if you would rather have it.
+
+I ran makesum and a clean extract and patch. All five distfiles pass
+their checksums, the commit is not extracted, and post-patch applies
+it to sonic-1.15.4, so loader/mmap_unix.go passes ^uintptr(0) as the
+fd. portclippy, portfmt, and portlint are clean. The v10 notes carry
+the interdiff against v9.
+
+Still open for you: v10 has not been built, since it changes only the
+fetch, extract, and patch phases, and I ran those. It needs your
+poudriere testport on amd64 and aarch64. My questions about the
+prebuilt web frontend and the /usr/local/etc/signoz layout also have
+no answer yet [3].
+
+[1] "[freebsd-ports PATCH v10] net-mgmt/signoz: Observability platform
+    for logs, metrics, and traces"
+    id:69c6aeed91d2a7643f5d17abc900d0804128f0e6.1792088188.git.claude@p7x.dev
+[2] "Re: [freebsd-ports PATCH] net-mgmt/signoz: Observability platform
+    for logs, metrics, and traces"
+    id:m2wlrj3h4v.fsf@beastie.p7x.dev
+[3] "Re: [freebsd-ports PATCH v7] net-mgmt/signoz: Observability
+    platform for logs, metrics, and traces"
+    id:1792086449.36efa737f03d@p7x.dev
