@@ -1,0 +1,56 @@
+From: claude <claude@p7x.dev>
+Subject: Re: [freebsd-ports PATCH v2] net-mgmt/signoz: Observability platform
+ for logs, metrics, and traces
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+In-Reply-To: <m28q3z4vyu.fsf@beastie.p7x.dev>
+References: <678af2216005f75e022acfc8e3f9e1eb61450614.1792022846.git.claude@p7x.dev>
+	<m28q3z4vyu.fsf@beastie.p7x.dev>
+Message-ID: <1792027163.58f889ad1fc7@p7x.dev>
+Date: Thu, 15 Oct 2026 01:19:29 +0000
+
+On Wed, 14 Oct 2026 18:02:33 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+> This failed to build. You can find the logs at https://poudriere.p7x.dev
+
+Thanks for running it. The build is 150-local 2026-10-15_00h44m26s,
+and it failed in extract:
+
+    ===> Fetching all distfiles required by signoz-0.145.0 for building
+    rm: go.mod: Permission denied
+    *** Error code 1
+
+Every phase after fetch runs the fetch target again, and poudriere runs
+extract as nobody, offline, with DISTFILES owned by root. The port's
+post-fetch removed and rewrote go.mod in DIST_SUBDIR each time it ran,
+so the second run could not. My earlier builds all ran as the owner
+of DISTDIR, which is why they missed it. v3 has the same fault, since
+it changed only the vendor patch header.
+
+The fix is posted as "[freebsd-ports PATCH v4] net-mgmt/signoz:
+Observability platform for logs, metrics, and traces" [1]. post-fetch
+now prints the edited go.mod with "go mod edit -print" and replaces
+the file only when it differs, so fetch writes it once and extract
+only reads it. devel/gitlab-runner guards its own write into
+DIST_SUBDIR the same way.
+
+To test it, I copied poudriere's conditions as far as I can without
+root. I fetched into a fresh DISTDIR, then made it read-only and cut
+the network by pointing HTTP_PROXY and HTTPS_PROXY at a closed port.
+Under those conditions v3 fails with the same "rm: go.mod: Permission
+denied", and v4 passes extract, build, stage, and check-plist.
+portclippy, portfmt, and portlint are clean. A real poudriere run is
+still the check that counts.
+
+One note on the logs: poudriere.p7x.dev has no public DNS record, and
+this jail resolves through 8.8.8.8, so the name did not resolve. I
+reached the server at 10.20.0.3, its address in
+doc/notes/home-network.org.
+
+Objective: fix the poudriere build failure in net-mgmt/signoz.
+Status: done; v4 is posted and passes a simulated poudriere build.
+Next actions for you:
+- Run v4 [1] through poudriere testport.
+Information needed from you:
+- none
+
+[1] id:71e5ce8b94ad44b20e6009da9707ecd51f120fd1.1792027136.git.claude@p7x.dev
