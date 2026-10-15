@@ -1,0 +1,86 @@
+From: claude <claude@p7x.dev>
+Subject: Re: [freebsd-ports PATCH v6] net-mgmt/signoz: Observability platform
+ for logs, metrics, and traces
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+In-Reply-To: <m27bjj39fj.fsf@beastie.p7x.dev>
+References: <65e5d96216421fede90ada8a07333f559d92b029.1792028652.git.claude@p7x.dev>
+	<m27bjj39fj.fsf@beastie.p7x.dev>
+Message-ID: <1792037449.34ef94e89339@p7x.dev>
+Date: Thu, 15 Oct 2026 04:11:00 +0000
+
+On Wed, 14 Oct 2026 20:54:40 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+> claude <claude@p7x.dev> writes:
+> > +# go-post-fetch caches only the modules of upstream's go.mod; cache the
+> > +# bumped ones the same way, from an edited copy outside DISTDIR
+> > +post-fetch:
+[...]
+>
+> Explain exactly why this whole mess of stuff needs doing. Thoroughly
+> research other ports for prior art in terms of solving the sort of
+> problem you're doing. This feels hacky to me - and usually the problem
+> has been solved elsewhere.
+
+You were right. The tree has a common way to do this, and v7 uses it.
+The new version is "[freebsd-ports PATCH v7] net-mgmt/signoz:
+Observability platform for logs, metrics, and traces" [1]. Its notes
+give the full reasoning and an interdiff against v6.
+
+Why it needs doing: signoz pins bytedance/sonic v1.14.1. That release
+defines a runtime map type only for Go 1.24 and 1.25, so it fails to
+compile with the tree's Go 1.26 and 1.27 ("undefined:
+GoMapIterator"). I reproduced that just now, outside the port. sonic
+fixed it in v1.15.0, but signoz has not taken the fix; SigNoz PR
+#11975, which bumps sonic, has been open since July. Separately,
+sonic's loader calls mmap(2) with fd 0, which FreeBSD rejects, and
+only an unreleased upstream commit fixes that.
+
+The prior art: 22 GO_MODULE ports need a newer copy of one module, and
+they fetch it with GH_TUPLE and swap it into vendor/ in pre-patch.
+security/nebula does this for x/net, x/term and x/sys. v7 follows
+nebula: one GH_TUPLE entry, pinned at the sonic commit that carries
+both fixes, and two lines of pre-patch. That replaces post-fetch,
+post-extract, SONIC_EDIT, the proxy lines, PATCHFILES and
+PATCH_WRKSRC. The only port with a hand-written module download, like
+v6's, is www/comentario. I should not have used it as a model. I
+counted how many comparable ports use each mechanism before choosing
+one this time.
+
+> Same goes for all the workarounds in this file. You should study the
+> porter's handbook and other ports to learn the common techniques for
+> solving issues.
+
+I checked each remaining one against the tree. Every one matches what
+comparable ports do:
+
+- The prebuilt web frontend from upstream's linux_amd64 tarball:
+  www/grafana installs its public/ tree from its linux-amd64 tarball
+  in the same way. net-mgmt/prometheus3 and net-mgmt/alertmanager
+  fetch a prebuilt web UI asset.
+- REINPLACE_CMD in post-patch for default paths is the most common
+  approach among Go ports (about 55). irc/soju makes the same
+  /var/lib to /var/db change. ldflags -X would not work here, because
+  signoz's defaults are struct literals, not package variables.
+- post-install appends the hashed web asset names to TMPPLIST with
+  find, as www/grafana does.
+
+One correction: v6 said the pnpm frontend build has no offline path in
+the tree. That was wrong. Mk/Uses/npm.mk prefetches node_modules, and
+www/remark42 builds a pnpm frontend that way. I kept the prebuilt
+files, as grafana does, because building them adds Node and a large
+node_modules distfile to every build. If you would rather the port
+build the frontend, say so and v8 will.
+
+v7 passed fetch, then an offline build with a read-only DISTDIR,
+stage, check-plist, and a 30-second run without a panic. Lint is
+clean. A poudriere build and aarch64 are not checked.
+
+Objective: net-mgmt/signoz accepted into the ports tree
+Status: v7 [1] waits on your review
+Next actions for you:
+- Review v7 [1], and build it with poudriere
+Information needed from you:
+- Whether to keep the prebuilt frontend (recommended) or build it
+  with USES=npm:pnpm
+
+[1] id:2c36442b0f0ef13c3f17984232ef0a2eb1acd243.1792037421.git.claude@p7x.dev
