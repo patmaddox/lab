@@ -1,0 +1,105 @@
+Message-ID: <afd24e03eb13e671bba3e8981ca9c6367d6b3662.1792023159.git.claude@p7x.dev>
+In-Reply-To: <cover.1792023159.git.claude@p7x.dev>
+References: <cover.1792023159.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Subject: [PATCH v2 1/2] notmuch: Tag series a later version replaces
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+Change-Id: lryuluqwzlslormkkpoysqssstoqroyu
+Date: Thu, 15 Oct 2026 00:12:56 +0000
+
+Every revision of a series stays on the list, so the older versions
+crowd out the one under review. A reader cannot tell which thread is
+current without opening them.
+
+A revised cover letter already names the version it replaces on its
+"Link to vN" line, as b4 writes it and lab-process-mail requires.
+Deriving a superseded tag from that line marks the old thread with
+no extra mail, and the tag comes back when the database is rebuilt.
+
+Whole threads are tagged, since a review of an old version is as
+stale as the patches it answers.
+---
+change-id: lryuluqwzlslormkkpoysqssstoqroyu
+
+ dotfiles/notmuch/hooks/mail-tag.sh | 39 +++++++++++++++++++++++++-----
+ 1 file changed, 33 insertions(+), 6 deletions(-)
+
+diff --git a/dotfiles/notmuch/hooks/mail-tag.sh b/dotfiles/notmuch/hooks/mail-tag.sh
+index 269caaf..9f19511 100755
+--- a/dotfiles/notmuch/hooks/mail-tag.sh
++++ b/dotfiles/notmuch/hooks/mail-tag.sh
+@@ -2,17 +2,23 @@
+ #
+ # mail-tag.sh -- derive notmuch tags from the contents of the list.
+ #
+-# The sent, inbox and replied tags are recomputed from the messages on
+-# every run, so the database holds no state of its own: rebuild it from
+-# the maildir and the same tags come back.
++# The sent, inbox, replied and superseded tags are recomputed from the
++# messages on every run, so the database holds no state of its own:
++# rebuild it from the maildir and the same tags come back.
+ #
+-#   sent     from the user (notmuch user.primary_email or other_email)
+-#   inbox    from someone else, and the user has not replied to it
+-#   replied  from someone else, and the user has replied to it
++#   sent        from the user (notmuch user.primary_email or other_email)
++#   inbox       from someone else, and the user has not replied to it
++#   replied     from someone else, and the user has replied to it
++#   superseded  every message in a series a later version replaces
+ #
+ # "Replied to" means a message from the user names it in In-Reply-To.
+ # Drafts get none of these tags.
+ #
++# "Replaces" means the cover letter or lone patch of a revised series
++# names the previous version on a line of its own, outside any quote,
++# as "- Link to vN: id:<message-id>". That message's whole thread is
++# superseded.
++#
+ # Runs from the notmuch post-new hook, so notmuch new applies it.
+ 
+ set -eu
+@@ -25,12 +31,16 @@ main() {
+ 	me="$(me_query)"
+ 
+ 	{
++		echo "-superseded -- *"
+ 		echo "-sent -inbox -replied -- ${drafts}"
+ 		echo "+sent -inbox -replied -- (${me}) and not ${drafts}"
+ 		echo "-sent +inbox -replied -- not (${me}) and not ${drafts}"
+ 		replied_ids "${me}" | while read -r id; do
+ 			echo "+replied -inbox -- id:\"${id}\" and not (${me}) and not ${drafts}"
+ 		done
++		link_ids | while read -r id; do
++			echo "+superseded -- thread:{id:\"${id}\"} and not ${drafts}"
++		done
+ 	} | notmuch tag --batch
+ }
+ 
+@@ -68,6 +78,23 @@ replied_ids() {
+ 	' | sort -u
+ }
+ 
++# The Message-ID on each "Link to vN" line, naming the version a
++# revised series replaces. The body is read decoded, so any transfer
++# encoding is undone.
++link_ids() {
++	notmuch search --output=messages "body:\"link to\" and not ${drafts}" |
++	    while read -r id; do
++		notmuch show --format=raw --part=1 "${id}"
++	done | awk '
++		/^[ \t]*-?[ \t]*Link to v[0-9]+[^:]*:[ \t]*id:[^ \t]/ {
++			match($0, /id:[^ \t]+/)
++			id = substr($0, RSTART + 3, RLENGTH - 3)
++			gsub(/^<|>$/, "", id)
++			print id
++		}
++	' | sort -u
++}
++
+ die() {
+ 	echo "${0##*/}: ${*}" >&2
+ 	exit 1
+-- 
+2.56.0
+

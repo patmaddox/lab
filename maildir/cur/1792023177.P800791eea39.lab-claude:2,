@@ -1,0 +1,82 @@
+Message-ID: <2e2462457490c5b12d35e99aa0841c4e82f32130.1792023159.git.claude@p7x.dev>
+In-Reply-To: <cover.1792023159.git.claude@p7x.dev>
+References: <cover.1792023159.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Subject: [PATCH v2 2/2] notmuch: Tag threads a Superseded-by trailer names
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+Change-Id: lmozpmvnnwylpvukyuozmwytyzssynzp
+Date: Thu, 15 Oct 2026 00:12:57 +0000
+
+Not every replacement carries a Link line. A series may be replaced by
+a different one, or posted again without naming the old version, and
+it then stays current forever.
+
+A maintainer can now retire such a thread by replying to it with a
+Superseded-by trailer as the last lines of the reply. The trailer
+names the replacement, so the link survives on the list, and the tag
+is derived from it like every other.
+
+Trailers are found with git interpret-trailers, so they follow the
+same rules as in commit messages. A trailer quoted in a later reply
+does not count, so quoting the old message does not retire anything
+by accident.
+---
+change-id: lmozpmvnnwylpvukyuozmwytyzssynzp
+
+ dotfiles/notmuch/hooks/mail-tag.sh | 25 ++++++++++++++++++++++++-
+ 1 file changed, 24 insertions(+), 1 deletion(-)
+
+diff --git a/dotfiles/notmuch/hooks/mail-tag.sh b/dotfiles/notmuch/hooks/mail-tag.sh
+index 9f19511..2cb4b77 100755
+--- a/dotfiles/notmuch/hooks/mail-tag.sh
++++ b/dotfiles/notmuch/hooks/mail-tag.sh
+@@ -17,7 +17,10 @@
+ # "Replaces" means the cover letter or lone patch of a revised series
+ # names the previous version on a line of its own, outside any quote,
+ # as "- Link to vN: id:<message-id>". That message's whole thread is
+-# superseded.
++# superseded. So is the thread of any message whose closing trailers,
++# as git interpret-trailers finds them, include Superseded-by. That
++# covers a series that a different one replaces, with no Link line.
++# Reading trailers needs git.
+ #
+ # Runs from the notmuch post-new hook, so notmuch new applies it.
+ 
+@@ -41,6 +44,9 @@ main() {
+ 		link_ids | while read -r id; do
+ 			echo "+superseded -- thread:{id:\"${id}\"} and not ${drafts}"
+ 		done
++		superseded_by_ids | while read -r id; do
++			echo "+superseded -- thread:{id:\"${id}\"} and not ${drafts}"
++		done
+ 	} | notmuch tag --batch
+ }
+ 
+@@ -95,6 +101,23 @@ link_ids() {
+ 	' | sort -u
+ }
+ 
++# The Message-ID of each message with a Superseded-by trailer. Only
++# the closing trailer block counts, so a quoted trailer does not. A
++# signature below the trailers is dropped first, or git would not find
++# them.
++superseded_by_ids() {
++	notmuch search --output=messages \
++	    "body:\"superseded by\" and not ${drafts}" |
++	    while read -r id; do
++		if notmuch show --format=raw --part=1 "${id}" |
++		    sed '/^-- $/,$d' |
++		    git interpret-trailers --parse |
++		    grep -i '^superseded-by: *[^ ]' >/dev/null; then
++			echo "${id#id:}"
++		fi
++	done
++}
++
+ die() {
+ 	echo "${0##*/}: ${*}" >&2
+ 	exit 1
+-- 
+2.56.0
+

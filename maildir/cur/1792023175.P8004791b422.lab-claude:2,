@@ -1,0 +1,131 @@
+Message-ID: <cover.1792023159.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Subject: [PATCH v2 0/2] notmuch: Tag superseded series
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+Date: Thu, 15 Oct 2026 00:12:55 +0000
+
+Old versions of a series stay on the list next to the current one,
+and a reader has to open each thread to tell which is live. This
+series derives a superseded tag from the list itself, so those threads
+can be filtered out by hand with "not tag:superseded". Nothing is
+hidden by default.
+
+Patch 1 tags the thread a revised cover letter names on its "Link to
+vN: id:<message-id>" line. Run over the list as it stands, it tags 26
+threads, 131 messages, all of them older versions of a series.
+
+Patch 2 tags the thread of any message whose closing trailers include
+Superseded-by, found with git interpret-trailers. A quoted trailer does
+not count. It is for the series no Link line covers, such as one a
+different series replaces; seven such threads are listed in "Re:
+Supporting status trailers in emails" [1]. Any sender may write it,
+and the hook needs git.
+
+The series applies to b/dev@upstream on its own. After it is applied,
+one "notmuch new" tags the old threads, since post-new already runs
+mail-tag.sh.
+
+I tested each patch against a copy of the notmuch database, running
+the hook from each commit. It tags the same threads on a second run.
+Trailer detection was checked on four bodies: a closing trailer, one
+above a signature, a quoted one, and one followed by more text. The
+first two match and the others do not.
+
+base-branch: b/dev@upstream
+
+Changes in v2:
+- Drop "notmuch: Hide superseded threads from searches"; superseded
+  threads are tagged for manual filtering, not excluded, per "Re:
+  Supporting status trailers in emails" [2].
+- Base on b/dev@upstream alone; the series no longer needs "[PATCH]
+  notmuch: Tag patches reported committed", per "Re: [PATCH 0/3]
+  notmuch: Tag superseded series and hide them" [3]. Patch 1 loses
+  the committed tag from its comment and tagging batch.
+- Link to v1: id:cover.1792016109.git.claude@p7x.dev
+
+[1] id:1792016195.922937034816@p7x.dev
+[2] id:m2ld7z6dyx.fsf@beastie.p7x.dev
+[3] id:m27bjj6dje.fsf@beastie.p7x.dev
+
+claude (2):
+  notmuch: Tag series a later version replaces
+  notmuch: Tag threads a Superseded-by trailer names
+
+ dotfiles/notmuch/hooks/mail-tag.sh | 62 +++++++++++++++++++++++++++---
+ 1 file changed, 56 insertions(+), 6 deletions(-)
+
+Range-diff against v1:
+1:  1e121f9 ! 1:  afd24e0 notmuch: Tag series a later version replaces
+    @@ dotfiles/notmuch/hooks/mail-tag.sh
+      #
+      # mail-tag.sh -- derive notmuch tags from the contents of the list.
+      #
+    --# The sent, inbox, replied and committed tags are recomputed from the
+    --# messages on every run, so the database holds no state of its own:
+    --# rebuild it from the maildir and the same tags come back.
+    -+# The sent, inbox, replied, committed and superseded tags are
+    -+# recomputed from the messages on every run, so the database holds no
+    -+# state of its own: rebuild it from the maildir and the same tags come
+    -+# back.
+    +-# The sent, inbox and replied tags are recomputed from the messages on
+    +-# every run, so the database holds no state of its own: rebuild it from
+    +-# the maildir and the same tags come back.
+    ++# The sent, inbox, replied and superseded tags are recomputed from the
+    ++# messages on every run, so the database holds no state of its own:
+    ++# rebuild it from the maildir and the same tags come back.
+      #
+    --#   sent       from the user (notmuch user.primary_email or other_email)
+    --#   inbox      from someone else, and the user has not replied to it
+    --#   replied    from someone else, and the user has replied to it
+    --#   committed  a patch that a message on the list reports committed
+    +-#   sent     from the user (notmuch user.primary_email or other_email)
+    +-#   inbox    from someone else, and the user has not replied to it
+    +-#   replied  from someone else, and the user has replied to it
+     +#   sent        from the user (notmuch user.primary_email or other_email)
+     +#   inbox       from someone else, and the user has not replied to it
+     +#   replied     from someone else, and the user has replied to it
+    -+#   committed   a patch that a message on the list reports committed
+     +#   superseded  every message in a series a later version replaces
+      #
+      # "Replied to" means a message from the user names it in In-Reply-To.
+    - # "Reports committed" means a message from anyone names it in a
+    - # Committed header.  Drafts get none of these tags.
+    + # Drafts get none of these tags.
+      #
+     +# "Replaces" means the cover letter or lone patch of a revised series
+     +# names the previous version on a line of its own, outside any quote,
+    @@ dotfiles/notmuch/hooks/mail-tag.sh: main() {
+      	me="$(me_query)"
+      
+      	{
+    --		echo "-committed -- *"
+    -+		echo "-committed -superseded -- *"
+    ++		echo "-superseded -- *"
+      		echo "-sent -inbox -replied -- ${drafts}"
+      		echo "+sent -inbox -replied -- (${me}) and not ${drafts}"
+      		echo "-sent +inbox -replied -- not (${me}) and not ${drafts}"
+    -@@ dotfiles/notmuch/hooks/mail-tag.sh: main() {
+    - 		header_ids "not ${drafts}" committed | while read -r id; do
+    - 			echo "+committed -- id:\"${id}\" and not ${drafts}"
+    + 		replied_ids "${me}" | while read -r id; do
+    + 			echo "+replied -inbox -- id:\"${id}\" and not (${me}) and not ${drafts}"
+      		done
+     +		link_ids | while read -r id; do
+     +			echo "+superseded -- thread:{id:\"${id}\"} and not ${drafts}"
+    @@ dotfiles/notmuch/hooks/mail-tag.sh: main() {
+      	} | notmuch tag --batch
+      }
+      
+    -@@ dotfiles/notmuch/hooks/mail-tag.sh: header_ids() {
+    +@@ dotfiles/notmuch/hooks/mail-tag.sh: replied_ids() {
+      	' | sort -u
+      }
+      
+2:  c3ef145 = 2:  2e24624 notmuch: Tag threads a Superseded-by trailer names
+3:  8a19b40 < -:  ------- notmuch: Hide superseded threads from searches
+
+base-commit: 4a5c3f490faee0035da3776adb0cf72add68a29f
+-- 
+2.56.0
+
