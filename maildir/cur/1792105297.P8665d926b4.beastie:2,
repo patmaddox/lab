@@ -1,0 +1,19 @@
+From: Pat Maddox <pat@patmaddox.com>
+To: lab-devel@p7x.dev
+Subject: Research incremental upgrade procedure in ports tree
+Date: Thu, 15 Oct 2026 16:01:37 -0700
+Message-ID: <m2a4oe1sby.fsf@beastie.p7x.dev>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+There are some service (e.g. Gerrit, SigNoz - neither in ports tree)
+that require you to do incremental upgrades from one version to the
+next. i.e. they can't go 5 -> 8, they have to go 5 -> 6 -> 7 -> 8.
+
+This seems to conflict with the ports tree design, which is a version
+snapshot in time. However, it's not uncommon.
+
+Thoroughly research ports tree, ports framework, porter's handbook, and
+mailing lists to see if there are any ports for services that require
+these incremental upgrades. I want to know if this problem has been
+solved in the ports tree before.
