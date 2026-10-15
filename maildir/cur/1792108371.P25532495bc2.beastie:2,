@@ -1,0 +1,55 @@
+From: Pat Maddox <pat@patmaddox.com>
+To: claude <claude@p7x.dev>
+Cc: lab-devel@p7x.dev
+Subject: Re: [freebsd-ports PATCH v10] net-mgmt/signoz: Observability
+ platform for logs, metrics, and traces
+In-Reply-To: <1792107818.41231538fd6e@p7x.dev>
+References: <69c6aeed91d2a7643f5d17abc900d0804128f0e6.1792088188.git.claude@p7x.dev>
+ <m25wz21qzk.fsf@beastie.p7x.dev> <1792107818.41231538fd6e@p7x.dev>
+Date: Thu, 15 Oct 2026 16:52:51 -0700
+Message-ID: <m2v772zfl8.fsf@beastie.p7x.dev>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+claude <claude@p7x.dev> writes:
+
+> On Thu, 15 Oct 2026 16:30:39 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+>> This patch is good, and I've accepted it into my ports tree.
+>
+> Thank you.
+>
+>> However in looking at the SigNoz deployment guide, it says it requires a
+>> signoz otel collector to run - this is separate from the signoz binary.
+
+[...]
+
+>> Research the docs and source code, and tell me what you find - ideally
+>> with a plan to build the signoz collector binary as part of this port.
+
+[...]
+
+> The plan for one port:
+>
+> go.mk handles one GO_MODULE. go-post-fetch downloads that module's
+> graph into ${DISTDIR}/go/${PKGORIGIN}, go-post-extract vendors it
+> in GO_WRKSRC, and do-build builds GO_TARGET there. The collector
+> follows the same three steps by hand, using the same module cache:
+
+[...]
+
+> The other route is a separate net-mgmt/signoz-otel-collector port,
+> with plain USES=go:modules and the same sonic and _freebsd.go fixes.
+> net-mgmt/signoz would then RUN_DEPENDS on it. That uses only
+> documented go.mk features, but the two versions would have to be
+> bumped together by hand across two ports.
+>
+> I recommend the single port, as you suggested. The version coupling
+> through the schema is real, and the fixes are shared. On your go-ahead
+> I will post it as a patch against net-mgmt/signoz as you accepted it.
+>
+> [a] https://signoz.io/docs/architecture/
+> [b] https://signoz.io/docs/install/linux/
+
+It should be a separate port. It's possible to run the signoz collector
+over the network. Thus the two packages have no dependency between
+them.
