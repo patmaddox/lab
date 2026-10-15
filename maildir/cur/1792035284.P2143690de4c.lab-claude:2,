@@ -1,0 +1,102 @@
+Message-ID: <88ea6d44124212cda7f1ca4ef4172b96d1190456.1792035264.git.claude@p7x.dev>
+In-Reply-To: <cover.1792035264.git.claude@p7x.dev>
+References: <cover.1792035264.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Subject: [PATCH v2 2/4] libexec/mail: Refuse a reroll without an interdiff
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+Change-Id: xpklzwpowplrruxmqrvlvzrolzykuunu
+Date: Thu, 15 Oct 2026 03:34:44 +0000
+
+Revised series reached the list without an interdiff against their
+previous version, so the reviewer had to reread every patch to find
+what changed. Leaving it to whoever formats the series has not been
+enough. Making format-patch.sh refuse -v N for N > 1 unless
+--interdiff is given turns the omission into an error at the point
+where it can be fixed.
+---
+change-id: xpklzwpowplrruxmqrvlvzrolzykuunu
+
+ libexec/mail/format-patch.sh | 51 +++++++++++++++++++++++++++++++++---
+ 1 file changed, 48 insertions(+), 3 deletions(-)
+
+diff --git a/libexec/mail/format-patch.sh b/libexec/mail/format-patch.sh
+index cad19ab..f7f30e0 100755
+--- a/libexec/mail/format-patch.sh
++++ b/libexec/mail/format-patch.sh
+@@ -21,6 +21,17 @@
+ # on unmerged work, prerequisite-patch-id lines:
+ #
+ #     format-patch.sh -o /tmp/series --base="${base}" "${base}..${head}"
++#
++# A revised series (-v N, N > 1) must carry an interdiff against the
++# previous version, so the reviewer sees what changed without
++# rereading the whole series. Pass --previous=<message-id> naming the
++# cover letter, or only patch, of the previous version. series-rebuild.sh
++# applies that version from the list onto --base, and git puts the
++# interdiff against it in the cover letter, or below the "---" of a
++# single patch. If it does not apply there, it is rebuilt on its own
++# base and compared with a range-diff instead, since an interdiff
++# across two bases would show everything that landed between them. A
++# reroll without --previous is refused.
+ 
+ set -eu
+ set -o pipefail
+@@ -37,17 +48,51 @@ die() {
+ }
+ 
+ main() {
+-	local arg file
++	local arg file reroll previous want_reroll base range
++	reroll=1
++	previous=
++	base=
++	want_reroll=
+ 
+ 	# git lists the files it writes, unless told to be quiet.
+ 	for arg; do
+ 		shift
++		if [ -n "${want_reroll}" ]; then
++			reroll="${arg}"
++			want_reroll=
++		fi
+ 		case "${arg}" in
+-		-q|--quiet) ;;
+-		*) set -- "${@}" "${arg}" ;;
++		-q|--quiet) continue ;;
++		-v|--reroll-count) want_reroll=1 ;;
++		-v*) reroll="${arg#-v}" ;;
++		--reroll-count=*) reroll="${arg#*=}" ;;
++		--base=*) base="${arg#*=}" ;;
++		--previous=*) previous="${arg#*=}"; continue ;;
+ 		esac
++		set -- "${@}" "${arg}"
+ 	done
+ 
++	case "${reroll}" in
++	''|1|*[!0-9]*) ;;
++	*)
++		[ -n "${previous}" ] ||
++		    die "v${reroll} needs --previous=<message-id of v$((reroll - 1))>"
++		;;
++	esac
++
++	if [ -n "${previous}" ]; then
++		if range="$("${0%/*}/series-rebuild.sh" ${base:+-o "${base}"} \
++		    "${previous}" 2>/dev/null)"; then
++			set -- "${@}" --interdiff="${range#*..}"
++		else
++			range="$("${0%/*}/series-rebuild.sh" "${previous}")" ||
++			    die "cannot rebuild ${previous}"
++			err "${previous} does not apply onto ${base:-?};" \
++			    "comparing with a range-diff"
++			set -- "${@}" --range-diff="${range}"
++		fi
++	fi
++
+ 	git format-patch "${@}" | while read -r file; do
+ 		add_change_id "${file}"
+ 		echo "${file}"
+-- 
+2.56.0
+

@@ -1,0 +1,50 @@
+Message-ID: <356584ebc943e8e6674d31a097856b8b027954ab.1792035264.git.claude@p7x.dev>
+In-Reply-To: <cover.1792035264.git.claude@p7x.dev>
+References: <cover.1792035264.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Subject: [PATCH v2 4/4] claude/skills/freebsd-port: Interdiff each revision
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+Change-Id: ypsuyxtrzmyzrzouqztspuomyuykuvyv
+Date: Thu, 15 Oct 2026 03:34:46 +0000
+
+Ports patches are formatted with plain git format-patch in a ports
+tree, so the check in format-patch.sh never sees them, and the signoz
+port went through five revisions without an interdiff. The skill now
+shows how to rebuild the previous version from the list onto the new
+base and pass its head to --interdiff, with a range-diff when it no
+longer applies.
+---
+change-id: ypsuyxtrzmyzrzouqztspuomyuykuvyv
+
+ .claude/skills/freebsd-port/SKILL.md | 14 ++++++++++++++
+ 1 file changed, 14 insertions(+)
+
+diff --git a/.claude/skills/freebsd-port/SKILL.md b/.claude/skills/freebsd-port/SKILL.md
+index 5b2ce91..7f7f831 100644
+--- a/.claude/skills/freebsd-port/SKILL.md
++++ b/.claude/skills/freebsd-port/SKILL.md
+@@ -202,6 +202,20 @@ For more than one patch add `--cover-letter` and fill it in. Below the
+ review: the ports you followed, what was checked (lint, makesum), what
+ was not (the build, the plist), and any loosened dependency bound.
+ 
++A revision adds `-v N` and an interdiff against v(N-1) as posted, so
++Pat sees what changed without rereading the port. Rebuild v(N-1) from
++the list onto the new base, from inside the ports tree, and pass its
++head to git:
++
++    prev="$(~/lab/default.jj/libexec/mail/series-rebuild.sh \
++        -o "${base}" "<message-id of v(N-1)>")"
++    git format-patch ... -v N --interdiff="${prev#*..}" origin/main..HEAD
++
++If v(N-1) does not apply onto the new base, run series-rebuild.sh
++without `-o` and pass `--range-diff="${prev}"` instead; an interdiff
++across two bases would show every commit that landed between them.
++End the notes with what changed and a `Link to v(N-1):` line.
++
+ Deliver the series into the mail workspace and push it, as
+ zib/patch-review-workflow.org describes:
+ 
+-- 
+2.56.0
+

@@ -1,0 +1,69 @@
+Message-ID: <7e097b8ea3525dc468f05e8ae7bded9c98f36def.1792035264.git.claude@p7x.dev>
+In-Reply-To: <cover.1792035264.git.claude@p7x.dev>
+References: <cover.1792035264.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Subject: [PATCH v2 3/4] src/lab-process-mail: Interdiff each revision
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+Change-Id: luzplvsysuvssrwyzzvkuozrzowyzlpz
+Date: Thu, 15 Oct 2026 03:34:45 +0000
+
+The pass told the agent to send revisions with -v N but said nothing
+about an interdiff, so revised series went out without one and the
+reviewer had to reread every patch to find what changed. It now names
+the previous version with --previous, which format-patch.sh needs to
+rebuild that version from the list, and says what to do when the
+revision moved to a new base. The mail workflow guide states the same
+rule.
+---
+change-id: luzplvsysuvssrwyzzvkuozrzowyzlpz
+
+ doc/mail-workflow.md           |  4 +++-
+ src/lab-process-mail/prompt.md | 16 ++++++++++++----
+ 2 files changed, 15 insertions(+), 5 deletions(-)
+
+diff --git a/doc/mail-workflow.md b/doc/mail-workflow.md
+index 07ee142..ed9edd8 100644
+--- a/doc/mail-workflow.md
++++ b/doc/mail-workflow.md
+@@ -73,7 +73,9 @@ Conventions:
+   or reject at that granularity.
+ - A new revision of a series is a **fresh thread** subject
+   `[PATCH vN]`, with a `v(N-1): <message-id>` link in the cover -- not a
+-  reply buried under the old thread.
++  reply buried under the old thread. It carries an interdiff against
++  v(N-1) as posted, rebuilt from the list:
++  `libexec/mail/format-patch.sh --previous=<message-id>` requires it.
+ - Append; never rewrite already-published history.
+ 
+ ## Maintainer side
+diff --git a/src/lab-process-mail/prompt.md b/src/lab-process-mail/prompt.md
+index 233e750..97d7ebd 100644
+--- a/src/lab-process-mail/prompt.md
++++ b/src/lab-process-mail/prompt.md
+@@ -210,10 +210,18 @@ git then adds `prerequisite-patch-id:` lines for the commits between
+ the base and the series. Name the prerequisite series in the cover
+ letter by its full subject, with its Message-ID in a footnote.
+ 
+-**Revisions.** For a revised series add `-v N`. Address every review
+-point the list researcher found unaddressed, or say why not. End the
+-cover letter blurb with what changed and a link to the previous
+-version:
++**Revisions.** For a revised series add `-v N` and
++`--previous=<message-id of the v(N-1) cover>`, or of its only patch.
++format-patch.sh refuses a reroll without it. It rebuilds v(N-1) from
++the list onto `--base` with series-rebuild.sh and adds an interdiff
++against it, so the reviewer sees exactly what changed since the
++version they read, computed from that mail rather than from your
++tree. If v(N-1) does not apply onto the new base, it says so and adds
++a range-diff instead; say in the cover letter why the base moved.
++
++Address every review point the list researcher found unaddressed, or
++say why not. End the cover letter blurb with what changed and a link
++to the previous version:
+ 
+     Changes in vN:
+     - <what changed, and why>
+-- 
+2.56.0
+

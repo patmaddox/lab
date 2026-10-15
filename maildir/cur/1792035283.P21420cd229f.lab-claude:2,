@@ -1,0 +1,221 @@
+Message-ID: <0485d977972ea53f818272b85b0dcf569abb8508.1792035264.git.claude@p7x.dev>
+In-Reply-To: <cover.1792035264.git.claude@p7x.dev>
+References: <cover.1792035264.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Subject: [PATCH v2 1/4] libexec/mail: Rebuild a posted series from the list
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+Change-Id: ywmmqzymxpnpukxuymoxyoyltmztztwy
+Date: Thu, 15 Oct 2026 03:34:43 +0000
+
+A revised series needs an interdiff against its previous version, and
+that version is what reached the list, not whatever its author still
+has in their tree. The commits behind it may have been rewritten,
+abandoned, or never existed locally, as with someone else's series.
+series-rebuild.sh applies the posted patches and prints the range they
+make, so the interdiff is computed from the mail the reviewer read.
+
+It can apply them onto a commit other than their own base. A revision
+is often rebased as well as changed, and an interdiff across two bases
+buries the changes under everything that landed between them. Applied
+onto the new base, the previous version differs from the new one only
+by what the revision changed.
+
+Each commit is dated from its message, so the same series always
+rebuilds to the same commit ids.
+---
+change-id: ywmmqzymxpnpukxuymoxyoyltmztztwy
+
+ libexec/mail/series-rebuild.sh | 180 +++++++++++++++++++++++++++++++++
+ 1 file changed, 180 insertions(+)
+ create mode 100755 libexec/mail/series-rebuild.sh
+
+diff --git a/libexec/mail/series-rebuild.sh b/libexec/mail/series-rebuild.sh
+new file mode 100755
+index 0000000..b36f9af
+--- /dev/null
++++ b/libexec/mail/series-rebuild.sh
+@@ -0,0 +1,180 @@
++#!/bin/sh
++#
++# series-rebuild.sh -- rebuild a series posted to the list as commits.
++#
++#     series-rebuild.sh [-o <commit>] <message-id>
++#
++# Takes the Message-ID of a series' cover letter, or of its only patch,
++# applies the series as posted onto its base-commit, or onto <commit>
++# if given, and prints the result as a range, <base>..<head>. It is how
++# a revised series gets its interdiff: the previous version is whatever
++# reached the list, so it is rebuilt from the list rather than looked
++# up in anyone's tree.
++#
++#     format-patch.sh -v 2 --previous=<message-id of v1> ...
++#
++# The patches are the messages in the cover letter's thread whose
++# subject carries the cover's prefix and an index, e.g. "[PATCH v2 3/7]"
++# under "[PATCH v2 0/7]". Every index from 1 to the total must be there
++# exactly once. Without -o, the base is the series' base-commit line,
++# which must be in the repo; a series with prerequisite-patch-id lines
++# is refused, since the patches it needs are not named.
++#
++# The repo is the git repo of the current directory, or the git backend
++# of its jj workspace, so a ports tree works as well as lab. The commits
++# are written straight into its object store with a scratch index, so no
++# working copy changes and nothing refers to them. Each is dated with
++# its message's Date, so the same mail always gives the same commit id. If any patch fails to apply, nothing is printed.
++
++set -eu
++set -o pipefail
++
++readonly PROGNAME="${0##*/}"
++
++err() {
++	echo "${PROGNAME}: ${*}" >&2
++}
++
++die() {
++	err "${@}"
++	exit 1
++}
++
++tmp=""
++
++cleanup() {
++	rm -rf "${tmp}"
++}
++
++# Print header ${1} of message file ${2}, unfolded, keeping a subject's
++# [PATCH ...] prefix.
++header() {
++	git mailinfo -k "${tmp}/msg" "${tmp}/patch" <"${2}" |
++	    sed -n "s/^${1}: //p"
++}
++
++usage() {
++	die "usage: ${PROGNAME} [-o <commit>] <message-id>"
++}
++
++main() {
++	local arg id cover subject prefix total base file k parent tree commit
++
++	base=
++	while getopts o: arg; do
++		case "${arg}" in
++		o) base="${OPTARG}" ;;
++		*) usage ;;
++		esac
++	done
++	shift $((OPTIND - 1))
++	[ "${#}" -eq 1 ] || usage
++	id="${1#id:}"
++	id="${id#<}"
++	id="${id%>}"
++
++	tmp="$(mktemp -d "${TMPDIR:-/tmp}/series-rebuild.XXXXXX")"
++	trap cleanup EXIT
++
++	cover="$(notmuch search --output=files --duplicate=1 "id:${id}")"
++	[ -n "${cover}" ] || die "id:${id}: no such message"
++
++	export GIT_DIR
++	GIT_DIR="$(git rev-parse --absolute-git-dir 2>/dev/null || jj git root)"
++
++	subject="$(header Subject "${cover}")"
++	case "${subject}" in
++	\[*\]*) ;;
++	*) die "id:${id}: not a patch: ${subject}" ;;
++	esac
++	prefix="${subject#\[}"
++	prefix="${prefix%%\]*}"
++
++	# "PATCH v2 0/7" is a cover with seven patches; "PATCH v2" is a
++	# single patch, and the series is that message alone.
++	case "${prefix##* }" in
++	0/[1-9]*)
++		total="${prefix##*/}"
++		prefix="${prefix% *}"
++		notmuch search --output=files --duplicate=1 \
++		    "thread:{id:${id}}" >"${tmp}/files"
++		while read -r file; do
++			subject="$(header Subject "${file}")"
++			k="${subject#"[${prefix} "}"
++			[ "${k}" != "${subject}" ] || continue
++			k="${k%%\]*}"
++			[ "${k#*/}" = "${total}" ] || continue
++			k="${k%/*}"
++			case "${k}" in
++			''|0|*[!0-9]*) continue ;;
++			esac
++			[ ! -e "${tmp}/${k}.eml" ] ||
++			    die "id:${id}: patch ${k}/${total} posted twice"
++			cp "${file}" "${tmp}/${k}.eml"
++		done <"${tmp}/files"
++		;;
++	[0-9]*/[0-9]*)
++		die "id:${id}: one patch of a series; give its cover letter"
++		;;
++	*)
++		total=1
++		cp "${cover}" "${tmp}/1.eml"
++		;;
++	esac
++
++	if [ -z "${base}" ]; then
++		base="$(sed -n 's/^base-commit: \([0-9a-f]\{40\}\)$/\1/p' \
++		    "${cover}")"
++		[ -n "${base}" ] || die "id:${id}: no base-commit line"
++		! grep -q '^prerequisite-patch-id: ' "${cover}" ||
++		    die "id:${id}: needs prerequisite patches; give -o"
++	fi
++	git rev-parse --verify --quiet "${base}^{commit}" >"${tmp}/base" ||
++	    die "id:${id}: base ${base} not in the repo; fetch it"
++	base="$(cat "${tmp}/base")"
++
++	export GIT_INDEX_FILE="${tmp}/index"
++	git read-tree "${base}"
++	parent="${base}"
++	k=1
++	while [ "${k}" -le "${total}" ]; do
++		file="${tmp}/${k}.eml"
++		[ -e "${file}" ] ||
++		    die "id:${id}: patch ${k}/${total} not on the list"
++		git mailinfo "${tmp}/msg" "${tmp}/patch" <"${file}" \
++		    >"${tmp}/info"
++		if [ -s "${tmp}/patch" ]; then
++			git apply --cached --whitespace=nowarn "${tmp}/patch" ||
++			    die "id:${id}: patch ${k}/${total} does not apply"
++		fi
++		tree="$(git write-tree)"
++		commit="$(commit_tree "${tree}" "${parent}")"
++		parent="${commit}"
++		k=$((k + 1))
++	done
++
++	echo "${base}..${parent}"
++}
++
++# Commit a tree the way git am would, from the mailinfo of one patch.
++commit_tree() {
++	local name email date subject
++
++	name="$(sed -n 's/^Author: //p' "${tmp}/info")"
++	email="$(sed -n 's/^Email: //p' "${tmp}/info")"
++	date="$(sed -n 's/^Date: //p' "${tmp}/info")"
++	subject="$(sed -n 's/^Subject: //p' "${tmp}/info")"
++
++	{
++		echo "${subject}"
++		if [ -s "${tmp}/msg" ]; then
++			echo
++			cat "${tmp}/msg"
++		fi
++	} | GIT_AUTHOR_NAME="${name}" GIT_AUTHOR_EMAIL="${email}" \
++	    GIT_AUTHOR_DATE="${date}" GIT_COMMITTER_NAME="${name}" \
++	    GIT_COMMITTER_EMAIL="${email}" GIT_COMMITTER_DATE="${date}" \
++	    git commit-tree "${1}" -p "${2}"
++}
++
++main "${@}"
+-- 
+2.56.0
+

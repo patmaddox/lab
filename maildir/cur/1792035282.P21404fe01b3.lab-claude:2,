@@ -1,0 +1,399 @@
+Message-ID: <cover.1792035264.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Subject: [PATCH v2 0/4] Require an interdiff on revised series
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+Date: Thu, 15 Oct 2026 03:34:42 +0000
+
+Revised series keep reaching the list without an interdiff against
+their previous version, so the reviewer has to reread every patch to
+find what changed. Pat asked that the interdiff be computed
+deterministically from the previous version rather than inferred.
+
+Patch 1 adds series-rebuild.sh. Given the Message-ID of a series'
+cover letter or only patch, it applies the posted patches onto their
+base-commit, or onto another commit with -o, and prints the range.
+The previous version is therefore what reached the list, whatever
+became of its commits in anyone's tree. Rebuilding all six signoz
+versions this way gives trees identical to the commits they were
+formatted from.
+
+Patch 2 makes format-patch.sh refuse -v N for N > 1 without
+--previous=<message-id>. It rebuilds that version onto the new
+--base and passes git --interdiff against it, so a rebase does not
+bury the changes under everything that landed between the bases.
+If the previous version no longer applies to the new base, it warns
+and gives a range-diff instead.
+
+Patch 3 states the rule in src/lab-process-mail/prompt.md and the
+mail workflow guide. Patch 4 does the same for the freebsd-port
+skill, whose patches are formatted with plain git in a ports tree,
+which is how the signoz revisions escaped the check.
+
+I tested series-rebuild.sh on single patches and covers, on lab and
+ports trees, and its refusals: a non-cover patch of a series, a
+missing base, a patch that does not apply. format-patch.sh refuses
+-v 2 without --previous, and formatted this series with it.
+
+Changes in v2:
+- Rebuild the previous version from the list instead of taking its
+  head from the leading hash of a Message-ID, as asked in "New patch
+  series must have an interdiff" [1].
+- Apply it onto the new base so the interdiff shows only the
+  revision, with a range-diff fallback.
+- Move the instructions from the removed process-email skill to
+  src/lab-process-mail/prompt.md, and cover the freebsd-port skill.
+- The range-diff below pairs patches poorly: v1's patch 2 edited
+  the process-email skill, which is gone from the base, so v1 no
+  longer applies and format-patch.sh fell back to a range-diff.
+- Link to v1: id:cover.1792005540.git.claude@p7x.dev
+
+base-branch: b/dev@upstream
+
+[1] id:m2ecdr3aq6.fsf@beastie.p7x.dev
+
+claude (4):
+  libexec/mail: Rebuild a posted series from the list
+  libexec/mail: Refuse a reroll without an interdiff
+  src/lab-process-mail: Interdiff each revision
+  claude/skills/freebsd-port: Interdiff each revision
+
+ .claude/skills/freebsd-port/SKILL.md |  14 +++
+ doc/mail-workflow.md                 |   4 +-
+ libexec/mail/format-patch.sh         |  51 +++++++-
+ libexec/mail/series-rebuild.sh       | 180 +++++++++++++++++++++++++++
+ src/lab-process-mail/prompt.md       |  16 ++-
+ 5 files changed, 257 insertions(+), 8 deletions(-)
+ create mode 100755 libexec/mail/series-rebuild.sh
+
+Range-diff against v1:
+2:  1d93c1f ! 1:  0485d97 claude/skills/process-email: Show how to interdiff a revision
+    @@ Metadata
+     Author: claude <claude@p7x.dev>
+     
+      ## Commit message ##
+    -    claude/skills/process-email: Show how to interdiff a revision
+    +    libexec/mail: Rebuild a posted series from the list
+     
+    -    The skill told the agent to send revisions with -v N but said nothing
+    -    about the interdiff, which is why revised series kept going out
+    -    without one. It now asks for --interdiff and shows where to find the
+    -    previous version's head: git format-patch names each patch's
+    -    Message-ID after its commit, so the head of the last version is the
+    -    hash leading the Message-ID of its last patch. The mail workflow
+    -    guide states the same rule.
+    +    A revised series needs an interdiff against its previous version, and
+    +    that version is what reached the list, not whatever its author still
+    +    has in their tree. The commits behind it may have been rewritten,
+    +    abandoned, or never existed locally, as with someone else's series.
+    +    series-rebuild.sh applies the posted patches and prints the range they
+    +    make, so the interdiff is computed from the mail the reviewer read.
+     
+    - ## .claude/skills/process-email/SKILL.md ##
+    -@@ .claude/skills/process-email/SKILL.md: git then adds `prerequisite-patch-id:` lines for the commits between
+    - trunk and the series. Name the prerequisite series in the cover letter
+    - by its full subject, with its Message-ID in a footnote.
+    - 
+    --**Revisions.** For a revised series add `-v N`. Address every review
+    --point the list researcher found unaddressed, or say why not. End the
+    --cover letter blurb with what changed and a link to the previous
+    --version:
+    -+**Revisions.** For a revised series add `-v N` and
+    -+`--interdiff=<head of v(N-1)>`. format-patch.sh refuses a reroll
+    -+without an interdiff, which shows the reviewer exactly what changed
+    -+since the version they read; git puts it in the cover letter, or below
+    -+the `---` of a single patch. git names each patch's Message-ID after
+    -+its commit, so the previous head is the leading hash of the last
+    -+patch's Message-ID in v(N-1):
+    -+
+    -+    prev="<Message-ID of the last patch of v(N-1)>"
+    -+    prev_head="${prev%%.*}"
+    -+    git cat-file -e "${prev_head}^{commit}"
+    -+
+    -+If trunk moved between versions, the interdiff shows trunk's changes
+    -+too; say so in the version notes.
+    -+
+    -+Address every review point the list researcher found unaddressed, or
+    -+say why not. End the cover letter blurb with what changed and a link
+    -+to the previous version:
+    - 
+    -     Changes in vN:
+    -     - <what changed, and why>
+    +    It can apply them onto a commit other than their own base. A revision
+    +    is often rebased as well as changed, and an interdiff across two bases
+    +    buries the changes under everything that landed between them. Applied
+    +    onto the new base, the previous version differs from the new one only
+    +    by what the revision changed.
+     
+    - ## doc/mail-workflow.md ##
+    -@@ doc/mail-workflow.md: Conventions:
+    -   or reject at that granularity.
+    - - A new revision of a series is a **fresh thread** subject
+    -   `[PATCH vN]`, with a `v(N-1): <message-id>` link in the cover -- not a
+    --  reply buried under the old thread.
+    -+  reply buried under the old thread. It carries an interdiff against
+    -+  v(N-1) (`git format-patch --interdiff`), which
+    -+  `libexec/mail/format-patch.sh` requires.
+    - - Append; never rewrite already-published history.
+    - 
+    - ## Maintainer side
+    +    Each commit is dated from its message, so the same series always
+    +    rebuilds to the same commit ids.
+    +
+    + ## libexec/mail/series-rebuild.sh (new) ##
+    +@@
+    ++#!/bin/sh
+    ++#
+    ++# series-rebuild.sh -- rebuild a series posted to the list as commits.
+    ++#
+    ++#     series-rebuild.sh [-o <commit>] <message-id>
+    ++#
+    ++# Takes the Message-ID of a series' cover letter, or of its only patch,
+    ++# applies the series as posted onto its base-commit, or onto <commit>
+    ++# if given, and prints the result as a range, <base>..<head>. It is how
+    ++# a revised series gets its interdiff: the previous version is whatever
+    ++# reached the list, so it is rebuilt from the list rather than looked
+    ++# up in anyone's tree.
+    ++#
+    ++#     format-patch.sh -v 2 --previous=<message-id of v1> ...
+    ++#
+    ++# The patches are the messages in the cover letter's thread whose
+    ++# subject carries the cover's prefix and an index, e.g. "[PATCH v2 3/7]"
+    ++# under "[PATCH v2 0/7]". Every index from 1 to the total must be there
+    ++# exactly once. Without -o, the base is the series' base-commit line,
+    ++# which must be in the repo; a series with prerequisite-patch-id lines
+    ++# is refused, since the patches it needs are not named.
+    ++#
+    ++# The repo is the git repo of the current directory, or the git backend
+    ++# of its jj workspace, so a ports tree works as well as lab. The commits
+    ++# are written straight into its object store with a scratch index, so no
+    ++# working copy changes and nothing refers to them. Each is dated with
+    ++# its message's Date, so the same mail always gives the same commit id. If any patch fails to apply, nothing is printed.
+    ++
+    ++set -eu
+    ++set -o pipefail
+    ++
+    ++readonly PROGNAME="${0##*/}"
+    ++
+    ++err() {
+    ++	echo "${PROGNAME}: ${*}" >&2
+    ++}
+    ++
+    ++die() {
+    ++	err "${@}"
+    ++	exit 1
+    ++}
+    ++
+    ++tmp=""
+    ++
+    ++cleanup() {
+    ++	rm -rf "${tmp}"
+    ++}
+    ++
+    ++# Print header ${1} of message file ${2}, unfolded, keeping a subject's
+    ++# [PATCH ...] prefix.
+    ++header() {
+    ++	git mailinfo -k "${tmp}/msg" "${tmp}/patch" <"${2}" |
+    ++	    sed -n "s/^${1}: //p"
+    ++}
+    ++
+    ++usage() {
+    ++	die "usage: ${PROGNAME} [-o <commit>] <message-id>"
+    ++}
+    ++
+    ++main() {
+    ++	local arg id cover subject prefix total base file k parent tree commit
+    ++
+    ++	base=
+    ++	while getopts o: arg; do
+    ++		case "${arg}" in
+    ++		o) base="${OPTARG}" ;;
+    ++		*) usage ;;
+    ++		esac
+    ++	done
+    ++	shift $((OPTIND - 1))
+    ++	[ "${#}" -eq 1 ] || usage
+    ++	id="${1#id:}"
+    ++	id="${id#<}"
+    ++	id="${id%>}"
+    ++
+    ++	tmp="$(mktemp -d "${TMPDIR:-/tmp}/series-rebuild.XXXXXX")"
+    ++	trap cleanup EXIT
+    ++
+    ++	cover="$(notmuch search --output=files --duplicate=1 "id:${id}")"
+    ++	[ -n "${cover}" ] || die "id:${id}: no such message"
+    ++
+    ++	export GIT_DIR
+    ++	GIT_DIR="$(git rev-parse --absolute-git-dir 2>/dev/null || jj git root)"
+    ++
+    ++	subject="$(header Subject "${cover}")"
+    ++	case "${subject}" in
+    ++	\[*\]*) ;;
+    ++	*) die "id:${id}: not a patch: ${subject}" ;;
+    ++	esac
+    ++	prefix="${subject#\[}"
+    ++	prefix="${prefix%%\]*}"
+    ++
+    ++	# "PATCH v2 0/7" is a cover with seven patches; "PATCH v2" is a
+    ++	# single patch, and the series is that message alone.
+    ++	case "${prefix##* }" in
+    ++	0/[1-9]*)
+    ++		total="${prefix##*/}"
+    ++		prefix="${prefix% *}"
+    ++		notmuch search --output=files --duplicate=1 \
+    ++		    "thread:{id:${id}}" >"${tmp}/files"
+    ++		while read -r file; do
+    ++			subject="$(header Subject "${file}")"
+    ++			k="${subject#"[${prefix} "}"
+    ++			[ "${k}" != "${subject}" ] || continue
+    ++			k="${k%%\]*}"
+    ++			[ "${k#*/}" = "${total}" ] || continue
+    ++			k="${k%/*}"
+    ++			case "${k}" in
+    ++			''|0|*[!0-9]*) continue ;;
+    ++			esac
+    ++			[ ! -e "${tmp}/${k}.eml" ] ||
+    ++			    die "id:${id}: patch ${k}/${total} posted twice"
+    ++			cp "${file}" "${tmp}/${k}.eml"
+    ++		done <"${tmp}/files"
+    ++		;;
+    ++	[0-9]*/[0-9]*)
+    ++		die "id:${id}: one patch of a series; give its cover letter"
+    ++		;;
+    ++	*)
+    ++		total=1
+    ++		cp "${cover}" "${tmp}/1.eml"
+    ++		;;
+    ++	esac
+    ++
+    ++	if [ -z "${base}" ]; then
+    ++		base="$(sed -n 's/^base-commit: \([0-9a-f]\{40\}\)$/\1/p' \
+    ++		    "${cover}")"
+    ++		[ -n "${base}" ] || die "id:${id}: no base-commit line"
+    ++		! grep -q '^prerequisite-patch-id: ' "${cover}" ||
+    ++		    die "id:${id}: needs prerequisite patches; give -o"
+    ++	fi
+    ++	git rev-parse --verify --quiet "${base}^{commit}" >"${tmp}/base" ||
+    ++	    die "id:${id}: base ${base} not in the repo; fetch it"
+    ++	base="$(cat "${tmp}/base")"
+    ++
+    ++	export GIT_INDEX_FILE="${tmp}/index"
+    ++	git read-tree "${base}"
+    ++	parent="${base}"
+    ++	k=1
+    ++	while [ "${k}" -le "${total}" ]; do
+    ++		file="${tmp}/${k}.eml"
+    ++		[ -e "${file}" ] ||
+    ++		    die "id:${id}: patch ${k}/${total} not on the list"
+    ++		git mailinfo "${tmp}/msg" "${tmp}/patch" <"${file}" \
+    ++		    >"${tmp}/info"
+    ++		if [ -s "${tmp}/patch" ]; then
+    ++			git apply --cached --whitespace=nowarn "${tmp}/patch" ||
+    ++			    die "id:${id}: patch ${k}/${total} does not apply"
+    ++		fi
+    ++		tree="$(git write-tree)"
+    ++		commit="$(commit_tree "${tree}" "${parent}")"
+    ++		parent="${commit}"
+    ++		k=$((k + 1))
+    ++	done
+    ++
+    ++	echo "${base}..${parent}"
+    ++}
+    ++
+    ++# Commit a tree the way git am would, from the mailinfo of one patch.
+    ++commit_tree() {
+    ++	local name email date subject
+    ++
+    ++	name="$(sed -n 's/^Author: //p' "${tmp}/info")"
+    ++	email="$(sed -n 's/^Email: //p' "${tmp}/info")"
+    ++	date="$(sed -n 's/^Date: //p' "${tmp}/info")"
+    ++	subject="$(sed -n 's/^Subject: //p' "${tmp}/info")"
+    ++
+    ++	{
+    ++		echo "${subject}"
+    ++		if [ -s "${tmp}/msg" ]; then
+    ++			echo
+    ++			cat "${tmp}/msg"
+    ++		fi
+    ++	} | GIT_AUTHOR_NAME="${name}" GIT_AUTHOR_EMAIL="${email}" \
+    ++	    GIT_AUTHOR_DATE="${date}" GIT_COMMITTER_NAME="${name}" \
+    ++	    GIT_COMMITTER_EMAIL="${email}" GIT_COMMITTER_DATE="${date}" \
+    ++	    git commit-tree "${1}" -p "${2}"
+    ++}
+    ++
+    ++main "${@}"
+1:  f0b394c ! 2:  88ea6d4 libexec/mail: Refuse a reroll without an interdiff
+    @@ libexec/mail/format-patch.sh
+     +#
+     +# A revised series (-v N, N > 1) must carry an interdiff against the
+     +# previous version, so the reviewer sees what changed without
+    -+# rereading the whole series. Pass --interdiff=<previous head>; git
+    -+# puts it in the cover letter, or below the "---" of a single patch.
+    -+# A reroll without one is refused.
+    ++# rereading the whole series. Pass --previous=<message-id> naming the
+    ++# cover letter, or only patch, of the previous version. series-rebuild.sh
+    ++# applies that version from the list onto --base, and git puts the
+    ++# interdiff against it in the cover letter, or below the "---" of a
+    ++# single patch. If it does not apply there, it is rebuilt on its own
+    ++# base and compared with a range-diff instead, since an interdiff
+    ++# across two bases would show everything that landed between them. A
+    ++# reroll without --previous is refused.
+      
+      set -eu
+      set -o pipefail
+    @@ libexec/mail/format-patch.sh: die() {
+      
+      main() {
+     -	local arg file
+    -+	local arg file reroll interdiff want_reroll
+    ++	local arg file reroll previous want_reroll base range
+     +	reroll=1
+    -+	interdiff=
+    ++	previous=
+    ++	base=
+     +	want_reroll=
+      
+      	# git lists the files it writes, unless told to be quiet.
+    @@ libexec/mail/format-patch.sh: die() {
+     +		-v|--reroll-count) want_reroll=1 ;;
+     +		-v*) reroll="${arg#-v}" ;;
+     +		--reroll-count=*) reroll="${arg#*=}" ;;
+    -+		--interdiff|--interdiff=*) interdiff=1 ;;
+    ++		--base=*) base="${arg#*=}" ;;
+    ++		--previous=*) previous="${arg#*=}"; continue ;;
+      		esac
+     +		set -- "${@}" "${arg}"
+      	done
+    @@ libexec/mail/format-patch.sh: die() {
+     +	case "${reroll}" in
+     +	''|1|*[!0-9]*) ;;
+     +	*)
+    -+		[ -n "${interdiff}" ] ||
+    -+		    die "v${reroll} needs --interdiff=<head of v$((reroll - 1))>"
+    ++		[ -n "${previous}" ] ||
+    ++		    die "v${reroll} needs --previous=<message-id of v$((reroll - 1))>"
+     +		;;
+     +	esac
+    ++
+    ++	if [ -n "${previous}" ]; then
+    ++		if range="$("${0%/*}/series-rebuild.sh" ${base:+-o "${base}"} \
+    ++		    "${previous}" 2>/dev/null)"; then
+    ++			set -- "${@}" --interdiff="${range#*..}"
+    ++		else
+    ++			range="$("${0%/*}/series-rebuild.sh" "${previous}")" ||
+    ++			    die "cannot rebuild ${previous}"
+    ++			err "${previous} does not apply onto ${base:-?};" \
+    ++			    "comparing with a range-diff"
+    ++			set -- "${@}" --range-diff="${range}"
+    ++		fi
+    ++	fi
+     +
+      	git format-patch "${@}" | while read -r file; do
+      		add_change_id "${file}"
+-:  ------- > 3:  7e097b8 src/lab-process-mail: Interdiff each revision
+-:  ------- > 4:  356584e claude/skills/freebsd-port: Interdiff each revision
+
+base-commit: 8d0b05250dc28c4dfa11e4e7925c94f50cfcf211
+-- 
+2.56.0
+
