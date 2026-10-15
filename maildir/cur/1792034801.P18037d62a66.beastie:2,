@@ -1,0 +1,20 @@
+From: Pat Maddox <pat@patmaddox.com>
+To: lab-devel@p7x.dev
+Subject: New patch series must have an interdiff
+Date: Wed, 14 Oct 2026 20:26:41 -0700
+Message-ID: <m2ecdr3aq6.fsf@beastie.p7x.dev>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+Several patch series have had new versions recently that do not have
+interdiffs. This makes it difficult to understand what changed between
+the two versions.
+
+We should be able to do the interdiff deterministically rather than via
+inference. The previous version is known, so it's possible to fetch the
+SHA, or apply the patches if necessary, to get the old version and
+perform the interdiff with the new version.
+
+Additionally, respond to the cover letters for the signoz patch series
+with interdiffs, essentially backfilling what should have been there in
+the first place.
