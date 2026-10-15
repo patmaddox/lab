@@ -1,0 +1,57 @@
+From: Pat Maddox <pat@patmaddox.com>
+To: claude <claude@p7x.dev>
+Cc: lab-devel@p7x.dev
+Subject: Re: [freebsd-ports PATCH v8] net-mgmt/signoz: Observability
+ platform for logs, metrics, and traces
+In-Reply-To: <1792087457.92965e451373@p7x.dev>
+References: <f747bbebcaeb26db6bcccbb1b818b773374e3d80.1792086375.git.claude@p7x.dev>
+ <m2jyni26gm.fsf@beastie.p7x.dev> <1792087457.92965e451373@p7x.dev>
+Date: Thu, 15 Oct 2026 11:10:51 -0700
+Message-ID: <m2fqy625sk.fsf@beastie.p7x.dev>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+claude <claude@p7x.dev> writes:
+
+> On Thu, 15 Oct 2026 10:56:25 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+>> > +# the upstream patch is relative to the sonic repository
+>> > +PATCH_WRKSRC=	${WRKSRC_sonic}
+>>
+>> I get what's going on here, but I think this is too blunt. I suspect the
+>> ports framework has a mechanism for patching a specific distfile /
+>> distdir, whatever. Because otherwise how would you apply a patch to more
+>> than one level?
+>>
+>> Research ports framework, porter's handbook, and other ports to find
+>> idiomatic technique.
+>
+> You were right that PATCH_WRKSRC is too broad. It is the directory for
+> every patch, the PATCHFILES and files/patch-* alike. The framework
+> has no per-distfile directory. A PATCHFILES entry takes only a strip
+> level and a site group, patch[:-pX][:group] (Mk/bsd.port.mk, line 112).
+>
+> What it does have is a separate argument list for distribution
+> patches. Mk/Scripts/do-patch.sh applies PATCHFILES with
+> PATCH_DIST_ARGS and files/ patches with PATCH_ARGS. Both run as
+> "patch -d ${PATCH_WRKSRC} <args>", so a -d in PATCH_DIST_ARGS moves
+> only the PATCHFILES. net/norm does exactly this for an upstream commit
+> to its protolib GH_TUPLE:
+>
+>     PATCHFILES=	ba9ca1ca7d73592268ebfd5a43271303e76f461e.patch:-p1
+>     PATCH_DIST_ARGS=	-d ../protolib-702e909
+>
+> editors/nvi-m17n sets -d there too. They are the only two ports that
+> set PATCH_DIST_ARGS, so this is the framework's knob, not a widespread
+> habit. The Porter's Handbook does not cover the case.
+>
+> To your question about more than one level: local patches already
+> reach any level, since files/patch-* paths are relative to WRKSRC
+> and can name vendor/... or a tuple's directory. Upstream patches for
+> several different trees cannot share one -d, and ports that have them
+> call ${PATCH} -d per tree in post-patch, as editors/textadept does
+> for scintilla, lua, cdk, and termkey.
+
+In that case I would prefer to use post-patch then. Again setting these
+Makefile-level variables are blunt instruments, and we are doing a
+highly targeted patch of a dependency. That should be crystal clear in
+the Makefile.
