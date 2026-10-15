@@ -1,0 +1,503 @@
+Message-ID: <2c36442b0f0ef13c3f17984232ef0a2eb1acd243.1792037421.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Subject: [freebsd-ports PATCH v7] net-mgmt/signoz: Observability platform for
+ logs, metrics, and traces
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+Date: Thu, 15 Oct 2026 04:10:26 +0000
+
+SigNoz is an open source observability platform. It brings logs,
+metrics, and traces together in one application, with dashboards,
+alerts, exceptions, and service maps. It is native to OpenTelemetry and
+stores its data in ClickHouse.
+
+This is the Community Edition of the query service and web interface.
+Telemetry reaches ClickHouse through the SigNoz distribution of the
+OpenTelemetry Collector, which is packaged separately.
+
+Upstream pins github.com/bytedance/sonic v1.14.1, which does not build
+with Go 1.26 or later. The port vendors sonic from an upstream commit
+after v1.15.4 instead; that commit also fixes mmap(2) on FreeBSD, which
+no sonic release includes yet.
+
+WWW: https://signoz.io/
+---
+Notes for review:
+
+Build: on the base commit below, with Go 1.27.2 and STRICT_DEPENDS
+set, makesum fetched into an empty DISTDIR with the network up. Then,
+as in a poudriere jail, DISTDIR was made read-only and the network was
+cut by pointing the proxy variables at a closed port. extract, patch,
+build, stage, and check-plist all passed, and go logged no download
+after fetch. The staged binary, run as an unprivileged user with no
+ClickHouse, started its HTTP servers and ran for 30 seconds without a
+panic. portclippy, portfmt, and portlint are clean. Not checked: a
+real poudriere build, aarch64, and a run from rc.d (that needs root).
+
+Why sonic must be replaced: signoz v0.145.0 pins
+github.com/bytedance/sonic v1.14.1. Its internal/rt package defines
+GoMapIterator only for go1.24 && !go1.26, so with the tree's Go 1.26
+or 1.27 it fails with "undefined: GoMapIterator". This is not specific
+to FreeBSD, and go.mk offers no older Go. sonic added Go 1.26 support
+in v1.15.0. signoz main and v0.146.0 still pin v1.14.1; SigNoz PR
+#11975, "fix(deps): bump bytedance/sonic to v1.15.0 for Go 1.26
+compatibility", has been open since July. Separately, sonic's loader
+maps memory with MAP_ANON and fd 0, which FreeBSD rejects with EINVAL,
+so the binary panics at startup. bytedance/sonic commit bf12ab8,
+"MAP_ANON should be set to -1 , not required on Linux, required on
+BSD. + go fmt", fixes that and is in no release yet.
+
+How, and the prior art: go.mk vendors the modules at extract time, in
+go-post-extract, so a patch to go.mod in files/ comes too late. The
+Porter's Handbook says so in "Overriding go.mod in Modules Mode"
+(section 6.6.8). The tree's common answer, for a GO_MODULE port that
+needs a newer copy of one module, is to fetch it with GH_TUPLE and
+swap it into vendor/ in pre-patch. 22 GO_MODULE ports do this, e.g.
+security/nebula (x/net, x/term, x/sys), databases/imposm3,
+net/slackcat, and www/oneshot. This version follows nebula: one
+GH_TUPLE entry and a two-line pre-patch.
+
+The tuple is commit bf12ab8 rather than a tag, since only that commit
+has the mmap fix. It is v1.15.4 plus five bug fixes, and its loader
+differs from loader/v0.5.2 only in mmap_unix.go. sonic v1.15.4 needs
+no new modules: its go.mod differs from v1.14.1's only in the loader
+version. go.mod and vendor/modules.txt still name v1.14.1 and v0.3.0,
+so go's vendor consistency check passes. The cost is that "go version
+-m" reports those versions, as it does for nebula's x/ modules. When a
+sonic release has the fix, the tuple becomes that tag.
+
+This drops post-fetch, post-extract, SONIC_EDIT, the six proxy lines,
+PATCH_SITES, PATCHFILES, and PATCH_WRKSRC. Only www/comentario
+downloads an extra module in its own post-fetch, so it was a poor
+model. The mmap fix still comes from upstream's GitHub through the
+framework, now as the commit's tree. No port in the tree applies
+PATCHFILES to vendored code. Two alternatives were rejected:
+- Override go.mod and go.sum as distfiles, as the handbook's example
+  does for textproc/miller. The edited go.mod would need hosting
+  (LOCAL on freefall), and the loader would still need its own fix.
+- Add files/patch-go.mod, patch-go.sum and patch-vendor_modules.txt
+  to the swap, as net/slackcat and databases/cayley do. That is three
+  more patches whose only effect is accurate version metadata.
+
+The other workarounds, each with the ports that do the same:
+- :web, the prebuilt frontend from upstream's linux_amd64 release
+  tarball. www/grafana installs public/ from its linux-amd64 tarball
+  the same way, and net-mgmt/prometheus3 and net-mgmt/alertmanager
+  fetch a prebuilt web UI release asset. The files are not
+  architecture-specific, so the amd64 tarball serves aarch64 too.
+  Source maps, 31 MB of the 54 MB, are left out because only browser
+  developer tools read them. v6 said the pnpm build has no offline
+  path in the tree. That was wrong: Mk/Uses/npm.mk prefetches
+  node_modules as a distfile, and www/remark42 builds a pnpm frontend
+  with USES=npm:pnpm. Building would add Node and a node_modules
+  distfile to every build. I recommend the prebuilt files, as grafana
+  does.
+- post-patch REINPLACE_CMD for default paths. About 55 Go ports use
+  it; it is the most common way. irc/soju rewrites /var/lib/soju to
+  /var/db/soju, and security/nebula rewrites /etc/nebula. ldflags -X,
+  as security/crowdsec uses, sets only package variables, and
+  signoz's defaults are struct literals in its config constructors.
+  The active query log path is one of them: it defaults to "", the
+  working directory, which is / under rc.d.
+- post-install appends the web files to TMPPLIST with find. www/grafana
+  does the same for its public/ tree. The file names carry content
+  hashes that change with every release.
+- USERS and GROUPS (UID 485) and ONLY_FOR_ARCHS are unchanged from
+  v6.
+
+Changes in v7:
+- Vendor sonic from a GH_TUPLE commit swapped in pre-patch, following
+  security/nebula, instead of a hand-written post-fetch download and
+  go mod edit. The commit includes the mmap fix, so the PATCHFILES
+  entry and PATCH_WRKSRC are gone.
+- Name the replaced sonic pin in the commit message.
+- Link to v6: id:65e5d96216421fede90ada8a07333f559d92b029.1792028652.git.claude@p7x.dev
+
+ GIDs                                 |  2 +-
+ UIDs                                 |  2 +-
+ net-mgmt/Makefile                    |  1 +
+ net-mgmt/signoz/Makefile             | 67 +++++++++++++++++++++
+ net-mgmt/signoz/distinfo             |  9 +++
+ net-mgmt/signoz/files/pkg-message.in | 27 +++++++++
+ net-mgmt/signoz/files/signoz.in      | 88 ++++++++++++++++++++++++++++
+ net-mgmt/signoz/pkg-descr            |  8 +++
+ net-mgmt/signoz/pkg-plist            |  6 ++
+ 9 files changed, 208 insertions(+), 2 deletions(-)
+ create mode 100644 net-mgmt/signoz/Makefile
+ create mode 100644 net-mgmt/signoz/distinfo
+ create mode 100644 net-mgmt/signoz/files/pkg-message.in
+ create mode 100644 net-mgmt/signoz/files/signoz.in
+ create mode 100644 net-mgmt/signoz/pkg-descr
+ create mode 100644 net-mgmt/signoz/pkg-plist
+
+diff --git a/GIDs b/GIDs
+index 8a7121f4d4db..cf7fd5bb5433 100644
+--- a/GIDs
++++ b/GIDs
+@@ -426,7 +426,7 @@ promxy:*:481:
+ openbao:*:482:
+ garage:*:483:
+ stalwart:*:484:
+-# free: 485
++signoz:*:485:
+ # free: 486
+ # free: 487
+ # free: 488
+diff --git a/UIDs b/UIDs
+index d47676ab8c8c..1534d8a4441d 100644
+--- a/UIDs
++++ b/UIDs
+@@ -431,7 +431,7 @@ promxy:*:481:481::0:0:Promxy Daemon:/nonexistent:/usr/sbin/nologin
+ openbao:*:482:482:daemon:0:0:OpenBao Daemon:/nonexistent:/usr/sbin/nologin
+ garage:*:483:483::0:0:Garage Daemon:/var/db/garage:/usr/sbin/nologin
+ stalwart:*:484:484::0:0:stalwart Mail Server Daemon:/nonexistent:/usr/sbin/nologin
+-# free: 485
++signoz:*:485:485::0:0:SigNoz Daemon:/var/db/signoz:/usr/sbin/nologin
+ # free: 486
+ # free: 487
+ # free: 488
+diff --git a/net-mgmt/Makefile b/net-mgmt/Makefile
+index de8e4c7e83ed..8f7c5c41183d 100644
+--- a/net-mgmt/Makefile
++++ b/net-mgmt/Makefile
+@@ -391,6 +391,7 @@
+     SUBDIR += seafile-gui
+     SUBDIR += semaphore
+     SUBDIR += sendip
++    SUBDIR += signoz
+     SUBDIR += simplomon
+     SUBDIR += sipcalc
+     SUBDIR += sjitter
+diff --git a/net-mgmt/signoz/Makefile b/net-mgmt/signoz/Makefile
+new file mode 100644
+index 000000000000..a62b1ebd2119
+--- /dev/null
++++ b/net-mgmt/signoz/Makefile
+@@ -0,0 +1,67 @@
++PORTNAME=	signoz
++DISTVERSIONPREFIX=	v
++DISTVERSION=	0.145.0
++CATEGORIES=	net-mgmt
++# prebuilt web frontend; only web/ is installed from it
++MASTER_SITES+=	https://github.com/SigNoz/${PORTNAME}/releases/download/${DISTVERSIONFULL}/:web
++DISTFILES+=	${PORTNAME}-community_linux_amd64${EXTRACT_SUFX}:web
++
++MAINTAINER=	patmaddox@FreeBSD.org
++COMMENT=	Observability platform for logs, metrics, and traces
++WWW=		https://signoz.io/
++
++LICENSE=	MIT
++LICENSE_FILE=	${WRKSRC}/LICENSE
++
++ONLY_FOR_ARCHS=	aarch64 amd64
++ONLY_FOR_ARCHS_REASON=	upstream supports and releases only amd64 and arm64
++
++USES=		go:modules
++USE_GITHUB=	nodefault
++# replaces the vendored sonic v1.14.1, which builds only with Go 1.24 and
++# 1.25; this commit also fixes mmap(2) on FreeBSD, in no release yet
++GH_TUPLE=	bytedance:sonic:bf12ab8c1f789cfbbdfa9d6a4cae69ed136ea516:sonic
++USE_RC_SUBR=	${PORTNAME}
++
++GO_MODULE=	github.com/SigNoz/signoz
++GO_TARGET=	./cmd/community:${PORTNAME}
++GO_BUILDFLAGS=	-ldflags "-X ${GO_MODULE}/pkg/version.variant=community \
++		-X ${GO_MODULE}/pkg/version.version=${DISTVERSIONFULL}"
++
++SUB_FILES=	pkg-message
++
++USERS=		${PORTNAME}
++GROUPS=		${PORTNAME}
++
++# after go-post-extract has vendored the modules upstream pins
++pre-patch:
++	${RM} -r ${WRKSRC}/vendor/github.com/bytedance/sonic
++	${LN} -s ${WRKSRC_sonic} ${WRKSRC}/vendor/github.com/bytedance/sonic
++
++post-patch:
++	${REINPLACE_CMD} -e 's|/etc/signoz/web|${DATADIR}/web|' \
++		${WRKSRC}/pkg/web/config.go
++	${REINPLACE_CMD} -e 's|/root/templates|${DATADIR}/templates|' \
++		${WRKSRC}/pkg/alertmanager/alertmanagerserver/config.go \
++		${WRKSRC}/pkg/emailing/config.go
++	${REINPLACE_CMD} -e 's|/var/lib/signoz|/var/db/signoz|' \
++		${WRKSRC}/pkg/sqlstore/config.go
++# the active query log defaults to the working directory, / under rc.d
++	${REINPLACE_CMD} -e 's|Path: *""|Path: "/var/db/signoz"|' \
++		${WRKSRC}/pkg/prometheus/config.go
++	${REINPLACE_CMD} -e 's|/etc/signoz/web|${DATADIR}/web|' \
++		-e 's|/opt/signoz/conf/templates|${DATADIR}/templates|' \
++		-e 's|/var/lib/signoz|/var/db/signoz|' \
++		-e 's|path: ""|path: /var/db/signoz|' \
++		${WRKSRC}/conf/example.yaml
++
++post-install:
++	${MKDIR} ${STAGEDIR}${DATADIR} ${STAGEDIR}/var/db/signoz
++	(cd ${WRKSRC} && ${COPYTREE_SHARE} templates ${STAGEDIR}${DATADIR})
++	${INSTALL_DATA} ${WRKSRC}/conf/example.yaml ${STAGEDIR}${DATADIR}
++	(cd ${WRKDIR}/${PORTNAME}-community_linux_amd64 && \
++		${COPYTREE_SHARE} web ${STAGEDIR}${DATADIR} "! -name *.map")
++	${FIND} ${STAGEDIR}${DATADIR}/web -type f | \
++		${SED} -e 's|^${STAGEDIR}${PREFIX}/||' >> ${TMPPLIST}
++
++.include <bsd.port.mk>
+diff --git a/net-mgmt/signoz/distinfo b/net-mgmt/signoz/distinfo
+new file mode 100644
+index 000000000000..d6617f83d157
+--- /dev/null
++++ b/net-mgmt/signoz/distinfo
+@@ -0,0 +1,9 @@
++TIMESTAMP = 1792037215
++SHA256 (go/net-mgmt_signoz/signoz-v0.145.0/signoz-community_linux_amd64.tar.gz) = 6e0ab5ab34427feffac57523c136508f6b19e25517987a9b51e44e0c93f088e2
++SIZE (go/net-mgmt_signoz/signoz-v0.145.0/signoz-community_linux_amd64.tar.gz) = 69694238
++SHA256 (go/net-mgmt_signoz/signoz-v0.145.0/v0.145.0.mod) = 1094fa6359fa7dc7824f18f706f0e2c3675fa4464c21b1473fe16609c96de3d1
++SIZE (go/net-mgmt_signoz/signoz-v0.145.0/v0.145.0.mod) = 20296
++SHA256 (go/net-mgmt_signoz/signoz-v0.145.0/v0.145.0.zip) = a3fcd82b1d06929e2e8e7efab8be8b83cfad2e282fb93398de73025722cd8557
++SIZE (go/net-mgmt_signoz/signoz-v0.145.0/v0.145.0.zip) = 21100973
++SHA256 (go/net-mgmt_signoz/signoz-v0.145.0/bytedance-sonic-bf12ab8c1f789cfbbdfa9d6a4cae69ed136ea516_GH0.tar.gz) = bec106b101826c4f58d2a33978b5359f2476b3c0ef8cb4bd2c14a4425e9d90fb
++SIZE (go/net-mgmt_signoz/signoz-v0.145.0/bytedance-sonic-bf12ab8c1f789cfbbdfa9d6a4cae69ed136ea516_GH0.tar.gz) = 3443718
+diff --git a/net-mgmt/signoz/files/pkg-message.in b/net-mgmt/signoz/files/pkg-message.in
+new file mode 100644
+index 000000000000..d7cfc83dd1f3
+--- /dev/null
++++ b/net-mgmt/signoz/files/pkg-message.in
+@@ -0,0 +1,27 @@
++[
++{ type: install
++  message: <<EOM
++SigNoz stores telemetry in ClickHouse (databases/clickhouse), which may
++run on another host. Before the first start, ClickHouse needs a cluster
++named "cluster" and the SigNoz schema. The schema is created by the
++schema migrator of the SigNoz OpenTelemetry Collector, which also
++ingests the telemetry and is packaged separately.
++
++Settings come from built-in defaults, from an optional YAML file set in
++signoz_config, and from SIGNOZ_* variables set in signoz_env. A nested
++key is joined with "_", so telemetrystore.clickhouse.dsn is
++SIGNOZ_TELEMETRYSTORE_CLICKHOUSE_DSN. The reference configuration is
++installed as %%DATADIR%%/example.yaml.
++
++By default SigNoz listens on all interfaces: the web interface and API
++on port 8080, its Prometheus metrics on port 9090, and pprof on port
++6060. Port 9090 is also the Prometheus default. To keep pprof off the
++network and move the metrics, set for example:
++
++  sysrc signoz_env="SIGNOZ_PPROF_ENABLED=false \
++SIGNOZ_INSTRUMENTATION_METRICS_READERS_PULL_EXPORTER_PROMETHEUS_PORT=9464"
++
++The SQLite metadata store is kept in /var/db/signoz.
++EOM
++}
++]
+diff --git a/net-mgmt/signoz/files/signoz.in b/net-mgmt/signoz/files/signoz.in
+new file mode 100644
+index 000000000000..fab84b3d5f8e
+--- /dev/null
++++ b/net-mgmt/signoz/files/signoz.in
+@@ -0,0 +1,88 @@
++#!/bin/sh
++
++# PROVIDE: signoz
++# REQUIRE: LOGIN
++# KEYWORD: shutdown
++#
++# Add the following lines to /etc/rc.conf.local or /etc/rc.conf
++# to enable this service:
++#
++# signoz_enable (bool)
++#     Set it to YES to enable signoz
++#     Set to NO by default
++# signoz_user (string)
++#     Set user that signoz will run under
++#     Default is "signoz"
++# signoz_group (string)
++#     Set group that owns signoz files
++#     Default is "signoz"
++# signoz_config (string)
++#     Set full path to a YAML config file
++#     Default is "", which uses built-in defaults and signoz_env
++# signoz_pidfile (string)
++#     Set full path to pid file
++#     Default is "/var/run/signoz.pid"
++# signoz_syslog_output_enable (bool)
++#     Set it to NO to disable syslog output
++#     Set to YES by default
++# signoz_syslog_output_tag (str)
++#     Set syslog tag if syslog enabled
++#     Default is "signoz"
++# signoz_syslog_output_priority (string)
++#     Set syslog priority if syslog enabled
++#     Default is "info"
++# signoz_syslog_output_facility (string)
++#     Set syslog facility if syslog enabled
++#     Default is "daemon"
++# signoz_env (string)
++#     Set environment variables used with signoz, e.g.
++#     "SIGNOZ_TELEMETRYSTORE_CLICKHOUSE_DSN=tcp://db:9000"
++#     Default is ""
++# signoz_args (string)
++#     Set additional command line arguments
++#     Default is ""
++
++. /etc/rc.subr
++
++name=signoz
++rcvar=signoz_enable
++
++load_rc_config $name
++
++: ${signoz_enable:="NO"}
++: ${signoz_user:="signoz"}
++: ${signoz_group:="signoz"}
++: ${signoz_config:=""}
++: ${signoz_pidfile:="/var/run/signoz.pid"}
++: ${signoz_syslog_output_enable:="YES"}
++: ${signoz_syslog_output_priority:="info"}
++: ${signoz_syslog_output_facility:="daemon"}
++
++if checkyesno signoz_syslog_output_enable; then
++	signoz_syslog_output_flags="-T ${signoz_syslog_output_tag:-${name}} \
++	    -s ${signoz_syslog_output_priority} \
++	    -l ${signoz_syslog_output_facility}"
++fi
++
++if [ -n "${signoz_config}" ]; then
++	required_files="${signoz_config}"
++	signoz_config_flags="--config ${signoz_config}"
++fi
++
++pidfile="${signoz_pidfile}"
++procname="%%PREFIX%%/bin/signoz"
++command="/usr/sbin/daemon"
++command_args="-f ${signoz_syslog_output_flags} -p ${pidfile} -t ${name} \
++	/usr/bin/env ${signoz_env} ${procname} server \
++	${signoz_config_flags} ${signoz_args}"
++
++start_precmd="signoz_start_precmd"
++
++signoz_start_precmd()
++{
++	if [ ! -e "${pidfile}" ]; then
++		install -m 0600 -o "${signoz_user}" -g "${signoz_group}" /dev/null "${pidfile}"
++	fi
++}
++
++run_rc_command "$1"
+diff --git a/net-mgmt/signoz/pkg-descr b/net-mgmt/signoz/pkg-descr
+new file mode 100644
+index 000000000000..951ff383d910
+--- /dev/null
++++ b/net-mgmt/signoz/pkg-descr
+@@ -0,0 +1,8 @@
++SigNoz is an open source observability platform. It brings logs,
++metrics, and traces together in one application, with dashboards,
++alerts, exceptions, and service maps. It is native to OpenTelemetry and
++stores its data in ClickHouse.
++
++This is the Community Edition of the query service and web interface.
++Telemetry reaches ClickHouse through the SigNoz distribution of the
++OpenTelemetry Collector, which is packaged separately.
+diff --git a/net-mgmt/signoz/pkg-plist b/net-mgmt/signoz/pkg-plist
+new file mode 100644
+index 000000000000..4e2438d6f675
+--- /dev/null
++++ b/net-mgmt/signoz/pkg-plist
+@@ -0,0 +1,6 @@
++bin/signoz
++%%DATADIR%%/example.yaml
++%%DATADIR%%/templates/alertmanager/email.gotmpl
++%%DATADIR%%/templates/email/invitation.gotmpl
++%%DATADIR%%/templates/email/reset_password.gotmpl
++@dir(signoz,signoz,750) /var/db/signoz
+
+Interdiff against v6:
+  diff --git a/net-mgmt/signoz/Makefile b/net-mgmt/signoz/Makefile
+  index 203310eac804..a62b1ebd2119 100644
+  --- a/net-mgmt/signoz/Makefile
+  +++ b/net-mgmt/signoz/Makefile
+  @@ -6,10 +6,6 @@ CATEGORIES=	net-mgmt
+   MASTER_SITES+=	https://github.com/SigNoz/${PORTNAME}/releases/download/${DISTVERSIONFULL}/:web
+   DISTFILES+=	${PORTNAME}-community_linux_amd64${EXTRACT_SUFX}:web
+   
+  -# MAP_ANON with fd -1, which FreeBSD's mmap(2) requires; in no release yet
+  -PATCH_SITES=	https://github.com/bytedance/sonic/commit/
+  -PATCHFILES=	bf12ab8c1f789cfbbdfa9d6a4cae69ed136ea516.patch:-p1
+  -
+   MAINTAINER=	patmaddox@FreeBSD.org
+   COMMENT=	Observability platform for logs, metrics, and traces
+   WWW=		https://signoz.io/
+  @@ -21,6 +17,10 @@ ONLY_FOR_ARCHS=	aarch64 amd64
+   ONLY_FOR_ARCHS_REASON=	upstream supports and releases only amd64 and arm64
+   
+   USES=		go:modules
+  +USE_GITHUB=	nodefault
+  +# replaces the vendored sonic v1.14.1, which builds only with Go 1.24 and
+  +# 1.25; this commit also fixes mmap(2) on FreeBSD, in no release yet
+  +GH_TUPLE=	bytedance:sonic:bf12ab8c1f789cfbbdfa9d6a4cae69ed136ea516:sonic
+   USE_RC_SUBR=	${PORTNAME}
+   
+   GO_MODULE=	github.com/SigNoz/signoz
+  @@ -30,37 +30,13 @@ GO_BUILDFLAGS=	-ldflags "-X ${GO_MODULE}/pkg/version.variant=community \
+   
+   SUB_FILES=	pkg-message
+   
+  -# the upstream patch is relative to the sonic repository, vendored here
+  -PATCH_WRKSRC=	${WRKSRC}/vendor/github.com/bytedance/sonic
+  -
+   USERS=		${PORTNAME}
+   GROUPS=		${PORTNAME}
+   
+  -# sonic v1.14.1, as pinned upstream, builds only with Go 1.24 and 1.25
+  -SONIC_EDIT=	${SETENVI} ${WRK_ENV} ${GO_ENV} ${GO_CMD} mod edit \
+  -		-require=github.com/bytedance/sonic@v1.15.4 \
+  -		-require=github.com/bytedance/sonic/loader@v0.5.2
+  -
+  -# go-post-fetch caches only the modules of upstream's go.mod; cache the
+  -# bumped ones the same way, from an edited copy outside DISTDIR
+  -post-fetch:
+  -	@${ECHO_MSG} "===> Fetching bumped sonic dependencies"
+  -	@tmp=$$(${MKTEMP} -d) || exit 1; \
+  -	${SONIC_EDIT} -print ${DISTDIR}/${DIST_SUBDIR}/${GO_MODFILE} \
+  -		> $${tmp}/go.mod && \
+  -	(cd $${tmp} && ${SETENVI} ${WRK_ENV} \
+  -		${HTTP_PROXY:DHTTP_PROXY=${HTTP_PROXY:Q}} \
+  -		${http_proxy:Dhttp_proxy=${http_proxy:Q}} \
+  -		${HTTPS_PROXY:DHTTPS_PROXY=${HTTPS_PROXY:Q}} \
+  -		${https_proxy:Dhttps_proxy=${https_proxy:Q}} \
+  -		${NO_PROXY:DNO_PROXY=${NO_PROXY:Q}} \
+  -		${no_proxy:Dno_proxy=${no_proxy:Q}} \
+  -		${GO_ENV} GOPROXY=${GO_GOPROXY} ${GO_CMD} mod download -x all); \
+  -	rc=$$?; ${RM} -r $${tmp}; exit $${rc}
+  -
+  -# before go-post-extract, so it vendors the bumped modules
+  -post-extract:
+  -	@cd ${WRKSRC} && ${SONIC_EDIT}
+  +# after go-post-extract has vendored the modules upstream pins
+  +pre-patch:
+  +	${RM} -r ${WRKSRC}/vendor/github.com/bytedance/sonic
+  +	${LN} -s ${WRKSRC_sonic} ${WRKSRC}/vendor/github.com/bytedance/sonic
+   
+   post-patch:
+   	${REINPLACE_CMD} -e 's|/etc/signoz/web|${DATADIR}/web|' \
+  diff --git a/net-mgmt/signoz/distinfo b/net-mgmt/signoz/distinfo
+  index b27bd5815428..d6617f83d157 100644
+  --- a/net-mgmt/signoz/distinfo
+  +++ b/net-mgmt/signoz/distinfo
+  @@ -1,9 +1,9 @@
+  -TIMESTAMP = 1792027422
+  +TIMESTAMP = 1792037215
+   SHA256 (go/net-mgmt_signoz/signoz-v0.145.0/signoz-community_linux_amd64.tar.gz) = 6e0ab5ab34427feffac57523c136508f6b19e25517987a9b51e44e0c93f088e2
+   SIZE (go/net-mgmt_signoz/signoz-v0.145.0/signoz-community_linux_amd64.tar.gz) = 69694238
+   SHA256 (go/net-mgmt_signoz/signoz-v0.145.0/v0.145.0.mod) = 1094fa6359fa7dc7824f18f706f0e2c3675fa4464c21b1473fe16609c96de3d1
+   SIZE (go/net-mgmt_signoz/signoz-v0.145.0/v0.145.0.mod) = 20296
+   SHA256 (go/net-mgmt_signoz/signoz-v0.145.0/v0.145.0.zip) = a3fcd82b1d06929e2e8e7efab8be8b83cfad2e282fb93398de73025722cd8557
+   SIZE (go/net-mgmt_signoz/signoz-v0.145.0/v0.145.0.zip) = 21100973
+  -SHA256 (go/net-mgmt_signoz/signoz-v0.145.0/bf12ab8c1f789cfbbdfa9d6a4cae69ed136ea516.patch) = f51e707e2e75ef73e7c93cf45ad3092bc259346a17cbeba34bbc3ee00b53b112
+  -SIZE (go/net-mgmt_signoz/signoz-v0.145.0/bf12ab8c1f789cfbbdfa9d6a4cae69ed136ea516.patch) = 1492
+  +SHA256 (go/net-mgmt_signoz/signoz-v0.145.0/bytedance-sonic-bf12ab8c1f789cfbbdfa9d6a4cae69ed136ea516_GH0.tar.gz) = bec106b101826c4f58d2a33978b5359f2476b3c0ef8cb4bd2c14a4425e9d90fb
+  +SIZE (go/net-mgmt_signoz/signoz-v0.145.0/bytedance-sonic-bf12ab8c1f789cfbbdfa9d6a4cae69ed136ea516_GH0.tar.gz) = 3443718
+
+base-commit: 093b3979a71a95199c6397d05f692af0189417de
+-- 
+2.56.0
+
