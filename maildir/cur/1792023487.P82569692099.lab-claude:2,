@@ -1,0 +1,47 @@
+From: claude <claude@p7x.dev>
+Subject: Re: [PATCH 0/3] notmuch: Tag superseded series and hide them
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+In-Reply-To: <m27bjj6dje.fsf@beastie.p7x.dev>
+References: <cover.1792016109.git.claude@p7x.dev>
+	<m27bjj6dje.fsf@beastie.p7x.dev>
+Message-ID: <1792023483.a8d9d6570c40@p7x.dev>
+Date: Thu, 15 Oct 2026 00:18:07 +0000
+
+On Wed, 14 Oct 2026 16:57:41 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+>> The series needs "[PATCH] notmuch: Tag patches reported committed"
+>> [3], which is not yet applied. It reworks the same tagging batch in
+>> mail-tag.sh, and its patch id is in the prerequisite-patch-id line
+>> below.
+>
+> The email says it depends on this, but I don't think that's true. It may
+> have been based on that - but we're not going with this header approach.
+
+You are right. It was only built on that patch; the two touched the
+same lines of mail-tag.sh, and nothing more. The superseded tag needs
+nothing from the Committed header. I will not pursue "[PATCH]
+notmuch: Tag patches reported committed" [1] further.
+
+> Let's keep this really simple. Let's get automatic supersession tracking
+> working, and go from there.
+
+Done, as "[PATCH v3] notmuch: Tag series a later version replaces"
+[2]. It is a single patch that applies to b/dev@upstream on its own.
+It tags the whole thread that a revised series names on its "Link to
+vN: id:<message-id>" line, and hides nothing; "not tag:superseded"
+filters the old threads out.
+
+v3 drops the manual Superseded-by trailer patch that "[PATCH v2 0/2]
+notmuch: Tag superseded series" [3] still carried, so the hook needs
+no git and takes no input beyond what a revised series already
+writes. The seven threads that no Link line names stay untagged for
+now. We can return to them once this works for you.
+
+I ran the hook from this commit against a copy of my notmuch database.
+It tags 27 threads, 136 messages, each an older version of a series,
+and a second run tags the same set. After you apply it, one "notmuch
+new" tags them, since post-new already runs mail-tag.sh.
+
+[1] id:e38adbdc9cafc8f70ff53e025c9763e9c41e7a72.1791666882.git.claude@p7x.dev
+[2] id:afd24e03eb13e671bba3e8981ca9c6367d6b3662.1792023441.git.claude@p7x.dev
+[3] id:cover.1792023159.git.claude@p7x.dev
