@@ -1,0 +1,128 @@
+Message-ID: <6f094bb91968cf63af145630a4c708fac3f41c38.1792026470.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Subject: [freebsd-ports PATCH] mail/notmuch-git: Synchronize Notmuch tags
+ through a git repository
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+Date: Thu, 15 Oct 2026 01:08:56 +0000
+
+notmuch-git keeps a chosen set of Notmuch tags in a git repository,
+so they can be committed, pushed, and merged like any other history.
+Tags carrying a configured prefix are written to the repository as
+one file per message and tag, and read back into the Notmuch
+database on checkout or merge. One person can use it to carry tags
+between machines; a group can use it to share a common set of tags,
+as the Notmuch project does with nmbug for its bug tracker.
+
+Notmuch ships the script and mail/notmuch already installs its
+notmuch-git(1) manual page, but no port installs the script itself,
+so "notmuch git" fails with "Unknown command 'git'". It is a slave
+port, like mail/notmuch-mutt, so that Python and git stay out of the
+dependencies of every mail/notmuch user.
+
+WWW: https://notmuchmail.org/
+---
+Notes for review:
+
+Followed mail/notmuch-mutt, the other script-only slave of
+mail/notmuch, for the slave layout.
+
+Why a new port rather than installing the script from mail/notmuch:
+the script needs Python and git at run time, and mail/notmuch has
+neither as a run dependency today. Debian makes the same split with
+its notmuch-git binary package.
+
+Lines whose purpose is not obvious:
+- PORTREVISION=0: mail/notmuch sets PORTREVISION?=1 so that slaves
+  can pin their own. Without it the new package starts at 0.40_1 and
+  is bumped by every revision of the master. portlint warns that new
+  ports should not set PORTREVISION; this is the reason it stays.
+- USES=python:run and shebangfix: the script starts with
+  "#!/usr/bin/env python3". It uses only the standard library;
+  py-notmuch2 is optional (it falls back without it), so it is not a
+  dependency.
+- NO_BUILD and do-install: the script is installed as is, renamed
+  the way upstream's own build names it.
+- PORTSCOUT: copied from the master, since the slave tracks the same
+  distfile and inherits nothing from the master's .ifndef MASTERDIR
+  blocks.
+
+The notmuch-git(1) manual page stays in mail/notmuch, which already
+installs it under the MANPAGES option.
+
+Checked: portclippy and portfmt clean; portlint -A has only the
+PORTREVISION warning above. Built on 15.1-RELEASE amd64 outside
+poudriere: stage, check-plist, and package all pass, and the staged
+notmuch-git runs with its shebang rewritten to python3.12. The
+package depends on git, notmuch, and python312. Not run under
+poudriere testport.
+
+ mail/Makefile              |  1 +
+ mail/notmuch-git/Makefile  | 26 ++++++++++++++++++++++++++
+ mail/notmuch-git/pkg-descr |  7 +++++++
+ 3 files changed, 34 insertions(+)
+ create mode 100644 mail/notmuch-git/Makefile
+ create mode 100644 mail/notmuch-git/pkg-descr
+
+diff --git a/mail/Makefile b/mail/Makefile
+index ad70947d5321..cf289b8fee36 100644
+--- a/mail/Makefile
++++ b/mail/Makefile
+@@ -273,6 +273,7 @@
+     SUBDIR += notimail
+     SUBDIR += notmuch
+     SUBDIR += notmuch-emacs
++    SUBDIR += notmuch-git
+     SUBDIR += notmuch-mutt
+     SUBDIR += nullmailer
+     SUBDIR += oama
+diff --git a/mail/notmuch-git/Makefile b/mail/notmuch-git/Makefile
+new file mode 100644
+index 000000000000..bdd12bc57f2d
+--- /dev/null
++++ b/mail/notmuch-git/Makefile
+@@ -0,0 +1,26 @@
++PORTREVISION=	0
++CATEGORIES=	mail
++PKGNAMESUFFIX=	-git
++
++COMMENT=	Synchronize Notmuch tags through a git repository
++WWW=		https://notmuchmail.org/
++
++RUN_DEPENDS=	git:devel/git \
++		notmuch:mail/notmuch
++
++USES=		python:run shebangfix
++SHEBANG_FILES=	notmuch-git.py
++
++MASTERDIR=	${.CURDIR}/../notmuch
++NO_ARCH=	yes
++NO_BUILD=	yes
++
++PORTSCOUT=	limit:^[0-9\.]*$$
++
++PLIST_FILES=	bin/notmuch-git
++
++do-install:
++	${INSTALL_SCRIPT} ${WRKSRC}/notmuch-git.py \
++		${STAGEDIR}${PREFIX}/bin/notmuch-git
++
++.include "${MASTERDIR}/Makefile"
+diff --git a/mail/notmuch-git/pkg-descr b/mail/notmuch-git/pkg-descr
+new file mode 100644
+index 000000000000..9f22bdf24752
+--- /dev/null
++++ b/mail/notmuch-git/pkg-descr
+@@ -0,0 +1,7 @@
++notmuch-git keeps a chosen set of Notmuch tags in a git repository,
++so they can be committed, pushed, and merged like any other history.
++Tags carrying a configured prefix are written to the repository as
++one file per message and tag, and read back into the Notmuch
++database on checkout or merge. One person can use it to carry tags
++between machines; a group can use it to share a common set of tags,
++as the Notmuch project does with nmbug for its bug tracker.
+
+base-commit: 8e18e3939be9e4ea489d5504d12de91827b8498b
+-- 
+2.56.0
+
