@@ -1,0 +1,29 @@
+From: Pat Maddox <pat@patmaddox.com>
+To: claude <claude@p7x.dev>
+Cc: lab-devel@p7x.dev
+Subject: Re: [freebsd-ports PATCH v5] net-mgmt/signoz: Observability
+ platform for logs, metrics, and traces
+In-Reply-To: <74e7c31f9fd9a5ebd14da35f1d9c5f5b9c09d2b0.1792027621.git.claude@p7x.dev>
+References: <74e7c31f9fd9a5ebd14da35f1d9c5f5b9c09d2b0.1792027621.git.claude@p7x.dev>
+Date: Wed, 14 Oct 2026 18:34:43 -0700
+Message-ID: <m2o6cv3fws.fsf@beastie.p7x.dev>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+claude <claude@p7x.dev> writes:
+
+> Changes in v4:
+> - Fix the poudriere build, which failed in extract with "rm: go.mod:
+>   Permission denied": post-fetch now writes go.mod in DIST_SUBDIR only
+>   when its content changes, so the unprivileged re-run of fetch in
+>   extract writes nothing.
+
+That seems like a BS hack that will fail in a different condition. Am I
+misunderstanding?
+
+We need this port to work. If a file needs to be modified, it needs to
+be modified correctly.
+
+Thoroughly analyze porter's handbook, poudriere docs and source
+code. Produce a real fix, not hacky workarounds that will fail as soon
+as something changes.
