@@ -1,0 +1,79 @@
+From: claude <claude@p7x.dev>
+Subject: Re: [PATCH v3] notmuch: Tag series a later version replaces
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+In-Reply-To: <m2se273gnm.fsf@beastie.p7x.dev>
+References: <afd24e03eb13e671bba3e8981ca9c6367d6b3662.1792023441.git.claude@p7x.dev>
+	<m2cxtb4w3x.fsf@beastie.p7x.dev> <1792026697.77fbba9b1484@p7x.dev>
+	<m2se273gnm.fsf@beastie.p7x.dev>
+Message-ID: <1792027912.a5add6aab130@p7x.dev>
+Date: Thu, 15 Oct 2026 01:31:55 +0000
+
+On Wed, 14 Oct 2026 18:18:37 -0700, Pat Maddox wrote:
+
+> Okay great, this works, and has cleaned up my inbox some.
+
+Good, thanks for testing it.
+
+> Now I want the manual supersession behavior. I forget how we specced
+> this out, if we did. I think it would have been something like:
+>
+>     Supersedes: id:<msgid>
+>
+> or maybe
+>
+>     Superseded-by: id:<msgid>
+>
+> Which one would be better?
+
+We did spec it, in "Re: Supporting status trailers in emails" [1].
+You chose Superseded-by, as a body trailer at the end of a reply
+rather than a mail header, and said the latest trailer wins. I still
+think that is the better one, for three reasons:
+
+- It goes in the old thread. Whoever opens a stale thread finds the
+  pointer to its replacement right there, which is the link you said
+  matters.
+- It can be written after the fact, by anyone, by replying to the old
+  series. Supersedes has to be written from the new series, so it
+  cannot retire something already posted without new mail in the
+  wrong thread.
+- Supersedes would duplicate the "Link to vN" line, which already
+  marks the old version from the new side.
+
+> Let's just get the logic now, then we'll follow up with a test of a few
+> threads.
+
+The logic is posted as "[PATCH v3] notmuch: Tag threads a
+Superseded-by trailer names" [2]. It is the trailer patch from the
+v2 series, which I dropped from "[PATCH v3] notmuch: Tag series a
+later version replaces" [3] to keep that one simple. It needs [3],
+so apply that one first.
+
+To retire a thread, reply to any message in it and end the reply with
+
+    Superseded-by: id:<message-id of the replacement>
+
+as the last paragraph, or just above a signature. On the next
+"notmuch new", the whole thread is tagged superseded. A quoted
+trailer, or one with more text below it, does not count.
+
+On a copy of the database, it tagged the threads of the test replies
+I wrote and nothing else on the list. For your test, the seven series
+no Link line catches are listed in "Re: Supporting status trailers in
+emails" [4]. Any of them will do. Remember to run "just install" in
+dotfiles/notmuch first, since notmuch runs the installed hook.
+
+Objective: superseded series tagged automatically or by a reply
+Status: waiting on your review of [2] and the test of a few threads
+Next actions for you:
+- Review and apply [3], then [2], and run "just install"
+- Reply to a few of the seven threads in [4] with a Superseded-by
+  trailer, run "notmuch new", and check tag:superseded
+Information needed from you:
+- none
+
+[1] id:m2fqy87xia.fsf@beastie.p7x.dev
+[2] id:bb661865e7c5aaba8bc6e62e8c467255ad9db807.1792027881.git.claude@p7x.dev
+[3] id:afd24e03eb13e671bba3e8981ca9c6367d6b3662.1792023441.git.claude@p7x.dev
+[4] id:1792016195.922937034816@p7x.dev
