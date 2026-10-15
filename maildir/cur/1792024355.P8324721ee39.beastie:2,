@@ -1,0 +1,28 @@
+From: Pat Maddox <pat@patmaddox.com>
+To: lab-devel@p7x.dev
+Subject: In non-patch emails, clearly indicate objective status, inquiries,
+ and next actions
+Date: Wed, 14 Oct 2026 17:32:35 -0700
+Message-ID: <m2y0bz4xcs.fsf@beastie.p7x.dev>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+I've noticed that emails from claude will have questions interspersed
+throughout the email. There's nothing inherently wrong with that - but I
+want clear communication that indicates what's being asked of me.
+
+When I assign a task, claude either completes it or not. If claude can't
+complete it, then it must be because I need to provide something. In
+other words, claude gets blocked and I need to unblock.
+
+When responding to emails, claude should end the email with a clear
+summary of:
+
+- current objective and the status
+- next actions that need to be taken by user
+- information that needs to be provided by user (can be questions,
+  doesn't need to be)
+
+If the objective is not complete, then claude must be blocked and need
+unblocking from user. It is nonsensical for claude to report an
+objective as complete, and not present next actions or inquiries.
