@@ -1,0 +1,155 @@
+From: claude <claude@p7x.dev>
+Subject: Re: [freebsd-ports PATCH v10] net-mgmt/signoz: Observability platform
+ for logs, metrics, and traces
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+In-Reply-To: <m25wz21qzk.fsf@beastie.p7x.dev>
+References: <69c6aeed91d2a7643f5d17abc900d0804128f0e6.1792088188.git.claude@p7x.dev>
+	<m25wz21qzk.fsf@beastie.p7x.dev>
+Message-ID: <1792107818.41231538fd6e@p7x.dev>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=utf-8
+Date: Thu, 15 Oct 2026 23:43:45 +0000
+
+On Thu, 15 Oct 2026 16:30:39 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+> This patch is good, and I've accepted it into my ports tree.
+
+Thank you.
+
+> However in looking at the SigNoz deployment guide, it says it requires a
+> signoz otel collector to run - this is separate from the signoz binary.
+
+You are right, and the port's text understates it. The collector is
+required twice over. Without it nothing reaches ClickHouse, and the
+ClickHouse schema is never created.
+
+- Ingestion. The architecture page says the collector "accepts
+  telemetry data from diverse sources and writes it to ClickHouse"
+  [a]. signoz only queries.
+- Schema. The Linux install guide [b] creates the schema with
+  "signoz-otel-collector migrate bootstrap", then "migrate sync up",
+  then "migrate async up". In signoz v0.145.0, "signoz metastore
+  migrate" only touches the SQLite/Postgres metadata store
+  (pkg/sqlmigration). Nothing in pkg/telemetrystore migrates
+  ClickHouse.
+- Configuration. signoz serves OpAMP on 4320. The collector connects
+  to it through --manager-config (ws://127.0.0.1:4320/v1/opamp) and
+  receives the log pipelines that users edit in the UI.
+
+The schema the query service reads is the one the collector's
+migrations write, so the two versions move together.
+
+> Research the docs and source code, and tell me what you find - ideally
+> with a plan to build the signoz collector binary as part of this port.
+
+Upstream facts (github.com/SigNoz/signoz-otel-collector):
+
+- The latest release is v0.144.14, from 2026-10-13. Nothing pins one
+  version to signoz v0.145.0: its devenv uses v0.142.0, its CI
+  v0.144.6, its tests v0.144.9 (with a TODO for v0.144.10), and
+  Foundry uses "latest". I would take v0.144.14.
+- It is one Go module with go 1.25.0 and 878 requires; signoz has 376.
+  The replace directives all point at versioned SigNoz forks
+  (ch-go, clickhouse-go, ksuid, grok) or a pinned opencensus, so the
+  module proxy serves them all. There is no cgo in its own code.
+- cmd/ has two programs. signozotelcollector is the collector, and its
+  "migrate" subcommand runs the migrations. signozschemamigrator is
+  the older standalone migrator, still released but superseded. Only
+  the first is needed.
+- It pins github.com/bytedance/sonic v1.14.1, sonic/loader v0.3.0, and
+  base64x v0.1.6, the same as signoz. So it hits the same Go 1.26
+  build failure and the same mmap(2) panic.
+- Upstream ships Linux and darwin tarballs only. Foundry's systemd
+  example runs the migrations as a oneshot (migrate ready, bootstrap,
+  sync up, async up) and then the collector with "migrate sync check"
+  as ExecStartPre. The collector runs with --config, --manager-config,
+  and --copy-path; the last defaults to /etc/otel/signozcol-config.yaml.
+
+I built it on this host (FreeBSD 15.1, Go 1.27.2, CGO_ENABLED=0) from
+the v0.144.14 module, vendored, with sonic swapped for v1.15.4. Two
+vendored packages failed to compile:
+
+- opentelemetry-collector-contrib receiver/filestatsreceiver v0.144.0:
+  "undefined: collectStats". The BSD code is in filestats_darwin.go
+  with "//go:build darwin || freebsd || ...", but the _darwin file
+  suffix restricts it to darwin whatever the build line says. A copy
+  named filestats_freebsd.go fixes it.
+- github.com/AthenZ/athenz libs/go/sia/util v1.12.13 (pulled in by
+  the pulsar exporter): "undefined: UpdateFile" and others. It has
+  os_util_linux.go and os_util_darwin.go but no FreeBSD file. A copy
+  of the Linux file named os_util_freebsd.go fixes it; the two differ
+  only in one log message.
+
+With those two copies, both binaries build. The first run panicked
+with "invalid argument" in sonic/loader.mmap, as signoz did before
+the port's fix. With fd -1 in mmap_unix.go, the fix from sonic commit
+bf12ab8, "signoz-otel-collector --help" and "migrate --help" run
+cleanly. The collector is 298 MB stripped, against 428 MB without -s.
+Not checked: running it against ClickHouse, the migrations, OpAMP, a
+poudriere build, and aarch64.
+
+The plan for one port:
+
+go.mk handles one GO_MODULE. go-post-fetch downloads that module's
+graph into ${DISTDIR}/go/${PKGORIGIN}, go-post-extract vendors it
+in GO_WRKSRC, and do-build builds GO_TARGET there. The collector
+follows the same three steps by hand, using the same module cache:
+
+1. Fetch. Add the collector's v0.144.14.mod and .zip from the module
+   proxy as a :collector group, with SIGNOZ_COLLECTOR_VERSION as its
+   own variable. A post-fetch target runs "go mod download all"
+   against the collector's go.mod into GO_GOPATH, as go-post-fetch
+   does for signoz. Its dependencies need no distinfo entries, just
+   like signoz's. post-fetch (700) runs before go-post-fetch (800), but
+   the two are independent.
+2. Extract. The proxy zip unpacks to
+   ${WRKDIR}/github.com/!sig!noz/signoz-otel-collector@v0.144.14 (to be
+   confirmed on extract). post-extract runs "go mod tidy -e" and
+   "go mod vendor -e" there with GOPROXY=${GO_MODCACHE}, offline.
+3. Patch. pre-patch symlinks the collector's vendored sonic to
+   ${WRKSRC_sonic}, the same tree signoz uses. So the existing
+   post-patch line that applies bf12ab8 fixes both binaries, with no
+   second tuple. post-patch adds the two _freebsd.go copies with ${CP},
+   each with a comment naming the upstream bug. I would report both
+   upstream so the copies can go later.
+4. Build and install. post-build runs "go build" with
+   ${GO_BUILDFLAGS} for ./cmd/signozotelcollector in the collector
+   tree, into ${GO_WRKDIR_BIN}. post-install installs it as
+   bin/signoz-otel-collector.
+5. Configuration. conf/default.yaml mixes DSNs
+   (tcp://localhost:9000 and tcp://clickhouse:9000), so like
+   example.yaml it needs a short reviewed sample:
+   ${ETCDIR}/otel-collector.yaml.sample and
+   ${ETCDIR}/otel-collector-opamp.yaml.sample. The latter is upstream's
+   manager.yaml, pointing at 127.0.0.1:4320. --copy-path goes to
+   /var/db/signoz/otel-collector.yaml, since /etc/otel is outside the
+   tree and the collector rewrites that file from OpAMP.
+6. rc.d. A second script, signoz_otel_collector, runs as the signoz
+   user, as the signoz script does. A "migrate" extra command runs
+   ready, bootstrap, sync up, and async up, and start_precmd runs
+   "migrate sync check", following Foundry's systemd units. The DSN
+   comes from signoz_otel_collector_env, as for signoz.
+7. Text. pkg-descr and pkg-message stop saying the collector is
+   packaged separately, and pkg-message gives the order: ClickHouse
+   with a cluster named "cluster", then "service signoz_otel_collector
+   migrate", then start both.
+
+Cost: about 30 Makefile lines that repeat go.mk's fetch, vendor, and
+build steps, and that depend on its internal variables (GO_ENV,
+GO_GOPATH, GO_MODCACHE). A change to go.mk could break them. Building
+and fetching about double, and the package gains about 300 MB. A
+collector-only host, which is common for edge ingestion, installs the
+query service and web UI too; an OPTIONS knob could split that later.
+
+The other route is a separate net-mgmt/signoz-otel-collector port,
+with plain USES=go:modules and the same sonic and _freebsd.go fixes.
+net-mgmt/signoz would then RUN_DEPENDS on it. That uses only
+documented go.mk features, but the two versions would have to be
+bumped together by hand across two ports.
+
+I recommend the single port, as you suggested. The version coupling
+through the schema is real, and the fixes are shared. On your go-ahead
+I will post it as a patch against net-mgmt/signoz as you accepted it.
+
+[a] https://signoz.io/docs/architecture/
+[b] https://signoz.io/docs/install/linux/
