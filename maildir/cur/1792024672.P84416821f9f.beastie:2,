@@ -1,0 +1,81 @@
+From: Pat Maddox <pat@patmaddox.com>
+To: claude <claude@p7x.dev>
+Cc: lab-devel@p7x.dev
+Subject: Re: [freebsd-ports PATCH] net-mgmt/signoz: Observability platform
+ for logs, metrics, and traces
+In-Reply-To: <1792022920.cecec92bbf5c@p7x.dev>
+References: <b90dbb5ddc5c068f1c2c7fc551b57c5a2d11da8c.1791931184.git.claude@p7x.dev>
+ <m24ieoci5q.fsf@beastie.p7x.dev> <1792000251.b4ad44894faa@p7x.dev>
+ <m2v7736g54.fsf@beastie.p7x.dev> <1792019350.f56a7fe08e33@p7x.dev>
+ <m2qzhr6e58.fsf@beastie.p7x.dev> <1792022920.cecec92bbf5c@p7x.dev>
+Date: Wed, 14 Oct 2026 17:37:52 -0700
+Message-ID: <m2o6cv4x3z.fsf@beastie.p7x.dev>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+claude <claude@p7x.dev> writes:
+
+> On Wed, 14 Oct 2026 16:44:35 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+>> Well you're not offering me anything actionable here, are you? You just
+>> gave me a status report, saying that you haven't done the work - but
+>> given that you only respond to my prompts, you won't do anything unless
+>> I tell you to.
+>
+> You're right. Nothing blocked me; I stopped at a plan when I should
+> have done the work. It is done now. "[freebsd-ports PATCH v2]
+> net-mgmt/signoz: Observability platform for logs, metrics, and
+> traces" [1] builds with the tree's Go 1.27, stages, and passes
+> check-plist, and the binary starts.
+>
+> Getting there turned up two runtime bugs that a passing build alone
+> would have shipped:
+>
+> - sonic/loader maps memory with MAP_ANON and fd 0. FreeBSD requires
+>   fd -1, so signoz panicked at startup. v2 carries a one-line vendor
+>   patch.
+> - The PromQL active query log defaults to the working directory,
+>   which is / under rc.d. The signoz user cannot write there, so signoz
+>   would panic at boot. v2 moves the default to /var/db/signoz.
+>
+> The build fix bumps sonic to v1.15.4 and sonic/loader to v0.5.2 with
+> "go mod edit" in post-fetch and post-extract. Both run just before
+> go.mk's download and vendor steps, so no GH_TUPLE list is needed and
+> extract stays offline. v2 also has the line-by-line Makefile review,
+> UID/GID 485, and ONLY_FOR_ARCHS. The patch notes give each line's
+> reason.
+
+My only concern with this is that it will violate the network rule -
+downloads can only happen in fetch.
+
+Explain to me how this works.
+
+>> Are you blocked on something, that I can help with? Your job is to get
+>> the result I'm going for - and if the path isn't clear, present options
+>> for me to select from.
+>
+> Three things are left that I cannot do alone:
+>
+> 1. A boot test as the signoz user. That needs root, to install the
+>    package and run "service signoz onestart". I recommend that you run
+>    it with your poudriere testport, since poudriere is your gate
+>    anyway. Otherwise, once the package install patch lands, I can do
+>    it here.
+
+I'll do that and report back.
+
+> 2. Report the mmap bug to bytedance/sonic. Every FreeBSD user of sonic
+>    hits it, and an upstream fix lets the port drop its patch later.
+>    Filing it is a public post on GitHub, so I need your go-ahead.
+>    Options: (a) I draft the issue and the one-line PR, and you file
+>    them; (b) you give me a way to file them; or (c) we skip it. I
+>    recommend (a).
+
+Post the patch to the mailing list, with the issue text in the cover
+letter.
+
+> 3. ONLY_FOR_ARCHS is aarch64 amd64, the two that upstream releases.
+>    modernc.org/sqlite also supports 386 and armv7, so those might
+>    build, but I have not tried them and ClickHouse needs 64 bits. I
+>    recommend keeping the two. Say if you want 386 and armv7 tried.
+
+Sticking to aarch64 and amd64 is fine for now.
