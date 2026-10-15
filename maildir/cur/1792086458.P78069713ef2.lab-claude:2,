@@ -1,0 +1,120 @@
+From: claude <claude@p7x.dev>
+Subject: Re: [freebsd-ports PATCH v7] net-mgmt/signoz: Observability platform
+ for logs, metrics, and traces
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+In-Reply-To: <m2tsmm27jm.fsf@beastie.p7x.dev>
+References: <2c36442b0f0ef13c3f17984232ef0a2eb1acd243.1792037421.git.claude@p7x.dev>
+	<m2tsmm27jm.fsf@beastie.p7x.dev>
+Message-ID: <1792086449.36efa737f03d@p7x.dev>
+Date: Thu, 15 Oct 2026 17:47:38 +0000
+
+On Thu, 15 Oct 2026 10:33:01 -0700, Pat Maddox wrote:
+> I am curious about this... the previous version used the patch file,
+> which I think is the right way to do this. Why did you move away from
+> that approach for this round?
+
+I made a mistake. Your v6 review objected to the post-fetch block, and
+I followed security/nebula: fetch the newer sonic with GH_TUPLE and
+swap it into vendor/ in pre-patch. I then pinned the tuple to the
+unreleased commit that carries the mmap fix, since it also contains
+v1.15.4. That made PATCHFILES redundant, so I dropped it. Nobody asked
+for that, and it undid what you asked for in your v3 review.
+
+> The post-fetch and post-extract were what I object to. If it's possible
+> to use the defined version, and apply the one mmap patch, I think that
+> would be ideal.
+
+v8 [1] does that with the closest version that builds. The tuple is
+now the sonic v1.15.4 release tag, and the mmap fix comes back as
+PATCHFILES from upstream commit bf12ab8, applied to the tuple with
+PATCH_WRKSRC=${WRKSRC_sonic}. There is still no post-fetch and no
+post-extract. The upstream patch touches only loader/mmap_unix.go and
+applies cleanly to v1.15.4. The port builds, stages and passes
+check-plist offline, and the binary runs.
+
+> If that's not possible, fine, but I want to understand why.
+
+The version upstream pins, v1.14.1, does not compile with any Go in
+the tree. Its internal/rt defines GoMapIterator only for go1.24 &&
+!go1.26, and Mk/Uses/go.mk offers only 1.26 and 1.27. Keeping v1.14.1
+would mean also backporting sonic's Go 1.26 support, which is far more
+than one patch. v1.15.4 is the newest sonic release, and it needs no
+module that v1.14.1 did not.
+
+>> +%%DATADIR%%/example.yaml
+>
+> Does example.yaml match the defaults, and so can be installed to
+> /usr/local/etc/signoz.yaml? Research packages from other sources
+> (probably linux package repos for the most part) to get ideas for how to
+> package this.
+
+No to both. I compared it key by key with the defaults in the Go
+code, and it is a sample, not the defaults. Installed as it stands,
+signoz exits before startup on three placeholder values:
+sharder.single.org_id "org_id" is not a UUID, user.root.email "" is
+not an email, and global.external_url "<unset>" is not a valid URL.
+With those fixed it still changes behavior. Alert grouping becomes
+1m/1m/1h instead of 30s/5m/4h, span metrics are switched on, password
+self-reset is allowed, the cache halves, and the cloud agent is
+pinned to an older version. Its own header says "Do not modify this
+file".
+
+There is no other packaging to borrow from. AUR, nixpkgs, Homebrew
+and Repology have no signoz. Upstream's Docker image runs from /root
+with no config file. Its systemd example in SigNoz/foundry unpacks the
+release tarball into /opt/signoz and sets every path through SIGNOZ_*
+environment variables, never reading example.yaml.
+
+v8 therefore installs a short /usr/local/etc/signoz/signoz.yaml as an
+@sample. It sets only the ClickHouse DSN, which is the setting
+everyone changes, and points to example.yaml as the reference to every
+key. example.yaml stays in DATADIR as that reference.
+
+>> +%%DATADIR%%/templates/alertmanager/email.gotmpl
+>> +%%DATADIR%%/templates/email/invitation.gotmpl
+>> +%%DATADIR%%/templates/email/reset_password.gotmpl
+>
+> Tell me more about these files. If they might be used in modified form
+> in the config, then do we need a /usr/local/etc/signoz dir, potentially
+> using /usr/local/etc/signoz/signoz.yaml for the config, so that we can
+> include additional configs?
+
+They are the HTML bodies of the mail signoz sends. The two email
+templates are the user invitation and the password reset. They are
+read from emailing.templates.directory, which must hold both files;
+if one is missing, signoz logs a warning and that email fails to send.
+alertmanager/email.gotmpl defines the layout of alert notification
+email, and alertmanager.signoz.templates is a list of globs, so a
+later file can redefine it. None of them is embedded in the binary.
+
+So yes, they are configuration that users will want to edit, and v8
+installs all three as @sample files in
+/usr/local/etc/signoz/templates, as sysutils/munin-master does with
+its templates, so edits survive upgrades. The compiled-in defaults
+point there.
+
+signoz has no default config path. It takes --config any number of
+times, merges the files in order key by key, then applies SIGNOZ_*
+variables. In v8, rc.d defaults signoz_config to
+/usr/local/etc/signoz/signoz.yaml and accepts a space-separated list,
+so additional configs sit beside it, e.g.
+
+    sysrc signoz_config="/usr/local/etc/signoz/signoz.yaml \
+        /usr/local/etc/signoz/local.yaml"
+
+signoz_config="" still runs on built-in defaults and signoz_env.
+
+[1] id:f747bbebcaeb26db6bcccbb1b818b773374e3d80.1792086375.git.claude@p7x.dev
+
+Objective: net-mgmt/signoz accepted into the ports tree
+Status: waiting on your review of "[freebsd-ports PATCH v8]
+  net-mgmt/signoz: Observability platform for logs, metrics, and
+  traces" [1] and a poudriere build
+Next actions for you:
+- Review v8 and build it with poudriere
+Information needed from you:
+- Whether the /usr/local/etc/signoz layout (signoz.yaml plus
+  templates/, all @sample) is what you want
+- Still open from v7: keep the prebuilt web frontend, as v8 does, or
+  build it with USES=npm:pnpm
