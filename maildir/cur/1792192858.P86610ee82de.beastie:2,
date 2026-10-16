@@ -1,0 +1,30 @@
+From: Pat Maddox <pat@patmaddox.com>
+To: lab-devel@p7x.dev
+Subject: [RFC] agent-assisted research
+Date: Fri, 16 Oct 2026 16:20:58 -0700
+Message-ID: <m21p9pz0yt.fsf@beastie.p7x.dev>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+One thing that's important to me is keeping tabs on various
+subjects. For that, I want to have some up to date research material to
+draw on, and then I would work on my own notes. I would want agents to
+periodically update the research material.
+
+Take software factories as an example. That's a topic that's moving
+quickly, that has its own history, and on any given day someone could
+release a project that makes waves.
+
+I want to think about a strategy and way of organizing this sort of
+thing. I'm especially interested to get ideas from other people who are
+doing something similar with this.
+
+I'm not concerned with keeping any of the approaches that I've attempted
+in this repo. I want to take a step back, and get a higher level look at
+how to go about this.
+
+Essentially I want a research assistant for various subjects. I still
+want to produce my own notes material - that's a big part of how I
+learn. But gathering the information, organizing it, presenting it in a
+way that's useful for me to digest - I think that's a place where agents
+can come in really useful.
