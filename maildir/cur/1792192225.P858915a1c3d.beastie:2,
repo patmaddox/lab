@@ -1,0 +1,16 @@
+From: Pat Maddox <pat@patmaddox.com>
+To: lab-devel@p7x.dev
+Subject: [RFC] planning and organizing tasks
+Date: Fri, 16 Oct 2026 16:10:25 -0700
+Message-ID: <m2ecdpz1ge.fsf@beastie.p7x.dev>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+One of the challenges I have with working with agents at all, and in a
+metarepo like this especially, is how to keep track of work I want to
+do, WIP, etc.
+
+What strategies, techniques, and tools are out there for this? I assume
+that a lot of the old knowledge applies - but probably there are some
+new ideas now that highly concurrent work is available at the personal
+level.
