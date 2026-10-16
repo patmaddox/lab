@@ -1,0 +1,132 @@
+From: claude <claude@p7x.dev>
+Subject: Re: [RFC] re-thinking SMTP relay
+To: Pat Maddox <pat@patmaddox.com>, lab-devel@p7x.dev
+In-Reply-To: <m2mrsdz1n0.fsf@beastie.p7x.dev>
+References: <m2mrsdz1n0.fsf@beastie.p7x.dev>
+Message-ID: <1792193020.cee32e2b1dec@p7x.dev>
+Date: Fri, 16 Oct 2026 23:23:44 +0000
+
+On Fri, 16 Oct 2026 16:06:27 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+> [1] I think I might actually be misremembering, and the previous version
+> did use git-send-email(1) with a script to deliver to maildir... need
+> some help checking that.
+
+Your second memory is right. The first mail tooling, which you added on
+2026-09-08, was built that way:
+
+- [fact] 0f4f0fbd6ba3 "mail: Add maildir-deliver.sh delivery agent"
+  added libexec/mail/maildir-deliver.sh, a sendmail-compatible program
+  that files one message into the maildir.
+- [fact] b1a17dcdbff8 "mail: Add mail-send.sh for git send-email" added
+  libexec/mail/mail-send.sh. It runs
+
+      git send-email --sendmail-cmd="${libdir}/maildir-deliver.sh" \
+          --suppress-cc=all --confirm=never --no-validate --quiet "$@"
+
+  doc/mail-workflow.md still documents it, and it is still in the tree.
+- [fact] No message in the maildir carries git send-email's X-Mailer
+  header, so it seems no posted series ever went through it. The agent
+  path moved to 1757c547b0b0 "mail: Add format-patch.sh carrying change
+  ids". Agents now run format-patch.sh and pipe each file to
+  maildir-deliver.sh by hand, which reimplements the delivery half of
+  git send-email.
+- [fact] I found no tool that takes a jj revset. The revsets live in
+  src/lab-process-mail/prompt.md, which turns them into commit ids and
+  passes git ranges to format-patch.sh. That may be what you remember.
+
+> It would be better to
+> use git-send-email(1) directly, with a mailer program that delivers
+> messages to the maildir.
+
+Agreed. Most of the parts already exist. format-patch.sh still earns
+its place, because it adds the Change-Id and the interdiff, and plain
+git format-patch can do neither. But its output is ordinary patch
+files, and git send-email takes files. The agent step would become
+
+    format-patch.sh -o /tmp/series ... &&
+    git send-email --to=... /tmp/series/*.patch
+
+with sendemail.sendmailCmd or sendemail.smtpServer set in git config
+instead of on the command line. That replaces the hand-written delivery
+loop in prompt.md and retires mail-send.sh.
+
+> It may be that I need a local SMTP server after
+> all, because the agent nodes won't have direct access to the
+> maildir. Instead they would send to a local SMTP server which delivers
+> to maildir, and then mbsync syncs between the local maildir and
+> fastmail.
+
+I think a local SMTP server is the right call over mounting the maildir
+into agent jails. A write mount would let an agent rename or delete any
+message on the list. With SMTP, an agent can only add one.
+
+For the server, I recommend OpenSMTPD (mail/opensmtpd):
+
+- [fact, from smtpd.conf(5)] It delivers to a maildir natively
+  ("action ... maildir"). It matches on source and recipient in two
+  lines, e.g. accept from the jail network for lab-devel@p7x.dev and
+  reject everything else.
+- [inference] The lab-mail spec rejected queuing MTAs because a queue
+  answers 250 before Fastmail has seen the message, so a rejection
+  turns into a bounce nobody sees. That objection goes away here. The
+  only hop is the local disk, and a local maildir does not reject
+  mail.
+- [inference] dma, the FreeBSD base MTA, will not do. It does not listen
+  on the network, and as far as I know it delivers local mail only to
+  mbox. Postfix can do maildir too, but it is much larger than this
+  job needs.
+
+The safety property also gets stronger. Today smtprelay keeps agents
+off other addresses with an allowlist in front of a real Fastmail
+login. A server that only ever delivers locally cannot send anywhere
+external at all. Nothing an agent sends leaves the host, except as a
+file that mbsync copies into a Fastmail folder.
+
+Things the proposal needs to settle:
+
+1. Moderation. Today an agent's mail reaches the list only after you
+   merge its `submissions` push into mail@upstream, and that merge is
+   your gate. If OpenSMTPD delivers straight into the maildir that
+   mbsync syncs, the gate is gone and agent mail is on the list right
+   away. One way to keep a gate is to have the server deliver into a
+   separate "moderation" maildir folder and move accepted messages
+   across yourself. This is the unmoderated-delivery question from
+   "What's the status of beastie connection with fastmail?" [1], and
+   it is still open.
+
+2. The loop signal. lab-process-mail keys on the `claude` bookmark at
+   submissions. Under this design the signal would be a delivered
+   message, e.g. a file in the maildir with the reply's In-Reply-To, or
+   `notmuch count` on it. That is still a side effect the model does
+   not author, so CLAUDE.md's "Own the loop" holds, but lab-process-mail
+   and prompt.md both have to change.
+
+3. mbsync settings. [inference] To start, I would run it with Expunge
+   None and Remove None, so a deletion or an expunge on one side never
+   destroys mail on the other. Then turn on what you need once the
+   sync has proven itself. notmuch copes with the flag renames mbsync
+   makes, as long as `notmuch new` runs after each sync.
+
+4. What becomes of lab-mail. If agents stop sending through Fastmail,
+   then smtprelay, the credentials mount, and the mailcred group in
+   "[PATCH v11 0/8] jails/instances/lab-mail: Build the mail relay
+   jail" [2] are only needed for your own mail to people outside the
+   list. The Dovecot mirror in the same series becomes redundant with
+   a local mbsync. "[PATCH v2] dotfiles/notmuch: Spec reading and
+   sending through lab-mail" assumes the relay, so it is stale under
+   either outcome.
+
+Your follow-up says this design is very close to the git-based one,
+just without git push and pull, and I agree. The difference that
+matters is that mbsync merges message by message, so it never
+conflicts. In exchange you lose the review gate and the history that
+jj gives today, unless point 1 adds a gate back.
+
+Status: research and feedback only; no patch.
+Asks: decide on point 1, whether agent mail is moderated, before
+anyone writes a spec. Once you choose, I will write the spec covering
+OpenSMTPD, mbsync, and the git send-email change, with an alternatives
+section.
+
+[1] id:m25wz49eua.fsf@beastie.p7x.dev
+[2] id:cover.1791969110.git.claude@p7x.dev
