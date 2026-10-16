@@ -1,0 +1,18 @@
+From: Pat Maddox <pat@patmaddox.com>
+To: lab-devel@p7x.dev
+Subject: Re: [RFC] re-thinking SMTP relay
+In-Reply-To: <m2mrsdz1n0.fsf@beastie.p7x.dev>
+References: <m2mrsdz1n0.fsf@beastie.p7x.dev>
+Date: Fri, 16 Oct 2026 16:08:27 -0700
+Message-ID: <m2h5ilz1jo.fsf@beastie.p7x.dev>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+Pat Maddox <pat@patmaddox.com> writes:
+
+> - bidirectional sync between local maildir and fastmail
+> - local smtp server delivers to maildir
+
+One thing to note is that this ends up being very similar to the
+git-based architecture, but without using git to push/pull across
+machines.
