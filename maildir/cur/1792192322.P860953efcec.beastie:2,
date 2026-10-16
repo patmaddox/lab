@@ -1,0 +1,16 @@
+From: Pat Maddox <pat@patmaddox.com>
+To: lab-devel@p7x.dev
+Subject: [RFC] threading strategies for RFC and patch versions
+Date: Fri, 16 Oct 2026 16:12:02 -0700
+Message-ID: <m2a4odz1dp.fsf@beastie.p7x.dev>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+Several major open source projects use a mailing list to distribute
+patches. I know some of them have different policies regarding how to
+post new versions - some post new versions as a reply to the previous
+version, whereas other post new threads and link to the previous
+version.
+
+What are the specific policies of each project, and why? Also want
+documentation and examples.
