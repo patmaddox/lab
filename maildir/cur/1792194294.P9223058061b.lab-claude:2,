@@ -1,0 +1,123 @@
+From: claude <claude@p7x.dev>
+Subject: Re: [RFC] planning and organizing tasks
+To: Pat Maddox <pat@patmaddox.com>, lab-devel@p7x.dev
+In-Reply-To: <m2ecdpz1ge.fsf@beastie.p7x.dev>
+References: <m2ecdpz1ge.fsf@beastie.p7x.dev>
+Message-ID: <1792194290.3aab364e9b9e@p7x.dev>
+Date: Fri, 16 Oct 2026 23:44:54 +0000
+
+On Fri, 16 Oct 2026 16:10:25 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+> One of the challenges I have with working with agents at all, and in a
+> metarepo like this especially, is how to keep track of work I want to
+> do, WIP, etc.
+
+First, what the repo holds today. Nothing below is changed by this
+reply; I read the tree on b/dev@upstream and searched the list.
+
+The backlog sits in at least six places: todo.org (15 headings, no
+TODO keywords), TODO.md (4 stale checkboxes), doc/tasks.org (8 TODO
+items from the early patch-review experiments), fieldstones.org and
+doc/fieldstones.org (which look like near-duplicates), and plans/. A
+draft plan, plans/consolidate-notes-and-tasks.md, already names this
+problem. WIP is spread across the list, the b/dev mega-merge, topic
+bookmarks on upstream, and the [REVIEW], [SIGNOFF] and [BLOCKED]
+commit tags. Nothing links a todo.org heading to the thread or the jj
+change that works on it.
+
+You have also already written down most of a design, in pieces:
+
+- todo.org's first heading sketches todo, next, wip, review, done,
+  with one wip/<id> branch per item.
+- zib/zib.org puts the task in an empty jj commit's description and
+  gives each one its own workspace, so work runs in parallel.
+- zib/nirvana-gtd.md has Focus, Next and Later.
+- In "Supporting status trailers in emails" [1] you set the rule that
+  state must be derivable from the list and the repo, and asked for a
+  "What's cooking" report.
+- You accepted todo.org as the place deferred work goes, in the
+  thread on "[PATCH] todo: Send as Pat through lab-mail later" [2].
+
+> What strategies, techniques, and tools are out there for this? I assume
+> that a lot of the old knowledge applies - but probably there are some
+> new ideas now that highly concurrent work is available at the personal
+> level.
+
+The old knowledge that still holds:
+
+- GTD: capture everything into one inbox, decide each item's next
+  action, and review the lists weekly. Its point is that you trust
+  the system, so you stop holding the backlog in your head. Several
+  capture inboxes defeat that, which is the trouble with the six
+  files above.
+- Kanban: make the stages visible and cap WIP at each one. Little's
+  law says lead time is WIP divided by throughput, so if you start
+  more work than you finish, each item takes longer, no matter how
+  fast the workers are.
+- How mailing-list projects track work. Git's maintainer posts a
+  periodic "What's cooking" message that lists each topic branch and
+  its state (new, in next, will merge, on hold). Patchwork and
+  lore+b4 track the state of each patch for the kernel. Neither keeps
+  a separate tracker. State lives in the list and the branches, and
+  the report is generated from them. That matches the rule from [1].
+
+What changes with agents. This part is my inference from how this
+repo works, not something I found settled anywhere:
+
+- The bottleneck moves. Agents make starting and doing work cheap,
+  but you still review and integrate every result yourself. So the
+  WIP limit that matters is on the review stage, i.e. how many
+  series wait on you, not how many agents are running. Spare agent
+  capacity is better spent on making each result cheaper to review
+  (smaller patches, better messages, triage) than on starting more
+  work.
+- The task becomes an artifact. A clear task description is now
+  close to the prompt itself. That supports zib/zib.org's idea:
+  once work starts, the description moves into the change or thread
+  that does it, and the backlog only holds what nobody has started.
+- Status must be readable from outside. This is the same rule as
+  "Own the loop" in CLAUDE.md. An item's state is wherever its
+  real artifact is: no thread yet, a posted series, an Approved:
+  trailer, a commit on trunk. A status field someone has to keep in
+  sync will drift once several agents touch the same item.
+- Tools built for this. A few git-backed trackers aimed at agents
+  have appeared, e.g. Steve Yegge's beads (issues kept as JSONL in
+  the repo, with dependencies and a "ready" query) and Backlog.md
+  (one markdown file per task). Spec-driven tools such as GitHub's
+  Spec Kit turn a written spec into a task list. I have not tried
+  any of these here. Each one adds a second source of truth next to
+  the list, which goes against [1], so I would borrow ideas from
+  them rather than adopt them.
+
+Here is what I recommend, in order:
+
+1. One capture point. Merge TODO.md, doc/tasks.org and the duplicate
+   fieldstones file into todo.org, as the draft plan proposes. Only
+   work that nobody has started lives there.
+2. Hand off by link. When an item starts, it becomes a list thread
+   (an RFC or a series) and its heading gets the thread's id. At that
+   point the list owns its state, and when the work lands the heading
+   is deleted. You could set TODO and NEXT keywords on the headings
+   for an org agenda, but nothing past NEXT belongs in the file.
+3. Generate the WIP view, don't maintain it. A "What's cooking"
+   report built from notmuch tags and jj (open series, approved but
+   not applied, on b/dev, waiting on you) covers WIP. It is close to
+   what the patch-triage skill already does, so it could grow from
+   that.
+
+Your sister RFC, "[RFC] push vs pull for agents" [3], is the other
+half of this: if agents pull from the list, then the list is the
+queue, and todo.org feeds it.
+
+Objective: answer the RFC on planning and organizing tasks
+Status: done, as a reply only. Nothing is posted or changed.
+Next actions for you:
+- Decide whether to adopt recommendations 1 to 3, in whole or in
+  part.
+Information needed from you:
+- If yes, which one first. Item 1 is a small patch I can send in the
+  next pass. Item 3 needs your answer on whether the report should
+  extend patch-triage or be a separate script.
+
+[1] id:m21p9s9ejd.fsf@beastie.p7x.dev
+[2] id:3392fc1fe384930c729e4616a7fd4355f965064b.1791958269.git.claude@p7x.dev
+[3] id:m25wz1z155.fsf@beastie.p7x.dev
