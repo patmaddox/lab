@@ -1,0 +1,36 @@
+From: Pat Maddox <pat@patmaddox.com>
+To: lab-devel@p7x.dev
+Subject: [RFC] push vs pull for agents
+Date: Fri, 16 Oct 2026 16:17:10 -0700
+Message-ID: <m25wz1z155.fsf@beastie.p7x.dev>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+From my understanding, one of the principles of effective flow is to use
+pull-based queues as much as possible.
+
+I'm wondering how this applies in terms of AI-assisted programming. For
+example, I usually think of working with a coding agent as assigning it
+a task - pushing a message to the agent.
+
+However I wonder if it's more helpful to think of it as a pull model. I
+push something onto the queue (so does this end up being push, pull, or
+both)? Then an agent takes it off the queue.
+
+Where I'm particularly interested in this is in developing more
+autonomous agents. So rather than instructing an agent to code review -
+I would rather post to the list, let the various agents monitor the
+list, and respond to messages if it's appropriate. For example, a code
+review agent doesn't need to respond to an RFC - unless perhaps the RFC
+is about code review specifically, in which case it might have something
+to contribute.
+
+The point is, rather than thinking of agents as buttons to push when I
+want a certain task done - they become more ambient and proactive,
+detecting when they can provide value and contributing to the
+discussion. In that sense they work like real collaborators, not simply
+workers that I delegate to.
+
+I'd like some feedback on the high-level principles of flow, how they
+apply to working with coding agents, and what are current lines of
+thinking around this.
