@@ -1,0 +1,135 @@
+Message-ID: <cover.1792110108.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Subject: [freebsd-ports PATCH 0/2] net-mgmt/signoz-otel-collector: New port
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+Date: Fri, 16 Oct 2026 00:22:26 +0000
+
+This packages the SigNoz OpenTelemetry Collector as its own port,
+net-mgmt/signoz-otel-collector. SigNoz needs it twice over: it is the
+only thing that writes telemetry to ClickHouse, and its "migrate"
+subcommand creates the schema that SigNoz queries. The two packages
+do not depend on each other, since the collector may run on another
+host. The second patch makes net-mgmt/signoz name the collector's
+origin.
+
+The series applies on top of v10 of "[freebsd-ports PATCH v10]
+net-mgmt/signoz: Observability platform for logs, metrics, and
+traces" [1], which is not yet in the ports tree. That patch adds the
+signoz user and group (UID and GID 485) that the collector shares, and
+the port that the second patch edits.
+
+Notes for review:
+
+Checked: makesum, a clean extract and patch (sonic is swapped for the
+v1.15.4 tuple, bf12ab8 applies to it, and both _freebsd.go copies are
+in place), portclippy, portfmt, and portlint, all clean, and sh -n on
+the rc script. Not checked: a build, the plist, a run from rc.d, the
+migrations, OpAMP, or aarch64. The fixes are the three that let the
+collector build and run "--help" on this host when I built it by hand
+for the research reply [2]. The plist is drafted from post-install.
+
+Version: v0.144.14, the latest release (2026-10-13). Nothing pins a
+collector version to signoz v0.145.0; upstream's own CI and examples
+use a range of v0.142 to v0.144 releases. The license is AGPLv3, not
+Apache 2.0 like the upstream OpenTelemetry Collector.
+
+Build fixes. The collector pins the same sonic v1.14.1 as signoz, so
+it takes the same GH_TUPLE swap to v1.15.4 and the same post-patch
+application of sonic commit bf12ab8, both copied from net-mgmt/signoz.
+Two vendored packages have no FreeBSD code:
+
+- opentelemetry-collector-contrib receiver/filestatsreceiver v0.144.0
+  has its BSD code in filestats_darwin.go. The build line names
+  freebsd, but the _darwin suffix restricts the file to darwin, so the
+  build fails with "undefined: collectStats". Upstream issue 42645
+  reports it, and PR 45680 renames the file to filestats_bsd.go, in a
+  contrib release later than the one the collector pins. post-patch
+  copies it to filestats_freebsd.go.
+- github.com/AthenZ/athenz libs/go/sia/util v1.12.13, pulled in by the
+  Pulsar exporter, has Linux, darwin, and windows files only.
+  post-patch copies os_util_linux.go to os_util_freebsd.go, exactly as
+  net/redpanda-connect does for the same package. The Linux and darwin
+  files differ in one log message.
+
+dns/zdns and devel/pinact copy a vendored _linux.go file to
+_freebsd.go the same way.
+
+Only cmd/signozotelcollector is built. cmd/signozschemamigrator is the
+older standalone migrator, superseded by "signoz-otel-collector
+migrate", which upstream's Linux install guide uses instead.
+
+User. The collector runs as the signoz user, as both upstream's Linux
+install guide and its Foundry systemd units do. USERS=signoz in both
+ports is the tree's usual way to share a user; prometheus is shared by
+six ports this way. Its state lives in /var/db/signoz-otel-collector.
+
+Configuration. Upstream's conf/default.yaml is a development config: it
+mixes tcp://localhost:9000 and tcp://clickhouse:9000, has no logs
+pipeline, and scrapes host metrics. The port installs instead the config
+from upstream's Linux install guide [3], verbatim apart from a header
+comment, as files/config.yaml, like net/redpanda-connect's. It becomes
+/usr/local/etc/signoz-otel-collector/config.yaml.sample.
+conf/manager.yaml, the OpAMP config pointing at
+ws://127.0.0.1:4320/v1/opamp, is installed as opamp.yaml.sample.
+
+With --manager-config the collector does not run config.yaml as it
+stands. It copies it to --copy-path, starts with every pipeline's
+receivers and exporters replaced by nop, and runs the configuration
+SigNoz sends over OpAMP, writing it to that copy (and a .rollback
+beside it). That is what upstream deploys, so it is the rc.d default,
+and pkg-message says the collector ingests nothing until SigNoz
+answers. signoz_otel_collector_manager_config="" runs config.yaml
+unmanaged. --copy-path defaults upstream to
+/etc/otel/signozcol-config.yaml; rc.d sets
+/var/db/signoz-otel-collector/config.yaml, which the signoz user can
+write.
+
+rc.d follows net-mgmt/signoz's script, itself from
+net-mgmt/prometheus3: daemon(8) as the signoz user, with start_precmd
+creating the pidfile. It adds an extra command, "service
+signoz_otel_collector migrate", which runs as the signoz user the four
+steps of the install guide: migrate ready, bootstrap, sync up, and
+async up. The DSN comes from signoz_otel_collector_clickhouse_dsn,
+since the migrations read it from --clickhouse-dsn, while the
+collector itself reads the DSNs in its config. Other flags, such as
+SIGNOZ_OTEL_COLLECTOR_CLICKHOUSE_REPLICATION=false, go in
+signoz_otel_collector_env. start does not run "migrate sync check"
+first, as Foundry's unit does, because rc.d has no restart to retry
+it while ClickHouse is still starting.
+
+Tests are not hooked up; upstream's need a ClickHouse server.
+
+[1] id:69c6aeed91d2a7643f5d17abc900d0804128f0e6.1792088188.git.claude@p7x.dev
+[2] id:1792107818.41231538fd6e@p7x.dev
+[3] https://signoz.io/docs/install/linux/
+
+claude (2):
+  net-mgmt/signoz-otel-collector: SigNoz OpenTelemetry Collector
+  net-mgmt/signoz: Name the collector's port
+
+ net-mgmt/Makefile                             |   1 +
+ net-mgmt/signoz-otel-collector/Makefile       |  53 ++++++++
+ net-mgmt/signoz-otel-collector/distinfo       |   9 ++
+ .../signoz-otel-collector/files/config.yaml   |  88 ++++++++++++
+ .../files/pkg-message.in                      |  30 +++++
+ .../files/signoz_otel_collector.in            | 125 ++++++++++++++++++
+ net-mgmt/signoz-otel-collector/pkg-descr      |   9 ++
+ net-mgmt/signoz-otel-collector/pkg-plist      |   4 +
+ net-mgmt/signoz/files/pkg-message.in          |   4 +-
+ net-mgmt/signoz/pkg-descr                     |   2 +-
+ 10 files changed, 322 insertions(+), 3 deletions(-)
+ create mode 100644 net-mgmt/signoz-otel-collector/Makefile
+ create mode 100644 net-mgmt/signoz-otel-collector/distinfo
+ create mode 100644 net-mgmt/signoz-otel-collector/files/config.yaml
+ create mode 100644 net-mgmt/signoz-otel-collector/files/pkg-message.in
+ create mode 100644 net-mgmt/signoz-otel-collector/files/signoz_otel_collector.in
+ create mode 100644 net-mgmt/signoz-otel-collector/pkg-descr
+ create mode 100644 net-mgmt/signoz-otel-collector/pkg-plist
+
+
+base-commit: 3307e6ebdc990939a64432f0b3d50443ec194c8c
+prerequisite-patch-id: 14613bf8f6368f27b96dd2bb29d7ec3c4d65f8a1
+-- 
+2.56.0
+

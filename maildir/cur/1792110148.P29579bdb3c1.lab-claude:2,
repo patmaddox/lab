@@ -1,0 +1,47 @@
+Message-ID: <8e60ec45ccb868b86def4f60c5f167a7632f108f.1792110108.git.claude@p7x.dev>
+In-Reply-To: <cover.1792110108.git.claude@p7x.dev>
+References: <cover.1792110108.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Subject: [freebsd-ports PATCH 2/2] net-mgmt/signoz: Name the collector's port
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+Date: Fri, 16 Oct 2026 00:22:28 +0000
+
+SigNoz cannot run without the SigNoz OpenTelemetry Collector, which
+creates the ClickHouse schema and ingests the telemetry. The package
+text only said the collector was packaged separately, leaving users to
+find it. It now names net-mgmt/signoz-otel-collector. The collector is
+not a dependency, since it may run on another host.
+---
+ net-mgmt/signoz/files/pkg-message.in | 4 ++--
+ net-mgmt/signoz/pkg-descr            | 2 +-
+ 2 files changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/net-mgmt/signoz/files/pkg-message.in b/net-mgmt/signoz/files/pkg-message.in
+index e0acc0c39ab4..7df9f7db4d69 100644
+--- a/net-mgmt/signoz/files/pkg-message.in
++++ b/net-mgmt/signoz/files/pkg-message.in
+@@ -4,8 +4,8 @@
+ SigNoz stores telemetry in ClickHouse (databases/clickhouse), which may
+ run on another host. Before the first start, ClickHouse needs a cluster
+ named "cluster" and the SigNoz schema. The schema is created by the
+-schema migrator of the SigNoz OpenTelemetry Collector, which also
+-ingests the telemetry and is packaged separately.
++SigNoz OpenTelemetry Collector (net-mgmt/signoz-otel-collector), which
++also ingests the telemetry and may run on another host.
+ 
+ Settings come from built-in defaults, from %%ETCDIR%%/signoz.yaml,
+ and from SIGNOZ_* variables set in signoz_env, each overriding the one
+diff --git a/net-mgmt/signoz/pkg-descr b/net-mgmt/signoz/pkg-descr
+index 951ff383d910..66a9c0461702 100644
+--- a/net-mgmt/signoz/pkg-descr
++++ b/net-mgmt/signoz/pkg-descr
+@@ -5,4 +5,4 @@ stores its data in ClickHouse.
+ 
+ This is the Community Edition of the query service and web interface.
+ Telemetry reaches ClickHouse through the SigNoz distribution of the
+-OpenTelemetry Collector, which is packaged separately.
++OpenTelemetry Collector, net-mgmt/signoz-otel-collector.
+-- 
+2.56.0
+

@@ -1,0 +1,414 @@
+Message-ID: <b0fa827acc57967d69355c55d3e1ec29130d7b23.1792110108.git.claude@p7x.dev>
+In-Reply-To: <cover.1792110108.git.claude@p7x.dev>
+References: <cover.1792110108.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Subject: [freebsd-ports PATCH 1/2] net-mgmt/signoz-otel-collector: SigNoz
+ OpenTelemetry Collector
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+Date: Fri, 16 Oct 2026 00:22:27 +0000
+
+The SigNoz OpenTelemetry Collector receives logs, metrics, and traces
+over OTLP, Jaeger, and HTTP, and writes them to ClickHouse for SigNoz,
+an open source observability platform. It adds SigNoz's exporters and
+processors to the OpenTelemetry Collector, such as span metrics and
+log pipelines that SigNoz manages over OpAMP.
+
+It also creates and migrates the SigNoz schema in ClickHouse. SigNoz
+reads that schema, so this collector is needed for SigNoz to work, but
+it may run on another host.
+
+WWW: https://github.com/SigNoz/signoz-otel-collector
+---
+ net-mgmt/Makefile                             |   1 +
+ net-mgmt/signoz-otel-collector/Makefile       |  53 ++++++++
+ net-mgmt/signoz-otel-collector/distinfo       |   9 ++
+ .../signoz-otel-collector/files/config.yaml   |  88 ++++++++++++
+ .../files/pkg-message.in                      |  30 +++++
+ .../files/signoz_otel_collector.in            | 125 ++++++++++++++++++
+ net-mgmt/signoz-otel-collector/pkg-descr      |   9 ++
+ net-mgmt/signoz-otel-collector/pkg-plist      |   4 +
+ 8 files changed, 319 insertions(+)
+ create mode 100644 net-mgmt/signoz-otel-collector/Makefile
+ create mode 100644 net-mgmt/signoz-otel-collector/distinfo
+ create mode 100644 net-mgmt/signoz-otel-collector/files/config.yaml
+ create mode 100644 net-mgmt/signoz-otel-collector/files/pkg-message.in
+ create mode 100644 net-mgmt/signoz-otel-collector/files/signoz_otel_collector.in
+ create mode 100644 net-mgmt/signoz-otel-collector/pkg-descr
+ create mode 100644 net-mgmt/signoz-otel-collector/pkg-plist
+
+diff --git a/net-mgmt/Makefile b/net-mgmt/Makefile
+index 8f7c5c41183d..e6ac1e7fa3f9 100644
+--- a/net-mgmt/Makefile
++++ b/net-mgmt/Makefile
+@@ -392,6 +392,7 @@
+     SUBDIR += semaphore
+     SUBDIR += sendip
+     SUBDIR += signoz
++    SUBDIR += signoz-otel-collector
+     SUBDIR += simplomon
+     SUBDIR += sipcalc
+     SUBDIR += sjitter
+diff --git a/net-mgmt/signoz-otel-collector/Makefile b/net-mgmt/signoz-otel-collector/Makefile
+new file mode 100644
+index 000000000000..61f326b11f01
+--- /dev/null
++++ b/net-mgmt/signoz-otel-collector/Makefile
+@@ -0,0 +1,53 @@
++PORTNAME=	signoz-otel-collector
++DISTVERSIONPREFIX=	v
++DISTVERSION=	0.144.14
++CATEGORIES=	net-mgmt
++# :sonic_patch is not extracted; post-patch applies it to the sonic tuple.
++MASTER_SITES+=	https://github.com/bytedance/sonic/commit/:sonic_patch
++DISTFILES+=	${SONIC_PATCH}:sonic_patch
++EXTRACT_ONLY=	${_DISTFILES:N*.mod:N${SONIC_PATCH}}
++
++MAINTAINER=	patmaddox@FreeBSD.org
++COMMENT=	SigNoz distribution of the OpenTelemetry Collector
++WWW=		https://github.com/SigNoz/signoz-otel-collector
++
++LICENSE=	AGPLv3
++LICENSE_FILE=	${WRKSRC}/LICENSE
++
++USES=		go:modules
++USE_GITHUB=	nodefault
++# replaces the vendored sonic v1.14.1, which does not build with Go 1.26+
++GH_TUPLE=	bytedance:sonic:v1.15.4:sonic
++USE_RC_SUBR=	signoz_otel_collector
++# MAP_ANON with fd -1, which FreeBSD's mmap(2) requires; in no release yet
++SONIC_PATCH=	bf12ab8c1f789cfbbdfa9d6a4cae69ed136ea516.patch
++
++GO_MODULE=	github.com/SigNoz/signoz-otel-collector
++GO_TARGET=	./cmd/signozotelcollector:${PORTNAME}
++
++SUB_FILES=	pkg-message
++
++USERS=		signoz
++GROUPS=		signoz
++
++# after go-post-extract has vendored the modules upstream pins
++pre-patch:
++	${RM} -r ${WRKSRC}/vendor/github.com/bytedance/sonic
++	${LN} -s ${WRKSRC_sonic} ${WRKSRC}/vendor/github.com/bytedance/sonic
++
++post-patch:
++	${PATCH} -d ${WRKSRC_sonic} -p1 < ${DISTDIR}/${DIST_SUBDIR}/${SONIC_PATCH}
++# the _darwin suffix limits the BSD code to darwin despite its build line;
++# opentelemetry-collector-contrib PR 45680 renames it to filestats_bsd.go
++	${CP} ${WRKSRC}/vendor/github.com/open-telemetry/opentelemetry-collector-contrib/receiver/filestatsreceiver/filestats_darwin.go \
++		${WRKSRC}/vendor/github.com/open-telemetry/opentelemetry-collector-contrib/receiver/filestatsreceiver/filestats_freebsd.go
++# no FreeBSD file; the Linux one also builds here, as in net/redpanda-connect
++	${CP} ${WRKSRC}/vendor/github.com/AthenZ/athenz/libs/go/sia/util/os_util_linux.go \
++		${WRKSRC}/vendor/github.com/AthenZ/athenz/libs/go/sia/util/os_util_freebsd.go
++
++post-install:
++	${MKDIR} ${STAGEDIR}${ETCDIR} ${STAGEDIR}/var/db/signoz-otel-collector
++	${INSTALL_DATA} ${FILESDIR}/config.yaml ${STAGEDIR}${ETCDIR}/config.yaml.sample
++	${INSTALL_DATA} ${WRKSRC}/conf/manager.yaml ${STAGEDIR}${ETCDIR}/opamp.yaml.sample
++
++.include <bsd.port.mk>
+diff --git a/net-mgmt/signoz-otel-collector/distinfo b/net-mgmt/signoz-otel-collector/distinfo
+new file mode 100644
+index 000000000000..35b91858afd7
+--- /dev/null
++++ b/net-mgmt/signoz-otel-collector/distinfo
+@@ -0,0 +1,9 @@
++TIMESTAMP = 1792109829
++SHA256 (go/net-mgmt_signoz-otel-collector/signoz-otel-collector-v0.144.14/bf12ab8c1f789cfbbdfa9d6a4cae69ed136ea516.patch) = f51e707e2e75ef73e7c93cf45ad3092bc259346a17cbeba34bbc3ee00b53b112
++SIZE (go/net-mgmt_signoz-otel-collector/signoz-otel-collector-v0.144.14/bf12ab8c1f789cfbbdfa9d6a4cae69ed136ea516.patch) = 1492
++SHA256 (go/net-mgmt_signoz-otel-collector/signoz-otel-collector-v0.144.14/v0.144.14.mod) = aaccf45a5c530a3a521c252fc84c20b744fe9f02b56c3d5d0b5ed29fe6806c01
++SIZE (go/net-mgmt_signoz-otel-collector/signoz-otel-collector-v0.144.14/v0.144.14.mod) = 60725
++SHA256 (go/net-mgmt_signoz-otel-collector/signoz-otel-collector-v0.144.14/v0.144.14.zip) = b17c05ce18f00570d5e2242ce660e3c8689a3956b119b74f606c9f2e4c26c26c
++SIZE (go/net-mgmt_signoz-otel-collector/signoz-otel-collector-v0.144.14/v0.144.14.zip) = 1510385
++SHA256 (go/net-mgmt_signoz-otel-collector/signoz-otel-collector-v0.144.14/bytedance-sonic-v1.15.4_GH0.tar.gz) = 4de58652dbdc8d235c9b6b8f0936433bcc7eeb30b96e5a504920d6878252cf1a
++SIZE (go/net-mgmt_signoz-otel-collector/signoz-otel-collector-v0.144.14/bytedance-sonic-v1.15.4_GH0.tar.gz) = 3439525
+diff --git a/net-mgmt/signoz-otel-collector/files/config.yaml b/net-mgmt/signoz-otel-collector/files/config.yaml
+new file mode 100644
+index 000000000000..361b4f8dcde8
+--- /dev/null
++++ b/net-mgmt/signoz-otel-collector/files/config.yaml
+@@ -0,0 +1,88 @@
++# SigNoz OpenTelemetry Collector configuration, from the SigNoz Linux
++# installation guide, https://signoz.io/docs/install/linux/
++#
++# The exporters write to ClickHouse on localhost. If ClickHouse has a
++# password, add ?password=<password> to every DSN after the database.
++#
++# With a manager configuration (signoz_otel_collector_manager_config),
++# the collector runs a copy of this file in /var/db/signoz-otel-collector.
++# Its pipelines stay idle until SigNoz answers over OpAMP and sends the
++# configuration to run, with the log pipelines edited in its interface.
++
++receivers:
++  otlp:
++    protocols:
++      grpc:
++        endpoint: 0.0.0.0:4317
++        max_recv_msg_size_mib: 16
++      http:
++        endpoint: 0.0.0.0:4318
++  jaeger:
++    protocols:
++      grpc:
++        endpoint: 0.0.0.0:14250
++      thrift_http:
++        endpoint: 0.0.0.0:14268
++  httplogreceiver/heroku:
++    endpoint: 0.0.0.0:8081
++    source: heroku
++  httplogreceiver/json:
++    endpoint: 0.0.0.0:8082
++    source: json
++processors:
++  batch:
++    send_batch_size: 50000
++    timeout: 1s
++  signozspanmetrics/delta:
++    metrics_exporter: signozclickhousemetrics
++    latency_histogram_buckets: [100us, 1ms, 2ms, 6ms, 10ms, 50ms, 100ms, 250ms, 500ms, 1000ms, 1400ms, 2000ms, 5s, 10s, 20s, 40s, 60s]
++    dimensions_cache_size: 100000
++    dimensions:
++      - name: service.namespace
++        default: default
++      - name: deployment.environment
++        default: default
++      - name: signoz.collector.id
++    aggregation_temporality: AGGREGATION_TEMPORALITY_DELTA
++extensions:
++  health_check:
++    endpoint: 0.0.0.0:13133
++  zpages:
++    endpoint: localhost:55679
++  pprof:
++    endpoint: localhost:1777
++exporters:
++  clickhousetraces:
++    datasource: tcp://localhost:9000/signoz_traces
++    use_new_schema: true
++  signozclickhousemetrics:
++    dsn: tcp://localhost:9000/signoz_metrics
++    timeout: 45s
++  clickhouselogsexporter:
++    dsn: tcp://localhost:9000/signoz_logs
++    timeout: 10s
++    use_new_schema: true
++  metadataexporter:
++    dsn: tcp://localhost:9000/signoz_metadata
++    timeout: 10s
++    tenant_id: default
++    cache:
++      provider: in_memory
++service:
++  telemetry:
++    logs:
++      encoding: json
++  extensions: [health_check, zpages, pprof]
++  pipelines:
++    traces:
++      receivers: [otlp, jaeger]
++      processors: [signozspanmetrics/delta, batch]
++      exporters: [clickhousetraces, metadataexporter]
++    metrics:
++      receivers: [otlp]
++      processors: [batch]
++      exporters: [metadataexporter, signozclickhousemetrics]
++    logs:
++      receivers: [otlp, httplogreceiver/heroku, httplogreceiver/json]
++      processors: [batch]
++      exporters: [clickhouselogsexporter, metadataexporter]
+diff --git a/net-mgmt/signoz-otel-collector/files/pkg-message.in b/net-mgmt/signoz-otel-collector/files/pkg-message.in
+new file mode 100644
+index 000000000000..a8d8102db3ca
+--- /dev/null
++++ b/net-mgmt/signoz-otel-collector/files/pkg-message.in
+@@ -0,0 +1,30 @@
++[
++{ type: install
++  message: <<EOM
++The collector writes to ClickHouse (databases/clickhouse), which may
++run on another host, as may SigNoz (net-mgmt/signoz). ClickHouse needs
++a cluster named "cluster" and ZooKeeper, as upstream's installation
++guide describes:
++
++  https://signoz.io/docs/install/linux/
++
++Before the first start, and after each upgrade, create or upgrade the
++SigNoz schema in ClickHouse:
++
++  sysrc signoz_otel_collector_clickhouse_dsn="tcp://localhost:9000"
++  service signoz_otel_collector migrate
++
++The collector reads %%ETCDIR%%/config.yaml, whose exporters
++write to ClickHouse on localhost. By default SigNoz manages it over
++OpAMP, as set in %%ETCDIR%%/opamp.yaml, and the collector
++ingests nothing until SigNoz answers there. To run config.yaml as it
++stands, without SigNoz:
++
++  sysrc signoz_otel_collector_manager_config=""
++
++By default the collector listens on all interfaces for OTLP on ports
++4317 (gRPC) and 4318 (HTTP), Jaeger on 14250 and 14268, HTTP logs on
++8081 and 8082, and health checks on 13133.
++EOM
++}
++]
+diff --git a/net-mgmt/signoz-otel-collector/files/signoz_otel_collector.in b/net-mgmt/signoz-otel-collector/files/signoz_otel_collector.in
+new file mode 100644
+index 000000000000..d7dee8f70ef5
+--- /dev/null
++++ b/net-mgmt/signoz-otel-collector/files/signoz_otel_collector.in
+@@ -0,0 +1,125 @@
++#!/bin/sh
++
++# PROVIDE: signoz_otel_collector
++# REQUIRE: LOGIN
++# KEYWORD: shutdown
++#
++# Add the following lines to /etc/rc.conf.local or /etc/rc.conf
++# to enable this service:
++#
++# signoz_otel_collector_enable (bool)
++#     Set it to YES to enable signoz_otel_collector
++#     Set to NO by default
++# signoz_otel_collector_user (string)
++#     Set user that signoz_otel_collector will run under
++#     Default is "signoz"
++# signoz_otel_collector_group (string)
++#     Set group that owns signoz_otel_collector files
++#     Default is "signoz"
++# signoz_otel_collector_config (string)
++#     Set full path to the collector config file
++#     Default is "%%ETCDIR%%/config.yaml"
++# signoz_otel_collector_manager_config (string)
++#     Set full path to the OpAMP config file, through which SigNoz
++#     manages the collector
++#     Default is "%%ETCDIR%%/opamp.yaml"
++#     Set to "" to run signoz_otel_collector_config unmanaged
++# signoz_otel_collector_copy_path (string)
++#     Set full path to the copy of the config that SigNoz manages
++#     Default is "/var/db/signoz-otel-collector/config.yaml"
++# signoz_otel_collector_clickhouse_dsn (string)
++#     Set the ClickHouse DSN that the migrate command uses
++#     Default is "tcp://localhost:9000"
++# signoz_otel_collector_pidfile (string)
++#     Set full path to pid file
++#     Default is "/var/run/signoz_otel_collector.pid"
++# signoz_otel_collector_syslog_output_enable (bool)
++#     Set it to NO to disable syslog output
++#     Set to YES by default
++# signoz_otel_collector_syslog_output_tag (str)
++#     Set syslog tag if syslog enabled
++#     Default is "signoz_otel_collector"
++# signoz_otel_collector_syslog_output_priority (string)
++#     Set syslog priority if syslog enabled
++#     Default is "info"
++# signoz_otel_collector_syslog_output_facility (string)
++#     Set syslog facility if syslog enabled
++#     Default is "daemon"
++# signoz_otel_collector_env (string)
++#     Set environment variables used with signoz_otel_collector and its
++#     migrate command, e.g.
++#     "SIGNOZ_OTEL_COLLECTOR_CLICKHOUSE_REPLICATION=false"
++#     Default is ""
++# signoz_otel_collector_args (string)
++#     Set additional command line arguments
++#     Default is ""
++#
++# "service signoz_otel_collector migrate" creates or upgrades the SigNoz
++# schema in ClickHouse.
++
++. /etc/rc.subr
++
++name=signoz_otel_collector
++rcvar=signoz_otel_collector_enable
++
++load_rc_config $name
++
++: ${signoz_otel_collector_enable:="NO"}
++: ${signoz_otel_collector_user:="signoz"}
++: ${signoz_otel_collector_group:="signoz"}
++: ${signoz_otel_collector_config:="%%ETCDIR%%/config.yaml"}
++: ${signoz_otel_collector_manager_config="%%ETCDIR%%/opamp.yaml"}
++: ${signoz_otel_collector_copy_path:="/var/db/signoz-otel-collector/config.yaml"}
++: ${signoz_otel_collector_clickhouse_dsn:="tcp://localhost:9000"}
++: ${signoz_otel_collector_pidfile:="/var/run/signoz_otel_collector.pid"}
++: ${signoz_otel_collector_syslog_output_enable:="YES"}
++: ${signoz_otel_collector_syslog_output_priority:="info"}
++: ${signoz_otel_collector_syslog_output_facility:="daemon"}
++
++if checkyesno signoz_otel_collector_syslog_output_enable; then
++	signoz_otel_collector_syslog_output_flags="-T ${signoz_otel_collector_syslog_output_tag:-${name}} \
++	    -s ${signoz_otel_collector_syslog_output_priority} \
++	    -l ${signoz_otel_collector_syslog_output_facility}"
++fi
++
++required_files="${signoz_otel_collector_config} ${signoz_otel_collector_manager_config}"
++if [ -n "${signoz_otel_collector_manager_config}" ]; then
++	signoz_otel_collector_manager_flags="--manager-config ${signoz_otel_collector_manager_config} \
++	    --copy-path ${signoz_otel_collector_copy_path}"
++fi
++
++pidfile="${signoz_otel_collector_pidfile}"
++procname="%%PREFIX%%/bin/signoz-otel-collector"
++command="/usr/sbin/daemon"
++command_args="-f ${signoz_otel_collector_syslog_output_flags} -p ${pidfile} -t ${name} \
++	/usr/bin/env ${signoz_otel_collector_env} ${procname} \
++	--config ${signoz_otel_collector_config} \
++	${signoz_otel_collector_manager_flags} ${signoz_otel_collector_args}"
++
++start_precmd="signoz_otel_collector_start_precmd"
++extra_commands="migrate"
++migrate_cmd="signoz_otel_collector_migrate"
++
++signoz_otel_collector_start_precmd()
++{
++	if [ ! -e "${pidfile}" ]; then
++		install -m 0600 -o "${signoz_otel_collector_user}" -g "${signoz_otel_collector_group}" /dev/null "${pidfile}"
++	fi
++}
++
++# The steps of upstream's installation guide, in order. ready checks that
++# ClickHouse, its cluster, and ZooKeeper answer; the others skip what is
++# already done.
++signoz_otel_collector_migrate()
++{
++	local _step
++
++	for _step in ready bootstrap "sync up" "async up"; do
++		su -m "${signoz_otel_collector_user}" -c \
++		    "/usr/bin/env ${signoz_otel_collector_env} ${procname} \
++		    migrate ${_step} \
++		    --clickhouse-dsn ${signoz_otel_collector_clickhouse_dsn}" || return 1
++	done
++}
++
++run_rc_command "$1"
+diff --git a/net-mgmt/signoz-otel-collector/pkg-descr b/net-mgmt/signoz-otel-collector/pkg-descr
+new file mode 100644
+index 000000000000..c0505f8dde95
+--- /dev/null
++++ b/net-mgmt/signoz-otel-collector/pkg-descr
+@@ -0,0 +1,9 @@
++The SigNoz OpenTelemetry Collector receives logs, metrics, and traces
++over OTLP, Jaeger, and HTTP, and writes them to ClickHouse for SigNoz,
++an open source observability platform. It adds SigNoz's exporters and
++processors to the OpenTelemetry Collector, such as span metrics and
++log pipelines that SigNoz manages over OpAMP.
++
++It also creates and migrates the SigNoz schema in ClickHouse. SigNoz
++reads that schema, so this collector is needed for SigNoz to work, but
++it may run on another host.
+diff --git a/net-mgmt/signoz-otel-collector/pkg-plist b/net-mgmt/signoz-otel-collector/pkg-plist
+new file mode 100644
+index 000000000000..74940e37794c
+--- /dev/null
++++ b/net-mgmt/signoz-otel-collector/pkg-plist
+@@ -0,0 +1,4 @@
++bin/signoz-otel-collector
++@sample %%ETCDIR%%/config.yaml.sample
++@sample %%ETCDIR%%/opamp.yaml.sample
++@dir(signoz,signoz,750) /var/db/signoz-otel-collector
+-- 
+2.56.0
+
