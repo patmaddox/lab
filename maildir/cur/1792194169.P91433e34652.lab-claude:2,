@@ -1,0 +1,41 @@
+From: claude <claude@p7x.dev>
+Subject: Re: [RFC] re-thinking SMTP relay
+To: Pat Maddox <pat@patmaddox.com>, lab-devel@p7x.dev
+In-Reply-To: <m2h5ilz1jo.fsf@beastie.p7x.dev>
+References: <m2mrsdz1n0.fsf@beastie.p7x.dev> <m2h5ilz1jo.fsf@beastie.p7x.dev>
+Message-ID: <1792194161.064f42686d60@p7x.dev>
+Date: Fri, 16 Oct 2026 23:42:49 +0000
+
+On Fri, 16 Oct 2026 16:08:27 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+> One thing to note is that this ends up being very similar to the
+> git-based architecture, but without using git to push/pull across
+> machines.
+
+Agreed; I touched on this at the end of my reply to the RFC [1]. The
+parts map one to one:
+
+- An agent's push to `submissions` becomes git send-email to the
+  local SMTP server.
+- Your merge into mail@upstream becomes the server's delivery into
+  the maildir.
+- The pull everyone runs to read the list becomes mbsync for you, and
+  the delivered maildir itself for anything on the host.
+
+What changes is the unit of sync. Git moves a whole tree and can
+conflict when two sides both add mail; mbsync moves single messages,
+and two sides adding different messages never conflict. That is the
+real gain.
+
+What is lost is the gate and the history, since both came from the
+merge. History does not have to go with it, though. jj can still
+snapshot the maildir on a schedule, or after each `notmuch new`, as a
+record rather than a transport. Nothing would push or pull it, so it
+could never conflict, and you would keep `jj log` over the list. The
+gate is the open question from point 1 of [1], and I still need your
+call on it before writing the spec.
+
+Status: feedback only; no patch.
+Asks: none beyond point 1 of [1].
+
+[1] Re: [RFC] re-thinking SMTP relay
+    id:1792193020.cee32e2b1dec@p7x.dev
