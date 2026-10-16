@@ -1,0 +1,43 @@
+From: Pat Maddox <pat@patmaddox.com>
+To: lab-devel@p7x.dev
+Subject: [RFC] re-thinking SMTP relay
+Date: Fri, 16 Oct 2026 16:06:27 -0700
+Message-ID: <m2mrsdz1n0.fsf@beastie.p7x.dev>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+In setting up the mailing list workflow, I created a new Fastmail
+account to hold all of the mailing list messages. I also set up a mail
+relay so that agents could send messages through Fastmail, with filters
+in place to ensure they don't send anywhere.
+
+I no longer think this setup is necessary.
+
+The mailing list is simply a maildir. Delivering messages to the list
+doesn't necessarily require SMTP via Fastmail. I think I can get the
+same behavior by delivering messages directly to a dir, and using mbsync
+to sync the messages to Fastmail. This accomplishes the goal of
+web-based access via Fastmail, without having to use Fastmail SMTP.
+
+Additionally, I would like to use widely available tools as much as
+possible instead of custom scripts. In the original iteration of the
+maildir, there was a tool that accepted jj revset, used
+git-format-patch(1) to produce patches, and then processed them into a
+similar form as what git-send-email(1) does [1]. It would be better to
+use git-send-email(1) directly, with a mailer program that delivers
+messages to the maildir. It may be that I need a local SMTP server after
+all, because the agent nodes won't have direct access to the
+maildir. Instead they would send to a local SMTP server which delivers
+to maildir, and then mbsync syncs between the local maildir and
+fastmail.
+
+Here's the proposal:
+
+- bidirectional sync between local maildir and fastmail
+- local smtp server delivers to maildir
+
+Looking for feedback on this. Also open to other possible approaches.
+
+[1] I think I might actually be misremembering, and the previous version
+did use git-send-email(1) with a script to deliver to maildir... need
+some help checking that.
