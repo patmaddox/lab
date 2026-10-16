@@ -1,0 +1,65 @@
+From: claude <claude@p7x.dev>
+Subject: Re: [freebsd-ports PATCH v10] net-mgmt/signoz: Observability platform
+ for logs, metrics, and traces
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+In-Reply-To: <m2v772zfl8.fsf@beastie.p7x.dev>
+References: <69c6aeed91d2a7643f5d17abc900d0804128f0e6.1792088188.git.claude@p7x.dev>
+	<m25wz21qzk.fsf@beastie.p7x.dev> <1792107818.41231538fd6e@p7x.dev>
+	<m2v772zfl8.fsf@beastie.p7x.dev>
+Message-ID: <1792110162.591162df6789@p7x.dev>
+Date: Fri, 16 Oct 2026 00:22:45 +0000
+
+On Thu, 15 Oct 2026 16:52:51 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+>> I recommend the single port, as you suggested. The version coupling
+>> through the schema is real, and the fixes are shared. On your go-ahead
+>> I will post it as a patch against net-mgmt/signoz as you accepted it.
+>
+> It should be a separate port. It's possible to run the signoz collector
+> over the network. Thus the two packages have no dependency between
+> them.
+
+Agreed. The collector is posted as its own port in "[freebsd-ports
+PATCH 0/2] net-mgmt/signoz-otel-collector: New port" [1]. Neither
+package depends on the other.
+
+- Patch 1 adds net-mgmt/signoz-otel-collector v0.144.14. It uses
+  USES=go:modules with the same sonic swap and bf12ab8 patch as
+  net-mgmt/signoz. post-patch adds two vendored _freebsd.go copies.
+  The athenz one is exactly what net/redpanda-connect already does,
+  and the filestatsreceiver one is fixed upstream by
+  opentelemetry-collector-contrib PR 45680, in a release the collector
+  does not pin yet. It installs the config from upstream's Linux
+  install guide and the OpAMP config as samples. Its rc.d script has
+  a "migrate" command that creates or upgrades the ClickHouse schema.
+- Patch 2 changes net-mgmt/signoz's pkg-descr and pkg-message to
+  name the collector's origin, where they said only that it was
+  packaged separately. You may prefer to squash it into the signoz
+  commit in your tree.
+
+The series applies on top of the signoz v10 patch [2], because the
+collector shares its signoz user and group (UID 485). Upstream runs
+both services as signoz in its install guide and Foundry units.
+
+Two things worth knowing before you build it:
+
+- The license is AGPLv3, not Apache 2.0.
+- By default, as upstream deploys it, SigNoz manages the collector
+  over OpAMP. Until SigNoz answers, the collector runs with nop
+  receivers and exporters and ingests nothing. Setting
+  signoz_otel_collector_manager_config="" runs the local config
+  unmanaged, which suits a collector that is not paired with a SigNoz
+  instance.
+
+Checked: makesum, extract, patch, and clean portclippy, portfmt, and
+portlint. Not checked: the build and plist, which poudriere will
+cover, or a run from rc.d.
+
+One thing I noticed in net-mgmt/signoz while doing this: its
+GO_BUILDFLAGS sets -ldflags, and go.mk adds "-ldflags '-s'" only when
+GO_BUILDFLAGS has no -ldflags. So the signoz binary is not stripped.
+I have not changed it. If you want it stripped, the smallest fix is
+to add -s inside its -ldflags string.
+
+[1] id:cover.1792110108.git.claude@p7x.dev
+[2] id:69c6aeed91d2a7643f5d17abc900d0804128f0e6.1792088188.git.claude@p7x.dev
