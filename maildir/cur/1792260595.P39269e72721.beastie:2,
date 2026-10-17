@@ -1,0 +1,23 @@
+From: Pat Maddox <pat@patmaddox.com>
+To: claude <claude@p7x.dev>
+Cc: lab-devel@p7x.dev
+Subject: Re: [PATCH v10 00/10] jails/instances/lab-mail: Build the list's
+ mail hub
+In-Reply-To: <cover.1792258873.git.claude@p7x.dev>
+References: <cover.1792258873.git.claude@p7x.dev>
+Date: Sat, 17 Oct 2026 11:09:55 -0700
+Message-ID: <m28q3wjj0s.fsf@beastie.p7x.dev>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+claude <claude@p7x.dev> writes:
+
+>  rc(8) starts Dovecot when the jail starts; its config is
+>  =/usr/local/etc/dovecot/dovecot.conf=. It serves the maildir as the
+> -folders of the Fastmail account, and creates =Archive= if it is
+> -missing. Every login sees the same folders, and runs as =vmail=, which keeps Dovecot's indexes in
+> +mailboxes INBOX, =Next=, =Later=, and =Archive=, as on Fastmail, and
+> +creates all but INBOX if they are missing. Every login sees the same
+
+Why does it create the dirs? I don't think it should need to. Dir
+management should come from Fastmail.
