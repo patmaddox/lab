@@ -1,0 +1,191 @@
+Message-ID: <4f63e9892093f8224dc6c0b42165554bcf0b1412.1792224725.git.claude@p7x.dev>
+In-Reply-To: <cover.1792224725.git.claude@p7x.dev>
+References: <cover.1792224725.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Subject: [PATCH v2 3/3] jails/instances/lab-mail: File posts into lists with
+ Sieve
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+Change-Id: kmkylxlxlrusqqqtqplwroksrorysmwp
+Date: Sat, 17 Oct 2026 08:12:31 +0000
+
+LMTP alone delivers only to INBOX, so a post waits there until Pat
+moves it, and it reaches neither Fastmail nor the readers of lists
+before then. The spec has Dovecot file each post into lists, which
+needs a filter.
+
+- A Sieve script from Pigeonhole files every post into lists.
+- The spec names Pigeonhole and says why Sieve, not LMTP's detail
+  mailbox: the detail would put lab-devel+lists@p7x.dev in
+  Delivered-To instead of the list's address.
+- README.org and dovecot.conf say INBOX stays empty.
+---
+change-id: kmkylxlxlrusqqqtqplwroksrorysmwp
+
+ jails/instances/lab-mail/README.org           | 21 ++++++++-----------
+ jails/instances/lab-mail/dist.mtree           |  1 +
+ .../dist/usr/local/etc/dovecot/dovecot.conf   | 20 ++++++++++++------
+ .../dist/usr/local/etc/dovecot/lists.sieve    |  4 ++++
+ jails/instances/lab-mail/instance.conf        |  1 +
+ jails/instances/lab-mail/spec.org             | 14 +++++++++----
+ 6 files changed, 39 insertions(+), 22 deletions(-)
+ create mode 100644 jails/instances/lab-mail/dist/usr/local/etc/dovecot/lists.sieve
+
+diff --git a/jails/instances/lab-mail/README.org b/jails/instances/lab-mail/README.org
+index 5ba001ae..234e395d 100644
+--- a/jails/instances/lab-mail/README.org
++++ b/jails/instances/lab-mail/README.org
+@@ -43,7 +43,7 @@ through Dovecot, as the user =vmail=.
+ 
+ ** posting
+ #+BEGIN_EXAMPLE
+-client --SMTP--> OpenSMTPD 127.0.0.1:2525 --LMTP--> Dovecot --> INBOX
++client --SMTP--> OpenSMTPD 127.0.0.1:2525 --LMTP--> Dovecot --> lists
+ #+END_EXAMPLE
+ 
+ rc(8) starts OpenSMTPD when the jail starts; its config is
+@@ -65,13 +65,10 @@ refusal while it is still connected.
+ 
+ OpenSMTPD then queues the message and hands it to Dovecot over LMTP,
+ on the socket =/var/run/dovecot/lmtp=, which only =vmail= may open.
+-LMTP delivers it to INBOX. OpenSMTPD never opens the maildir. If
+-Dovecot is stopped, the message waits in OpenSMTPD's queue and lands
+-when Dovecot is back.
+-
+-A post stays in INBOX until Pat moves it into =lists=. mbsync does
+-not sync INBOX, so a post reaches Fastmail and the readers of =lists=
+-only once Pat has moved it.
++A Sieve script, =/usr/local/etc/dovecot/lists.sieve=, files it into
++=lists=. OpenSMTPD never opens the maildir. If Dovecot is stopped,
++the message waits in OpenSMTPD's queue and lands when Dovecot is
++back.
+ 
+ OpenSMTPD never relays. Nothing posted leaves lab-mail except as a
+ message that mbsync copies into a Fastmail folder.
+@@ -83,10 +80,10 @@ message that mbsync copies into a Fastmail folder.
+ 
+ rc(8) starts Dovecot when the jail starts; its config is
+ =/usr/local/etc/dovecot/dovecot.conf=. It serves the maildir as the
+-mailboxes =lists= and =Archive=, as on Fastmail, beside an INBOX that
+-holds new posts. Every login sees the same mailboxes, and runs as
+-=vmail=, which keeps Dovecot's indexes in =/data/mail/dovecot=. What
+-each login may do is in =dovecot-acl=, as rights describes.
++mailboxes =lists= and =Archive=, beside an empty INBOX, as on
++Fastmail. Every login sees the same mailboxes, and runs as =vmail=,
++which keeps Dovecot's indexes in =/data/mail/dovecot=. What each login
++may do is in =dovecot-acl=, as rights describes.
+ 
+ Reading and posting keep working while Fastmail is down.
+ 
+diff --git a/jails/instances/lab-mail/dist.mtree b/jails/instances/lab-mail/dist.mtree
+index 365f4f97..a704f055 100644
+--- a/jails/instances/lab-mail/dist.mtree
++++ b/jails/instances/lab-mail/dist.mtree
+@@ -13,6 +13,7 @@
+ ./usr/local/etc/dovecot type=dir mode=0755
+ ./usr/local/etc/dovecot/dovecot-acl
+ ./usr/local/etc/dovecot/dovecot.conf
++./usr/local/etc/dovecot/lists.sieve
+ ./usr/local/etc/mail type=dir mode=0755
+ ./usr/local/etc/mail/smtpd.conf
+ ./usr/local/etc/mbsyncrc
+diff --git a/jails/instances/lab-mail/dist/usr/local/etc/dovecot/dovecot.conf b/jails/instances/lab-mail/dist/usr/local/etc/dovecot/dovecot.conf
+index 5791ade0..78b96a04 100644
+--- a/jails/instances/lab-mail/dist/usr/local/etc/dovecot/dovecot.conf
++++ b/jails/instances/lab-mail/dist/usr/local/etc/dovecot/dovecot.conf
+@@ -48,8 +48,8 @@ passdb {
+ }
+ 
+ # Every login, and every LMTP delivery, is the same user, vmail, which
+-# owns the maildir. The indexes, the UID lists, and INBOX, where LMTP
+-# delivers each post, live in a directory of vmail's own.
++# owns the maildir. The indexes, the UID lists, and an empty INBOX,
++# which IMAP requires, live in a directory of vmail's own.
+ userdb {
+   driver = static
+   args = uid=vmail gid=vmail home=/data/mail/dovecot allow_all_users=yes
+@@ -83,8 +83,16 @@ plugin {
+   acl_globals_only = yes
+ }
+ 
+-# LMTP delivers each posted message to INBOX. The ACL governs IMAP
+-# logins, not delivery: only vmail can reach the LMTP socket. Dovecot
+-# adds Return-Path and Delivered-To, and no Received header of its
+-# own; OpenSMTPD's is enough.
++# A posted message is filed into lists by a Sieve script, since LMTP
++# alone delivers only to INBOX. The ACL governs IMAP logins, not
++# delivery: only vmail can reach the LMTP socket. Dovecot adds
++# Return-Path and Delivered-To, and no Received header of its own;
++# OpenSMTPD's is enough.
++protocol lmtp {
++  mail_plugins = sieve
++}
+ lmtp_add_received_header = no
++
++plugin {
++  sieve_before = file:/usr/local/etc/dovecot/lists.sieve;bindir=/data/mail/dovecot/sieve-bin
++}
+diff --git a/jails/instances/lab-mail/dist/usr/local/etc/dovecot/lists.sieve b/jails/instances/lab-mail/dist/usr/local/etc/dovecot/lists.sieve
+new file mode 100644
+index 00000000..193e794f
+--- /dev/null
++++ b/jails/instances/lab-mail/dist/usr/local/etc/dovecot/lists.sieve
+@@ -0,0 +1,4 @@
++# File each posted message into the list. LMTP alone would deliver it
++# to INBOX.
++require "fileinto";
++fileinto "lists";
+diff --git a/jails/instances/lab-mail/instance.conf b/jails/instances/lab-mail/instance.conf
+index 93de96bd..1a702499 100644
+--- a/jails/instances/lab-mail/instance.conf
++++ b/jails/instances/lab-mail/instance.conf
+@@ -8,6 +8,7 @@ vmail:15103:15103
+ 
+ readonly packages="
+ mail/dovecot
++mail/dovecot-pigeonhole
+ mail/isync
+ mail/opensmtpd
+ "
+diff --git a/jails/instances/lab-mail/spec.org b/jails/instances/lab-mail/spec.org
+index 4ae772d0..e36e074e 100644
+--- a/jails/instances/lab-mail/spec.org
++++ b/jails/instances/lab-mail/spec.org
+@@ -125,8 +125,9 @@ posting:
+   names =lab-devel@p7x.dev= on every message, and a Bcc leaves no
+   trace.
+ - OpenSMTPD hands each message for the list to Dovecot over LMTP, on
+-  a unix socket inside the jail, and Dovecot files it into =lists=.
+-  OpenSMTPD never opens the maildir.
++  a unix socket inside the jail. A Sieve script files it into =lists=,
++  since LMTP alone delivers only to INBOX. OpenSMTPD never opens the
++  maildir.
+ - OpenSMTPD answers the client's DATA once the message is in its
+   queue. A delivery that fails is retried from the queue, so a message
+   posted while Dovecot is stopped lands when Dovecot is back. A
+@@ -134,8 +135,9 @@ posting:
+   discarded like any other mail to a known address.
+ 
+ reading:
+-- Software: Dovecot (mail/dovecot) for IMAP and LMTP, and isync
+-  (mail/isync) for mbsync.
++- Software: Dovecot (mail/dovecot) for IMAP and LMTP, Pigeonhole
++  (mail/dovecot-pigeonhole) for Sieve, and isync (mail/isync) for
++  mbsync.
+ - Dovecot is the only program that writes the list. Every change to
+   it, a posted message, a sync from Fastmail, or a move or deletion by
+   Pat, goes through Dovecot, as Dovecot's user.
+@@ -423,6 +425,10 @@ why.
+ - Dovecot, not Cyrus or Courier. Each of those brings its own mail
+   store and admin model, where Dovecot serves a plain maildir and
+   takes LMTP.
++- A Sieve script files a posted message into =lists=, not LMTP's
++  detail mailbox. With =lmtp_save_to_detail_mailbox=, OpenSMTPD would
++  have to rewrite the recipient to =lab-devel+lists@p7x.dev=, and
++  Delivered-To would name that address, not the list's.
+ - IMAP over loopback, not a nullfs-mounted maildir. A mount ties
+   every client to beastie's filesystem. A loopback bind is cheap to
+   change into an external address later.
+-- 
+2.56.0
+

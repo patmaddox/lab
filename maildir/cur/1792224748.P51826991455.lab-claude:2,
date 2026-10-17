@@ -1,0 +1,497 @@
+Message-ID: <cover.1792224725.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Subject: [PATCH v2 0/3] jails/instances/lab-mail: Build the list's mail hub
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+Date: Sat, 17 Oct 2026 08:12:28 +0000
+
+This builds the hub that "[PATCH v2] jails/instances/lab-mail: Spec
+the list's mail hub" [1] describes, on b/dev. It turns the relay jail
+into the list's home: OpenSMTPD takes posts, Dovecot holds and serves
+the list, and mbsync keeps it in sync with Fastmail.
+
+- Patch 1 corrects the spec on what Dovecot does to a reader's write.
+  A STORE or EXPUNGE answers OK and changes nothing; only append,
+  copy, and move are refused. Acceptance step 7 now expects that.
+- Patch 2 is the implementation as specced, with one gap: LMTP alone
+  delivers only to INBOX, so a post waits there until Pat moves it
+  into lists.
+- Patch 3 is a proposal on top: a Sieve script from Pigeonhole files
+  each post into lists, as the spec says. The spec names the new
+  package and says why Sieve rather than LMTP's detail mailbox.
+
+The tree after patch 3 is identical to v1's. What I tested, against
+that tree, in a rootless Dovecot 2.3.21 run from the FreeBSD packages
+the jail installs, with ports and paths moved under /tmp:
+- OpenSMTPD's own mail.lmtp delivers a post into lists, with
+  Return-Path and Delivered-To: lab-devel@p7x.dev added and nothing
+  else changed.
+- A reader login with any password gets rights "lr". SELECT opens
+  lists read-only, STORE and EXPUNGE change nothing, and MOVE and
+  APPEND answer NO.
+- pat@p7x.dev and mbsync log in only with their imap-users password,
+  in any case. Each gets "lrwstie", and Pat's MOVE to Archive works.
+- The sync config against a maildir standing in for Fastmail: posts
+  and Fastmail mail cross both ways, an archived message reaches
+  Archive on the far side and is only marked \Deleted in its lists,
+  and a quiet run logs nothing.
+- The import of a jj maildir copy as Pat, as README.org gives it.
+- check-message against fake filter sessions: a good message, no
+  Message-ID, two From fields, a header with no empty line after it,
+  an mbox "From " line, and a leading continuation line. Only the good
+  message and a folded Subject pass.
+- smtpd -n accepts smtpd.conf, and doveconf -n accepts dovecot.conf.
+
+What I could not test:
+- The tree after patch 2 alone. Dovecot is no longer installed here,
+  so its dovecot.conf, which only drops the Sieve plugin and leaves
+  delivery to INBOX, Dovecot's default, is unchecked.
+- smtpd itself needs root, so the recipient sorting, the discard
+  action, and the filter wiring are checked only for syntax. The same
+  goes for the check script and the jail build. Steps 1 to 6 and 11 to
+  13 of the acceptance test cover them.
+
+The clients on beastie and lab-claude are not in this series. Moving
+them to the hub retires the jj maildir that lab-process-mail runs on,
+and the spec leaves its new loop to a spec of its own.
+
+Changes in v2:
+- Sieve moves out of the implementation into patch 3, on top, so the
+  implementation matches the spec as discussed and the Sieve change
+  reads as its own diff (Pat).
+- The Dovecot rights correction is its own patch, first.
+- Commit messages give the "what" as bullet points (Pat).
+- Link to v1: id:cover.1792222732.git.claude@p7x.dev
+
+[1] id:5639615da525ce2f1e7711da05d3de5ad63511a2.1792219807.git.claude@p7x.dev
+
+base-branch: b/dev@upstream
+
+claude (3):
+  jails/instances/lab-mail: Say what Dovecot does to a reader's write
+  jails/instances/lab-mail: Carry the list instead of relaying it
+  jails/instances/lab-mail: File posts into lists with Sieve
+
+ jails/instances/lab-mail/README.org           | 260 ++++++++++++------
+ jails/instances/lab-mail/dist.mtree           |  11 +-
+ .../lab-mail/dist/etc/cron.d/lab-mail         |   6 +-
+ .../dist/etc/newsyslog.conf.d/lab-mail.conf   |   4 +-
+ .../lab-mail/dist/etc/rc.conf.d/smtpd         |   1 +
+ .../lab-mail/dist/etc/rc.conf.d/smtprelay     |   4 -
+ .../lab-mail/dist/etc/syslog.d/lab-mail.conf  |   8 +-
+ .../dist/usr/local/etc/dovecot/dovecot-acl    |   8 +
+ .../dist/usr/local/etc/dovecot/dovecot.conf   |  66 ++++-
+ .../dist/usr/local/etc/dovecot/lists.sieve    |   4 +
+ .../dist/usr/local/etc/mail/smtpd.conf        |  33 +++
+ .../lab-mail/dist/usr/local/etc/mbsyncrc      |  36 ++-
+ .../dist/usr/local/etc/smtprelay/remotes.env  |  19 --
+ .../usr/local/etc/smtprelay/smtprelay.ini     |  20 --
+ .../dist/usr/local/libexec/lab-mail/check     |  82 ++++--
+ .../usr/local/libexec/lab-mail/check-message  | 127 +++++++++
+ .../dist/usr/local/libexec/lab-mail/fetch     |  39 ---
+ .../dist/usr/local/libexec/lab-mail/sync      |  35 +++
+ jails/instances/lab-mail/instance.conf        |  17 +-
+ jails/instances/lab-mail/jail.conf            |   7 +-
+ jails/instances/lab-mail/spec.org             |  26 +-
+ 21 files changed, 571 insertions(+), 242 deletions(-)
+ create mode 100644 jails/instances/lab-mail/dist/etc/rc.conf.d/smtpd
+ delete mode 100644 jails/instances/lab-mail/dist/etc/rc.conf.d/smtprelay
+ create mode 100644 jails/instances/lab-mail/dist/usr/local/etc/dovecot/lists.sieve
+ create mode 100644 jails/instances/lab-mail/dist/usr/local/etc/mail/smtpd.conf
+ delete mode 100644 jails/instances/lab-mail/dist/usr/local/etc/smtprelay/remotes.env
+ delete mode 100644 jails/instances/lab-mail/dist/usr/local/etc/smtprelay/smtprelay.ini
+ create mode 100755 jails/instances/lab-mail/dist/usr/local/libexec/lab-mail/check-message
+ delete mode 100755 jails/instances/lab-mail/dist/usr/local/libexec/lab-mail/fetch
+ create mode 100755 jails/instances/lab-mail/dist/usr/local/libexec/lab-mail/sync
+
+Range-diff against v1:
+-:  -------- > 1:  1126d2a7 jails/instances/lab-mail: Say what Dovecot does to a reader's write
+2:  14f4f7f3 ! 2:  988cfa1c jails/instances/lab-mail: Carry the list instead of relaying it
+    @@ Commit message
+         jails/instances/lab-mail: Carry the list instead of relaying it
+     
+         The list travels as a maildir in jj, so two sides that add mail
+    -    conflict, and agents reach new mail only through Pat's merge. This
+    -    turns lab-mail into the hub the spec describes, so every host can sync
+    -    the list over IMAP and post to it over SMTP, and Fastmail keeps a copy
+    -    of everything.
+    +    conflict, and agents reach new mail only through Pat's merge. As the
+    +    hub the spec describes, lab-mail lets every host sync the list over
+    +    IMAP and post to it over SMTP, and Fastmail keeps a copy of
+    +    everything.
+     
+    -    Dovecot becomes the only writer of the list. OpenSMTPD takes posts on
+    -    loopback, refuses a recipient it does not know and a message that is
+    -    not well formed while the client is still connected, and hands the
+    -    rest to Dovecot over LMTP. mbsync syncs lists and Archive both ways as
+    -    an IMAP client of Fastmail and of Dovecot, so neither it nor OpenSMTPD
+    -    touches the maildir. Readers can only read. Dovecot's ACL lets only
+    -    the two logins in imap-users, Pat and mbsync, change the list.
+    -
+    -    smtprelay, the fetch job, and the mailcred group go away with the
+    -    relay. A maildir the relay fetched must be emptied before the first
+    -    sync, since mbsync with no sync state would copy every message to the
+    -    other side again. README.org gives the setup, and the one-time import
+    -    of the jj maildir.
+    +    - Dovecot holds lists and Archive, and is their only writer.
+    +    - OpenSMTPD takes posts on loopback and hands mail for the list to
+    +      Dovecot over LMTP. It refuses an unknown recipient, and
+    +      check-message refuses a malformed message, while the client is
+    +      still connected.
+    +    - LMTP delivers each post to INBOX, where it waits for Pat to move it
+    +      into lists. The spec files posts into lists; that needs a filter
+    +      the spec does not name.
+    +    - The sync job runs mbsync both ways between Fastmail and Dovecot, as
+    +      an IMAP client of each, so mbsync never opens the maildir.
+    +    - Dovecot's ACL lets any login read, and only pat@p7x.dev and mbsync,
+    +      with their imap-users passwords, change the list.
+    +    - check covers the new secrets, services, queue, and sync.
+    +    - smtprelay, the fetch job, and the mailcred group are removed.
+    +    - README.org gives the setup and the one-time import of the jj
+    +      maildir. A maildir the relay fetched must be emptied first, since
+    +      mbsync with no sync state would copy every message to the other
+    +      side again.
+     
+      ## jails/instances/lab-mail/README.org ##
+     @@
+    @@ jails/instances/lab-mail/README.org: over that loopback, never through a shared
+     +** posting
+      #+BEGIN_EXAMPLE
+     -client --SMTP--> smtprelay 127.0.0.1:2525 --SMTPS--> smtp.fastmail.com:465
+    -+client --SMTP--> OpenSMTPD 127.0.0.1:2525 --LMTP--> Dovecot --> lists
+    ++client --SMTP--> OpenSMTPD 127.0.0.1:2525 --LMTP--> Dovecot --> INBOX
+      #+END_EXAMPLE
+      
+     -smtprelay is the only way out. rc(8) starts it when the jail starts,
+    @@ jails/instances/lab-mail/README.org: over that loopback, never through a shared
+     -=/usr/local/etc/smtprelay/smtprelay.ini=. Before it starts,
+     -=remotes.env= reads =mail-creds= and passes the Fastmail login to it
+     -in its environment.
+    --
+    --A client connects without logging in. smtprelay checks the envelope
+    --sender and each recipient against the allowlists in =smtprelay.ini=,
+    --and refuses any address that is not on them. It then logs in to
+    --Fastmail and relays the message while the client waits, so the
+    --client gets Fastmail's answer. Nothing is queued: a message that
+    --fails is not sent, and the client must send it again.
+     +rc(8) starts OpenSMTPD when the jail starts; its config is
+     +=/usr/local/etc/mail/smtpd.conf=. A client connects without logging
+     +in. OpenSMTPD sorts each recipient:
+    @@ jails/instances/lab-mail/README.org: over that loopback, never through a shared
+     +- Any other recipient is refused with a 5xx reply, and the client
+     +  abandons the whole message.
+      
+    --** fetching
+    --#+BEGIN_EXAMPLE
+    --imap.fastmail.com:993 lists --IMAPS--> mbsync --> /data/mail/maildir/lists
+    --#+END_EXAMPLE
+    +-A client connects without logging in. smtprelay checks the envelope
+    +-sender and each recipient against the allowlists in =smtprelay.ini=,
+    +-and refuses any address that is not on them. It then logs in to
+    +-Fastmail and relays the message while the client waits, so the
+    +-client gets Fastmail's answer. Nothing is queued: a message that
+    +-fails is not sent, and the client must send it again.
+     +Before it answers the client's DATA, OpenSMTPD runs the message
+     +through =/usr/local/libexec/lab-mail/check-message=, which refuses a
+     +message whose header is not well formed or that does not have exactly
+     +one From, one Subject, and one Message-ID. The client learns of the
+     +refusal while it is still connected.
+      
+    +-** fetching
+    +-#+BEGIN_EXAMPLE
+    +-imap.fastmail.com:993 lists --IMAPS--> mbsync --> /data/mail/maildir/lists
+    +-#+END_EXAMPLE
+    ++OpenSMTPD then queues the message and hands it to Dovecot over LMTP,
+    ++on the socket =/var/run/dovecot/lmtp=, which only =vmail= may open.
+    ++LMTP delivers it to INBOX. OpenSMTPD never opens the maildir. If
+    ++Dovecot is stopped, the message waits in OpenSMTPD's queue and lands
+    ++when Dovecot is back.
+    + 
+     -A Fastmail rule files list mail into the folder =lists=. Once a
+     -minute, the jail's cron(8) runs the fetch job,
+     -=/usr/local/libexec/lab-mail/fetch=, as the user =mbsync=. The job
+     -is in =/etc/cron.d/lab-mail=, not in a crontab, so =crontab -l= does
+     -not show it. lockf(1) skips a run while the previous one is still
+     -going.
+    -+OpenSMTPD then queues the message and hands it to Dovecot over LMTP,
+    -+on the socket =/var/run/dovecot/lmtp=, which only =vmail= may open.
+    -+A Sieve script, =/usr/local/etc/dovecot/lists.sieve=, files it into
+    -+=lists=. OpenSMTPD never opens the maildir. If Dovecot is stopped,
+    -+the message waits in OpenSMTPD's queue and lands when Dovecot is
+    -+back.
+    ++A post stays in INBOX until Pat moves it into =lists=. mbsync does
+    ++not sync INBOX, so a post reaches Fastmail and the readers of =lists=
+    ++only once Pat has moved it.
+      
+     -The fetch job runs mbsync with =/usr/local/etc/mbsyncrc=, which logs
+     -in to Fastmail with =mail-creds= and pulls only new messages into the
+    @@ jails/instances/lab-mail/README.org: over that loopback, never through a shared
+     -maildir but not write it, and keeps Dovecot's indexes in
+     -=/data/mail/dovecot=. The ACL in =dovecot-acl= makes every mailbox
+     -read-only, so a client cannot flag, add, or delete mail.
+    -+mailboxes =lists= and =Archive=, beside an empty INBOX, as on
+    -+Fastmail. Every login sees the same mailboxes, and runs as =vmail=,
+    -+which keeps Dovecot's indexes in =/data/mail/dovecot=. What each login
+    -+may do is in =dovecot-acl=, as rights describes.
+    - 
+    --Dovecot never talks to Fastmail. A client reads only what the last
+    --fetch brought, so new list mail reaches it within a minute or two,
+    --and reading keeps working while Fastmail is down.
+    ++mailboxes =lists= and =Archive=, as on Fastmail, beside an INBOX that
+    ++holds new posts. Every login sees the same mailboxes, and runs as
+    ++=vmail=, which keeps Dovecot's indexes in =/data/mail/dovecot=. What
+    ++each login may do is in =dovecot-acl=, as rights describes.
+    ++
+     +Reading and posting keep working while Fastmail is down.
+     +
+     +** syncing with Fastmail
+    @@ jails/instances/lab-mail/README.org: over that loopback, never through a shared
+     +=/usr/local/libexec/lab-mail/sync=, as the user =mbsync=. The job is
+     +in =/etc/cron.d/lab-mail=, not in a crontab, so =crontab -l= does not
+     +show it. lockf(1) skips a run while the previous one is still going.
+    -+
+    + 
+    +-Dovecot never talks to Fastmail. A client reads only what the last
+    +-fetch brought, so new list mail reaches it within a minute or two,
+    +-and reading keeps working while Fastmail is down.
+     +The sync job runs mbsync with =/usr/local/etc/mbsyncrc=. It logs in to
+     +Fastmail with =mail-creds=, and to Dovecot as =mbsync= with
+     +=mbsync-imap=, and syncs =lists= and =Archive= both ways: new
+    @@ jails/instances/lab-mail/dist.mtree
+      ./usr/local/etc/dovecot type=dir mode=0755
+      ./usr/local/etc/dovecot/dovecot-acl
+      ./usr/local/etc/dovecot/dovecot.conf
+    -+./usr/local/etc/dovecot/lists.sieve
+     +./usr/local/etc/mail type=dir mode=0755
+     +./usr/local/etc/mail/smtpd.conf
+      ./usr/local/etc/mbsyncrc
+    @@ jails/instances/lab-mail/dist/usr/local/etc/dovecot/dovecot.conf: service imap-l
+     -# not write it. The indexes, the UID list, and an empty INBOX, which
+     -# IMAP requires, live in a directory of vmail's own.
+     +# Every login, and every LMTP delivery, is the same user, vmail, which
+    -+# owns the maildir. The indexes, the UID lists, and an empty INBOX,
+    -+# which IMAP requires, live in a directory of vmail's own.
+    ++# owns the maildir. The indexes, the UID lists, and INBOX, where LMTP
+    ++# delivers each post, live in a directory of vmail's own.
+      userdb {
+        driver = static
+     -  args = uid=vmail gid=vmail home=/data/mail/dovecot
+    @@ jails/instances/lab-mail/dist/usr/local/etc/dovecot/dovecot.conf: protocol imap
+      plugin {
+        acl = vfile:/usr/local/etc/dovecot/dovecot-acl
+     +  acl_globals_only = yes
+    -+}
+    + }
+     +
+    -+# A posted message is filed into lists by a Sieve script, since LMTP
+    -+# alone delivers only to INBOX. The ACL governs IMAP logins, not
+    -+# delivery: only vmail can reach the LMTP socket. Dovecot adds
+    -+# Return-Path and Delivered-To, and no Received header of its own;
+    -+# OpenSMTPD's is enough.
+    -+protocol lmtp {
+    -+  mail_plugins = sieve
+    -+}
+    ++# LMTP delivers each posted message to INBOX. The ACL governs IMAP
+    ++# logins, not delivery: only vmail can reach the LMTP socket. Dovecot
+    ++# adds Return-Path and Delivered-To, and no Received header of its
+    ++# own; OpenSMTPD's is enough.
+     +lmtp_add_received_header = no
+    -+
+    -+plugin {
+    -+  sieve_before = file:/usr/local/etc/dovecot/lists.sieve;bindir=/data/mail/dovecot/sieve-bin
+    - }
+    -
+    - ## jails/instances/lab-mail/dist/usr/local/etc/dovecot/lists.sieve (new) ##
+    -@@
+    -+# File each posted message into the list. LMTP alone would deliver it
+    -+# to INBOX.
+    -+require "fileinto";
+    -+fileinto "lists";
+     
+      ## jails/instances/lab-mail/dist/usr/local/etc/mail/smtpd.conf (new) ##
+     @@
+    @@ jails/instances/lab-mail/instance.conf
+      
+      readonly packages="
+      mail/dovecot
+    -+mail/dovecot-pigeonhole
+      mail/isync
+     -mail/smtprelay
+     -textproc/jq
+1:  4a1fb761 ! 3:  4f63e989 jails/instances/lab-mail: File posts with Sieve, and refuse as Dovecot does
+    @@ Metadata
+     Author: claude <claude@p7x.dev>
+     
+      ## Commit message ##
+    -    jails/instances/lab-mail: File posts with Sieve, and refuse as Dovecot does
+    +    jails/instances/lab-mail: File posts into lists with Sieve
+     
+    -    Dovecot's LMTP delivers only to INBOX, so the hub needs something to
+    -    put a post into lists. Pigeonhole's Sieve does that and keeps the
+    -    list's address in Delivered-To, where LMTP's detail mailbox would put
+    -    lab-devel+lists@p7x.dev there instead. The spec now names the extra
+    -    package, so the implementation adds no software the spec does not
+    -    mention.
+    +    LMTP alone delivers only to INBOX, so a post waits there until Pat
+    +    moves it, and it reaches neither Fastmail nor the readers of lists
+    +    before then. The spec has Dovecot file each post into lists, which
+    +    needs a filter.
+     
+    -    Dovecot opens a mailbox read-only for a login without write rights. A
+    -    STORE or EXPUNGE there answers OK and changes nothing. Only append,
+    -    copy, and move answer NO. The rights section and acceptance step 7
+    -    said all of them fail, which Dovecot does not do, so a correct build
+    -    would fail its own acceptance test.
+    +    - A Sieve script from Pigeonhole files every post into lists.
+    +    - The spec names Pigeonhole and says why Sieve, not LMTP's detail
+    +      mailbox: the detail would put lab-devel+lists@p7x.dev in
+    +      Delivered-To instead of the list's address.
+    +    - README.org and dovecot.conf say INBOX stays empty.
+    +
+    + ## jails/instances/lab-mail/README.org ##
+    +@@ jails/instances/lab-mail/README.org: through Dovecot, as the user =vmail=.
+    + 
+    + ** posting
+    + #+BEGIN_EXAMPLE
+    +-client --SMTP--> OpenSMTPD 127.0.0.1:2525 --LMTP--> Dovecot --> INBOX
+    ++client --SMTP--> OpenSMTPD 127.0.0.1:2525 --LMTP--> Dovecot --> lists
+    + #+END_EXAMPLE
+    + 
+    + rc(8) starts OpenSMTPD when the jail starts; its config is
+    +@@ jails/instances/lab-mail/README.org: refusal while it is still connected.
+    + 
+    + OpenSMTPD then queues the message and hands it to Dovecot over LMTP,
+    + on the socket =/var/run/dovecot/lmtp=, which only =vmail= may open.
+    +-LMTP delivers it to INBOX. OpenSMTPD never opens the maildir. If
+    +-Dovecot is stopped, the message waits in OpenSMTPD's queue and lands
+    +-when Dovecot is back.
+    +-
+    +-A post stays in INBOX until Pat moves it into =lists=. mbsync does
+    +-not sync INBOX, so a post reaches Fastmail and the readers of =lists=
+    +-only once Pat has moved it.
+    ++A Sieve script, =/usr/local/etc/dovecot/lists.sieve=, files it into
+    ++=lists=. OpenSMTPD never opens the maildir. If Dovecot is stopped,
+    ++the message waits in OpenSMTPD's queue and lands when Dovecot is
+    ++back.
+    + 
+    + OpenSMTPD never relays. Nothing posted leaves lab-mail except as a
+    + message that mbsync copies into a Fastmail folder.
+    +@@ jails/instances/lab-mail/README.org: message that mbsync copies into a Fastmail folder.
+    + 
+    + rc(8) starts Dovecot when the jail starts; its config is
+    + =/usr/local/etc/dovecot/dovecot.conf=. It serves the maildir as the
+    +-mailboxes =lists= and =Archive=, as on Fastmail, beside an INBOX that
+    +-holds new posts. Every login sees the same mailboxes, and runs as
+    +-=vmail=, which keeps Dovecot's indexes in =/data/mail/dovecot=. What
+    +-each login may do is in =dovecot-acl=, as rights describes.
+    ++mailboxes =lists= and =Archive=, beside an empty INBOX, as on
+    ++Fastmail. Every login sees the same mailboxes, and runs as =vmail=,
+    ++which keeps Dovecot's indexes in =/data/mail/dovecot=. What each login
+    ++may do is in =dovecot-acl=, as rights describes.
+    + 
+    + Reading and posting keep working while Fastmail is down.
+    + 
+    +
+    + ## jails/instances/lab-mail/dist.mtree ##
+    +@@
+    + ./usr/local/etc/dovecot type=dir mode=0755
+    + ./usr/local/etc/dovecot/dovecot-acl
+    + ./usr/local/etc/dovecot/dovecot.conf
+    ++./usr/local/etc/dovecot/lists.sieve
+    + ./usr/local/etc/mail type=dir mode=0755
+    + ./usr/local/etc/mail/smtpd.conf
+    + ./usr/local/etc/mbsyncrc
+    +
+    + ## jails/instances/lab-mail/dist/usr/local/etc/dovecot/dovecot.conf ##
+    +@@ jails/instances/lab-mail/dist/usr/local/etc/dovecot/dovecot.conf: passdb {
+    + }
+    + 
+    + # Every login, and every LMTP delivery, is the same user, vmail, which
+    +-# owns the maildir. The indexes, the UID lists, and INBOX, where LMTP
+    +-# delivers each post, live in a directory of vmail's own.
+    ++# owns the maildir. The indexes, the UID lists, and an empty INBOX,
+    ++# which IMAP requires, live in a directory of vmail's own.
+    + userdb {
+    +   driver = static
+    +   args = uid=vmail gid=vmail home=/data/mail/dovecot allow_all_users=yes
+    +@@ jails/instances/lab-mail/dist/usr/local/etc/dovecot/dovecot.conf: plugin {
+    +   acl_globals_only = yes
+    + }
+    + 
+    +-# LMTP delivers each posted message to INBOX. The ACL governs IMAP
+    +-# logins, not delivery: only vmail can reach the LMTP socket. Dovecot
+    +-# adds Return-Path and Delivered-To, and no Received header of its
+    +-# own; OpenSMTPD's is enough.
+    ++# A posted message is filed into lists by a Sieve script, since LMTP
+    ++# alone delivers only to INBOX. The ACL governs IMAP logins, not
+    ++# delivery: only vmail can reach the LMTP socket. Dovecot adds
+    ++# Return-Path and Delivered-To, and no Received header of its own;
+    ++# OpenSMTPD's is enough.
+    ++protocol lmtp {
+    ++  mail_plugins = sieve
+    ++}
+    + lmtp_add_received_header = no
+    ++
+    ++plugin {
+    ++  sieve_before = file:/usr/local/etc/dovecot/lists.sieve;bindir=/data/mail/dovecot/sieve-bin
+    ++}
+    +
+    + ## jails/instances/lab-mail/dist/usr/local/etc/dovecot/lists.sieve (new) ##
+    +@@
+    ++# File each posted message into the list. LMTP alone would deliver it
+    ++# to INBOX.
+    ++require "fileinto";
+    ++fileinto "lists";
+    +
+    + ## jails/instances/lab-mail/instance.conf ##
+    +@@ jails/instances/lab-mail/instance.conf: vmail:15103:15103
+    + 
+    + readonly packages="
+    + mail/dovecot
+    ++mail/dovecot-pigeonhole
+    + mail/isync
+    + mail/opensmtpd
+    + "
+     
+      ## jails/instances/lab-mail/spec.org ##
+    -@@ jails/instances/lab-mail/spec.org: follows from these rules, and the README states them first.
+    -   one already there.
+    - - Anyone may read the list over IMAP. Any user name logs in with any
+    -   password, and that login may list, fetch, search, and IDLE, and
+    --  nothing else. Dovecot's ACL rejects its attempts to set flags,
+    --  append, copy into a mailbox, move, or expunge, so it cannot archive
+    --  or delete a message, and it cannot mark one read for anyone else.
+    -+  nothing else. Dovecot's ACL opens every mailbox read-only for it:
+    -+  its attempts to set flags or expunge change nothing, and its
+    -+  attempts to append, copy into a mailbox, or move fail. So it cannot
+    -+  archive or delete a message, and it cannot mark one read for anyone
+    -+  else.
+    - - IMAP has no anonymous mode, so an agent logs in as its own address,
+    -   such as =claude@p7x.dev=, with any password.
+    - - Two logins may change the list: =pat@p7x.dev= and =mbsync=. Each
+     @@ jails/instances/lab-mail/spec.org: posting:
+        names =lab-devel@p7x.dev= on every message, and a Bcc leaves no
+        trace.
+    @@ jails/instances/lab-mail/spec.org: posting:
+      - Dovecot is the only program that writes the list. Every change to
+        it, a posted message, a sync from Fastmail, or a move or deletion by
+        Pat, goes through Dovecot, as Dovecot's user.
+    -@@ jails/instances/lab-mail/spec.org: beastie.
+    - 6. A message with no Message-ID is refused at the end of DATA. msmtp
+    -    exits non-zero and nothing lands on the list.
+    - 7. Logged in as =claude@p7x.dev=, an IMAP STORE of =\Deleted=
+    --   followed by EXPUNGE on =lists= fails, and so does a MOVE to
+    --   =Archive=. The message stays in place.
+    -+   followed by EXPUNGE on =lists= changes nothing, and a MOVE to
+    -+   =Archive= fails. The message stays in place, its flags unchanged.
+    - 8. A login as =pat@p7x.dev= with a wrong password fails.
+    - 9. On beastie, Pat archives a message in Emacs. After the next syncs,
+    -    it is in =Archive= and not in =lists= on lab-mail, it is in
+     @@ jails/instances/lab-mail/spec.org: why.
+      - Dovecot, not Cyrus or Courier. Each of those brings its own mail
+        store and admin model, where Dovecot serves a plain maildir and
+
+base-commit: f6ba757868b6e16efee8bfb3882dc3339ef9fb69
+-- 
+2.56.0
+
