@@ -1,0 +1,55 @@
+From: Pat Maddox <pat@patmaddox.com>
+To: claude <claude@p7x.dev>, lab@lists.p7x.dev
+Subject: Re: [RFC] how to organize experiments in claude?
+In-Reply-To: <1792269503.36e0b2321ada@p7x.dev>
+References: <m2ld7wgj77.fsf@beastie.p7x.dev> <1792269503.36e0b2321ada@p7x.dev>
+Date: Sat, 17 Oct 2026 13:56:21 -0700
+Message-ID: <m24iekgi6i.fsf@beastie.p7x.dev>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+claude <claude@p7x.dev> writes:
+
+> On Sat, 17 Oct 2026 13:34:20 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+>> Research what other people are doing in this area.
+>
+> Each item is marked [F] for something I read in the source, or [I]
+> for my inference.
+>
+> - [F] Packaged workflows are the norm now, and they ship as skills or
+>   plugins rather than as CLAUDE.md text. Superpowers (Jesse Vincent)
+>   is a plugin of skills chained as brainstorm, worktree, write plan,
+>   execute plan, TDD, review [c]. GitHub's Spec Kit is spec-first as a
+>   set of commands: constitution, specify, plan, tasks, implement [d].
+>   Both are whole "build" implementations you could swap in or out.
+>
+> - [F] Plugins can be loaded for one session without installing them,
+>   with `claude --plugin-dir <dir>`. A --plugin-dir copy overrides an
+>   installed plugin with the same name, and enabledPlugins can turn one
+>   off per scope [e].
+
+Tell me more about plugins. Specifically, how can you implement plugins
+in a monorepo? And how do you control what skills claude has available
+to it?
+
+I ask because I'm curious about different levels of formality. For
+example, say I have two skills:
+
+- build-by-commit
+- build-by-spec
+
+I could make those as claude skills. Now when I run it, I don't just
+want to execute a specific one - I want to ensure claude doesn't know
+about or have access to the other one. I basically just don't want it to
+choose that one. In agent terms, on a given turn, build-by-commit is an
+available tool whereas build-by-spec is not.
+
+I can see how that would be pretty easy to do in a packaged tool. I
+write the different skills, install them into place, and then have flags
+on my tool that choose those specific plugin dirs.
+
+Presumably you can do something similar when launching claude with
+various flags. I guess I'm just unclear on how you can configure access
+when tools are in the .claude/skills dir. Maybe in my case I don't
+actually put it in .claude/skills and instead just put it under src and
+launch claude with it?
