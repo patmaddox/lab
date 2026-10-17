@@ -1,0 +1,51 @@
+Message-ID: <819175e31cd15dda5623ee9df1f2eb679e8785ac.1792225852.git.claude@p7x.dev>
+In-Reply-To: <cover.1792225852.git.claude@p7x.dev>
+References: <cover.1792225852.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Subject: [PATCH 1/2] CLAUDE.md: Base work on trunk, not b/dev
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+Change-Id: xyrrvwpuqrpwpkzqvyroqvqlonuwkkmw
+Date: Sat, 17 Oct 2026 08:31:01 +0000
+
+b/dev is a staging tree that Pat revises freely. Work built on it
+inherits that instability: when a commit beneath it changes or is
+dropped, the work must be revised or abandoned, and a series posted
+against it cannot be applied to trunk as sent. Trunk is the only
+stable base, so work that cannot be done there is not ready yet and
+should wait for its dependencies to land.
+---
+change-id: xyrrvwpuqrpwpkzqvyroqvqlonuwkkmw
+
+ CLAUDE.md | 15 +++++++--------
+ 1 file changed, 7 insertions(+), 8 deletions(-)
+
+diff --git a/CLAUDE.md b/CLAUDE.md
+index f5de49f7..09358d62 100644
+--- a/CLAUDE.md
++++ b/CLAUDE.md
+@@ -149,14 +149,13 @@ mega-merge is one possible future timeline. The series you post is the
+ delta Pat can apply onto trunk. If new work truly needs a prior patch,
+ say so and reference it, or include those commits on purpose.
+ 
+-`b/dev` is Pat's local mega-merge and you can base new work on it. It
+-is more mature than a random list patch, but it is subject to
+-revision. Do not assume its patches land as-is - work based on it may
+-require more revision or potentially abandonment. When submitting work
+-based on `b/dev`, try to insert commits `-A trunk -B b/dev` so the
+-commit is isolated. If necessary, insert it `-A <base-commit> -B
+-b/dev`. When submitting patches to the list, include the full patch
+-series leading up to th new commit(s) so they appear in context.
++Base new work on trunk, not on `b/dev`. `b/dev` is Pat's local
++mega-merge of trunk candidates. Read it to see what is coming, but
++he revises it freely, so work built on it may need revision or be
++abandoned when its base changes. Trunk is stable. If new work
++depends on something in `b/dev` and cannot be done on trunk, it is
++not ready. Say so on the list and wait until its dependencies reach
++trunk.
+ 
+ ## Use subagents for large batches
+ 
+-- 
+2.56.0
+

@@ -1,0 +1,52 @@
+Message-ID: <6a5d69663c52d8ad7b173d2567ab038d01a39d94.1792225852.git.claude@p7x.dev>
+In-Reply-To: <cover.1792225852.git.claude@p7x.dev>
+References: <cover.1792225852.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Subject: [PATCH 2/2] src/lab-process-mail: Leave b/dev to the operator
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+Change-Id: orlxmuxnmznwmyuomlznnzoktqnpurkt
+Date: Sat, 17 Oct 2026 08:31:02 +0000
+
+A pass reads b/dev to see what is coming, and nothing stopped it
+from building on what it found there. Work that rests on a b/dev
+commit cannot be applied to trunk as posted, and it must be revised
+or abandoned whenever Pat rewrites that commit. Saying that such
+work waits for trunk keeps every series a contributor posts
+applicable to the stable tree. A base other than trunk stays
+available for an operator whose own assistant should see the tree
+as they do.
+---
+change-id: orlxmuxnmznwmyuomlznnzoktqnpurkt
+
+ src/lab-process-mail/prompt.md | 7 +++++--
+ 1 file changed, 5 insertions(+), 2 deletions(-)
+
+diff --git a/src/lab-process-mail/prompt.md b/src/lab-process-mail/prompt.md
+index 233e7508..6066c13a 100644
+--- a/src/lab-process-mail/prompt.md
++++ b/src/lab-process-mail/prompt.md
+@@ -29,7 +29,8 @@ each pass, from whether the message left the inbox.
+   pass starts there, and you develop patches in it.
+ - `${lab_base}` - the revset your work is based on, also named near
+   the end of this prompt. It is trunk() unless the operator chose
+-  another, such as their staging branch b/dev@upstream.
++  another for their own assistant, such as their staging branch
++  b/dev@upstream.
+ - `~/lab/default.jj` - the operator's trunk workspace. Leave its
+   working copy alone.
+ - `~/lab/mail.jj` - mail workspace; its `maildir/` is the list.
+@@ -55,7 +56,9 @@ the list may already do part of what you need, and you may build on
+ it in your own tree. Rely on a source only as far as it is settled,
+ though. A list patch may never land, and one on b/dev may land
+ changed. The aim is a series accepted as first posted, so prefer what
+-is already on the base.
++is already on the base. Never build on b/dev when it is not the base:
++work that needs a commit there and cannot be done on trunk is not
++ready, so say so in the reply and leave it until that commit lands.
+ 
+ notmuch derives the tags from the list itself on every `notmuch new`:
+ your mail is `sent`, mail you answered with an In-Reply-To is
+-- 
+2.56.0
+

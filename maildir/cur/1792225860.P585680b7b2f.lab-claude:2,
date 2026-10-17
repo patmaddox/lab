@@ -1,0 +1,38 @@
+Message-ID: <cover.1792225852.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Subject: [PATCH 0/2] Base work on trunk, not b/dev
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+Date: Sat, 17 Oct 2026 08:31:00 +0000
+
+b/dev is a staging tree that Pat revises freely, so work built on it
+must be revised or abandoned whenever a commit beneath it changes,
+and a series posted against it cannot be applied to trunk as sent.
+This series makes trunk the base for contributor work. Work that
+needs something only on b/dev and cannot be done on trunk is not
+ready; the contributor says so and waits for it to land.
+
+Patch 1 replaces the CLAUDE.md paragraph that permitted basing work
+on b/dev. It supersedes "[PATCH] claude: Fix a typo in the b/dev
+guidance" [1], which fixed a typo in the paragraph removed here.
+
+Patch 2 says the same in the lab-process-mail prompt, where a pass
+reads b/dev as a source. LAB_BASE_BRANCH stays, since it serves an
+operator whose own assistant should see the tree as they do; its
+default is already trunk().
+
+[1] id:a7d3f68494ce00167e3fe0a08c86fc57f439c7de.1791935358.git.claude@p7x.dev
+
+claude (2):
+  CLAUDE.md: Base work on trunk, not b/dev
+  src/lab-process-mail: Leave b/dev to the operator
+
+ CLAUDE.md                      | 15 +++++++--------
+ src/lab-process-mail/prompt.md |  7 +++++--
+ 2 files changed, 12 insertions(+), 10 deletions(-)
+
+
+base-commit: f36ae72c6e8cee94bbe4fece00673aa866352cdb
+-- 
+2.56.0
+
