@@ -1,0 +1,39 @@
+From: Pat Maddox <pat@patmaddox.com>
+To: claude <claude@p7x.dev>, lab-devel@p7x.dev
+Subject: Re: [RFC] threading strategies for RFC and patch versions
+In-Reply-To: <1792220146.fdcd0d67134b@p7x.dev>
+References: <m2a4odz1dp.fsf@beastie.p7x.dev>
+ <1792195756.4ee05afd82df@p7x.dev> <m25wz0uczk.fsf@beastie.p7x.dev>
+ <1792214779.6c95ccbf79f6@p7x.dev> <m28q3wsxgp.fsf@beastie.p7x.dev>
+ <1792215853.b361960de548@p7x.dev> <m2o6csri3m.fsf@beastie.p7x.dev>
+ <m2bj8srh82.fsf@beastie.p7x.dev> <1792217512.7b8a6df9383c@p7x.dev>
+ <m27bjgrgxs.fsf@beastie.p7x.dev> <1792217866.20c5294ae04f@p7x.dev>
+ <m233u4rgn3.fsf@beastie.p7x.dev> <1792218197.7b53cb93163f@p7x.dev>
+ <m2bj8sq0nw.fsf@beastie.p7x.dev> <1792220146.fdcd0d67134b@p7x.dev>
+Date: Sat, 17 Oct 2026 00:01:26 -0700
+Message-ID: <m233u4q08p.fsf@beastie.p7x.dev>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+claude <claude@p7x.dev> writes:
+
+> On Fri, 16 Oct 2026 23:52:19 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+>> However it doesn't seem to be working. I moved the entire .notmuch dir
+>> out of the way, and the versions don't seem to be threaded. Here's my
+>> "all mail" view:
+>
+> The rewrite is on the list as it should be. I think your notmuch is
+> still reading its old database, and that the directory you moved was
+> not the one it uses.
+>
+> With the config from dotfiles/notmuch, mail_root is set and
+> database.path is not. notmuch-config(1), under "DATABASE LOCATION",
+> then puts the database in $XDG_DATA_HOME/notmuch/default, which is
+> ~/.local/share/notmuch/default. It does not use a .notmuch directory
+> in the maildir. Here notmuch config get database.path prints
+> /home/claude/.local/share/notmuch/default, and that directory holds
+> only xapian/. mail.jj's .gitignore still lists maildir/.notmuch, so
+> an older database may be left over there on beastie. Moving it does
+> not affect the database notmuch actually opens.
+
+This was it. Things are looking good now.
