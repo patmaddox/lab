@@ -1,8 +1,9 @@
-# Pull new mail from Fastmail's INBOX into a local maildir.
+# Pull new mail from Fastmail's INBOX into Dovecot's. mbsync is an
+# IMAP client of each, so it never opens the maildir.
 #
 # Only new messages move, and only from Fastmail to here: nothing is
-# sent back, and nothing is removed from the maildir. A message
-# deleted or moved on Fastmail stays here.
+# sent back, and nothing is removed from lab-mail. A message deleted
+# or moved on Fastmail stays here.
 
 IMAPAccount fastmail
 Host imap.fastmail.com
@@ -14,15 +15,24 @@ PassCmd "sed -n 2p /data/secrets/mail-creds"
 IMAPStore fastmail
 Account fastmail
 
-MaildirStore local
-Path /data/mail/maildir/
-Inbox /data/mail/maildir/INBOX
+# Dovecot on loopback, with no TLS. mbsync sends a password in the
+# clear only over a mechanism named here.
+IMAPAccount lab-mail
+Host 127.0.0.1
+Port 2143
+TLSType None
+AuthMechs LOGIN
+User mbsync
+PassCmd "cat /data/secrets/mbsync-imap"
 
-Channel lists
+IMAPStore lab-mail
+Account lab-mail
+
+Channel list
 Far :fastmail:INBOX
-Near :local:INBOX
-Create Near
+Near :lab-mail:INBOX
 Sync Pull New
+Create None
 Expunge None
 Remove None
 CopyArrivalDate yes

@@ -1,33 +1,29 @@
 #!/bin/sh
-# Pull new list mail from Fastmail, then let Dovecot read it.
+# Pull new list mail from Fastmail into Dovecot.
 #
-# mbsync creates mail mode 0600 and folders 0700, whatever the umask.
-# Dovecot reads the maildir as vmail, which must not be able to write
-# it, so the new files are opened up for reading after each pull.
-#
-# cron sends the output to the fetch log. mbsync -q prints only
-# errors, so the job says itself what each pull brought.
+# cron sends the output to the fetch log. mbsync warns on every run
+# that it logs in to Dovecot without TLS, which is by design on
+# loopback, and prints a line of counts for each run. The job keeps
+# the counts only when something moved, and every error.
 set -u
 
-readonly maildir=/data/mail/maildir
+readonly creds=/data/secrets/mail-creds
 
-messages() {
-	find ${maildir} -type f \( -path '*/new/*' -o -path '*/cur/*' \) |
-	    wc -l
-}
-
-before=$(($(messages)))
-rc=0
-/usr/local/bin/mbsync -q -c /usr/local/etc/mbsyncrc lists || rc=${?}
-after=$(($(messages)))
-
-find ${maildir} \
-    \( -type d ! -perm -0055 -exec chmod go+rx {} + \) -o \
-    \( -type f ! -perm -0044 -exec chmod go+r {} + \)
-
-if [ ${after} -gt ${before} ]; then
-	echo "fetched $((after - before)) new messages"
+# mbsync would log in with whatever the file holds, so an empty line
+# stops the fetch before it starts.
+if [ -z "$(sed -n 1p ${creds})" ] || [ -z "$(sed -n 2p ${creds})" ]; then
+	echo "${creds} needs the login on line 1 and the password on line 2"
+	exit 1
 fi
+
+out=$(/usr/local/bin/mbsync -c /usr/local/etc/mbsyncrc list 2>&1)
+rc=${?}
+
+printf '%s\n' "${out}" | grep -v \
+    -e '^\*\*\* IMAP Warning \*\*\* Password is being sent in the clear$' \
+    -e '^$' \
+    -e '^Channels: .* Far: +0 \*0 #0 -0 *Near: +0 \*0 #0 -0$'
+
 if [ ${rc} -ne 0 ]; then
 	echo "mbsync failed with exit status ${rc}"
 else

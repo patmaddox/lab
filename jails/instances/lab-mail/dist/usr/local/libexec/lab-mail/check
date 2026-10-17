@@ -6,8 +6,15 @@
 set -u
 PATH=/sbin:/bin:/usr/sbin:/usr/bin:/usr/local/sbin:/usr/local/bin
 
-readonly creds=/data/secrets/mail-creds
+readonly secrets=/data/secrets
+readonly creds=${secrets}/mail-creds
+readonly users=${secrets}/imap-users
+readonly mbpass=${secrets}/mbsync-imap
 readonly stamp=/data/mail/mbsync/last-fetch
+
+# Every user a lab-mail service runs as. Each secret must be readable
+# by its reader and by none of the others.
+readonly service_users="smtprelay mbsync vmail dovecot dovenull"
 
 failed=0
 
@@ -27,14 +34,30 @@ has_line() {
 	[ -n "$(sed -n "${1}p" ${creds})" ]
 }
 
+has_user() {
+	grep -q "^${1}:" ${users}
+}
+
 # can_read and cannot_read run test(1) as the user, so a missing user
 # fails both.
 can_read() {
-	su -m "${1}" -c "test -r ${creds}"
+	su -m "${1}" -c "test -r ${2}"
 }
 
 cannot_read() {
-	su -m "${1}" -c "test ! -r ${creds}"
+	su -m "${1}" -c "test ! -r ${2}"
+}
+
+# readable_only_by <file> <reader>
+readable_only_by() {
+	local u
+	for u in ${service_users}; do
+		if [ "${u}" = "${2}" ]; then
+			can_read "${u}" "${1}" || return 1
+		else
+			cannot_read "${u}" "${1}" || return 1
+		fi
+	done
 }
 
 owned_by() {
@@ -53,16 +76,20 @@ fetched_recently() {
 check "${creds} exists" test -f ${creds}
 check "${creds} has the login on line 1" has_line 1
 check "${creds} has the password on line 2" has_line 2
-check "smtprelay can read ${creds}" can_read smtprelay
-check "mbsync can read ${creds}" can_read mbsync
-check "vmail cannot read ${creds}" cannot_read vmail
+check "${users} has mbsync" has_user mbsync
+check "${mbpass} is not empty" test -s ${mbpass}
+check "smtprelay can read ${creds}" can_read smtprelay ${creds}
+check "mbsync can read ${creds}" can_read mbsync ${creds}
+check "vmail cannot read ${creds}" cannot_read vmail ${creds}
+check "only mbsync can read ${mbpass}" readable_only_by ${mbpass} mbsync
+check "only dovecot can read ${users}" readable_only_by ${users} dovecot
 
-check "/data/mail/maildir is owned by mbsync (15102)" \
-    owned_by /data/mail/maildir 15102
-check "/data/mail/mbsync is owned by mbsync (15102)" \
-    owned_by /data/mail/mbsync 15102
+check "/data/mail/maildir is owned by vmail (15103)" \
+    owned_by /data/mail/maildir 15103
 check "/data/mail/dovecot is owned by vmail (15103)" \
     owned_by /data/mail/dovecot 15103
+check "/data/mail/mbsync is owned by mbsync (15102)" \
+    owned_by /data/mail/mbsync 15102
 
 for s in syslogd cron smtprelay dovecot; do
 	check "${s} is running" service ${s} status

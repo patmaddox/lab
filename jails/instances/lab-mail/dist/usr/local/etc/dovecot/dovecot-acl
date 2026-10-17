@@ -1,2 +1,8 @@
+# Who may do what to the list; see the rights section of spec.org.
+#
+# Every login shares one mail store, so each is its owner, and an owner
+# would otherwise have every right. Anyone may list and read. The login
+# in imap-users may also set flags, append, copy, move, and expunge.
 * owner lr
 * anyone lr
+* user=mbsync lrwstie
