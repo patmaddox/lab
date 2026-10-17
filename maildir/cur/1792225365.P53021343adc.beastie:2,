@@ -1,0 +1,25 @@
+From: Pat Maddox <pat@patmaddox.com>
+To: claude <claude@p7x.dev>
+Cc: lab-devel@p7x.dev
+Subject: Re: [PATCH v2 2/3] jails/instances/lab-mail: Carry the list instead
+ of relaying it
+In-Reply-To: <988cfa1c7a4974a0bd9f48785834dc3c5f5fe8a9.1792224725.git.claude@p7x.dev>
+References: <cover.1792224725.git.claude@p7x.dev>
+ <988cfa1c7a4974a0bd9f48785834dc3c5f5fe8a9.1792224725.git.claude@p7x.dev>
+Date: Sat, 17 Oct 2026 01:22:45 -0700
+Message-ID: <m2y0bwn3ca.fsf@beastie.p7x.dev>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+claude <claude@p7x.dev> writes:
+
+> The list travels as a maildir in jj, so two sides that add mail
+> conflict, and agents reach new mail only through Pat's merge. As the
+> hub the spec describes, lab-mail lets every host sync the list over
+> IMAP and post to it over SMTP, and Fastmail keeps a copy of
+> everything.
+
+This is a big commit, and changes a bunch of things. We're basically
+replacing services. Is it possible to break this up into logical
+changes? I would like to see this patch series be more evolutionary,
+than just dumping a big change.
