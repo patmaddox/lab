@@ -1,9 +1,13 @@
-# Pull new mail from Fastmail's INBOX into Dovecot's. mbsync is an
-# IMAP client of each, so it never opens the maildir.
+# Sync the list, the folders INBOX and Archive, both ways between
+# Fastmail and Dovecot. Any other folder of the account stays on
+# Fastmail. mbsync is an IMAP client of each, so it never opens the
+# maildir. The folders come from Fastmail: one missing on Dovecot is
+# created there, and none is ever created on Fastmail.
 #
-# Only new messages move, and only from Fastmail to here: nothing is
-# sent back, and nothing is removed from lab-mail. A message deleted
-# or moved on Fastmail stays here.
+# New messages, flag changes, and moves travel both ways. Nothing is
+# ever expunged or removed on either side: a message expunged on one
+# side is only marked \Deleted on the other, so Fastmail keeps every
+# message ever posted.
 
 IMAPAccount fastmail
 Host imap.fastmail.com
@@ -29,10 +33,11 @@ IMAPStore lab-mail
 Account lab-mail
 
 Channel list
-Far :fastmail:INBOX
-Near :lab-mail:INBOX
-Sync Pull New
-Create None
+Far :fastmail:
+Near :lab-mail:
+Patterns INBOX Archive
+Sync All
+Create Near
 Expunge None
 Remove None
 CopyArrivalDate yes

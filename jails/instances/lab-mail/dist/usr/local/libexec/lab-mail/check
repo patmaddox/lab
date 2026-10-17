@@ -10,7 +10,7 @@ readonly secrets=/data/secrets
 readonly creds=${secrets}/mail-creds
 readonly users=${secrets}/imap-users
 readonly mbpass=${secrets}/mbsync-imap
-readonly stamp=/data/mail/mbsync/last-fetch
+readonly stamp=/data/mail/mbsync/last-sync
 
 # Every user a lab-mail service runs as. Each secret must be readable
 # by its reader and by none of the others.
@@ -69,7 +69,7 @@ listening() {
 }
 
 # find prints the stamp only if it changed in the last five minutes.
-fetched_recently() {
+synced_recently() {
 	[ -n "$(find ${stamp} -mmin -5)" ]
 }
 
@@ -98,10 +98,10 @@ done
 check "smtprelay accepts connections on 127.0.0.1:2525" listening 2525
 check "dovecot accepts connections on 127.0.0.1:2143" listening 2143
 
-check "the last successful fetch was within five minutes" \
-    fetched_recently
+check "the last successful sync was within five minutes" \
+    synced_recently
 
-for l in smtprelay fetch dovecot; do
+for l in smtprelay sync dovecot; do
 	check "/var/log/lab-mail/${l}.log exists" \
 	    test -f /var/log/lab-mail/${l}.log
 done

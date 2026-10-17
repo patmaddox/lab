@@ -19,5 +19,5 @@
 ./usr/local/etc/smtprelay/smtprelay.ini
 ./usr/local/libexec/lab-mail type=dir mode=0755
 ./usr/local/libexec/lab-mail/check mode=0755
-./usr/local/libexec/lab-mail/fetch mode=0755
+./usr/local/libexec/lab-mail/sync mode=0755
 ./var/log/lab-mail type=dir mode=0755

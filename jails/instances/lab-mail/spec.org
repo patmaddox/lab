@@ -19,6 +19,18 @@ provider: p7x.dev and lists.p7x.dev are hosted on Fastmail.
 - claude@p7x.dev is a sending identity on the Fastmail account.
 - The account is the list's own, so mail to the list lands in INBOX.
   No Fastmail rule files it elsewhere.
+- Fastmail's folder =Archive= is the account's archive folder. Over
+  IMAP it carries the =\Archive= special-use flag.
+
+the list: the folders INBOX and =Archive= of the Fastmail account.
+- A message posted to the list lands in INBOX. Archiving a message
+  moves it to =Archive=. A message that needs no answer is archived.
+- The folder a message is in is its state. That state lives in the
+  list data, not in any one client, so Fastmail and every client see
+  it, and a move on Fastmail's web interface counts like any other.
+- Any other folder of the account is not part of the list. Pat may
+  make one on Fastmail for anything else, and it never reaches
+  lab-mail.
 
 rights: who may do what to the list.
 - Anyone may read the list over IMAP. Any user name logs in with any
@@ -30,7 +42,8 @@ rights: who may do what to the list.
   such as =claude@p7x.dev=, with any password.
 - One login may change the list: =mbsync=. It must give the password
   in =imap-users=, and a wrong one fails. It may set flags, append,
-  copy, move, and expunge.
+  copy, move, and expunge, and it may create a folder, so it can
+  bring one over from Fastmail.
 - These rights are enforced by Dovecot's ACL, not by file
   permissions. Dovecot's user can write the whole maildir, so a fault
   in the ACL config would let every login change the list. Steps 7
@@ -64,7 +77,7 @@ credentials: the operator stores three files on the host, in
   Only mbsync can read it.
 - The directory is nullfs-mounted read-only into lab-mail, and into
   no other jail.
-- smtprelay refuses to start, and the fetch job to run, unless both
+- smtprelay refuses to start, and the sync job to run, unless both
   lines of =mail-creds= are present and not empty.
 - The instance documents how the operator stores each file.
 
@@ -105,43 +118,54 @@ reading:
 - Software: isync (mail/isync) for mbsync, and Dovecot (mail/dovecot)
   for IMAP.
 - Dovecot is the only program that writes the list. Every change to
-  it, such as a fetch from Fastmail, goes through Dovecot, as
+  it, such as a sync from Fastmail, goes through Dovecot, as
   Dovecot's user.
-- mbsync in lab-mail pulls new messages from Fastmail's INBOX into
-  Dovecot's once a minute, as an IMAP client of each. It logs in to
-  Dovecot on 127.0.0.1:2143 as =mbsync=, with the password in
-  =mbsync-imap=. It never opens the maildir.
-- The jail's cron(8) runs the fetch job from a file in =/etc/cron.d=,
-  as mbsync's user, so it is not in any user's crontab. A run that
-  starts while the previous one is still going exits at once.
-- The fetch job records the time of its last successful pull, so a
-  check can tell a fetch that stopped from a list that is quiet.
-- mbsync only pulls new messages. It never sends new messages, flag
-  changes, or deletions to Fastmail, and it never removes a message
-  from lab-mail. A message deleted from INBOX on Fastmail, or moved
-  out of it, stays on lab-mail.
 - The maildir lives in =/jails/data/lab-mail/mail/=, mounted
   read-write into lab-mail only, so a rebuild of the jail keeps the
   list. Dovecot's user owns it.
 - The operator creates that directory and its subdirectories on the
   host before the jail starts, as with the credentials. The jail does
   not create anything on the host.
-- Dovecot serves the maildir as INBOX, as on Fastmail. INBOX is a
-  folder of the maildir. Every login sees the same mailbox, and
-  Dovecot's ACL gives each login the rights in the rights section.
+- Dovecot serves the list as the mailboxes INBOX and =Archive=, as on
+  Fastmail. INBOX is a folder of the maildir like the other. Every
+  login sees the same mailboxes, and Dovecot's ACL gives each login
+  the rights in the rights section.
 - Dovecot serves IMAP only. It does not run POP3, LMTP, or
   submission.
 - Reading keeps working from lab-mail's copy while Fastmail is down.
 
+sync with Fastmail:
+- mbsync in lab-mail syncs INBOX and =Archive= both ways between
+  Fastmail and Dovecot, as an IMAP client of each, and no other
+  folder. It logs in to Dovecot on 127.0.0.1:2143 as =mbsync=, with
+  the password in =mbsync-imap=. It never opens the maildir.
+- New messages, flag changes, moves, and deletions travel in both
+  directions on the next run.
+- mbsync uses =Expunge None= and =Remove None=. It never expunges a
+  message or removes a folder on either side. A message expunged on
+  one side is only marked =\Deleted= on the other, so Fastmail keeps
+  every message ever posted, and a mistaken deletion on lab-mail can
+  be undone from there.
+- mbsync uses =Create Near=. The folders come from Fastmail: one of
+  the list's folders that Dovecot lacks is created on Dovecot at the
+  next run, and mbsync never creates a folder on Fastmail. Dovecot
+  creates no folder of its own.
+- The jail's cron(8) runs the sync job once a minute, from a file in
+  =/etc/cron.d=, as mbsync's user, so it is not in any user's
+  crontab. A run that starts while the previous one is still going
+  exits at once.
+- The sync job records the time of its last successful run, so a
+  check can tell a sync that stopped from a list that is quiet.
+
 logs:
 - Every service in lab-mail logs through syslogd(8) in the jail:
-  smtprelay, the fetch job, and Dovecot. Each has a file of its own
-  under =/var/log/lab-mail/=: =smtprelay.log=, =fetch.log=, and
+  smtprelay, the sync job, and Dovecot. Each has a file of its own
+  under =/var/log/lab-mail/=: =smtprelay.log=, =sync.log=, and
   =dovecot.log=. They also land together in =/var/log/maillog=, as
   all mail logs do by default.
 - smtprelay logs each session: the client, the envelope, and
-  Fastmail's reply. The fetch job logs each run that brings new
-  messages, with mbsync's counts, and every failure. Dovecot logs each
+  Fastmail's reply. The sync job logs each run that moves mail,
+  with mbsync's counts, and every failure. Dovecot logs each
   login and every error.
 - newsyslog(8) rotates the files daily and keeps a week, as it does
   =/var/log/maillog=.
@@ -168,7 +192,7 @@ check:
   - syslogd, cron, smtprelay, and Dovecot are running;
   - smtprelay accepts connections on 127.0.0.1:2525, and Dovecot on
     127.0.0.1:2143;
-  - the last successful fetch was within the last five minutes;
+  - the last successful sync was within the last five minutes;
   - each log file exists.
 - The check only reads. It changes nothing in the jail and sends no
   mail, so it is safe to run at any time.
@@ -205,13 +229,18 @@ beastie.
 9. On beastie, =just check= exits 0.
 10. On beastie, with smtprelay stopped, =just check= exits non-zero
     and a FAIL line names smtprelay.
+11. On Fastmail, Pat moves a message from INBOX to =Archive=. Within
+    two minutes, it is in =Archive= and not in INBOX on lab-mail.
 
 out of scope:
 - The lab-devel list and the process-email workflow. They keep using
   the maildir in jj.
 - An archive of the list in git. It is a separate artifact, and can
-  be fed from INBOX like any other client.
+  be fed from the list's folders like any other client.
 - Restricting which jails or local users may use lab-mail.
+- Expunging on either side. A message deleted or moved on one side
+  stays in its old folder on the other, marked =\Deleted=, until a
+  later change turns on Expunge for that side.
 - Delivery failures that happen after Fastmail has accepted a
   message, and where Fastmail delivers mail for claude@p7x.dev.
 
@@ -263,6 +292,17 @@ why.
   the maildir and the Fastmail credentials both. Every jail on beastie
   can reach 127.0.0.1:2143, so the login that may write the list must
   have a secret.
+- =Expunge None= and =Remove None=, not mirroring deletions. Fastmail
+  then keeps every message whatever happens on lab-mail, which is the
+  safety net for any login that may delete there. Expunge can be
+  turned on once the sync has proven itself.
+- Name the folders lab-mail syncs, not sync every folder of the
+  account. Pat can then make a folder on Fastmail for anything else,
+  and it stays out of lab-mail and out of every client.
+- Archive by folder, not by a tag in one client. A tag is not in the
+  list data, so a rebuild of the index loses it and no agent sees it.
+  Fastmail's own =Archive= folder is used, not a new one, so archiving
+  on Fastmail's web interface means the same.
 - Passwords only for the logins that may write, not for every login.
   A read-only login can do nothing a password would guard against,
   and agents need no secret.
@@ -299,10 +339,10 @@ why.
 - A check script built from base tools, not a monitor such as monit
   or Nagios. A monitor is another daemon to install and configure for
   one jail, and the operator runs the check when it is needed.
-- The fetch job records its last success in a file, and the check
-  reads that file's age, not the fetch log. A quiet list writes no
-  log lines, so the log cannot tell a stopped fetch from a quiet
-  list, and a file's age needs no parsing.
+- The sync job records its last success in a file, and the check
+  reads that file's age, not the sync log. A quiet list writes no log
+  lines, so the log cannot tell a stopped sync from a quiet list, and
+  a file's age needs no parsing.
 - Pat's own mail client is not part of this spec. With no queue,
   there is nothing about it for lab-mail to provide. Sending as
   pat@patmaddox.com takes one more allowed sender and an msmtp entry

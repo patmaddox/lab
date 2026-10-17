@@ -1,7 +1,7 @@
 #!/bin/sh
-# Pull new list mail from Fastmail into Dovecot.
+# Sync the list both ways between Fastmail and Dovecot.
 #
-# cron sends the output to the fetch log. mbsync warns on every run
+# cron sends the output to the sync log. mbsync warns on every run
 # that it logs in to Dovecot without TLS, which is by design on
 # loopback, and prints a line of counts for each run. The job keeps
 # the counts only when something moved, and every error.
@@ -10,7 +10,7 @@ set -u
 readonly creds=/data/secrets/mail-creds
 
 # mbsync would log in with whatever the file holds, so an empty line
-# stops the fetch before it starts.
+# stops the sync before it starts.
 if [ -z "$(sed -n 1p ${creds})" ] || [ -z "$(sed -n 2p ${creds})" ]; then
 	echo "${creds} needs the login on line 1 and the password on line 2"
 	exit 1
@@ -27,9 +27,9 @@ printf '%s\n' "${out}" | grep -v \
 if [ ${rc} -ne 0 ]; then
 	echo "mbsync failed with exit status ${rc}"
 else
-	# The check reads this file's age to see that fetching works,
+	# The check reads this file's age to see that syncing works,
 	# even while the list is quiet.
-	touch /data/mail/mbsync/last-fetch
+	touch /data/mail/mbsync/last-sync
 fi
 
 exit ${rc}

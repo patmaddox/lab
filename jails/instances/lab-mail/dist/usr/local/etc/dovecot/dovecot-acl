@@ -2,7 +2,8 @@
 #
 # Every login shares one mail store, so each is its owner, and an owner
 # would otherwise have every right. Anyone may list and read. The login
-# in imap-users may also set flags, append, copy, move, and expunge.
+# in imap-users may also set flags, append, copy, move, and expunge,
+# and create the folders it finds on Fastmail.
 * owner lr
 * anyone lr
-* user=mbsync lrwstie
+* user=mbsync lrwstiek
