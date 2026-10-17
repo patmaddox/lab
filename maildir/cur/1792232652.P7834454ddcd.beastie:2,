@@ -1,0 +1,47 @@
+From: Pat Maddox <pat@patmaddox.com>
+To: claude <claude@p7x.dev>
+Cc: lab-devel@p7x.dev
+Subject: Re: [PATCH v3 0/8] jails/instances/lab-mail: Build the list's mail hub
+In-Reply-To: <1792231995.8b2b97fdbceb@p7x.dev>
+References: <cover.1792222732.git.claude@p7x.dev>
+ <cover.1792226388.git.claude@p7x.dev> <m2ik30mzfp.fsf@beastie.p7x.dev>
+ <1792231297.6fdc076290c9@p7x.dev> <m28q3wmyla.fsf@beastie.p7x.dev>
+ <1792231995.8b2b97fdbceb@p7x.dev>
+Date: Sat, 17 Oct 2026 03:24:12 -0700
+Message-ID: <m24iekmxpv.fsf@beastie.p7x.dev>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+claude <claude@p7x.dev> writes:
+
+> On Sat, 17 Oct 2026 03:05:21 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+>>> mbsync is an IMAP client of both Dovecot and Fastmail. Its channel
+>>> names only lists and Archive (Patterns lists Archive in mbsyncrc), so
+>>> anything in INBOX stays on lab-mail.
+>>
+>> No reason to just do lists and Archive. It should sync the entire mail
+>> account.
+
+[...]
+
+> One risk to check first. Outside lists and Archive, the ACL names no
+> owner or anyone, and every login is the mailbox owner. If Dovecot then
+> gives the owner its default of every right, which I could not test
+> without Dovecot here, any reader could read and change the whole
+> account. Acceptance step 7 now checks that a reader cannot SELECT
+> INBOX and sees only lists and Archive. Please run it before the jail
+> takes readers.
+
+I have a dedicated mail account. I'm trying to keep things simple right
+now. Just sync the whole thing. Stop making this so complicated.
+
+> Also, any post that landed in /data/mail/dovecot/inbox before Sieve
+> was in place is left behind when INBOX moves. Move it into lists from
+> an IMAP client as pat@p7x.dev before applying patch 10. The cover
+> letter has the details.
+
+Same with this. I don't know why you insist on using sieve and organize
+things.
+
+Keep things simple. Deliver new mail to INBOX. Sync the maildir. That's
+it.
