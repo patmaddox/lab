@@ -39,11 +39,11 @@ fails is not sent, and the client must send it again.
 
 ** fetching
 #+BEGIN_EXAMPLE
-imap.fastmail.com:993 lists --IMAPS--> mbsync --> /data/mail/maildir/lists
+imap.fastmail.com:993 INBOX --IMAPS--> mbsync --> /data/mail/maildir/INBOX
 #+END_EXAMPLE
 
-A Fastmail rule files list mail into the folder =lists=. Once a
-minute, the jail's cron(8) runs the fetch job,
+The Fastmail account is the list's own, so list mail lands in its
+INBOX. Once a minute, the jail's cron(8) runs the fetch job,
 =/usr/local/libexec/lab-mail/fetch=, as the user =mbsync=. The job
 is in =/etc/cron.d/lab-mail=, not in a crontab, so =crontab -l= does
 not show it. lockf(1) skips a run while the previous one is still
@@ -58,12 +58,12 @@ itself, so the job then makes them readable by everyone, for Dovecot.
 
 ** reading
 #+BEGIN_EXAMPLE
-/data/mail/maildir/lists --> Dovecot 127.0.0.1:2143 --IMAP--> client
+/data/mail/maildir/INBOX --> Dovecot 127.0.0.1:2143 --IMAP--> client
 #+END_EXAMPLE
 
 rc(8) starts Dovecot when the jail starts; its config is
 =/usr/local/etc/dovecot/dovecot.conf=. It serves the maildir as the
-mailbox =lists=, beside an empty INBOX, and accepts any user name and
+mailbox INBOX, as on Fastmail, and accepts any user name and
 password. Every login runs as the user =vmail=, which can read the
 maildir but not write it, and keeps Dovecot's indexes in
 =/data/mail/dovecot=. The ACL in =dovecot-acl= makes every mailbox
@@ -120,6 +120,10 @@ install -d -o 15102 -g 15102 -m 0755 /jails/data/lab-mail/mail/maildir
 install -d -o 15102 -g 15102 -m 0700 /jails/data/lab-mail/mail/mbsync
 install -d -o 15103 -g 15103 -m 0700 /jails/data/lab-mail/mail/dovecot
 #+END_EXAMPLE
+
+A maildir from before the list moved to INBOX holds a =lists=
+folder, which Dovecot would still serve. Remove it, and delete the
+Fastmail rule that filed list mail there.
 
 * operate
 Like the other instances; see =jails/README.org=:

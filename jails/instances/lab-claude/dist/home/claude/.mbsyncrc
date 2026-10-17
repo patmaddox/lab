@@ -1,4 +1,4 @@
-# Fetch the lists mailbox from lab-mail into ~/mail/lists.
+# Fetch the list, lab-mail's INBOX, into ~/mail/lists.
 #
 # lab-mail serves it on loopback and accepts any login, so the
 # credentials here are placeholders.
@@ -18,7 +18,7 @@ MaildirStore local
 Path ~/mail/
 
 Channel lists
-Far :lab-mail:lists
+Far :lab-mail:INBOX
 Near :local:lists
 Create Near
 Sync Pull

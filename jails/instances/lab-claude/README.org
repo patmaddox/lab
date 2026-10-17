@@ -9,8 +9,9 @@ This is separate from the lab-devel list, which stays in the jj
 maildir under =~/lab/mail.jj= and the default notmuch profile.
 
 ** fetch and read
-mbsync pulls the =lists= mailbox into =~/mail/lists=, and notmuch
-indexes it under its own profile, =lists=:
+mbsync pulls lab-mail's INBOX, which holds the list, into
+=~/mail/lists=, and notmuch indexes it under its own profile,
+=lists=:
 #+BEGIN_EXAMPLE
 mbsync lists && NOTMUCH_PROFILE=lists notmuch new
 NOTMUCH_PROFILE=lists notmuch search from:pat@patmaddox.com

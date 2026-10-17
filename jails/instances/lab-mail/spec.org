@@ -17,9 +17,8 @@ provider: p7x.dev and lists.p7x.dev are hosted on Fastmail.
   password, with IMAP and SMTP access. smtprelay and mbsync both use
   them.
 - claude@p7x.dev is a sending identity on the Fastmail account.
-- A Fastmail rule marks list mail as read and files it into the
-  folder =lists=. Over IMAP, =lists= is at the top level, a sibling of
-  INBOX, and it has no subfolders.
+- The account is the list's own, so mail to the list lands in INBOX.
+  No Fastmail rule files it elsewhere.
 
 access:
 - lab-mail uses =ip4 = inherit=, like the client jails. A jail with
@@ -86,16 +85,16 @@ sending:
 reading:
 - Software: isync (mail/isync) for mbsync, and Dovecot (mail/dovecot)
   for IMAP.
-- mbsync in lab-mail pulls new messages from the Fastmail folder
-  =lists= into a local maildir once a minute. The jail's cron(8) runs
-  the fetch job from a file in =/etc/cron.d=, as mbsync's user, so it
-  is not in any user's crontab. A run that starts while the previous
+- mbsync in lab-mail pulls new messages from Fastmail's INBOX into a
+  local maildir once a minute. The jail's cron(8) runs the fetch job
+  from a file in =/etc/cron.d=, as mbsync's user, so it is not in any
+  user's crontab. A run that starts while the previous
   one is still going exits at once.
 - The fetch job records the time of its last successful pull, so a
   check can tell a fetch that stopped from a list that is quiet.
 - mbsync only pulls new messages. It never sends new messages, flag
   changes, or deletions to Fastmail, and it never removes a message
-  from the local maildir. A message deleted from =lists= on Fastmail,
+  from the local maildir. A message deleted from INBOX on Fastmail,
   or moved out of it, stays in the local maildir. Fastmail is the
   inbox, and the local maildir is append-only.
 - The local maildir lives in =/jails/data/lab-mail/mail/=, mounted
@@ -109,11 +108,11 @@ reading:
   writable, by Dovecot's user. A message from that pull cannot be read
   over IMAP until then; a client fetch in that moment fails and
   succeeds on its next run.
-- Dovecot serves the local maildir as the mailbox =lists=, beside an
-  empty INBOX, as on Fastmail. Clients can list, fetch, search, and
-  IDLE on =lists=. Both mailboxes are read-only: Dovecot rejects
-  attempts to set flags, append, copy into them, or expunge, and
-  Dovecot's user cannot write the maildir.
+- Dovecot serves the local maildir as INBOX, as on Fastmail. INBOX is
+  a folder of the maildir. Clients can list, fetch, search, and IDLE
+  on it. It is read-only: Dovecot rejects attempts to set flags,
+  append, copy into it, or expunge, and Dovecot's user cannot write
+  the maildir.
 - Dovecot serves IMAP only. It does not run POP3, LMTP, or
   submission.
 - Reading keeps working from the local copy while Fastmail is down.
@@ -161,9 +160,9 @@ clients: lab-claude.
   server refuses any recipient, msmtp sends no message and exits
   non-zero with the server's reply, so the whole message is
   abandoned.
-- mbsync pulls the =lists= mailbox from 127.0.0.1:2143 into a maildir
-  in the agent's home, and =notmuch new= indexes it there. The agent
-  searches and reads the local index, not IMAP.
+- mbsync pulls INBOX from 127.0.0.1:2143 into a maildir in the
+  agent's home, and =notmuch new= indexes it there. The agent searches
+  and reads the local index, not IMAP.
 - lab-claude documents the commands to fetch and to send.
 
 acceptance test: run from lab-claude, except where a step says
@@ -178,7 +177,7 @@ beastie.
    at RCPT TO for someone@example.com. msmtp exits non-zero and
    pat@patmaddox.com receives nothing.
 6. A message from someone@p7x.dev is refused. msmtp exits non-zero.
-7. An IMAP STORE of \Deleted followed by EXPUNGE on =lists= fails, and
+7. An IMAP STORE of \Deleted followed by EXPUNGE on INBOX fails, and
    the message stays in place, both in lab-mail's maildir and on
    Fastmail.
 8. On beastie, =just check= exits 0.
@@ -189,7 +188,7 @@ out of scope:
 - The lab-devel list and the process-email workflow. They keep using
   the maildir in jj.
 - An archive of the list in git. It is a separate artifact, and can
-  be fed from the =lists= mailbox like any other client.
+  be fed from INBOX like any other client.
 - Restricting which jails or local users may use lab-mail.
 - Delivery failures that happen after Fastmail has accepted a
   message, and where Fastmail delivers mail for claude@p7x.dev.
@@ -235,9 +234,10 @@ why.
   Dovecot's ACL alone. An inherited ACL needs its own dataset with
   ACL properties set on the host, where a chmod works on any
   filesystem.
-- Serve the list as =lists= beside an empty INBOX, not as INBOX. The
-  name says what the mailbox holds, it matches Fastmail, and another
-  mirrored folder could sit beside it.
+- A Fastmail account of the list's own, with every message in INBOX,
+  not a =lists= folder that a Fastmail rule files into. With nothing
+  else arriving in the account, there is nothing to sort, and
+  lab-mail serves the folder Fastmail has.
 - Dovecot, not Cyrus or Courier. Each of those brings its own mail
   store and admin model, where Dovecot serves a plain maildir.
 - IMAP over loopback, not a nullfs-mounted maildir. A mount ties

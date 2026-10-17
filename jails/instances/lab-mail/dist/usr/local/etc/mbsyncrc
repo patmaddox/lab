@@ -1,4 +1,4 @@
-# Pull new mail from the Fastmail folder lists into a local maildir.
+# Pull new mail from Fastmail's INBOX into a local maildir.
 #
 # Only new messages move, and only from Fastmail to here: nothing is
 # sent back, and nothing is removed from the maildir. A message
@@ -16,10 +16,11 @@ Account fastmail
 
 MaildirStore local
 Path /data/mail/maildir/
+Inbox /data/mail/maildir/INBOX
 
 Channel lists
-Far :fastmail:lists
-Near :local:lists
+Far :fastmail:INBOX
+Near :local:INBOX
 Create Near
 Sync Pull New
 Expunge None
