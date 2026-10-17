@@ -1,0 +1,275 @@
+Message-ID: <ffbef841254afa1d00c000c25c342a9230150bbf.1792256705.git.claude@p7x.dev>
+In-Reply-To: <cover.1792256705.git.claude@p7x.dev>
+References: <cover.1792256705.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Subject: [PATCH 2/2] src/lab-process-mail: Quarantine mail from unapproved
+ senders
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+Change-Id: xosoprrqnznooqywkkvoskqskltlvzpk
+Date: Sat, 17 Oct 2026 17:05:29 +0000
+
+The list takes posts from anyone who can reach lab-mail, and every
+inbox message becomes an agent pass that may change code and push it.
+Mail is untrusted input, so a stranger's message must never be what
+drives the agent, however it reached the list.
+
+The check runs in the loop, before the agent sees anything, so it does
+not depend on what a model decides. A message whose From is not one
+listed address is moved into the list's quarantine/ maildir instead,
+and the move is pushed on the outbox like a reply, so it leaves the
+inbox for every reader and the loop goes on. Moving the file back
+releases it. With no list of senders the loop refuses to start rather
+than trust everyone.
+---
+change-id: xosoprrqnznooqywkkvoskqskltlvzpk
+
+ src/lab-process-mail/lab-process-mail        | 47 ++++++++++++
+ src/lab-process-mail/lab-process-mail.pkg.do |  4 +-
+ src/lab-process-mail/lab-process-mail_test   | 78 +++++++++++++++++++-
+ src/lab-process-mail/senders                 |  4 +
+ 4 files changed, 129 insertions(+), 4 deletions(-)
+ create mode 100644 src/lab-process-mail/senders
+
+diff --git a/src/lab-process-mail/lab-process-mail b/src/lab-process-mail/lab-process-mail
+index bc5ce6ca..543b9aa5 100755
+--- a/src/lab-process-mail/lab-process-mail
++++ b/src/lab-process-mail/lab-process-mail
+@@ -11,6 +11,14 @@
+ # from the notmuch index afterwards. A message still in the inbox stops
+ # the loop, rather than being retried forever.
+ #
++# Only mail from an approved sender reaches the agent. Any other inbox
++# message is quarantined without a pass: its file moves, unchanged,
++# into the list's quarantine/ maildir, and the move is committed and
++# pushed on your outbox bookmark like a reply. The approved senders are
++# listed one address per line in ${LAB_PROCESS_MAIL_SENDERS}, or
++# share/lab-process-mail/senders in the prefix this script is installed
++# under. Blank lines and lines starting with # are ignored.
++#
+ # The trunk workspace is ${TRUNK_WORKSPACE}, or ~/lab/default.jj. Each
+ # pass runs in its own workspace, ${WORK_WORKSPACE}, or ~/lab/work.jj,
+ # created on first use. The mail workspace is ${MAIL_WORKSPACE}, or
+@@ -98,6 +106,35 @@ inbox_count() {
+ 	notmuch count tag:inbox
+ }
+ 
++# Whether a message is from an approved sender. Its From must name
++# exactly one address, and that address must be listed in full; case
++# does not matter.
++from_approved_sender() {
++	local from
++	from="$(notmuch address --output=sender --output=address "${1}")"
++	[ -n "${from}" ] && [ "$(printf '%s\n' "${from}" | wc -l)" -eq 1 ] ||
++	    return 1
++	grep -v -e '^#' -e '^[[:space:]]*$' "${senders}" |
++	    grep -Fxiq -e "${from}"
++}
++
++# Move a message's files into the list's quarantine/ maildir, keeping
++# each in its new/ or cur/, and publish the move on the outbox, so the
++# message leaves the inbox for every reader of the list.
++quarantine() {
++	local id="${1}" subject="${2}" f sub
++	notmuch search --output=files "${id}" | while read -r f; do
++		sub="$(basename -- "$(dirname -- "${f}")")"
++		mkdir -p "${mail}/maildir/quarantine/${sub}"
++		mv -- "${f}" "${mail}/maildir/quarantine/${sub}/"
++	done
++	jj --quiet -R "${mail}" commit -m "mail: Quarantine ${subject}"
++	jj --quiet -R "${mail}" bookmark set "${me}" -r @-
++	jj --quiet -R "${mail}" git push --remote submissions \
++	    --bookmark "${me}"
++	notmuch new --quiet
++}
++
+ # Post to the operator's ntfy topic. A failed or slow post must not
+ # stop the inbox from draining, so this gives up after ten seconds and
+ # only warns. Without a topic it does nothing.
+@@ -118,10 +155,12 @@ main() {
+ 	me="$(whoami)"
+ 	bindir="$(CDPATH= cd -- "$(dirname -- "${0}")" && pwd)"
+ 	prompt="${LAB_PROCESS_MAIL_PROMPT:-${bindir}/../share/lab-process-mail/prompt.md}"
++	senders="${LAB_PROCESS_MAIL_SENDERS:-${bindir}/../share/lab-process-mail/senders}"
+ 
+ 	[ -d "${trunk}" ] || die "${trunk}: no trunk workspace"
+ 	[ -d "${mail}" ] || die "${mail}: no mail workspace"
+ 	[ -r "${prompt}" ] || die "${prompt}: no prompt"
++	[ -r "${senders}" ] || die "${senders}: no approved senders"
+ 
+ 	while :; do
+ 		get_up_to_date
+@@ -130,6 +169,14 @@ main() {
+ 		[ -n "${id}" ] || break
+ 		subject="$(notmuch search "${id}" |
+ 		    sed -e 's/^[^;]*; //' -e 's/ ([^()]*)$//')"
++		if ! from_approved_sender "${id}"; then
++			echo "${PROGNAME}: ${id} (${subject}): quarantined"
++			quarantine "${id}" "${subject}"
++			[ "$(notmuch count "${id} and tag:inbox")" -eq 0 ] ||
++			    die "${id} is still in the inbox after quarantine"
++			notify "quarantined: ${subject} (inbox $(inbox_count))"
++			continue
++		fi
+ 		echo "${PROGNAME}: ${id} (${subject})"
+ 		(cd "${ws}" &&
+ 		    claude --permission-mode auto -p "$(cat "${prompt}")
+diff --git a/src/lab-process-mail/lab-process-mail.pkg.do b/src/lab-process-mail/lab-process-mail.pkg.do
+index 8cf660a9..353ec38b 100644
+--- a/src/lab-process-mail/lab-process-mail.pkg.do
++++ b/src/lab-process-mail/lab-process-mail.pkg.do
+@@ -10,7 +10,7 @@ name="lab-process-mail"
+ version="0.0.0"
+ prefix="/"
+ 
+-redo-ifchange lab-process-mail prompt.md
++redo-ifchange lab-process-mail prompt.md senders
+ 
+ # Stage files
+ stagedir=$(mktemp -d)
+@@ -19,6 +19,7 @@ trap "rm -rf ${stagedir}" EXIT
+ mkdir -p "${stagedir}/bin" "${stagedir}/share/${name}"
+ install -m 0555 lab-process-mail "${stagedir}/bin/lab-process-mail"
+ install -m 0444 prompt.md "${stagedir}/share/${name}/prompt.md"
++install -m 0444 senders "${stagedir}/share/${name}/senders"
+ 
+ # Calculate flatsize
+ flatsize=$(find "${stagedir}" -type f -exec stat -f%z {} + | awk '{s+=$1} END {print s}')
+@@ -42,6 +43,7 @@ EOD
+ files: {
+   /bin/lab-process-mail: "-"
+   /share/${name}/prompt.md: "-"
++  /share/${name}/senders: "-"
+ }
+ EOM
+ 
+diff --git a/src/lab-process-mail/lab-process-mail_test b/src/lab-process-mail/lab-process-mail_test
+index ba1019b2..07e224c7 100755
+--- a/src/lab-process-mail/lab-process-mail_test
++++ b/src/lab-process-mail/lab-process-mail_test
+@@ -16,6 +16,9 @@ atf_init_test_cases() {
+ 	atf_add_test_case follows_rewritten_base
+ 	atf_add_test_case keeps_work_on_its_prerequisite
+ 	atf_add_test_case rebases_outbox_onto_list
++	atf_add_test_case needs_senders
++	atf_add_test_case quarantines_unapproved_sender
++	atf_add_test_case approves_sender_in_any_case
+ }
+ 
+ # Build a small lab in the current directory: an upstream repo with
+@@ -28,6 +31,8 @@ setup() {
+ 	export TRUNK_WORKSPACE="${PWD}/default.jj"
+ 	export MAIL_WORKSPACE="${PWD}/mail.jj"
+ 	export WORK_WORKSPACE="${PWD}/work.jj"
++	export LAB_PROCESS_MAIL_SENDERS="${PWD}/senders"
++	printf '%s\n' '# Pat' 'pat@example.org' > senders
+ 	unset NOTIFY_URL LAB_BASE_BRANCH
+ 
+ 	export JJ_CONFIG="${PWD}/jj.toml"
+@@ -78,8 +83,11 @@ setup() {
+ # the inbox. With STUB_MOVE=1 it moves its working copy to root().
+ #
+ # notmuch reads the inbox from the file inbox, one "id subject" per
+-# line, oldest first. It answers only the queries lab-process-mail
+-# makes.
++# line, oldest first. Each message is from pat@example.org unless the
++# file from has a line "id address" for it. Its file is
++# mail.jj/maildir/cur/ and the id less "id:"; notmuch new drops from the
++# inbox a message whose file has moved under maildir/quarantine/. It
++# answers only the queries lab-process-mail makes.
+ #
+ # curl appends its argv to curl.log.
+ mk_stubs() {
+@@ -106,10 +114,23 @@ mk_stubs() {
+ 	inbox="${stubdir}/inbox"
+ 	case "\$1" in
+ 	new)
++		while read -r id rest; do
++			[ -e "${MAIL_WORKSPACE}/maildir/quarantine/cur/\${id#id:}" ] ||
++			    echo "\${id} \${rest}"
++		done < "\${inbox}" > "\${inbox}.new"
++		mv "\${inbox}.new" "\${inbox}"
++		;;
++	address)
++		for a in "\$@"; do last="\$a"; done
++		from="\$(grep "^\${last} " "${stubdir}/from" 2>/dev/null |
++		    cut -d ' ' -f 2)"
++		echo "\${from:-pat@example.org}"
+ 		;;
+ 	search)
+ 		for a in "\$@"; do last="\$a"; done
+-		if [ "\${last}" = tag:inbox ]; then
++		if [ "\$2" = --output=files ]; then
++			echo "${MAIL_WORKSPACE}/maildir/cur/\${last#id:}"
++		elif [ "\${last}" = tag:inbox ]; then
+ 			head -n 1 "\${inbox}" | cut -d ' ' -f 1
+ 		else
+ 			subject="\$(grep "^\${last} " "\${inbox}" | cut -d ' ' -f 2-)"
+@@ -369,3 +390,54 @@ rebases_outbox_onto_list_body() {
+ 	atf_check -o inline:"mail: Reply" \
+ 	    jj -R mail.jj log --no-graph -T 'description.first_line()' -r @-
+ }
++
++atf_test_case needs_senders
++needs_senders_body() {
++	setup
++	echo 'id:a@x Hello there' > inbox
++	rm senders
++	atf_check -s exit:1 -e match:"no approved senders" "${PROCESS_MAIL}"
++	atf_check -s exit:1 test -e claude.log
++}
++
++# Mail from a sender not listed never reaches the agent. Its file moves
++# into quarantine/, the move is pushed on the outbox, and the loop goes
++# on to the next message.
++atf_test_case quarantines_unapproved_sender
++quarantines_unapproved_sender_body() {
++	setup
++	me="$(whoami)"
++	printf 'id:q@x Buy now\nid:a@x Hello there\n' > inbox
++	echo 'id:q@x pat@example.org.evil.example' > from
++	(
++		cd seed.jj
++		jj new mail
++		mkdir maildir/cur
++		echo spam > maildir/cur/q@x
++		jj commit -m 'mail: Buy now'
++		jj bookmark set mail -r @-
++		jj git push --remote upstream --bookmark mail
++	) >/dev/null 2>&1 || atf_fail "cannot post to the list"
++	export STUB_ANSWER=1 NOTIFY_URL=https://ntfy.example/topic
++	printf '%s\n' 'lab-process-mail: id:q@x (Buy now): quarantined' \
++	    'lab-process-mail: id:a@x (Hello there)' > expout
++	atf_check -s exit:0 -o file:expout -e ignore "${PROCESS_MAIL}"
++	atf_check -o inline:"1\n" grep -c '^cwd ' claude.log
++	atf_check -o match:"answer is id:a@x" tail -n 1 claude.log
++	atf_check -o match:"quarantined: Buy now \\(inbox 1\\)" cat curl.log
++	atf_check -o inline:"spam\n" cat mail.jj/maildir/quarantine/cur/q@x
++	atf_check -s exit:1 test -e mail.jj/maildir/cur/q@x
++	atf_check -o inline:"mail: Quarantine Buy now" \
++	    jj -R mail.jj log --no-graph -T 'description.first_line()' \
++	    -r "${me}@submissions"
++}
++
++atf_test_case approves_sender_in_any_case
++approves_sender_in_any_case_body() {
++	setup
++	echo 'id:a@x Hello there' > inbox
++	echo 'id:a@x Pat@Example.ORG' > from
++	export STUB_ANSWER=1
++	atf_check -s exit:0 -o inline:"lab-process-mail: id:a@x (Hello there)\n" \
++	    -e ignore "${PROCESS_MAIL}"
++}
+diff --git a/src/lab-process-mail/senders b/src/lab-process-mail/senders
+new file mode 100644
+index 00000000..47f028a2
+--- /dev/null
++++ b/src/lab-process-mail/senders
+@@ -0,0 +1,4 @@
++# Senders whose mail lab-process-mail hands to the agent, one address
++# per line. Mail from anyone else is quarantined; see lab-process-mail.
++pat@patmaddox.com
++pat@p7x.dev
+-- 
+2.56.0
+

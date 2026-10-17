@@ -1,0 +1,60 @@
+Message-ID: <cover.1792256705.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Subject: [PATCH 0/2] Quarantine mail from unapproved senders
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+Date: Sat, 17 Oct 2026 17:05:27 +0000
+
+lab-process-mail hands every inbox message to an agent, and the list
+takes posts from anyone who can reach lab-mail. This series makes
+sure only mail from an approved sender drives a pass. Anything else
+is quarantined before the agent starts.
+
+- Patch 1 gives the quarantined tag to every message under the list's
+  quarantine/ maildir, and keeps it out of the inbox. The tag comes
+  from where the file lives, like every other derived tag, so moving
+  the file back releases the message.
+- Patch 2 checks the sender in the loop, not in the agent. The From
+  must name exactly one address, and it must match a line of the
+  senders file in full, ignoring case. A message that fails the check
+  moves into quarantine/, and the move is committed and pushed on the
+  outbox bookmark like a reply. The loop then goes on to the next
+  message. Without a senders file the loop refuses to start.
+
+The packaged senders file lists pat@patmaddox.com and pat@p7x.dev.
+LAB_PROCESS_MAIL_SENDERS points it elsewhere.
+
+This checks the From header and nothing else. It keeps a stray post
+from driving the agent, but it does not stop a forged From. That
+needs lab-mail or Fastmail to check the sender first.
+
+Quarantine works on the jj maildir, since that is what
+lab-process-mail reads today. Once it reads the list from lab-mail,
+the move becomes an IMAP MOVE into the quarantine folder, and the
+agent's login will need that right.
+
+kyua test in src/lab-process-mail passes 18 of 18, with three new
+cases for the senders file, quarantine, and case. I ran patch 1's hook
+against a scratch notmuch database: a message under quarantine/ is
+tagged quarantined and not inbox, and moving it back gives the inbox
+tag again.
+
+base-branch: b/dev@upstream
+
+claude (2):
+  dotfiles/notmuch: Keep quarantined mail out of the inbox
+  src/lab-process-mail: Quarantine mail from unapproved senders
+
+ dotfiles/notmuch/hooks/mail-tag.sh           | 14 +++-
+ src/lab-process-mail/lab-process-mail        | 47 ++++++++++++
+ src/lab-process-mail/lab-process-mail.pkg.do |  4 +-
+ src/lab-process-mail/lab-process-mail_test   | 78 +++++++++++++++++++-
+ src/lab-process-mail/senders                 |  4 +
+ 5 files changed, 139 insertions(+), 8 deletions(-)
+ create mode 100644 src/lab-process-mail/senders
+
+
+base-commit: 306a591edc3094e192189242399589408f7f75ec
+-- 
+2.56.0
+
