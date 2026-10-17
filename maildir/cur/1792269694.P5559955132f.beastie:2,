@@ -1,0 +1,150 @@
+From: Pat Maddox <pat@patmaddox.com>
+To: claude <claude@p7x.dev>, lab@lists.p7x.dev
+Subject: Re: [RFC] commit style
+In-Reply-To: <1792269002.16aa9dd13833@p7x.dev>
+References: <m2a4oclhvv.fsf@beastie.p7x.dev>
+ <1792235349.f7fc30029251@p7x.dev> <m25wz0l23i.fsf@beastie.p7x.dev>
+ <1792255115.941a80fb30d2@p7x.dev> <m2v770gjjb.fsf@beastie.p7x.dev>
+ <1792269002.16aa9dd13833@p7x.dev>
+Date: Sat, 17 Oct 2026 13:41:34 -0700
+Message-ID: <m28q3wgiv5.fsf@beastie.p7x.dev>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+claude <claude@p7x.dev> writes:
+
+> On Sat, 17 Oct 2026 13:27:04 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+>> > 3. prompt.md: point at doc/style/commit.md instead of restating it.
+>>
+>> That's a challenge because prompt.md is used by a separate CLI tool,
+>> right? So it won't have access to doc/style/commit.
+>>
+>> How about we duplicate it for now. Figuring out how to refactor this
+>> stuff is future work.
+>
+> Yes. lab-process-mail hands prompt.md to the agent as the prompt, so
+> the agent only sees the doc if it goes and reads it. I will copy the
+> rules into prompt.md, with a comment naming doc/style/commit.md as
+> the source, so the two copies are easy to keep in step.
+>
+>> > 4. src/jc and src/diffwise: point at it too, and keep only what is
+>> >    specific to each tool.
+>>
+>> Let's not bother changing these for now, I'm not really actively using them.
+>
+> Agreed; I will drop step 4.
+>
+>> > a. Forward references in prep commits: allow them within a series,
+>> >    as git does (my recommendation), or keep the ban?
+>>
+>> I think this is probably okay. Give me an example of what you mean
+>> though. I think this is the "Prepare for..." language?
+>
+> Yes, that is it. Here is git's own example, commit f7aeeae66
+> "builtin/clone: move around `setup_reference()`":
+>
+>     In a subsequent commit, `setup_reference()` will start to call
+>     `copy_alternates()`. Prepare for this by moving the function
+>     further down so that we can avoid adding a declaration.
+>
+> The commit only moves a function. Without the first sentence, a
+> reviewer sees churn with no reason. With it, the reviewer knows what
+> the move is for and can check that the move suits that purpose.
+>
+> In this series it would look like this, if the check in step 6 needs
+> format-patch.sh to hand it each file:
+>
+>     libexec/mail: Collect the files format-patch.sh writes
+>
+>     format-patch.sh adds the change id to each file as git writes
+>     it, and keeps no list of the files. A later commit in this
+>     series checks every message before any of them is posted, so it
+>     needs the whole list first. Collect the file names, then add the
+>     change ids in a second loop. No functional change.
+>
+> What the rule would allow is "a later commit in this series". What
+> it would still ban is pointing at work that is not in the series:
+> "a follow-up will...", or a patch not yet sent. The series lands
+> whole, so the reference always resolves in the tree.
+
+Yes that works. There's a condition I saw at times that was
+unacceptable: referring to the commit hash of a later commit. I'm okay
+with the git.git pattern.
+
+>> > c. Should the check refuse to post, or only warn? I recommend refuse
+>> >    for the mechanical checks and warn on size.
+>>
+>> That sounds good.
+>>
+>> So for this commit series, I want to try something... in another thread,
+>> I mentioned producing a series of commits with messages only, no
+>> code. This is effectively the plan of the work.
+>
+> That is your commit plan idea in "Re: [RFC] how to spec work in a
+> way that's readable for humans" [1], and my reply with rolling detail
+> and the plan as empty jj changes [2]. This series is a good first
+> try: it is small, and most of it is docs.
+>
+>> There are a couple other layers to this - tests and documentation. What
+>> I envision is iterating on the commits themselves. Start with
+>> description-only commits. Then add tests and/or documentation (and if
+>> they're separate, do the other one next).
+> [...]
+>> Before we get into this, give me some feedback on this approach -
+>> specifically whether tests and docs should go together, or be
+>> separate. If separate, which one comes first.
+>
+> Separate passes, with docs first. My reasons:
+>
+> - Docs are the go/no-go gate you described. If a pass of docs shows
+>   you would not use the tool, the plan changes, and any tests already
+>   written against it are wasted. Docs are also the cheapest layer for
+>   you to review, so the cheap decision comes first.
+> - Tests then check the docs. Each claim in the docs becomes a test.
+>   A claim that cannot be tested is too vague, and writing the test is
+>   what finds that. A test that matches no claim points at behavior
+>   the docs left out. Doing them in one pass hides both, because the
+>   writer bends each one to fit the other.
+> - Each pass gives you one kind of thing to review: first "is this
+>   the tool I want", then "is this how we will know it works". Mixed
+>   in one pass, the docs review tends to become a test review.
+>
+> The passes are layers inside each commit, not commits of their own.
+> After all of them, each commit holds its message, docs, tests, and
+> code together, which is rule 7. Some commits skip a layer. A prep
+> commit like the example above has no docs and relies on the existing
+> tests; a commit that is all prose, like CLAUDE.md's pointer, has no
+> tests.
+>
+> Three things to settle before I start:
+>
+> 1. The tests layer goes red until the code lands. In my workspace
+>    that is fine, since only the finished series is posted, and each
+>    posted commit has its tests and code together. A failing middle
+>    state is the point of writing the test first.
+
+Not quite sure what you want to settle here. Seems like you're aware of
+the intent and can manage it though.
+
+> 2. A plan of empty commits cannot be posted as [PATCH]. am.sh runs
+>    git am with --empty=drop, and just fetch abandons other people's
+>    empty commits, so the plan would vanish when applied. I propose
+>    each layer goes out as an [RFC PATCH] round in this thread: the
+>    plan as message-only mail, then the docs layer as patches (they
+>    are non-empty from then on), then the full series as [PATCH] in
+>    a new thread. You review each layer before I add the next.
+
+Yes I want to introduce a new idea: only patches that you believe are
+complete and ready to be applied should be sent as [PATCH]. Everything
+else is [RFC PATCH]. So if you've got open questions about a patch, send
+it as [RFC PATCH]. I know that contradicts something I said earlier,
+which was like "questions or patches, not both." The point is that we
+want to reduce the work load on me as much as possible. A patch should
+only go to the list if it has a high likelihood of being accepted. If
+you're unsure about something, questions are the default feedback
+mechanism. It is acceptable to post [RFC PATCH] to get feedback on the
+specifics of an approach.
+
+Now as for this - I do want to get patches onto the list that I can
+fetch, because I might want to rewrite the messages myself. How can do
+we do that?
