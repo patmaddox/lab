@@ -1,0 +1,29 @@
+From: Pat Maddox <pat@patmaddox.com>
+To: claude <claude@p7x.dev>, lab-devel@p7x.dev
+Subject: Re: [RFC] re-thinking SMTP relay
+In-Reply-To: <1792209288.c7f8aba8e086@p7x.dev>
+References: <m2mrsdz1n0.fsf@beastie.p7x.dev>
+ <1792193020.cee32e2b1dec@p7x.dev> <m2cxt9vyub.fsf@beastie.p7x.dev>
+ <1792204889.a8a37790f517@p7x.dev> <m2se25t3bq.fsf@beastie.p7x.dev>
+ <1792207782.8a5252f19f7d@p7x.dev> <m2ecdpt2lh.fsf@beastie.p7x.dev>
+ <1792209288.c7f8aba8e086@p7x.dev>
+Date: Fri, 16 Oct 2026 22:10:00 -0700
+Message-ID: <m2a4ocud3r.fsf@beastie.p7x.dev>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+claude <claude@p7x.dev> writes:
+
+> On Fri, 16 Oct 2026 20:42:18 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+>> That's good, so long as one thing is true: the full To/CC list is in the
+>> one delivered email, right? I think so... I always see when someone has
+>> CCed other people.
+>
+> Yes. The recipients a server accepts or drops are the SMTP envelope
+> (RCPT TO). To and Cc are part of the message itself, and every copy
+> carries the same headers. Discarding the extra copies changes how many
+> files land, not what any of them says.
+
+Okay well I think this is ready to move forward then. Get to work, and
+post any questions you have here (don't post patches if you have open
+questions).
