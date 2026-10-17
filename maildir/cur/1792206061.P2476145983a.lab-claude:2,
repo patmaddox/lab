@@ -1,0 +1,398 @@
+Message-ID: <f6209363f90923501a97ed75097da617619cee65.1792205997.git.claude@p7x.dev>
+In-Reply-To: <cover.1792205997.git.claude@p7x.dev>
+References: <cover.1792205997.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Subject: [PATCH v2 1/2] lab-process-mail: Add lab-process-maild
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+Change-Id: orkosmpvsuxnxxqnytoovmxszwxtywnp
+Date: Sat, 17 Oct 2026 03:01:01 +0000
+
+lab-process-mail drains the inbox once and exits, so new mail waits
+until the operator runs it again by hand. lab-process-maild reruns it
+every minute in the background, so the inbox stays answered without
+anyone watching.
+
+The operator only types start, stop, or status. daemon(8) does the
+detaching, and run stays in the foreground for any other supervisor.
+The conf, log, and pidfile are found under the root the package is
+installed in, so a user install under ~/local and a system install
+both work without a setting.
+
+Each pass starts from an empty environment plus the conf, so how the
+daemon behaves does not depend on which shell happened to start it.
+stop lets the pass in progress finish, so a reply is never left half
+sent.
+
+A failed run stops the daemon instead of retrying. A stuck message
+stays oldest in the inbox, so a retry would spend an agent pass on it
+every interval while the stuck notice has already gone out.
+---
+change-id: orkosmpvsuxnxxqnytoovmxszwxtywnp
+
+ src/lab-process-mail/Kyuafile                |   1 +
+ src/lab-process-mail/lab-process-mail.pkg.do |   4 +-
+ src/lab-process-mail/lab-process-maild       | 141 ++++++++++++++++
+ src/lab-process-mail/lab-process-maild_test  | 164 +++++++++++++++++++
+ 4 files changed, 309 insertions(+), 1 deletion(-)
+ create mode 100755 src/lab-process-mail/lab-process-maild
+ create mode 100755 src/lab-process-mail/lab-process-maild_test
+
+diff --git a/src/lab-process-mail/Kyuafile b/src/lab-process-mail/Kyuafile
+index 5624564..e0df737 100644
+--- a/src/lab-process-mail/Kyuafile
++++ b/src/lab-process-mail/Kyuafile
+@@ -3,3 +3,4 @@ syntax(2)
+ test_suite('lab-process-mail')
+ 
+ atf_test_program{name='lab-process-mail_test'}
++atf_test_program{name='lab-process-maild_test'}
+diff --git a/src/lab-process-mail/lab-process-mail.pkg.do b/src/lab-process-mail/lab-process-mail.pkg.do
+index 8cf660a..d3eecdf 100644
+--- a/src/lab-process-mail/lab-process-mail.pkg.do
++++ b/src/lab-process-mail/lab-process-mail.pkg.do
+@@ -10,7 +10,7 @@ name="lab-process-mail"
+ version="0.0.0"
+ prefix="/"
+ 
+-redo-ifchange lab-process-mail prompt.md
++redo-ifchange lab-process-mail lab-process-maild prompt.md
+ 
+ # Stage files
+ stagedir=$(mktemp -d)
+@@ -18,6 +18,7 @@ trap "rm -rf ${stagedir}" EXIT
+ 
+ mkdir -p "${stagedir}/bin" "${stagedir}/share/${name}"
+ install -m 0555 lab-process-mail "${stagedir}/bin/lab-process-mail"
++install -m 0555 lab-process-maild "${stagedir}/bin/lab-process-maild"
+ install -m 0444 prompt.md "${stagedir}/share/${name}/prompt.md"
+ 
+ # Calculate flatsize
+@@ -41,6 +42,7 @@ INSTALL_AS_USER=yes pkg -r ~/local install -U \$(realpath ${name}.pkg)
+ EOD
+ files: {
+   /bin/lab-process-mail: "-"
++  /bin/lab-process-maild: "-"
+   /share/${name}/prompt.md: "-"
+ }
+ EOM
+diff --git a/src/lab-process-mail/lab-process-maild b/src/lab-process-mail/lab-process-maild
+new file mode 100755
+index 0000000..31f7ea2
+--- /dev/null
++++ b/src/lab-process-mail/lab-process-maild
+@@ -0,0 +1,141 @@
++#!/bin/sh
++#
++# lab-process-maild -- keep the lab-devel inbox answered.
++#
++#	lab-process-maild start		run in the background
++#	lab-process-maild stop		finish the pass in progress and exit
++#	lab-process-maild status	say whether it is running
++#
++# start runs this script's run command under daemon(8), which owns
++# detaching, the log, and the pidfile. run calls lab-process-mail,
++# sleeps ${LAB_PROCESS_MAILD_INTERVAL} seconds, or 60, and calls it
++# again, in the foreground, so another supervisor can use it too.
++#
++# Its files are under the root the package is installed in, the parent
++# of this script's bin/. That is ~/local after pkg -r ~/local, and /
++# after a system install, so neither needs a setting:
++#
++#	etc/lab-process-maild.conf	settings, if present
++#	var/log/lab-process-maild.log	output of every pass
++#	var/run/lab-process-maild.pid	pid of daemon(8)
++#
++# The daemon starts from an empty environment, less HOME, USER,
++# LOGNAME, and a PATH that begins with the root's bin/, so it behaves
++# the same whichever shell started it. The conf is sh, and every
++# variable it sets is exported to lab-process-mail:
++#
++#	LAB_BASE_BRANCH='b/dev@upstream'
++#	NOTIFY_URL='https://ntfy.sh/my-topic'
++#
++# A failed run stops the daemon. When a message is stuck it is still
++# the oldest in the inbox, so running again would only retry it every
++# interval; lab-process-mail has already posted the notice, and the
++# operator starts the daemon again once it is dealt with.
++
++set -eu
++
++readonly PROGNAME="${0##*/}"
++
++err() {
++	echo "E: ${PROGNAME}: ${*}" >&2
++}
++
++die() {
++	err "${@}"
++	exit 1
++}
++
++usage() {
++	die "usage: ${PROGNAME} start | stop | status | run"
++}
++
++running() {
++	pgrep -q -L -F "${pidfile}" 2>/dev/null
++}
++
++start() {
++	! running || die "already running as pid $(cat "${pidfile}")"
++	mkdir -p "${root}/var/log" "${root}/var/run"
++	env -i HOME="${HOME}" USER="${me}" LOGNAME="${me}" \
++	    PATH="${root}/bin:/sbin:/bin:/usr/sbin:/usr/bin:/usr/local/sbin:/usr/local/bin" \
++	    daemon -f -H -o "${logfile}" -P "${pidfile}" -t "${PROGNAME}" \
++	    "${self}" run
++}
++
++# daemon(8) passes SIGTERM on to run, which lets the pass in progress
++# finish, so no reply is left half sent.
++stop() {
++	running || die "not running"
++	pkill -L -F "${pidfile}"
++	echo "${PROGNAME}: stopping after the current pass"
++}
++
++status() {
++	running || die "not running"
++	echo "${PROGNAME}: running as pid $(cat "${pidfile}")"
++}
++
++# Wait for a background job to exit, through any signals that interrupt
++# the wait, and return its status.
++reap() {
++	local pid status
++
++	pid="${1}"
++	while :; do
++		status=0
++		wait "${pid}" || status="${?}"
++		kill -0 "${pid}" 2>/dev/null || return "${status}"
++	done
++}
++
++run() {
++	local interval status pid stopping
++
++	if [ -e "${conf}" ]; then
++		set -a
++		. "${conf}"
++		set +a
++	fi
++	interval="${LAB_PROCESS_MAILD_INTERVAL:-60}"
++
++	stopping=
++	trap 'stopping=1' HUP INT TERM
++	while [ -z "${stopping}" ]; do
++		lab-process-mail &
++		status=0
++		reap "${!}" || status="${?}"
++		[ "${status}" -eq 0 ] ||
++		    die "lab-process-mail exited ${status}; stopping"
++		[ -z "${stopping}" ] || break
++
++		sleep "${interval}" &
++		pid="${!}"
++		wait "${pid}" || kill "${pid}" 2>/dev/null || :
++	done
++}
++
++main() {
++	local bindir
++
++	[ "${#}" -eq 1 ] || usage
++
++	bindir="$(CDPATH= cd -- "$(dirname -- "${0}")" && pwd)"
++	self="${bindir}/${PROGNAME}"
++	root="$(CDPATH= cd -- "${bindir}/.." && pwd)"
++	root="${root%/}"
++	conf="${root}/etc/${PROGNAME}.conf"
++	logfile="${root}/var/log/${PROGNAME}.log"
++	pidfile="${root}/var/run/${PROGNAME}.pid"
++	me="$(id -un)"
++
++	case "${1}" in
++	start|stop|status|run)
++		"${1}"
++		;;
++	*)
++		usage
++		;;
++	esac
++}
++
++main "${@}"
+diff --git a/src/lab-process-mail/lab-process-maild_test b/src/lab-process-mail/lab-process-maild_test
+new file mode 100755
+index 0000000..b410484
+--- /dev/null
++++ b/src/lab-process-mail/lab-process-maild_test
+@@ -0,0 +1,164 @@
++#!/usr/bin/env atf-sh
++
++atf_init_test_cases() {
++	atf_add_test_case no_args
++	atf_add_test_case unknown_command
++	atf_add_test_case sleeps_between_runs
++	atf_add_test_case default_interval
++	atf_add_test_case stops_on_failure
++	atf_add_test_case exports_conf
++	atf_add_test_case starts_under_daemon
++	atf_add_test_case starts_with_clean_env
++	atf_add_test_case stop_when_not_running
++	atf_add_test_case start_status_stop
++}
++
++# Install the daemon into an install root, root/, with stubs beside it
++# in root/bin, each logging its calls to calls.log. lab-process-mail
++# succeeds until its STUB_FAIL_AT'th run, which exits 1, so every run
++# ends. sleep only logs, unless STUB_REAL_SLEEP is set.
++setup() {
++	stubdir="${PWD}"
++	ROOT="${PWD}/root"
++	DAEMON="${ROOT}/bin/lab-process-maild"
++	unset LAB_PROCESS_MAILD_INTERVAL STUB_FAIL_AT STUB_REAL_SLEEP
++	mkdir -p "${ROOT}/bin" "${ROOT}/etc"
++	cp "$(atf_get_srcdir)/lab-process-maild" "${DAEMON}"
++
++	cat > "${ROOT}/bin/lab-process-mail" <<-EOF
++	#!/bin/sh
++	echo "run \${STUB_VAR:-}" >> "${stubdir}/calls.log"
++	n="\$(grep -c '^run' "${stubdir}/calls.log")"
++	[ "\${n}" -lt "\${STUB_FAIL_AT:-1}" ] || exit 1
++	EOF
++
++	cat > "${ROOT}/bin/sleep" <<-EOF
++	#!/bin/sh
++	echo "sleep \$*" >> "${stubdir}/calls.log"
++	[ -z "\${STUB_REAL_SLEEP:-}" ] || exec /bin/sleep "\$@"
++	EOF
++
++	chmod +x "${ROOT}"/bin/*
++	export PATH="${ROOT}/bin:${PATH}"
++}
++
++# Stand in for daemon(8): log its arguments and environment, one per
++# line, and do nothing.
++stub_daemon() {
++	cat > "${ROOT}/bin/daemon" <<-EOF
++	#!/bin/sh
++	printf '%s\n' "\$@" > "${stubdir}/daemon.args"
++	env > "${stubdir}/daemon.env"
++	EOF
++	chmod +x "${ROOT}/bin/daemon"
++}
++
++atf_test_case no_args
++no_args_body() {
++	setup
++	atf_check -s exit:1 -e match:"usage" "${DAEMON}"
++	atf_check -s exit:1 test -e calls.log
++}
++
++atf_test_case unknown_command
++unknown_command_body() {
++	setup
++	atf_check -s exit:1 -e match:"usage" "${DAEMON}" restart
++}
++
++atf_test_case sleeps_between_runs
++sleeps_between_runs_body() {
++	setup
++	export STUB_FAIL_AT=3 LAB_PROCESS_MAILD_INTERVAL=7
++	atf_check -s exit:1 -e ignore "${DAEMON}" run
++	printf '%s\n' 'run ' 'sleep 7' 'run ' 'sleep 7' 'run ' > expout
++	atf_check -o file:expout cat calls.log
++}
++
++atf_test_case default_interval
++default_interval_body() {
++	setup
++	export STUB_FAIL_AT=2
++	atf_check -s exit:1 -e ignore "${DAEMON}" run
++	atf_check -o match:"^sleep 60\$" cat calls.log
++}
++
++atf_test_case stops_on_failure
++stops_on_failure_body() {
++	setup
++	atf_check -s exit:1 -e match:"lab-process-mail exited 1; stopping" \
++	    "${DAEMON}" run
++	atf_check -o inline:"run \n" cat calls.log
++}
++
++atf_test_case exports_conf
++exports_conf_body() {
++	setup
++	cat > "${ROOT}/etc/lab-process-maild.conf" <<-EOF
++	STUB_VAR=from-conf
++	LAB_PROCESS_MAILD_INTERVAL=9
++	STUB_FAIL_AT=2
++	EOF
++	atf_check -s exit:1 -e ignore "${DAEMON}" run
++	printf '%s\n' 'run from-conf' 'sleep 9' 'run from-conf' > expout
++	atf_check -o file:expout cat calls.log
++}
++
++atf_test_case starts_under_daemon
++starts_under_daemon_body() {
++	setup
++	stub_daemon
++	atf_check "${DAEMON}" start
++	atf_check test -d "${ROOT}/var/log"
++	atf_check test -d "${ROOT}/var/run"
++	printf '%s\n' -f -H -o "${ROOT}/var/log/lab-process-maild.log" \
++	    -P "${ROOT}/var/run/lab-process-maild.pid" \
++	    -t lab-process-maild "${DAEMON}" run > expout
++	atf_check -o file:expout cat daemon.args
++}
++
++atf_test_case starts_with_clean_env
++starts_with_clean_env_body() {
++	setup
++	stub_daemon
++	export STUB_VAR=leaked
++	atf_check "${DAEMON}" start
++	atf_check -s exit:1 grep STUB_VAR daemon.env
++	atf_check -o match:"^HOME=${HOME}\$" cat daemon.env
++	atf_check -o match:"^PATH=${ROOT}/bin:" cat daemon.env
++}
++
++atf_test_case stop_when_not_running
++stop_when_not_running_body() {
++	setup
++	atf_check -s exit:1 -e match:"not running" "${DAEMON}" stop
++	atf_check -s exit:1 -e match:"not running" "${DAEMON}" status
++}
++
++# Under the real daemon(8): start, see it run a pass and sleep, and
++# stop it during the sleep.
++atf_test_case start_status_stop
++start_status_stop_body() {
++	setup
++	echo 'STUB_REAL_SLEEP=1' > "${ROOT}/etc/lab-process-maild.conf"
++	echo 'STUB_FAIL_AT=100' >> "${ROOT}/etc/lab-process-maild.conf"
++	atf_check "${DAEMON}" start
++	wait_for grep -q '^sleep 60$' calls.log
++	atf_check -o match:"running as pid" "${DAEMON}" status
++	atf_check -s exit:1 -e match:"already running" "${DAEMON}" start
++	atf_check -o match:"stopping" "${DAEMON}" stop
++	wait_for test ! -e "${ROOT}/var/run/lab-process-maild.pid"
++	atf_check -s exit:1 -e match:"not running" "${DAEMON}" status
++	atf_check -o inline:"run \nsleep 60\n" cat calls.log
++}
++
++wait_for() {
++	local i
++
++	i=0
++	until "${@}"; do
++		i=$((i + 1))
++		[ "${i}" -lt 50 ] || atf_fail "timed out waiting for: ${*}"
++		/bin/sleep 0.2
++	done
++}
+-- 
+2.56.0
+

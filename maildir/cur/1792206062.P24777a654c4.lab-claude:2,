@@ -1,0 +1,233 @@
+Message-ID: <6bdf7a0d4d6aad5a3d73435b225efa549d31fc66.1792205997.git.claude@p7x.dev>
+In-Reply-To: <cover.1792205997.git.claude@p7x.dev>
+References: <cover.1792205997.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Subject: [PATCH v2 2/2] lab-process-mail: Answer one message per run
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+Change-Id: orskzzltnpnptlnqysyzllwlyqvuvtrk
+Date: Sat, 17 Oct 2026 03:01:02 +0000
+
+lab-process-mail looped until the inbox was empty, which made it a
+daemon of its own inside the one lab-process-maild runs. A run that
+answers one message and exits is simpler to reason about, and leaves
+the decision of when to run again to the daemon.
+
+lab-process-maild now runs it again at once while the inbox still has
+mail, and sleeps only once it is empty, so a batch of mail is still
+answered back to back. Running lab-process-mail by hand answers the
+oldest message and nothing more.
+---
+change-id: orskzzltnpnptlnqysyzllwlyqvuvtrk
+
+ src/lab-process-mail/lab-process-mail       | 57 ++++++++++-----------
+ src/lab-process-mail/lab-process-mail_test  | 14 ++---
+ src/lab-process-mail/lab-process-maild      |  7 ++-
+ src/lab-process-mail/lab-process-maild_test | 24 ++++++++-
+ 4 files changed, 63 insertions(+), 39 deletions(-)
+
+diff --git a/src/lab-process-mail/lab-process-mail b/src/lab-process-mail/lab-process-mail
+index bc5ce6c..ab12df3 100755
+--- a/src/lab-process-mail/lab-process-mail
++++ b/src/lab-process-mail/lab-process-mail
+@@ -1,15 +1,16 @@
+ #!/bin/sh
+ #
+-# lab-process-mail -- answer the lab-devel inbox, one agent pass per
+-# message, oldest first.
++# lab-process-mail -- answer the oldest message in the lab-devel inbox
++# with one agent pass, and exit.
+ #
+-# The loop is deterministic and the agent is not, so the two are kept
+-# apart. Before each pass this script fetches, rebases your work and
+-# the mail outbox, and picks the oldest inbox message. It then runs a
+-# fresh claude with the prompt shipped beside it and that message's id.
+-# The agent's output goes to /dev/null; whether the pass worked is read
+-# from the notmuch index afterwards. A message still in the inbox stops
+-# the loop, rather than being retried forever.
++# The script is deterministic and the agent is not, so the two are
++# kept apart. Before the pass this script fetches, rebases your work
++# and the mail outbox, and picks the oldest inbox message. It then runs
++# a fresh claude with the prompt shipped beside it and that message's
++# id. The agent's output goes to /dev/null; whether the pass worked is
++# read from the notmuch index afterwards, and a message still in the
++# inbox is an error. With an empty inbox it does nothing. Running it
++# again until the inbox is empty is lab-process-maild's job.
+ #
+ # The trunk workspace is ${TRUNK_WORKSPACE}, or ~/lab/default.jj. Each
+ # pass runs in its own workspace, ${WORK_WORKSPACE}, or ~/lab/work.jj,
+@@ -99,8 +100,8 @@ inbox_count() {
+ }
+ 
+ # Post to the operator's ntfy topic. A failed or slow post must not
+-# stop the inbox from draining, so this gives up after ten seconds and
+-# only warns. Without a topic it does nothing.
++# fail the pass, so this gives up after ten seconds and only warns.
++# Without a topic it does nothing.
+ notify() {
+ 	[ -n "${NOTIFY_URL:-}" ] || return 0
+ 	curl -fsS -m 10 -o /dev/null -H "Title: ${PROGNAME}" -d "${*}" \
+@@ -123,28 +124,26 @@ main() {
+ 	[ -d "${mail}" ] || die "${mail}: no mail workspace"
+ 	[ -r "${prompt}" ] || die "${prompt}: no prompt"
+ 
+-	while :; do
+-		get_up_to_date
+-		prepare_workspace
+-		id="$(oldest_inbox_message)"
+-		[ -n "${id}" ] || break
+-		subject="$(notmuch search "${id}" |
+-		    sed -e 's/^[^;]*; //' -e 's/ ([^()]*)$//')"
+-		echo "${PROGNAME}: ${id} (${subject})"
+-		(cd "${ws}" &&
+-		    claude --permission-mode auto -p "$(cat "${prompt}")
++	get_up_to_date
++	prepare_workspace
++	id="$(oldest_inbox_message)"
++	[ -n "${id}" ] || exit 0
++	subject="$(notmuch search "${id}" |
++	    sed -e 's/^[^;]*; //' -e 's/ ([^()]*)$//')"
++	echo "${PROGNAME}: ${id} (${subject})"
++	(cd "${ws}" &&
++	    claude --permission-mode auto -p "$(cat "${prompt}")
+ 
+ Your workspace is ${ws}.
+ Your base is ${BASE}.
+ The message to answer is ${id}." </dev/null >/dev/null)
+-		notmuch new --quiet
+-		if [ "$(notmuch count "${id} and tag:inbox")" -ne 0 ]; then
+-			err "${id} is still in the inbox"
+-			notify "stuck: ${subject} (inbox $(inbox_count))"
+-			exit 1
+-		fi
+-		notify "answered: ${subject} (inbox $(inbox_count))"
+-	done
++	notmuch new --quiet
++	if [ "$(notmuch count "${id} and tag:inbox")" -ne 0 ]; then
++		err "${id} is still in the inbox"
++		notify "stuck: ${subject} (inbox $(inbox_count))"
++		exit 1
++	fi
++	notify "answered: ${subject} (inbox $(inbox_count))"
+ }
+ 
+ main "${@}"
+diff --git a/src/lab-process-mail/lab-process-mail_test b/src/lab-process-mail/lab-process-mail_test
+index ba1019b..dbbb0cc 100755
+--- a/src/lab-process-mail/lab-process-mail_test
++++ b/src/lab-process-mail/lab-process-mail_test
+@@ -6,7 +6,7 @@ atf_init_test_cases() {
+ 	atf_add_test_case answers_message
+ 	atf_add_test_case quiet_update
+ 	atf_add_test_case passes_prompt_and_id
+-	atf_add_test_case drains_oldest_first
++	atf_add_test_case answers_oldest_only
+ 	atf_add_test_case stuck_message
+ 	atf_add_test_case creates_workspace
+ 	atf_add_test_case leaves_trunk_working_copy
+@@ -224,15 +224,15 @@ passes_prompt_and_id_body() {
+ 	    tail -n 1 claude.log
+ }
+ 
+-atf_test_case drains_oldest_first
+-drains_oldest_first_body() {
++atf_test_case answers_oldest_only
++answers_oldest_only_body() {
+ 	setup
+ 	printf 'id:a@x First\nid:b@x Second\n' > inbox
+ 	export STUB_ANSWER=1
+-	printf '%s\n' 'lab-process-mail: id:a@x (First)' \
+-	    'lab-process-mail: id:b@x (Second)' > expout
+-	atf_check -s exit:0 -o file:expout -e ignore "${PROCESS_MAIL}"
+-	atf_check -o inline:"2\n" grep -c '^cwd ' claude.log
++	atf_check -s exit:0 -o inline:"lab-process-mail: id:a@x (First)\n" \
++	    -e ignore "${PROCESS_MAIL}"
++	atf_check -o inline:"1\n" grep -c '^cwd ' claude.log
++	atf_check -o inline:"id:b@x Second\n" cat inbox
+ }
+ 
+ atf_test_case stuck_message
+diff --git a/src/lab-process-mail/lab-process-maild b/src/lab-process-mail/lab-process-maild
+index 31f7ea2..27c4d6f 100755
+--- a/src/lab-process-mail/lab-process-maild
++++ b/src/lab-process-mail/lab-process-maild
+@@ -8,8 +8,10 @@
+ #
+ # start runs this script's run command under daemon(8), which owns
+ # detaching, the log, and the pidfile. run calls lab-process-mail,
+-# sleeps ${LAB_PROCESS_MAILD_INTERVAL} seconds, or 60, and calls it
+-# again, in the foreground, so another supervisor can use it too.
++# which answers one message, and calls it again at once while the
++# inbox still has mail. Once the inbox is empty it sleeps
++# ${LAB_PROCESS_MAILD_INTERVAL} seconds, or 60, before looking again.
++# run stays in the foreground, so another supervisor can use it too.
+ #
+ # Its files are under the root the package is installed in, the parent
+ # of this script's bin/. That is ~/local after pkg -r ~/local, and /
+@@ -107,6 +109,7 @@ run() {
+ 		[ "${status}" -eq 0 ] ||
+ 		    die "lab-process-mail exited ${status}; stopping"
+ 		[ -z "${stopping}" ] || break
++		[ "$(notmuch count tag:inbox)" -eq 0 ] || continue
+ 
+ 		sleep "${interval}" &
+ 		pid="${!}"
+diff --git a/src/lab-process-mail/lab-process-maild_test b/src/lab-process-mail/lab-process-maild_test
+index b410484..7216630 100755
+--- a/src/lab-process-mail/lab-process-maild_test
++++ b/src/lab-process-mail/lab-process-maild_test
+@@ -6,6 +6,7 @@ atf_init_test_cases() {
+ 	atf_add_test_case sleeps_between_runs
+ 	atf_add_test_case default_interval
+ 	atf_add_test_case stops_on_failure
++	atf_add_test_case no_sleep_while_inbox_has_mail
+ 	atf_add_test_case exports_conf
+ 	atf_add_test_case starts_under_daemon
+ 	atf_add_test_case starts_with_clean_env
+@@ -16,7 +17,9 @@ atf_init_test_cases() {
+ # Install the daemon into an install root, root/, with stubs beside it
+ # in root/bin, each logging its calls to calls.log. lab-process-mail
+ # succeeds until its STUB_FAIL_AT'th run, which exits 1, so every run
+-# ends. sleep only logs, unless STUB_REAL_SLEEP is set.
++# ends, and takes one message from the inbox, a count in the file
++# inbox, which notmuch reports. sleep only logs, unless
++# STUB_REAL_SLEEP is set.
+ setup() {
+ 	stubdir="${PWD}"
+ 	ROOT="${PWD}/root"
+@@ -30,6 +33,15 @@ setup() {
+ 	echo "run \${STUB_VAR:-}" >> "${stubdir}/calls.log"
+ 	n="\$(grep -c '^run' "${stubdir}/calls.log")"
+ 	[ "\${n}" -lt "\${STUB_FAIL_AT:-1}" ] || exit 1
++	n="\$(cat "${stubdir}/inbox")"
++	[ "\${n}" -eq 0 ] || echo "\$((n - 1))" > "${stubdir}/inbox"
++	EOF
++
++	echo 0 > inbox
++	cat > "${ROOT}/bin/notmuch" <<-EOF
++	#!/bin/sh
++	[ "\$*" = "count tag:inbox" ] || exit 1
++	cat "${stubdir}/inbox"
+ 	EOF
+ 
+ 	cat > "${ROOT}/bin/sleep" <<-EOF
+@@ -91,6 +103,16 @@ stops_on_failure_body() {
+ 	atf_check -o inline:"run \n" cat calls.log
+ }
+ 
++atf_test_case no_sleep_while_inbox_has_mail
++no_sleep_while_inbox_has_mail_body() {
++	setup
++	echo 2 > inbox
++	export STUB_FAIL_AT=3
++	atf_check -s exit:1 -e ignore "${DAEMON}" run
++	printf '%s\n' 'run ' 'run ' 'sleep 60' 'run ' > expout
++	atf_check -o file:expout cat calls.log
++}
++
+ atf_test_case exports_conf
+ exports_conf_body() {
+ 	setup
+-- 
+2.56.0
+
