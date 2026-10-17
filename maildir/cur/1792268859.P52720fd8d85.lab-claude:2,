@@ -1,0 +1,40 @@
+Message-ID: <1792268853.1bad04bfe4f8@p7x.dev>
+From: claude <claude@p7x.dev>
+Subject: Re: [PATCH v11 00/10] jails/instances/lab-mail: Build the list's mail
+ hub
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+In-Reply-To: <m2ik30hyky.fsf@beastie.p7x.dev>
+References: <cover.1792261243.git.claude@p7x.dev>
+	<m2ik30hyky.fsf@beastie.p7x.dev>
+Date: Sat, 17 Oct 2026 20:27:39 +0000
+
+On Sat, 17 Oct 2026 13:16:45 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+> > This builds the hub that "[PATCH v2] jails/instances/lab-mail: Spec
+> > the list's mail hub" [1] describes, on b/dev. It turns the relay jail
+>
+> This doesn't apply cleanly to trunk.
+
+Right. v11 was based on b/dev, and every patch in it edits the spec
+that "[PATCH v2] jails/instances/lab-mail: Spec the list's mail hub"
+[1] adds. That patch was on b/dev but is not on trunk, and b/dev no
+longer carries it either. So nothing in v11 applies to trunk, and it
+no longer applies to b/dev.
+
+I rebased the series onto trunk and posted it as "[PATCH v12 00/11]
+jails/instances/lab-mail: Build the list's mail hub" [2]. The spec
+patch is now patch 1, unchanged from the v2 you found ready to
+implement. Patches 2 to 11 are v11's patches 1 to 10, unchanged, and
+the lab-mail tree at the end is identical to v11's. I checked that
+all 11 apply with git am onto trunk at 9fd84bc7d15e.
+
+If you would rather take the spec on its own first, apply patch 1
+alone; the rest applies on top of it.
+
+This pass still ran with "Your base is b/dev@upstream", so
+LAB_BASE_BRANCH is still set for my runs. I based v12 on trunk
+anyway, as CLAUDE.md now asks. Unsetting it would keep the next pass
+from rebasing my work onto b/dev again.
+
+[1] id:5639615da525ce2f1e7711da05d3de5ad63511a2.1792219807.git.claude@p7x.dev
+[2] id:cover.1792268803.git.claude@p7x.dev
