@@ -1,0 +1,57 @@
+From: claude <claude@p7x.dev>
+Subject: Re: [RFC] threading strategies for RFC and patch versions
+To: Pat Maddox <pat@patmaddox.com>, lab-devel@p7x.dev
+In-Reply-To: <m2o6csri3m.fsf@beastie.p7x.dev>
+References: <m2a4odz1dp.fsf@beastie.p7x.dev>
+	<1792195756.4ee05afd82df@p7x.dev> <m25wz0uczk.fsf@beastie.p7x.dev>
+	<1792214779.6c95ccbf79f6@p7x.dev> <m28q3wsxgp.fsf@beastie.p7x.dev>
+	<1792215853.b361960de548@p7x.dev> <m2o6csri3m.fsf@beastie.p7x.dev>
+Date: Sat, 17 Oct 2026 06:05:29 +0000
+
+Message-ID: <1792217124.6dee879c5de8@p7x.dev>
+
+On Fri, 16 Oct 2026 22:50:21 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+> Yes - edit the existing maildir files. This is a one time operation, not
+> rewriting a draft. This is essentially a data migration from the
+> linux-style flat versions, to the git-style threaded versions.
+
+I ran the migration, but it is not on my bookmark. My sandbox let me
+rewrite the files and then refused the commit. Its permission check
+counts rewriting mail already on the list as changing a shared
+resource, whatever the list says. I did not try to get around it, so
+I put the 123 files back and left ~/lab/mail.jj clean.
+
+The run itself checked out. It rewrote 123 files, and every changed
+line is an In-Reply-To or References header. A second dry run plans
+nothing. A fresh notmuch database over the result has 103 threads
+where there were 147, and each series is one tree: the signoz port is
+42 messages with v2 to v10 under v1, and the lab-mail jail series is
+82.
+
+It also turned up a bug in "[PATCH] libexec/mail: Add rethread.py"
+[1]. Its instructions reindex the changed messages, but notmuch
+reindex leaves every reply in its old thread, so a database updated
+that way stops at 119 threads. notmuch new does not help either,
+because the file names do not change. "[PATCH v2] libexec/mail: Add
+rethread.py" [2] says to rebuild the database instead, keeping your
+tags with notmuch dump and restore. I tested that on a copy. Only the
+comment and the commit message changed.
+
+There are two ways to land it:
+
+1. You apply v2 and run the commands under its "---" in
+   ~/lab/mail.jj. You have to rebuild your own notmuch database
+   either way, so this adds only the rethread.py run and the commit.
+   I recommend this.
+2. You add an allow rule to lab-claude's Claude Code settings for
+   committing in ~/lab/mail.jj, then write again. The next pass runs
+   the migration and commits it on my bookmark.
+
+Whichever you pick, lab-claude's database needs the same rebuild once
+the rewrite reaches mail@upstream, since the update before each pass
+runs only notmuch new. The tags here all come from the list, so I can
+rebuild it without dump and restore. I will do that in the first pass
+that sees the rewrite, unless the sandbox refuses that too.
+
+[1] id:9ef57c72b2797c869c37c3f737bb13e9738754e0.1792215772.git.claude@p7x.dev
+[2] id:2da03c7ec55d578a5c45008694ebc958583ecdf0.1792217092.git.claude@p7x.dev
