@@ -1,0 +1,84 @@
+From: claude <claude@p7x.dev>
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab@lists.p7x.dev
+Subject: [RFC v2] Write the commit rules down once
+Message-ID: <1792273255.3943a0478d77@p7x.dev>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=utf-8
+Date: Sat, 17 Oct 2026 21:40:58 +0000
+
+This is the plan for the series agreed in "[RFC] commit style" [1]:
+four commit messages in the order they would land, with no docs,
+tests, or code yet. It is text for review, not for applying. To
+change a message, reply with your version quoted under mine, and I
+will fold it into my commits.
+
+The series is based on trunk.
+
+Changes in v2:
+- Plain text in one mail instead of format-patch output, as agreed
+  in the thread.
+- Dropped the two libexec/mail commits, "Collect the files
+  format-patch.sh writes" and "Check commit messages before
+  posting". You do not want tooling for this yet.
+- Held back "claude/skills/freebsd-port: Follow the ports tree's
+  commit style". The skill is on b/dev but not on trunk, so this
+  commit cannot apply to trunk. I will send it once the skill lands
+  on trunk.
+- Link to v1: "[RFC PATCH 0/7] Write the commit rules down once" [2]
+
+1. doc/style: Add the commit message rules
+------------------------------------------
+
+The commit rules are stated in several places, and the copies
+disagree. One asks for a body detailed enough to judge without the
+diff, which invites walking through each decision in it; another
+forbids the "Prepare for ..." line a prep commit needs. Give the rules
+one full statement, next to cli.md and sh.md, drawn from what FreeBSD,
+Linux, OpenBSD, PostgreSQL and git.git agree on.
+
+The rules, each with an example from one of those projects:
+
+- One logical change per commit. If the message needs a second
+  reason, split the commit.
+- The body says why. Its length follows how much there is to judge,
+  not the size of the diff. Open with what the code does now, then
+  the problem, then the fix in one imperative sentence. A mechanical
+  change gets one sentence.
+- Land prep commits first, saying what they prepare for. Within a
+  posted series a prep commit may refer to a later commit by what it
+  does, never by its hash, and never to work outside the series.
+- Aim for diffs under about 50 lines; treat 200 as a reason to split
+  unless the change is mechanical.
+- Tests and docs go in the commit whose behavior they cover.
+- How the code works belongs in code comments.
+- Summarize list discussion in the message; do not point at it.
+
+2. CLAUDE.md: Point at doc/style/commit.md for commit rules
+-----------------------------------------------------------
+
+CLAUDE.md states the commit rules in three sections, and two of them
+contradict doc/style/commit.md: "detailed enough to judge without
+reading the diff" asks for the per-decision bodies the rules
+discourage, and "Do not refer to work later in a series" bans the
+prep commit's "Prepare for ...". Replace the three with a pointer, so
+there is one statement to keep current.
+
+3. src/lab-process-mail: Carry the commit rules in prompt.md
+------------------------------------------------------------
+
+lab-process-mail hands prompt.md to the agent as its prompt, so the
+agent sees doc/style/commit.md only if it goes and reads it. Copy the
+rules into prompt.md, with a comment naming doc/style/commit.md as the
+source, so the two copies are easy to keep in step.
+
+4. dotfiles/emacs: Keep the re-apply message format
+---------------------------------------------------
+
+The commit that re-applies local patches after a vendor update lists
+each patch kept or dropped, with its hash. Under doc/style/commit.md
+that list reads as "what" to be cut. Say that the list is the point
+of that commit, so it is kept.
+
+[1] id:m2a4oclhvv.fsf@beastie.p7x.dev
+[2] id:cover.1792269999.git.claude@p7x.dev
