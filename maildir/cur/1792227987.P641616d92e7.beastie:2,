@@ -1,0 +1,28 @@
+From: Pat Maddox <pat@patmaddox.com>
+To: lab-devel@p7x.dev
+Subject: [ISSUE] Building jail instances fetches all the packages
+Date: Sat, 17 Oct 2026 02:06:27 -0700
+Message-ID: <m2mrscn1bg.fsf@beastie.p7x.dev>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+jails/instances has config to build jails. Every time it does, it
+fetches all of the packages. I think it might be possible to have the
+packages saved at the host level, so they're cached across jail
+instances.
+
+The process will require 617 MiB more space.
+163 MiB to be downloaded.
+[  1/188] Fetching FreeBSD-libmilter-dev-15.1: .......... done
+[  2/188] Fetching FreeBSD-libsqlite3-dev-15.1: .......... done
+[  3/188] Fetching FreeBSD-libldns-dev-15.1: .......... done
+[  4/188] Fetching FreeBSD-tcpd-15.1: ...... done
+
+...
+
+The process will require 318 MiB more space.
+51 MiB to be downloaded.
+[ 1/25] Fetching groff-1.24.2: .......... done
+[ 2/25] Fetching dovecot-pgsql-2.3.21.1_3: .......... done
+[ 3/25] Fetching libiconv-1.18_1: .......... done
+[ 4/25] Fetching libcbor-0.14.0: .......... done
