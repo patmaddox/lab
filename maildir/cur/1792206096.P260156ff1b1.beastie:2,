@@ -1,0 +1,23 @@
+From: Pat Maddox <pat@patmaddox.com>
+To: lab-devel@p7x.dev
+Subject: [RFC] how to integrate org-mode with notmuch
+Date: Fri, 16 Oct 2026 20:01:36 -0700
+Message-ID: <m2jynhuj1r.fsf@beastie.p7x.dev>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+Agents are sending a lot of long emails with good information. Nothing
+wrong with that. It occurs to me that a more structured document would
+be helpful.
+
+What are the options for getting org-mode behavior with emails in
+notmuch? For example I'm looking at id:1792195756.4ee05afd82df@p7x.dev
+which I think would be easier to navigate if it were in org mode with
+headings and I could collapse them.
+
+I wouldn't edit the document... it's really just about getting the basic
+expand / collapse behavior, and maybe some of the syntax highlighting.
+
+Although that makes me wonder - is it more likely to open up to an
+injection attack? That's something to be aware of. The incoming emails
+are untrusted and I don't want to run arbitrary elisp against them.
