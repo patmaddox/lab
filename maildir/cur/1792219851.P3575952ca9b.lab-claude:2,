@@ -1,0 +1,98 @@
+From: claude <claude@p7x.dev>
+Subject: Re: [PATCH] jails/instances/lab-mail: Spec the list's mail hub
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+In-Reply-To: <m2h5ikq127.fsf@beastie.p7x.dev>
+References: <991f4491863b0269b0d749dee3f46644892e255c.1792216397.git.claude@p7x.dev>
+	<m2h5ikq127.fsf@beastie.p7x.dev>
+Message-ID: <1792219840.5072b2756993@p7x.dev>
+Date: Sat, 17 Oct 2026 06:50:51 +0000
+
+On Fri, 16 Oct 2026 23:43:44 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+> > +- Logins and their rights, enforced by Dovecot's ACL:
+[...]
+> That's an interesting design choice, and I don't disagree with it... we
+> are making a mailing list, after all. However, the ACL behavior needs to
+> be documented prominently.
+
+Done in v2 [1]. The rules now have their own "rights" section, placed
+right after "the list" and before everything else. It covers posting
+too, and it says the README states the rules first. It also says
+plainly that the rules rest on Dovecot's ACL and not on file
+permissions, so a mistake in the ACL config would let every login
+change the list. Acceptance steps 7 and 8 check the rules.
+
+> Also is there any precedent for using IMAP folders in this way?
+
+Yes. The pattern is old, though not common today. These are from
+memory, and I have not checked them against current docs:
+
+- The IMAP ACL extension, RFC 4314, defines the identifier "anyone"
+  for exactly this. A folder can grant lookup and read to anyone,
+  and write, insert, and expunge to named users. Dovecot's ACL plugin
+  implements it.
+- Cyrus IMAP at CMU served "bboards": shared folders for netnews and
+  mailing lists, readable by anyone and written by a delivery agent.
+  That is our design with a different server.
+- public-inbox, the software behind lore.kernel.org, serves list
+  archives over read-only IMAP with public-inbox-imapd. As I recall,
+  it takes any login. That is the closest modern precedent. It is a
+  read-only archive, though. Nobody archives or deletes through it.
+
+What we add is two logins that may write: Pat moderating, and mbsync.
+I know of no list that gives a moderator IMAP write access like this.
+The ACL can express it, but it is the part with the least precedent.
+
+> > +- notmuch indexes the mail root. Its pre-new hook runs mbsync first,
+> > +  so one =notmuch new= syncs and indexes, and a failed sync stops it
+>
+> hrm... I don't think I want a network issue to stop notmuch from
+> indexing. What's the point of this? Is it to not have a stale cache?
+
+Yes, that was the point: one command to get current, so the agent
+would never index a stale copy. The cost is the one you name. An
+unreachable lab-mail stops indexing of mail already on disk.
+
+> Let's talk through this a bit. I'm not sure this sync needs to happen at
+> all. I'm fine with notmuch new just indexing what's new in the dir, not
+> triggering a fetch.
+>
+> If I want a fetch, I can do it a different way.
+
+Agreed, and v2 does it that way. notmuch has no pre-new hook. "notmuch
+new" indexes only what is in the mail root and never contacts
+lab-mail. A sync is its own command, run when wanted. A new acceptance
+step checks that "notmuch new" succeeds with Dovecot stopped. Getting
+the agent current before a pass is lab-process-mail's job, and the
+spec leaves that out of scope.
+
+> > +- msmtp posts through 127.0.0.1:2525 with no auth and no TLS, from
+[...]
+> Why no auth? I guess IMAP needs auth because users have different
+> permissions, whereas with SMTP everyone has the same permission to
+> deliver?
+
+Exactly. Over IMAP the logins differ: two may change the list and the
+rest may only read, so the two need secrets. Over SMTP every poster
+has the same right, to add one message. A password would tell no two
+posters apart, and every host would hold a secret that guards nothing.
+The boundary for posting is the loopback bind. v2 states this reason
+in the alternatives.
+
+> > +- On beastie, notmuch-emacs reads the mail root and sends through
+> > +  msmtp. A sent message is also saved by Fcc into
+[...]
+> What's the behavior of this once it syncs? Will there be duplicate
+> message? Or they have the same ID, so it just gets a different tag?
+
+No duplicate. notmuch keys a message by its Message-ID, so the Fcc
+copy and the list's copy become one message with two files. Tags
+belong to the message, not to a file, so the second file adds no tag.
+The thread shows the message once, with "(2)" for two files in the
+search view. I checked this with notmuch 0.40: I indexed a message in
+sent/, added the same file in lists/, and ran notmuch new again. The
+count stayed at 1, and --output=files listed both paths. v2 says this,
+and acceptance step 3 now checks it.
+
+[1] "[PATCH v2] jails/instances/lab-mail: Spec the list's mail hub"
+    id:5639615da525ce2f1e7711da05d3de5ad63511a2.1792219807.git.claude@p7x.dev
