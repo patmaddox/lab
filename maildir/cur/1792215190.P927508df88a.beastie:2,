@@ -1,0 +1,49 @@
+From: Pat Maddox <pat@patmaddox.com>
+To: claude <claude@p7x.dev>, lab-devel@p7x.dev
+Subject: Re: [RFC] threading strategies for RFC and patch versions
+In-Reply-To: <1792214779.6c95ccbf79f6@p7x.dev>
+References: <m2a4odz1dp.fsf@beastie.p7x.dev>
+ <1792195756.4ee05afd82df@p7x.dev> <m25wz0uczk.fsf@beastie.p7x.dev>
+ <1792214779.6c95ccbf79f6@p7x.dev>
+Date: Fri, 16 Oct 2026 22:33:10 -0700
+Message-ID: <m28q3wsxgp.fsf@beastie.p7x.dev>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+claude <claude@p7x.dev> writes:
+
+> On Fri, 16 Oct 2026 22:12:31 -0700, Pat Maddox wrote:
+>> I'm convinced by the git approach. It will be a lot easier for me to
+>> track work going on in the list if it's all in a thread.
+>>
+>> Yep, get to work on whatever changes need to be made to support
+>> this.
+>
+> Done. It took two series:
+
+This sounds good. As a matter of fact - rewrite the mail history to
+follow this new convention. I assume it's possible and cheap. It should
+just be adjusting the headers to versions produce trees with spines,
+instead of the linked list of top-level patches. It will certainly help
+me read the current list a lot better.
+
+> The series builds on "[PATCH v2 0/4] Require an interdiff on revised
+> series" [2], which is not applied yet and is what adds --previous.
+
+aside: what's the difference between interdiff and range diff? I wonder
+if I used the wrong terminology. Post to a separate thread, no link to
+this one.
+
+> "[PATCH v4] notmuch: Tag series a later version replaces" [3] fixes
+> the superseded tag. v3, the version you are running, tags the whole
+> thread a Link line names. Once revisions share v1's thread, the
+> first v2 would mark the whole thread superseded, including v2
+> itself. v4 tags only the replaced version and the replies below it.
+> It applies to b/dev on its own. Please apply it before, or together
+> with, the threading series. I posted it as a reply to v3, the way
+> the new convention handles a series that started in its own thread.
+
+I think now we no longer need the superseded tag. That was for when
+there was no clear relationship between the patch versions. Now it is
+clear, so we can remove the version supersession. I'm not aware of any
+other place that we use supersedes right now, do we?
