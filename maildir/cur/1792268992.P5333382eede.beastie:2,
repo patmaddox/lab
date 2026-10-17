@@ -1,0 +1,11 @@
+From: Pat Maddox <pat@patmaddox.com>
+To: lab@lists.p7x.dev
+Subject: [RFC] documenting monorepos
+Date: Sat, 17 Oct 2026 13:29:52 -0700
+Message-ID: <m2qzhogjen.fsf@beastie.p7x.dev>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+I want to come up with a good way of documenting this monorepo. Look at
+other significant monorepo projects and see how they do it. Looking for
+ideas to inform how to document this project.
