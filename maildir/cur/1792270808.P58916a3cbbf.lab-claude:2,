@@ -1,0 +1,138 @@
+From: claude <claude@p7x.dev>
+Subject: Re: [RFC] how to organize experiments in claude?
+To: Pat Maddox <pat@patmaddox.com>, lab@lists.p7x.dev
+In-Reply-To: <m24iekgi6i.fsf@beastie.p7x.dev>
+References: <m2ld7wgj77.fsf@beastie.p7x.dev>
+	<1792269503.36e0b2321ada@p7x.dev> <m24iekgi6i.fsf@beastie.p7x.dev>
+Message-ID: <1792270800.49ae42850b6b@p7x.dev>
+Date: Sat, 17 Oct 2026 21:00:08 +0000
+
+On Sat, 17 Oct 2026 13:56:21 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+> Tell me more about plugins. Specifically, how can you implement plugins
+> in a monorepo?
+
+As before, [F] marks something I read in the docs or ran here, and [I]
+marks my inference. I ran the [T] checks with Claude Code 2.1.296.
+
+- [F] A plugin is a directory holding .claude-plugin/plugin.json and a
+  skills/<name>/SKILL.md for each skill. It can also carry agents,
+  hooks, and MCP servers. Its skills are namespaced as
+  <plugin>:<skill> [a].
+
+- [F] A monorepo can hold plugins in two ways. The first is plain
+  directories passed with `claude --plugin-dir <dir>`. The flag can be
+  repeated, the plugin loads in place for that session only, and
+  nothing is installed [b][c].
+
+- [F] The second is to make the repo a marketplace. You add
+  .claude-plugin/marketplace.json at the root, and it lists each plugin
+  by a relative path such as "./claude/build/by-commit". Then
+  .claude/settings.json turns plugins on with enabledPlugins
+  {"<name>@<marketplace>": true}. Plugins with a relative path load in
+  place from the checkout, so edits take effect on the next session
+  [d][c].
+
+- [I] For this case a marketplace adds machinery and buys nothing. It
+  exists for distributing plugins to other people and machines. We
+  only need to choose one plugin per launch, which --plugin-dir does
+  by itself.
+
+> I could make those as claude skills. Now when I run it, I don't just
+> want to execute a specific one - I want to ensure claude doesn't know
+> about or have access to the other one.
+
+Here is how each control behaves, tested by asking a fresh `claude -p`
+to list the skills in its context:
+
+- [T] `--plugin-dir ./build-by-commit` lists only
+  build-by-commit:build. build-by-spec is not loaded, so Claude has no
+  trace of it.
+
+- [F] Every skill under .claude/skills loads in every session started
+  in the repo [a]. That is visible by default, the opposite of what
+  you want.
+
+- [T] Even so, a skill under .claude/skills can be hidden for one
+  launch:
+
+      claude --settings '{"skillOverrides":{"build-by-spec":"off"}}'
+
+  With that flag, build-by-spec dropped out of the list. In the docs,
+  "off" means Claude does not see the skill and /name is hidden [e].
+  The catch is that this is a deny list. Each new variant shows up in
+  every session until someone adds it to the list.
+
+- [T] A deny rule such as `--disallowedTools "Skill(build-by-spec)"`
+  does not meet your bar. The skill stayed in the list, and the rule
+  only refuses the call [f]. The same holds for the Skill(...) denies
+  in our .claude/settings.json today.
+
+- [F] With disable-model-invocation: true, the description stays out
+  of context, but you can still run the skill as /name [a]. It hides
+  the skill, but it does not remove it.
+
+> Maybe in my case I don't
+> actually put it in .claude/skills and instead just put it under src and
+> launch claude with it?
+
+Yes, I recommend that. Keep each implementation as its own plugin
+outside .claude/, and have the launcher pick one with --plugin-dir. The
+skill you don't pick is never loaded, so it is absent by construction.
+Nothing has to remember to hide it. It also fits "Lab repo shouldn't
+operate on itself" [1], since what is loaded is decided at launch and
+does not depend on the tree's .claude/.
+
+One layout makes the variants interchangeable:
+
+    src/claude-build/by-commit/.claude-plugin/plugin.json
+    src/claude-build/by-commit/skills/build/SKILL.md
+    src/claude-build/by-spec/.claude-plugin/plugin.json
+    src/claude-build/by-spec/skills/build/SKILL.md
+
+- [I] If both manifests use the name "build", the skill is build:build
+  whichever variant is loaded. prompt.md can then say "use the build
+  skill" without knowing which variant is in play.
+
+- [F] Loading two plugins with the same name together is not a clean
+  error. Among installed and skills-dir copies, the --plugin-dir copy
+  wins [c]. The docs do not say what happens with two --plugin-dir
+  copies of the same name. The launcher should pass exactly one.
+
+- [I] If you want both visible side by side, for example when comparing
+  them in one session, give the manifests distinct names
+  (build-by-commit, build-by-spec) instead.
+
+- [F] lab-process-mail runs `claude --permission-mode auto -p ...` in
+  the workspace today, with no plugin flags. Choosing a variant would
+  take a --build <variant> option that adds
+  --plugin-dir src/claude-build/<variant>. Its tests already stub
+  claude, so they can check the flag is passed.
+
+- [F] One caution: `--plugin-dir` also accepts a folder of plugins
+  [g]. Pointed at src/claude-build/, it would load both. Pass the
+  variant's own directory.
+
+Objective: a way to try workflows like build-by-commit and
+build-by-spec side by side, without committing them to CLAUDE.md
+Status: research done; recommend per-variant plugins under src/,
+chosen at launch with --plugin-dir
+Next actions for you:
+- none
+Information needed from you:
+- Whether src/claude-build/<variant>/ is the right home, and whether
+  both manifests should share the name "build"
+- Whether lab-process-mail should take the variant as a flag, or you
+  will pass --plugin-dir by hand at first
+
+Once you settle those, I will post a series that adds both plugins and
+the launcher flag.
+
+[1] id:m2h5ikli6x.fsf@beastie.p7x.dev
+
+[a] https://code.claude.com/docs/en/skills
+[b] https://code.claude.com/docs/en/cli-reference
+[c] https://code.claude.com/docs/en/plugins/loading
+[d] https://code.claude.com/docs/en/plugin-marketplaces
+[e] https://code.claude.com/docs/en/settings-reference#skilloverrides
+[f] https://code.claude.com/docs/en/cli-reference (--disallowedTools)
+[g] https://code.claude.com/docs/en/plugins/create
