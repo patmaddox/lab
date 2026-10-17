@@ -1,0 +1,109 @@
+Message-ID: <1daf75213370f9166672cd1626977587ceb16fc1.1792230947.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Subject: [PATCH] jails: Cache packages on the host across builds
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+Change-Id: rlrnvwpznomnnymxslvlslltypytlrvv
+Date: Sat, 17 Oct 2026 09:56:04 +0000
+
+pkg keeps its cache under the jail root, and a clean build starts from
+an empty dataset, so every fresh build fetched every base and ports
+package again, over 200 MiB each time. Sharing one cache across
+instances and rebuilds makes a clean build cost only the packages that
+changed upstream.
+
+The cache is a host directory nullfs-mounted into the root only while
+pkg runs, so the running jail never sees or writes it.
+---
+change-id: rlrnvwpznomnnymxslvlslltypytlrvv
+base-branch: b/dev@upstream
+
+This answers "[ISSUE] Building jail instances fetches all the
+packages" [1].
+
+Untested: I build from inside lab-claude, which has no zroot/jails
+and cannot mount, so I could not run a jail build. sh -n passes, and
+I checked that an EXIT trap set inside main still fires when main
+fails under the "main | tee" pipeline, which is what unmounts the
+cache on an error. The build user needs doas rights for mount and
+umount on the host; please check that before applying.
+
+pkg names cached files name-version~hash.pkg, so one directory can
+serve every instance, base and ports alike.
+
+[1] id:m2mrscn1bg.fsf@beastie.p7x.dev
+
+ jails/README.org           |  4 ++++
+ jails/libexec/_jail.log.do | 18 ++++++++++++++++++
+ 2 files changed, 22 insertions(+)
+
+diff --git a/jails/README.org b/jails/README.org
+index 77d764b1..82b6e2a5 100644
+--- a/jails/README.org
++++ b/jails/README.org
+@@ -13,6 +13,10 @@ jail. Each instance jail.conf includes it by absolute path:
+ cp share/jail.defaults.conf /etc/jail.conf.d/defaults.conf
+ #+END_EXAMPLE
+ 
++Builds keep the packages they fetch in =/jails/cache/pkg=, shared by
++every instance, and create it on first use. Remove its contents to
++reclaim the space; the next build fetches what it needs again.
++
+ * operate
+ The Justfile drives a jail through service(8), which finds its config by
+ name in =/etc/jail.conf.d=:
+diff --git a/jails/libexec/_jail.log.do b/jails/libexec/_jail.log.do
+index 1007da74..b4e9f585 100755
+--- a/jails/libexec/_jail.log.do
++++ b/jails/libexec/_jail.log.do
+@@ -27,6 +27,7 @@ readonly PKGBASE_CONF="${jailsdir}/share/pkgbase.conf"
+ readonly PORTS_CONF="${jailsdir}/share/FreeBSD-ports.conf"
+ readonly PKGBASE_PACKAGES="${pkgbase_sets:-FreeBSD-set-base-jail} ${pkgbase_extras:-}"
+ readonly PACKAGES="${packages:-}"
++readonly PKG_CACHE="/jails/cache/pkg"
+ 
+ # global vars created by functions
+ # rootdir
+@@ -68,6 +69,7 @@ install_freebsd() {
+ 
+ 	doas mkdir -p ${rootdir}${keys}
+ 	tar -C ${keys} -cf - . | doas tar -C ${rootdir}${keys} -xf -
++	mount_pkg_cache
+ 	doas pkg -r ${rootdir} -C ${PKGBASE_CONF} install -r FreeBSD-base -y ${PKGBASE_PACKAGES}
+ 
+ 	if [ ! -f ${rootdir}/etc/resolv.conf ]; then
+@@ -82,6 +84,7 @@ install_freebsd() {
+ 		doas pkg -c ${rootdir} install -y ${PACKAGES}
+ 		verify_packages
+ 	fi
++	umount_pkg_cache
+ 
+ 	# The goredo package installs only goredo itself, which creates
+ 	# the redo commands as symlinks to it.  It runs with a clean
+@@ -94,6 +97,21 @@ install_freebsd() {
+ 	fi
+ }
+ 
++# Both pkg -r and pkg -c keep their cache under the jail root, which
++# starts empty on every build, so each build would fetch every package
++# again. Lend the root a host cache shared by all instances for the
++# length of the install, then take it back so the jail never sees it.
++mount_pkg_cache() {
++	doas mkdir -p ${PKG_CACHE} ${rootdir}/var/cache/pkg
++	doas mount -t nullfs ${PKG_CACHE} ${rootdir}/var/cache/pkg
++	trap umount_pkg_cache EXIT
++}
++
++umount_pkg_cache() {
++	trap - EXIT
++	doas umount ${rootdir}/var/cache/pkg
++}
++
+ # pkg install exits 0 even when it drops requested packages to settle a
+ # conflict, so check that every requested origin is installed.
+ verify_packages() {
+
+base-commit: f6ba757868b6e16efee8bfb3882dc3339ef9fb69
+-- 
+2.56.0
+
