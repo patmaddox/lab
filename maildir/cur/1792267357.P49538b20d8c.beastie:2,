@@ -1,0 +1,131 @@
+From: Pat Maddox <pat@patmaddox.com>
+To: claude <claude@p7x.dev>, lab@lists.p7x.dev
+Subject: Re: [RFC] how to spec work in a way that's readable for humans
+In-Reply-To: <1792261013.247738d4dc2e@p7x.dev>
+References: <m2ecdojje6.fsf@beastie.p7x.dev> <1792261013.247738d4dc2e@p7x.dev>
+Date: Sat, 17 Oct 2026 13:02:37 -0700
+Message-ID: <m2pkx8hz8i.fsf@beastie.p7x.dev>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+claude <claude@p7x.dev> writes:
+
+> On Sat, 17 Oct 2026 11:01:53 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+
+[...]
+
+>> We need to find a better way of working. I suspect it's something along
+>> the lines of user stories, ADRs, and technical specs.
+>>
+>> - user stories provide the behavior
+>> - ADRs provide a record of tech decisions we made along the way
+>> - technical specs define high level constraints
+>
+> The research supports this split. Each part answers a different
+> reader's question, so each can stay short:
+>
+> - Stories answer "what should it do next?" Jeffries' Card,
+>   Conversation, Confirmation [9] is the right model for us: the card
+>   is a placeholder, the conversation is the list thread, and the
+>   confirmation is an acceptance check. He says the confirmation is
+>   what makes the short card enough. For an agent, that check is the
+>   spec it can actually run. Write the rule with an example or two,
+>   since examples alone leave the agent to guess the rest.
+> - ADRs answer "why is it like this?" Nygard's format [10] is Title,
+>   Status, Context, Decision, Consequences, a page or less, numbered,
+>   never edited once accepted, superseded by a new one. His argument
+>   is ours: "Small, modular documents have at least a chance at being
+>   updated." We already do this informally in src/diffwise/decisions.org
+>   and src/jc/decisions.org.
+> - The technical spec answers "what must always be true?" It holds
+>   the constraints that cut across stories (provider, rights,
+>   platform). It stays short because the decisions behind it live in
+>   ADRs and the behaviour lives in stories.
+
+It seems like you just took the three things I did and accepted them. I
+want to know what other people are doing. Thoroughly research and see
+what tools and techniques people are putting into practice for iterative
+development with LLMs. Don't just affirm what I've written.
+
+> Here is a slice of lab-mail split this way.
+>
+> Constraints (spec.org):
+>
+>     - The list lives on Fastmail. Only lab-mail holds its
+>       credentials and talks to it.
+>     - Agents can add to the list and do nothing else to it.
+>     - Clients reach lab-mail over the network, never through a
+>       shared filesystem.
+>
+> A story (stories.org):
+>
+>     * Post a reply to the list
+>     As an agent on lab-claude, I post a reply to all, so that it
+>     lands on the list exactly once.
+>     - Given a reply to lab@lists.p7x.dev and pat@p7x.dev, when I
+>       send it to lab-mail, then it lands once in the list's INBOX.
+>     - Given a message to an address lab-mail does not know, when I
+>       send it, then lab-mail refuses it while I am connected and
+>       nothing reaches the list.
+>
+> An ADR (decisions/0003-post-over-smtp.org):
+>
+>     * 3. Clients post over SMTP, not a shared maildir
+>     Status: accepted
+>     Context: agents must add to the list and do nothing else. A
+>     writable maildir mount would let an agent rename or delete any
+>     message.
+>     Decision: lab-mail runs a local SMTP server and clients post to
+>     it.
+>     Consequences: an agent can only add a message, and every host
+>     posts the same way. We run an MTA (OpenSMTPD, see ADR 4).
+
+That's pretty nice. Is status a standard part of ADR? It feels more like
+RFD to me. I'm not very familiar with ADR though.
+
+>> Also I want to think about scope... because my sense is that
+>> one-shotting is great for something like unix utilities, which are small
+>> and focused and can be done. For complex systems that are never done - I
+>> doubt that works.
+
+[...]
+
+> Proposal, for you to decide:
+>
+> 1. Keep "declarative" and "no open questions" for all three kinds.
+> 2. Move "alternatives considered" out of specs into ADRs, one
+>    decision per record.
+> 3. Keep "self-contained", but for the directory, not one file: the
+>    repo, not the list, carries spec.org, stories.org, and
+>    decisions/.
+> 4. Replace "update the spec" with "add or change a story, or
+>    supersede an ADR". The spec changes only when a constraint does.
+>
+> I recommend trying it on the next new piece of work rather than
+> converting lab-mail now, since lab-mail v10 is in review and a
+> rewrite would churn it. If you agree, I will post a short convention
+> doc (zib/specs.org) with the three templates above, and convert
+> lab-mail once its series lands.
+
+That sounds like a good direction to me.
+
+Maybe spec.org is fine and just needs to be more structured? I don't
+love having a bunch of separate files, especially the ADRs all being
+split up.
+
+This is the classic org mode question - whether to have one big file, or
+multiple small ones. I'll punt on that implementation for the time
+being.
+
+Right now I want to assess the components. I like stories, decisions,
+and constraints. I also wonder if design docs fit in here somewhere? Not
+visual design - but system design. Again I want to survey different
+techniques people are using and see what we can apply.
+
+Here's another idea I had when thinking through this... what about
+preparing a commit plan before doing the work? Instead of solving the
+problem and then slicing it into commits, produce a series of commits,
+with commit messages and all, that describe the evolution of the
+work. If we can't describe the evolution in a series of commits when
+there's no code changing - how will we be able to do it once we have the
+code?
