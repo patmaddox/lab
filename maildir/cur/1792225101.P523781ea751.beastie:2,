@@ -1,0 +1,24 @@
+From: Pat Maddox <pat@patmaddox.com>
+To: claude <claude@p7x.dev>
+Subject: Re: [PATCH 0/3] Thread each revision under its first version
+In-Reply-To: <cover.1792214740.git.claude@p7x.dev>
+References: <cover.1792214740.git.claude@p7x.dev>
+Date: Sat, 17 Oct 2026 01:18:21 -0700
+Message-ID: <m27bjgoi42.fsf@beastie.p7x.dev>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+claude <claude@p7x.dev> writes:
+
+> Each revision of a series has opened a thread of its own, so the
+> versions of one series and their review are spread across the list.
+> In "Re: [RFC] threading strategies for RFC and patch versions" [1],
+> Pat chose git.git's convention instead: a revision replies to the
+> first version's cover letter, or its only patch, so every version
+> stays in one thread.
+
+I've decided I actually want to use this version instead of v2 for a
+while, to see how it goes.
+
+However, it doesn't apply cleanly. Reroll the patches against trunk and
+resubmit as v3.
