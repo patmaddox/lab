@@ -1,0 +1,82 @@
+From: claude <claude@p7x.dev>
+Subject: Re: [PATCH v3 0/2] lab-process-mail: Add lab-process-maild
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+In-Reply-To: <m2ik31t2qs.fsf@beastie.p7x.dev>
+References: <cover.1792207350.git.claude@p7x.dev>
+	<m2ik31t2qs.fsf@beastie.p7x.dev>
+Message-ID: <1792209082.f4b879550474@p7x.dev>
+Date: Sat, 17 Oct 2026 03:51:28 +0000
+
+On Fri, 16 Oct 2026 20:39:07 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+> This whole interface is quite nice and basically exactly what I want.
+
+Thanks. v4 keeps it as it was, except in one place: daemon(8) cannot
+stop on a failed run, so that part changed, as described below.
+
+>> -	    PATH="${root}/bin:/sbin:/bin:/usr/sbin:/usr/bin:/usr/local/sbin:/usr/local/bin" \
+>> +	    PATH="${localbase}/bin:/sbin:/bin:/usr/sbin:/usr/bin:/usr/local/sbin:/usr/local/bin" \
+>
+> This shouldn't be baked in... if we need to update the PATH, it should
+> come via env var provided by the config file.
+
+Agreed, and fixed. start now passes PATH through as you have it, and
+a PATH in lab_process_maild_env replaces it. The prefix was only
+there so daemon(8) could find lab-process-mail, and start now gives
+daemon(8) the absolute path from bin/ instead. daemon(8) itself is
+found through env -P with the caller's PATH, so a PATH in the conf
+cannot hide it.
+
+If you would rather the daemon get no PATH at all unless the conf
+sets one, that is a one-word change. The cost is that jj, notmuch,
+and claude are not found without a conf, since sh's default is
+/usr/bin:/bin.
+
+>> +		with_env lab-process-mail &
+>
+> Maybe I'm misunderstanding but it shouldn't need to background the
+> process, should it? That's exactly what daemon(8) does.
+
+You read it right; it did not need to. I had kept the background
+child and the wait only so that a SIGTERM would be handled while a
+pass or the sleep was still running. That was the old structure
+carried over, not something the design needed.
+
+> In any case, the point of introducing daemon(8) is so that the program
+> itself can be a one-shot script, but can still be controlled as a
+> daemon. Backgrounding a process misses the point.
+
+v4 is posted as "[PATCH v4 0/4] lab-process-mail: Add
+lab-process-maild" [1]. lab-process-maild no longer has a run command
+or a loop. start runs
+
+    env -i ... daemon -f -H -o LOG -P PIDFILE -R INTERVAL \
+        -t lab-process-maild LOCALBASE/bin/lab-process-mail
+
+so daemon(8) does the detaching, the log, the pidfile, and the
+rerunning, and the script is start, stop, status, and the conf.
+
+Two duties of the old loop had to move into lab-process-mail, each
+as its own patch:
+
+- Stopping on a stuck message. daemon(8) reruns the child after any
+  exit, and I checked on 15.1 that this includes a failed one. Instead,
+  lab-process-mail records a stuck message, and later runs fail
+  before the agent starts while it is still the oldest in the inbox.
+  That costs a fetch, not a pass, and sends no repeat notice. Every
+  other failure is retried after one interval, which fixes the
+  transient case in "[BUG] lab-process-mail gets stuck" [2]. The
+  silent-failure part of that report is still open.
+- Finishing the pass on stop. daemon(8) forwards SIGTERM to its child,
+  and lab-process-mail now traps it and exits once its pass is done.
+  I checked that daemon(8) waits for that, and does not restart the
+  child.
+
+One cost to note is that lab-process-mail answers one message per run
+and daemon(8) waits the full interval after every run. A batch of ten
+messages therefore takes nine extra minutes at the default of 60. A
+smaller lab_process_maild_interval shortens that, since a run on an
+empty inbox costs only a fetch.
+
+[1] id:cover.1792209039.git.claude@p7x.dev
+[2] id:1792206019.c7310968cbe0@p7x.dev
