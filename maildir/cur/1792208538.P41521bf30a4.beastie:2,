@@ -1,0 +1,99 @@
+From: Pat Maddox <pat@patmaddox.com>
+To: claude <claude@p7x.dev>, lab-devel@p7x.dev
+Subject: Re: [RFC] re-thinking SMTP relay
+In-Reply-To: <1792207782.8a5252f19f7d@p7x.dev>
+References: <m2mrsdz1n0.fsf@beastie.p7x.dev>
+ <1792193020.cee32e2b1dec@p7x.dev> <m2cxt9vyub.fsf@beastie.p7x.dev>
+ <1792204889.a8a37790f517@p7x.dev> <m2se25t3bq.fsf@beastie.p7x.dev>
+ <1792207782.8a5252f19f7d@p7x.dev>
+Date: Fri, 16 Oct 2026 20:42:18 -0700
+Message-ID: <m2ecdpt2lh.fsf@beastie.p7x.dev>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+claude <claude@p7x.dev> writes:
+
+> On Fri, 16 Oct 2026 20:26:33 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+>> I really like the idea of agents being read-only, I hadn't thought of
+>> that. I guess the way they get mail in is via SMTP.
+>
+> Yes. An agent can only add mail, and only by sending it.
+>
+>> I'm not going to use notmuch to send email to people from outside the
+>> list. We can revisit this at some point. For the time being, I'm keeping
+>> it simple - mail gets delivered to the list via maildir, that's it. No
+>> other email interaction.
+>
+> Understood. The server then never relays anywhere, which is the
+> simplest and safest form of it.
+>
+>>>    a. Accept every recipient from agents and map them all to the one
+>>>       list mailbox. [inference] OpenSMTPD should then write a single
+>>>       copy, but I have not checked that yet. The spec's acceptance
+>>>       tests would.
+>>>    b. Agents address only the list. You read the list anyway, so you
+>>>       lose nothing, but prompt.md's reply-to-all goes.
+>>>
+>>>    I recommend (a) if the test confirms one copy, and (b) if not.
+>>
+>> Seems reasonable, run the test, report results and recommendation.
+>
+> I could not run the test here. lab-claude does not have mail/opensmtpd
+> installed, and smtpd refuses to start unless it runs as root, which I
+> do not have. Adding the package to lab-claude's instance.conf would
+> not help without root, so I did not send that patch. Instead I read
+> the source, which answers the question. A script for you to confirm
+> it is below.
+>
+> Result: (a) writes one copy per recipient. My earlier inference was
+> wrong.
+>
+> - [fact, from OpenSMTPD master] Each RCPT TO goes to the lookup
+>   process separately (smtp_tx_rcpt_to() in smtp_session.c), and
+>   lka_session() in lka_session.c starts each one with a fresh
+>   expansion tree.
+> - [fact] Only expand_insert() in expand.c discards duplicates, and
+>   only within that one tree. Nothing in queue.c or mda.c merges
+>   envelopes that share a destination.
+> - [inference] So two recipients that both map to the list mailbox
+>   become two envelopes, and the maildir action writes two files.
+>
+> Your mail has the same problem as the agents' mail. This message came
+> to claude@p7x.dev and lab-devel@p7x.dev. Under (a), every message you
+> send to the list would land twice as well. Under (b), you would also
+> have to address only the list.
+>
+> That leaves three options:
+>
+>   b. Everyone addresses only the list. The server rejects all other
+>      recipients. Both msmtp and git send-email fail the whole message
+>      if any recipient is refused. So any reply-to-all, from an agent
+>      or from your mail client, bounces until the sender removes the
+>      extra addresses. prompt.md has to drop reply-to-all.
+>
+>   c. Deliver only lab-devel@p7x.dev to the maildir. Accept the other
+>      known addresses (claude@p7x.dev, pat@patmaddox.com, the other
+>      agent logins) and throw them away. Reply-to-all keeps working
+>      for everyone. The list copy is the only one that is kept, which
+>      is the only copy anyone reads. It costs one more match line and
+>      one action that discards. [inference] An alias to /dev/null,
+>      which aliases(5) allows as a file, or an mda action that reads
+>      stdin and exits 0 would work; the test below should cover it.
+>
+>   d. Keep the duplicates and let notmuch merge them by Message-ID.
+>      notmuch handles it, but both files sync to Fastmail and show
+>      twice there. I would not do this.
+>
+> I recommend (c). The list stays the only mailbox, nobody has to
+> change how they address mail, and unknown recipients are still
+> refused at RCPT TO.
+
+That's good, so long as one thing is true: the full To/CC list is in the
+one delivered email, right? I think so... I always see when someone has
+CCed other people.
+
+I ask because I want to use that as metadata - was something addressed
+directly to me, or to an agent, etc.
+
+De-duplicating the emails, using only the list recipient, is fine so
+long as the CC list is maintained, which I think it is.
