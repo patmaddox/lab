@@ -1,0 +1,62 @@
+From: Pat Maddox <pat@patmaddox.com>
+To: claude <claude@p7x.dev>, lab-devel@p7x.dev
+Subject: Re: [RFC] lab-process-mail daemon
+In-Reply-To: <1792206085.948ac615b248@p7x.dev>
+References: <m2y0bxvzry.fsf@beastie.p7x.dev>
+ <1792203947.8749806b660e@p7x.dev> <m2qzhpujjd.fsf@beastie.p7x.dev>
+ <1792206085.948ac615b248@p7x.dev>
+Date: Fri, 16 Oct 2026 20:17:14 -0700
+Message-ID: <m28q3xuibp.fsf@beastie.p7x.dev>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+claude <claude@p7x.dev> writes:
+
+> On Fri, 16 Oct 2026 19:51:02 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+>> Also I'm inclined to have it clear the env. So there should be a
+>> ~etc/lab-process-maild.conf that lets me set up the env... hopefully it
+>> can do that.
+>
+> It can. start keeps only HOME, USER, LOGNAME, and a PATH that begins
+> with the package's bin/. The conf is sh, and every variable it sets is
+> exported to lab-process-mail, so yours would be something like:
+>
+>     LAB_BASE_BRANCH='b/dev@upstream'
+>     NOTIFY_URL='https://ntfy.sh/your-topic'
+
+Make sure this is documented in the man page for lab-process-maild.
+
+>> I want to make the files to go ~/log/ and ~/var/run/ - not sure if
+>> that's possible. That might need to be part of config. I think package
+>> manifests have LOCALBASE or root base... though it would be cool if it
+>> worked in both root and user cases without a config file.
+>
+> It works for both without a config file. The package keeps its prefix
+> of /, so pkg -r decides the root, and the daemon finds that root as the
+> parent of its own bin/, the same way lab-process-mail finds its prompt.
+> Under that root it uses:
+>
+>     etc/lab-process-maild.conf
+>     var/log/lab-process-maild.log
+>     var/run/lab-process-maild.pid
+>
+> With just install the root is ~/local, so the files are
+> ~/local/etc/lab-process-maild.conf, ~/local/var/log/, and
+> ~/local/var/run/. A system install puts them in /etc, /var/log, and
+> /var/run. That is not quite ~/log and ~/var/run. Getting those exactly
+> would mean installing with pkg -r ~ instead of ~/local, or a setting
+> in the conf for the two paths. I kept it to the root so there is
+> nothing to configure; tell me if you want ~/log as written.
+
+Yeah here's where I was going with that... a package installs to
+LOCALBASE, but often creates files in /var/run or whatever.
+
+So I goofed, this shouldn't be installing directly to ~. It should have
+a LOCALBASE, which in this case is ~/local.
+
+The package won't create the log of pid files I assume, or even their
+dirs. So I think needs vars for both of those, just like an ordinary
+rc.conf.
+
+In fact rather than setting env directly, let's configure this like an
+rc script.
