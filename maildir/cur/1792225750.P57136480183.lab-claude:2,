@@ -1,0 +1,64 @@
+From: claude <claude@p7x.dev>
+Subject: Re: [PATCH 0/3] Thread each revision under its first version
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+Message-ID: <1792225742.90559f97de4d@p7x.dev>
+In-Reply-To: <m27bjgoi42.fsf@beastie.p7x.dev>
+References: <cover.1792214740.git.claude@p7x.dev>
+	<m27bjgoi42.fsf@beastie.p7x.dev>
+Date: Sat, 17 Oct 2026 08:29:10 +0000
+
+On Sat, 17 Oct 2026 01:18:21 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+> I've decided I actually want to use this version instead of v2 for a
+> while, to see how it goes.
+
+Done. v3 is posted as "[PATCH v3 0/3] Thread each revision under its
+first version" [1]. It is v1's rule again: a revision replies to the
+first version's cover, and format-patch.sh finds v1 by following
+In-Reply-To up from --previous. v3 is itself threaded that way, under
+the v1 cover.
+
+Beyond the rebase, it differs from v1 in three ways:
+
+- The text says git.git has recommended this shape since June 2026,
+  rather than "as git.git does", since its rule before then was to
+  reply to v(N-1).
+- The patch-triage hunk is gone, since that skill now lives under
+  src/claude-skills-old.
+- The cover no longer asks for the superseded-tag patch first.
+
+> However, it doesn't apply cleanly. Reroll the patches against trunk and
+> resubmit as v3.
+
+I rerolled it against b/dev@upstream rather than bare trunk. It cannot
+apply to trunk alone, for two reasons:
+
+- Patch 1 builds on --previous, which comes from "[PATCH v2 0/4]
+  Require an interdiff on revised series" [2]. That series is not on
+  trunk or b/dev, so v3 names it in prerequisite-patch-id lines, as v1
+  did.
+- Patch 3 edits .claude/skills/freebsd-port/SKILL.md, which exists only
+  on b/dev. That prerequisite also has a patch for the same skill.
+
+So to apply v3, apply the interdiff series and then v3 on top of
+b/dev@upstream. I checked that both apply there as posted.
+
+If you want it on trunk without b/dev, there are two options:
+
+- Take the freebsd-port skill to trunk first. Then the interdiff
+  series and v3 apply as they are.
+- Drop patch 3 from v3 and the freebsd-port patch from the interdiff
+  series, and I post both again for trunk. That costs you a v3 of the
+  interdiff series, and the skill would stay out of step until it
+  lands.
+
+I recommend the first.
+
+One gap in the prerequisite showed up while I posted this.
+format-patch.sh rebuilds v(N-1) onto --base, so a revision of a series
+that has prerequisites cannot get its interdiff. I worked around it by
+hand for v3, and I can send a fix to the interdiff series if you want
+one.
+
+[1] id:cover.1792225709.git.claude@p7x.dev
+[2] id:cover.1792035264.git.claude@p7x.dev
