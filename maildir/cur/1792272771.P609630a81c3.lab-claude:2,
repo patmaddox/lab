@@ -1,0 +1,66 @@
+From: claude <claude@p7x.dev>
+Subject: Re: [RFC] commit style
+To: Pat Maddox <pat@patmaddox.com>, lab@lists.p7x.dev
+In-Reply-To: <m2wlrgf20r.fsf@beastie.p7x.dev>
+References: <m2a4oclhvv.fsf@beastie.p7x.dev>
+	<1792235349.f7fc30029251@p7x.dev> <m25wz0l23i.fsf@beastie.p7x.dev>
+	<1792255115.941a80fb30d2@p7x.dev> <m2v770gjjb.fsf@beastie.p7x.dev>
+	<1792269002.16aa9dd13833@p7x.dev> <m28q3wgiv5.fsf@beastie.p7x.dev>
+	<1792270050.4cef7df99d88@p7x.dev> <m2wlrgf20r.fsf@beastie.p7x.dev>
+Message-ID: <1792272767.f33d74d357cc@p7x.dev>
+Date: Sat, 17 Oct 2026 21:32:51 +0000
+
+On Sat, 17 Oct 2026 14:30:44 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+> I want to think through some other options here... I think drop --empty
+> is useful so that it doesn't include the replies etc. I don't want to
+> hack around the tooling with more tooling.
+
+Agreed. I withdraw "[PATCH] libexec/mail: Apply message-only commits
+as empty" [1] and have dropped it from my tree.
+
+> 1. Don't post patches - just post the commit messages as an email. It's
+> just text, nothing is getting applied. If I want to rewrite a commit
+> message, I can just copy it and edit it.
+
+I recommend this one. A plan is for review, not for applying, and the
+list already handles review: you reply with your rewrite quoted under
+mine, and I fold it into my commits. Nothing new is needed on either
+side.
+
+"[RFC PATCH 0/7] Write the commit rules down once" [2] already works
+this way if you skip its fetch instructions. Each of 1/7 to 7/7 is one
+commit message as plain text, so you can reply to any of them with
+your version. For the next plan I will send a single [RFC] mail with
+the messages in order, not format-patch output, so it does not look
+like something to apply.
+
+> 2. Marker files. Don't post empty commits. Just have a marker file for
+> that specific commit. That might actually be useful for tooling to
+> indicate where a particlar patch is in the process. Either it writes a
+> specific filename that indicates the state, or it writes the state as
+> the content of a fixed file name.
+
+This would work with am.sh as it is, but it costs more than it gives
+for now:
+
+- Every marker has to be removed before the series lands. That is one
+  more rewrite of every commit, and a marker that is missed lands on
+  trunk.
+- A fixed file name means every commit in the series edits the same
+  file. Reordering, splitting, or dropping a plan commit then
+  conflicts, and reshaping the plan is the point of the review. One
+  file name per commit avoids that, but fills the tree with files.
+- The list already records the state: [RFC PATCH] against [PATCH], the
+  replies, and the notmuch tags. A marker would be a second record to
+  keep in step with the first.
+
+If a tool later needs to read a patch's state from the tree, marker
+files are worth another look then. Until then I would keep the plan as
+text on the list.
+
+The open question in the plan's cover letter still stands: should the
+72-column check skip indented lines, such as quoted code or a long URL?
+I recommend skipping them.
+
+[1] id:c574fba0a4b2a19aa64952ea73d2418cb71c1fc6.1792269999.git.claude@p7x.dev
+[2] id:cover.1792269999.git.claude@p7x.dev
