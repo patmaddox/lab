@@ -1,0 +1,79 @@
+Message-ID: <fe8c29c7706cbddf210f1c0922b3e3a9a8f76db9.1792226388.git.claude@p7x.dev>
+In-Reply-To: <cover.1792226388.git.claude@p7x.dev>
+References: <cover.1792222732.git.claude@p7x.dev>
+	<cover.1792226388.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Subject: [PATCH v3 7/8] jails/instances/lab-mail: Document importing the jj
+ maildir
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+Change-Id: spvkorvpwuxmnxzxxlkrmvnluplqqypu
+Date: Sat, 17 Oct 2026 08:40:34 +0000
+
+The list's history from before lab-mail lives only in the jj maildir
+on the mail bookmark, so Pat imports it once. mbsync renames each
+file it syncs, so the steps run on a copy and never touch the jj
+working copy.
+---
+change-id: spvkorvpwuxmnxzxxlkrmvnluplqqypu
+
+ jails/instances/lab-mail/README.org | 43 +++++++++++++++++++++++++++++
+ 1 file changed, 43 insertions(+)
+
+diff --git a/jails/instances/lab-mail/README.org b/jails/instances/lab-mail/README.org
+index 98d6d5f4..5ba001ae 100644
+--- a/jails/instances/lab-mail/README.org
++++ b/jails/instances/lab-mail/README.org
+@@ -190,6 +190,49 @@ just start
+ The build starts the jail before it installs the config, so restart
+ the jail after a build that changes the config.
+ 
++** import the jj maildir
++The list before lab-mail lived in the jj maildir on the =mail=
++bookmark. Once lab-mail's first sync has pulled =lists= and =Archive=
++from Fastmail, the operator imports that maildir into =lists= once,
++from beastie, as =pat@p7x.dev=. The next sync carries it to Fastmail.
++mbsync renames each file it syncs, so it reads a copy, never the jj
++working copy:
++#+BEGIN_EXAMPLE
++cp -R ~/lab/mail.jj/maildir /tmp/list-import
++mkdir /tmp/list-import-state
++cat > /tmp/list-import.rc <<'EOF'
++IMAPAccount lab-mail
++Host 127.0.0.1
++Port 2143
++TLSType None
++AuthMechs LOGIN
++User pat@p7x.dev
++PassCmd "pass show lab-mail/pat@p7x.dev"
++
++IMAPStore lab-mail
++Account lab-mail
++
++MaildirStore import
++Path /tmp/
++Inbox /tmp/list-import
++
++Channel import
++Far :lab-mail:lists
++Near :import:
++Sync Push New
++Create None
++Expunge None
++Remove None
++CopyArrivalDate yes
++SyncState /tmp/list-import-state/
++EOF
++mbsync -c /tmp/list-import.rc import
++#+END_EXAMPLE
++
++A message that is already on Fastmail and in the jj maildir lands
++twice. notmuch indexes both files under the one Message-ID, so a
++thread shows it once.
++
+ * check
+ =just check= checks that lab-mail is set up and running. It prints
+ one line per check, ok or FAIL, and exits non-zero if any check
+-- 
+2.56.0
+

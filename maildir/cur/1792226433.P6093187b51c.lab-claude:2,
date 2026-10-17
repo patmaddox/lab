@@ -1,0 +1,215 @@
+Message-ID: <aba4b4d3e94ff51eaf0dbdb724bfe6d3fbc1deb5.1792226388.git.claude@p7x.dev>
+In-Reply-To: <cover.1792226388.git.claude@p7x.dev>
+References: <cover.1792222732.git.claude@p7x.dev>
+	<cover.1792226388.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Subject: [PATCH v3 6/8] jails/instances/lab-mail: Refuse malformed posts
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+Change-Id: luzwntuvsutlnzvsmypnvrmunxwlwpru
+Date: Sat, 17 Oct 2026 08:40:33 +0000
+
+Anyone who can reach lab-mail may post, and every post lands on the
+list for all of its readers. A message with a broken header, or
+without exactly one From, Subject, and Message-ID, breaks threading
+and the tools that read the list. Refused at the end of DATA, it
+never enters the queue, and the poster learns why while still
+connected.
+
+- check-message, an smtpd-filters(7) filter in awk, refuses such a
+  message with a 550 reply that names the fault.
+- OpenSMTPD runs it on the listener, as nobody.
+---
+change-id: luzwntuvsutlnzvsmypnvrmunxwlwpru
+
+ jails/instances/lab-mail/README.org           |   6 +
+ jails/instances/lab-mail/dist.mtree           |   1 +
+ .../dist/usr/local/etc/mail/smtpd.conf        |   7 +-
+ .../usr/local/libexec/lab-mail/check-message  | 127 ++++++++++++++++++
+ 4 files changed, 140 insertions(+), 1 deletion(-)
+ create mode 100755 jails/instances/lab-mail/dist/usr/local/libexec/lab-mail/check-message
+
+diff --git a/jails/instances/lab-mail/README.org b/jails/instances/lab-mail/README.org
+index ab743f5d..98d6d5f4 100644
+--- a/jails/instances/lab-mail/README.org
++++ b/jails/instances/lab-mail/README.org
+@@ -57,6 +57,12 @@ in. OpenSMTPD sorts each recipient:
+ - Any other recipient is refused with a 5xx reply, and the client
+   abandons the whole message.
+ 
++Before it answers the client's DATA, OpenSMTPD runs the message
++through =/usr/local/libexec/lab-mail/check-message=, which refuses a
++message whose header is not well formed or that does not have exactly
++one From, one Subject, and one Message-ID. The client learns of the
++refusal while it is still connected.
++
+ OpenSMTPD then queues the message and hands it to Dovecot over LMTP,
+ on the socket =/var/run/dovecot/lmtp=, which only =vmail= may open.
+ LMTP delivers it to INBOX. OpenSMTPD never opens the maildir. If
+diff --git a/jails/instances/lab-mail/dist.mtree b/jails/instances/lab-mail/dist.mtree
+index a76b279f..365f4f97 100644
+--- a/jails/instances/lab-mail/dist.mtree
++++ b/jails/instances/lab-mail/dist.mtree
+@@ -18,5 +18,6 @@
+ ./usr/local/etc/mbsyncrc
+ ./usr/local/libexec/lab-mail type=dir mode=0755
+ ./usr/local/libexec/lab-mail/check mode=0755
++./usr/local/libexec/lab-mail/check-message mode=0755
+ ./usr/local/libexec/lab-mail/sync mode=0755
+ ./var/log/lab-mail type=dir mode=0755
+diff --git a/jails/instances/lab-mail/dist/usr/local/etc/mail/smtpd.conf b/jails/instances/lab-mail/dist/usr/local/etc/mail/smtpd.conf
+index 775620b9..7b1e12d1 100644
+--- a/jails/instances/lab-mail/dist/usr/local/etc/mail/smtpd.conf
++++ b/jails/instances/lab-mail/dist/usr/local/etc/mail/smtpd.conf
+@@ -16,9 +16,14 @@ table known { "pat@p7x.dev", "pat@patmaddox.com", "claude@p7x.dev" }
+ table to-vmail { "@" = "vmail" }
+ table to-nobody { "@" = "nobody" }
+ 
++# Refuse at the end of DATA a message that is not well formed, while
++# the client is still connected.
++filter "check-message" proc-exec "/usr/local/libexec/lab-mail/check-message" \
++	user nobody group nobody
++
+ # Loopback on a non-standard port, so only beastie and the jails that
+ # share its addresses can reach it, and no tool finds it by default.
+-listen on 127.0.0.1 port 2525
++listen on 127.0.0.1 port 2525 filter "check-message"
+ 
+ action "list" lmtp "/var/run/dovecot/lmtp" rcpt-to virtual <to-vmail>
+ action "discard" mda "/bin/cat >/dev/null" virtual <to-nobody>
+diff --git a/jails/instances/lab-mail/dist/usr/local/libexec/lab-mail/check-message b/jails/instances/lab-mail/dist/usr/local/libexec/lab-mail/check-message
+new file mode 100755
+index 00000000..0d31c028
+--- /dev/null
++++ b/jails/instances/lab-mail/dist/usr/local/libexec/lab-mail/check-message
+@@ -0,0 +1,127 @@
++#!/usr/bin/awk -f
++# An smtpd-filters(7) filter that refuses, at the end of DATA, a
++# message that is not well formed:
++# - a header line that is neither a field nor the continuation of one;
++# - headers that are not ended by an empty line;
++# - anything other than exactly one From, one Subject, and one
++#   Message-ID.
++#
++# smtpd.conf runs it for every session on the listener. It echoes each
++# line of the message back unchanged, and keeps what it learns about
++# the header in arrays keyed by session.
++
++BEGIN {
++	FS = "|"
++}
++
++$1 == "config" && $2 == "ready" {
++	print "register|filter|smtp-in|data"
++	print "register|filter|smtp-in|data-line"
++	print "register|filter|smtp-in|commit"
++	print "register|report|smtp-in|link-disconnect"
++	print "register|ready"
++	fflush()
++	next
++}
++
++$1 == "report" && $5 == "link-disconnect" {
++	forget($6)
++	next
++}
++
++$1 != "filter" {
++	next
++}
++
++{
++	session = $6
++	token = $7
++}
++
++# A new message: start a fresh header.
++$5 == "data" {
++	forget(session)
++	inheader[session] = 1
++	result(session, token, "proceed")
++	next
++}
++
++$5 == "data-line" {
++	line = payload()
++	print "filter-dataline|" session "|" token "|" line
++	fflush()
++
++	if (line == ".") {
++		if (inheader[session] && fault[session] == "")
++			fault[session] = "the header is not ended by an empty line"
++		inheader[session] = 0
++		next
++	}
++	if (!inheader[session])
++		next
++
++	# The lines arrive dot-escaped.
++	if (line ~ /^\./)
++		line = substr(line, 2)
++
++	if (line == "") {
++		inheader[session] = 0
++	} else if (line ~ /^[ \t]/) {
++		if (!fields[session] && fault[session] == "")
++			fault[session] = "a continuation line comes before any field"
++	} else if (match(line, /^[!-9;-~]+:/)) {
++		fields[session]++
++		name = tolower(substr(line, 1, RLENGTH - 1))
++		count[session, name]++
++	} else if (fault[session] == "") {
++		fault[session] = "a header line is neither a field nor a continuation"
++	}
++	next
++}
++
++$5 == "commit" {
++	why = fault[session]
++	if (why == "")
++		why = once(session, "from", "From")
++	if (why == "")
++		why = once(session, "subject", "Subject")
++	if (why == "")
++		why = once(session, "message-id", "Message-ID")
++	forget(session)
++
++	if (why == "")
++		result(session, token, "proceed")
++	else
++		result(session, token, "reject|550 5.6.0 Malformed message: " why)
++	next
++}
++
++# The data-line payload is the rest of the line after the seventh "|",
++# and may itself hold "|".
++function payload(	s, n) {
++	s = $0
++	for (n = 0; n < 7; n++)
++		s = substr(s, index(s, "|") + 1)
++	return s
++}
++
++function once(s, name, shown,	n) {
++	n = count[s, name] + 0
++	if (n != 1)
++		return "it has " n " " shown " fields, not one"
++	return ""
++}
++
++function result(s, t, decision) {
++	print "filter-result|" s "|" t "|" decision
++	fflush()
++}
++
++function forget(s,	k) {
++	delete inheader[s]
++	delete fields[s]
++	delete fault[s]
++	for (k in count)
++		if (index(k, s SUBSEP) == 1)
++			delete count[k]
++}
+-- 
+2.56.0
+
