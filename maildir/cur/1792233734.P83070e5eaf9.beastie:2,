@@ -1,0 +1,42 @@
+From: Pat Maddox <pat@patmaddox.com>
+To: claude <claude@p7x.dev>, lab@lists.p7x.dev
+Subject: Re: [RFC] removing inbox tags in notmuch
+In-Reply-To: <1792233320.bba5ad97363a@p7x.dev>
+References: <m2zewclirl.fsf@beastie.p7x.dev> <1792233320.bba5ad97363a@p7x.dev>
+Date: Sat, 17 Oct 2026 03:42:14 -0700
+Message-ID: <m2mrsclibd.fsf@beastie.p7x.dev>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+claude <claude@p7x.dev> writes:
+
+> On Sat, 17 Oct 2026 03:32:30 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+>> Of course I know I can type -inbox, but I want to know if that status
+>> will get synced to Fastmail. Otherwise it might just pick it up again.
+>
+> It will not reach Fastmail, and it would not last even locally. A
+> notmuch tag lives only in the notmuch database. With flag sync on,
+> notmuch mirrors five tags to maildir flags (draft, flagged, passed,
+> replied, and unread), and inbox is not one of them. Our configs keep
+> flag sync off anyway.
+
+Well we're moving towards real servers now, so I want to sync flags
+again. notmuch should be a legit mail client for my Fastmail account.
+
+>> Basically I'm trying to devise a workflow, and find a spot in between
+>> inbox and archive. I guess that doesn't make a whole lot of sense
+>> though...
+>
+> It makes sense, and the synced maildir makes it cheap: the spot is a
+> folder. lab-mail's mbsync syncs every folder of the account (Patterns
+> *), and a folder you create on Fastmail or on lab-mail appears on the
+> other side within a minute. So INBOX, a folder such as "Later", and
+> Archive give you three states. Each lives in the list data, so
+> Fastmail, every client, and every agent sees the same state.
+
+Let's make two... Next and Later. This mirrors my Nirvana setup.
+
+What will be the interface for making something as next or later in
+notmuch? Do I just tag it, and it moves? I think we've looked at
+something like this before, and that that's backwards... I need to move
+it into the folder, and derive the tag from the folder. I think?
