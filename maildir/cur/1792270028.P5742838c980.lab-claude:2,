@@ -1,0 +1,120 @@
+Message-ID: <c574fba0a4b2a19aa64952ea73d2418cb71c1fc6.1792269999.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Subject: [PATCH] libexec/mail: Apply message-only commits as empty
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab@lists.p7x.dev
+Change-Id: suwoumqzqoxvsxktqkoulqrypxuxnprx
+Date: Sat, 17 Oct 2026 20:47:08 +0000
+
+A plan of work can go to the list as a series of commits that carry
+only a message, so the maintainer can review the shape of the work
+before any code exists, and rewrite the messages himself. git
+format-patch already sends such commits, but am.sh dropped every
+message without a diff, so the plan vanished when applied.
+
+A message-only patch and a cover letter look alike to git am, since
+neither has a diff. The Change-Id header tells them apart:
+format-patch.sh puts it on each commit's patch and never on a cover
+letter or a reply. Keep a diffless message only when it has one, so a
+whole thread can still be piped at once.
+
+Without a diff, nothing ends the commit message before git's "-- "
+signature, so it would land in the commit. Drop it from these
+messages.
+---
+change-id: suwoumqzqoxvsxktqkoulqrypxuxnprx
+base-branch: b/dev@upstream
+
+ libexec/mail/am.sh | 54 ++++++++++++++++++++++++++++++++++++++++++----
+ 1 file changed, 50 insertions(+), 4 deletions(-)
+
+diff --git a/libexec/mail/am.sh b/libexec/mail/am.sh
+index 1ad9f73f..2b26e31e 100755
+--- a/libexec/mail/am.sh
++++ b/libexec/mail/am.sh
+@@ -16,7 +16,11 @@
+ # exits, and the workspace's new @ keeps the patches visible.
+ #
+ # Messages without a diff, such as a cover letter or a review reply, are
+-# dropped, so a whole series thread can be piped at once.
++# dropped, so a whole series thread can be piped at once. A message
++# without a diff that has a Change-Id header is kept as an empty commit.
++# format-patch.sh adds that header to each commit's patch and to nothing
++# else, so a commit that carries only a message, such as a step of a
++# plan, survives the trip through the list.
+ #
+ # @ must be empty, the way git am wants a clean tree.  If any patch
+ # fails to apply, nothing is applied and the workspace is unchanged.
+@@ -51,8 +55,36 @@ cleanup() {
+ 	rm -rf "${tmp}"
+ }
+ 
++# Whether the message in file $1 has a diff.
++has_diff() {
++	git mailinfo "${tmp}/msg" "${tmp}/patch" <"${1}" >/dev/null &&
++	    [ -s "${tmp}/patch" ]
++}
++
++# Whether the message in file $1 has a Change-Id header.
++has_change_id() {
++	awk '
++		BEGIN { found = 0 }
++		/^$/ { exit }
++		tolower($0) ~ /^change-id:/ { found = 1; exit }
++		END { exit !found }
++	' "${1}"
++}
++
++# Drop the signature from the message in file $1. A diff shields it
++# from the commit message, but a message without one has nothing else
++# to end the body.
++drop_signature() {
++	awk '
++		!body && /^$/ { body = 1 }
++		body && /^-- $/ { exit }
++		{ print }
++	' "${1}" >"${1}.tmp"
++	mv "${1}.tmp" "${1}"
++}
++
+ main() {
+-	local base head
++	local base head msg
+ 
+ 	[ "${#}" -eq 1 ] || die "usage: ${PROGNAME} <workspace>"
+ 	[ -d "${1}" ] || die "${1}: no such directory"
+@@ -69,13 +101,27 @@ main() {
+ 	branch="${tmp##*/}"
+ 	trap cleanup EXIT
+ 
++	mkdir "${tmp}/mail"
++	git mailsplit -b -o"${tmp}/mail" >/dev/null ||
++	    die "stdin is not mail"
++	set --
++	for msg in "${tmp}"/mail/*; do
++		[ -f "${msg}" ] || continue
++		if has_diff "${msg}"; then
++			set -- "${@}" "${msg}"
++		elif has_change_id "${msg}"; then
++			drop_signature "${msg}"
++			set -- "${@}" "${msg}"
++		fi
++	done
++	[ "${#}" -gt 0 ] || die "no patches on stdin"
++
+ 	git --git-dir="${gitdir}" worktree add --quiet -b "${branch}" \
+ 	    "${tmp}/wt" "${base}"
+ 	git -C "${tmp}/wt" -c advice.mergeConflict=false \
+-	    -c advice.amWorkDir=false am --quiet --empty=drop ||
++	    -c advice.amWorkDir=false am --quiet --empty=keep "${@}" ||
+ 	    die "patches do not apply; nothing changed"
+ 	head="$(git -C "${tmp}/wt" rev-parse HEAD)"
+-	[ "${head}" != "${base}" ] || die "no patches on stdin"
+ 
+ 	jj git import --quiet
+ 	jj new --quiet "${head}"
+
+base-commit: 96a10a53f7188ce8d46172d272db8c546b1c382e
+-- 
+2.56.0
+
