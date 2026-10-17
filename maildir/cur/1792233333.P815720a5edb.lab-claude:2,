@@ -1,0 +1,79 @@
+From: claude <claude@p7x.dev>
+Subject: Re: [RFC] removing inbox tags in notmuch
+To: Pat Maddox <pat@patmaddox.com>, lab@lists.p7x.dev
+In-Reply-To: <m2zewclirl.fsf@beastie.p7x.dev>
+References: <m2zewclirl.fsf@beastie.p7x.dev>
+Message-ID: <1792233320.bba5ad97363a@p7x.dev>
+Date: Sat, 17 Oct 2026 10:35:33 +0000
+
+On Sat, 17 Oct 2026 03:32:30 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+> Of course I know I can type -inbox, but I want to know if that status
+> will get synced to Fastmail. Otherwise it might just pick it up again.
+
+It will not reach Fastmail, and it would not last even locally. A
+notmuch tag lives only in the notmuch database. With flag sync on,
+notmuch mirrors five tags to maildir flags (draft, flagged, passed,
+replied, and unread), and inbox is not one of them. Our configs keep
+flag sync off anyway.
+
+It also comes back sooner than a rebuild. The post-new hook,
+dotfiles/notmuch/hooks/mail-tag.sh, puts +inbox on every message from
+someone else that you have not replied to, on every notmuch new. So
+-inbox is undone by the next notmuch new. The same problem came up on
+the jj maildir in "[PATCH 0/2] Archive from notmuch-emacs with the
+archive tag" [1].
+
+> Basically I'm trying to devise a workflow, and find a spot in between
+> inbox and archive. I guess that doesn't make a whole lot of sense
+> though...
+
+It makes sense, and the synced maildir makes it cheap: the spot is a
+folder. lab-mail's mbsync syncs every folder of the account (Patterns
+*), and a folder you create on Fastmail or on lab-mail appears on the
+other side within a minute. So INBOX, a folder such as "Later", and
+Archive give you three states. Each lives in the list data, so
+Fastmail, every client, and every agent sees the same state.
+
+> In any case, what options are there for removing the inbox tag, and
+> having that persist? I don't want messages to be tagged with inbox again
+> if I re-create the database.
+
+These are the options I found. Only the first two survive a rebuild
+and reach Fastmail.
+
+Option 1: Move the message to another folder (recommended). Archive is
+already the design in lab-mail's spec.org ("Archive by folder, not by a
+notmuch tag on beastie"), and an in-between folder works the same way.
+For this to persist, mail-tag.sh must give inbox only to messages in
+INBOX, e.g. "folder:INBOX and not (me) and not replied", and tag the
+other folders by name, e.g. +later for folder:Later and +archived for
+folder:Archive. It needs two changes. The hook change is small, and
+beastie's mbsync must push moves to lab-mail, with Expunge Both, as
+lab-mail's spec.org says. The earlier client spec, "[PATCH]
+dotfiles/notmuch: Spec reading and sending through lab-mail" [2], made
+beastie pull-only, so a move there would be undone by the next pull. In
+Emacs, archiving then moves the file rather than changing a tag, as
+"[PATCH] emacs: Archive notmuch mail by moving its file" [3] did for the
+jj maildir.
+
+Option 2: Use an IMAP flag. \Flagged travels both ways through mbsync
+and Fastmail, and with synchronize_flags=true it becomes the flagged
+tag. The hook could then leave flagged mail out of the inbox. This
+avoids a folder, but it overloads "flagged", turns on file renames on
+every client, and adds unread tags everywhere. I would not pick it.
+
+Option 3: Keep the tags out of band, with notmuch dump/restore or
+notmuch-git(1), as researched in "find info on notmuch-git(1) and how
+notmuch list uses notmuch" [4]. This survives a rebuild if you keep the
+dump, but it never reaches Fastmail and no agent sees it. The hook would
+still have to stop re-adding inbox.
+
+If you want option 1, tell me the name of the in-between folder and
+I will send a patch to mail-tag.sh and to beastie's mbsync config. I
+have not sent one yet, because the folder names are yours to choose
+and the hook change would also change what the agents see as inbox.
+
+[1] id:cover.1791655463.git.claude@p7x.dev
+[2] id:6a8666348ab2db603875801d7405324720ecf6ae.1791972093.git.claude@p7x.dev
+[3] id:42a305bfe3b8b6eb570642a6ba258aafcabf240d.1791660619.git.claude@p7x.dev
+[4] id:1791656241.336eb348ac00@p7x.dev
