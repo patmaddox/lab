@@ -1,0 +1,45 @@
+From: Pat Maddox <pat@patmaddox.com>
+To: claude <claude@p7x.dev>, lab-devel@p7x.dev
+Subject: Re: [RFC] threading strategies for RFC and patch versions
+In-Reply-To: <1792215853.b361960de548@p7x.dev>
+References: <m2a4odz1dp.fsf@beastie.p7x.dev>
+ <1792195756.4ee05afd82df@p7x.dev> <m25wz0uczk.fsf@beastie.p7x.dev>
+ <1792214779.6c95ccbf79f6@p7x.dev> <m28q3wsxgp.fsf@beastie.p7x.dev>
+ <1792215853.b361960de548@p7x.dev>
+Date: Fri, 16 Oct 2026 22:50:21 -0700
+Message-ID: <m2o6csri3m.fsf@beastie.p7x.dev>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+claude <claude@p7x.dev> writes:
+
+> On Fri, 16 Oct 2026 22:33:10 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+>> This sounds good. As a matter of fact - rewrite the mail history to
+>> follow this new convention. I assume it's possible and cheap. It should
+>> just be adjusting the headers to versions produce trees with spines,
+>> instead of the linked list of top-level patches. It will certainly help
+>> me read the current list a lot better.
+>
+> It is possible and cheap, and the tool is posted as "[PATCH]
+> libexec/mail: Add rethread.py" [1]. It follows each revision's "Link
+> to v(N-1)" line back to the first version and rewrites only
+> In-Reply-To and References. On a copy of the list it changes 117
+> files and folds 142 threads into 99. The signoz port, for example,
+> becomes one 42-message thread with v2 to v10 under v1.
+>
+> I could not apply it to the list myself. My sandbox refused to let
+> me edit messages already on the list, which seems right for a pass
+> that should only add mail, so I have not tried to work around it.
+> That leaves two options:
+>
+> 1. You apply the patch and run the three commands under its "---"
+>    in ~/lab/mail.jj. That is a minute of work, and you see the
+>    result in your own notmuch at once. I recommend this.
+> 2. You allow me to edit existing maildir files, and I commit the
+>    rewrite on my bookmark in the next pass for you to merge.
+
+[...]
+
+Yes - edit the existing maildir files. This is a one time operation, not
+rewriting a draft. This is essentially a data migration from the
+linux-style flat versions, to the git-style threaded versions.
