@@ -1,0 +1,199 @@
+From: claude <claude@p7x.dev>
+Subject: Re: [RFC] threading strategies for RFC and patch versions
+To: Pat Maddox <pat@patmaddox.com>, lab-devel@p7x.dev
+In-Reply-To: <m2a4odz1dp.fsf@beastie.p7x.dev>
+References: <m2a4odz1dp.fsf@beastie.p7x.dev>
+Message-ID: <1792195756.4ee05afd82df@p7x.dev>
+Date: Sat, 17 Oct 2026 00:09:29 +0000
+
+On Fri, 16 Oct 2026 16:12:02 -0700, Pat Maddox wrote:
+> Several major open source projects use a mailing list to distribute
+> patches. I know some of them have different policies regarding how to
+> post new versions - some post new versions as a reply to the previous
+> version, whereas other post new threads and link to the previous
+> version.
+>
+> What are the specific policies of each project, and why? Also want
+> documentation and examples.
+
+The projects fall into two camps, plus a few with no rule. Each entry
+gives the policy, the governing text quoted verbatim, the rationale,
+and one v2+ posting as an example. I fetched every document link
+today and checked that it contains the quote. lore.kernel.org blocks
+automated fetches, so the examples are patchwork mbox links; their
+headers show whether the cover has an In-Reply-To.
+
+New thread, linking back
+------------------------
+
+Linux kernel. Documentation/process/submitting-patches.rst, section
+"Explicit In-Reply-To headers" [a]:
+
+"for a multi-patch series, it is generally best to avoid using
+In-Reply-To: to link to older versions of the series. This way
+multiple versions of the patch don't become an unmanageable forest
+of references in email clients. If a link is helpful, you can use
+the https://lore.kernel.org/ redirector (e.g., in the cover email
+text)"
+
+The rationale given is that mail clients choke on deep reference
+trees. b4 encodes this: send.html says it "edits the cover letter to
+add changelog entries containing a pre-populated link to the
+just-sent series" [b], which is where "Link to v1" comes from, and
+its b4.send-same-thread option defaults to "no" [c]. Example: bpf-next
+"bpf: Fix arena memory incoherence" v5, a new thread whose cover
+lists v1 to v4 by lore link [d]. All six recent netdevbpf v2+ covers
+the researcher sampled were new threads.
+
+QEMU. docs/devel/submitting-a-patch.rst [e]:
+
+"Send each new revision as a new top-level thread, rather than
+burying it in-reply-to an earlier revision, as many reviewers are
+not looking inside deep threads for new patches."
+
+The rationale is visibility: a new version should land in the
+reviewer's inbox as new work. Example: "[PATCH v3 0/2] io: make sure
+we don't close stdio fds", no In-Reply-To [f].
+
+GCC. contribute.html [g]:
+
+"If you submit a new version of a patch series, then you should
+start a new email thread (don't reply to the original patch
+series). This avoids email threads becoming confused between
+discussions of the first and subsequent revisions... It is a good
+idea to send a final follow-up message to the original thread
+indicating that a new version has been submitted."
+
+So GCC adds a pointer in the old thread, which the kernel does not.
+Practice drifts: "[PATCH v2 0/2] tree-optimization/115869..." replies
+to v1 [h], though three other sampled covers were new threads.
+
+Reply in the old thread
+-----------------------
+
+Git. Documentation/SubmittingPatches [i]:
+
+"All subsequent versions of a patch series and other related
+patches should be grouped into their own e-mail thread to help
+readers find all parts of the series. To that end, send them as
+replies to either an additional 'cover letter' message..."
+
+MyFirstContribution says to pass --in-reply-to and "always use the
+Message-ID from v1" [j], and builds v2 with format-patch -v2
+--range-diff. git.git pins this in its .b4-config with
+"send-same-thread = shallow" [k], overriding b4's default. The
+rationale is that readers can find every version in one place.
+Example: "[PATCH v2 0/4] object-file: fix '.keep' lockfile
+ownership...", In-Reply-To the v1 cover [l]. In practice people
+sometimes reply to the previous version instead of v1, so chains
+still deepen.
+
+U-Boot. doc/develop/sending_patches.rst [m]:
+
+"Make sure that your mailer adds or keeps correct In-reply-to: and
+References: headers, so threading of messages is working and
+everybody can see that the new message refers to some older
+posting of the same topic. Uncommented and un-threaded repostings
+are extremely annoying and time-consuming..."
+
+The rationale is that otherwise reviewers have to dig up the old
+thread and compare by hand. Example: "[PATCH v2 0/5] tools: mkimage:
+bound external data reads...", In-Reply-To v1 [n]. Practice is
+mixed: three of five sampled were new threads, since b4 users get
+b4's default.
+
+DPDK. doc/guides/contributing/patches.rst [o]:
+
+"If the patch relates to a previous email thread, add it to the
+same thread using the Message ID: git send-email ...
+--in-reply-to <1234-foo@bar.com>"
+
+No rationale is stated beyond grouping. Example: "[PATCH v5 0/4]
+wireshark extcap support", In-Reply-To an earlier version [p].
+
+PostgreSQL. No written rule; it follows from the tooling. A
+commitfest entry registers a mail thread, and cfbot tests the newest
+attachments in "the most recently active thread" [q], so new versions
+go in as replies in that thread. Submitting_a_Patch only asks for
+"Message-Id-based links" to earlier discussion [r]. This is my
+inference from the tooling, not a stated policy.
+
+Either
+------
+
+Buildroot's manual [s] makes the reply optional and gives a tooling
+reason: "The advantage of in-reply-to is that patchwork will
+automatically mark the previous version of the patch as superseded."
+Both sampled v2 covers were new threads anyway.
+
+No list policy
+--------------
+
+Yocto/OpenEmbedded [t] requires format-patch -v2 and a changelog
+under "---" but says nothing about threading. FreeBSD reviews in
+Phabricator and updates the same review with "arc diff --update
+DXXX" [u]. Debian keys follow-ups to the bug number [v]. Mesa moved
+to GitLab merge requests and its list-era rule is gone. I found no
+written rule for OpenBSD tech@ and could not verify LLVM's old
+llvm-commits practice, so I left both out.
+
+Why it splits this way
+----------------------
+
+1. Replying keeps every version in one place and lets patchwork mark
+ old versions superseded. Git, U-Boot, DPDK, and PostgreSQL choose
+ this. It works best shallow, always under the v1 cover.
+2. A new thread surfaces the new version as new work and keeps the
+ reference tree flat. The kernel, QEMU, and GCC choose this, and
+ say so.
+3. Archive links make new threads cheap. Once lore and b4 could link
+ versions by Message-ID, the reply lost its main advantage, which
+ is why b4 defaults to new threads.
+4. Docs and practice drift in both directions (GCC, U-Boot,
+ Buildroot). The projects that stay consistent pin the choice in
+ tooling, as git.git does with .b4-config.
+
+Where this lab stands: we already follow the kernel.
+doc/mail-workflow.md says a revision is "a fresh thread subject
+`[PATCH vN]`, with a `v(N-1): <message-id>` link in the cover", and
+src/lab-process-mail/prompt.md requires the "Link to v(N-1):" line.
+format-patch.sh refuses a reroll without --previous, which also makes
+it attach an interdiff. The superseded tag in "[PATCH v3] notmuch:
+Tag series a later version replaces" [1] reads those Link lines, so
+we get patchwork-style supersession without the reply. That covers
+the one advantage Buildroot cites for replying. Your later decision
+to drop the Overcome-by reply, in "Re: [PATCH 0/3] notmuch: Tag
+superseded series and hide them" [2], means we also skip GCC's
+follow-up in the old thread.
+
+I see no reason to change. If you want shallow reply threading like
+git.git instead, it is a small change to format-patch.sh
+(--in-reply-to=<v1 cover>) plus the doc and prompt; say so and I will
+send it. If you want this survey kept in the tree, I can post it as
+a zib note.
+
+[a] https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/plain/Documentation/process/submitting-patches.rst
+[b] https://b4.docs.kernel.org/en/latest/contributor/send.html
+[c] https://b4.docs.kernel.org/en/latest/config.html
+[d] https://patchwork.kernel.org/project/netdevbpf/cover/20261016193703.9203-1-emil@etsalapatis.com/mbox/
+[e] https://gitlab.com/qemu-project/qemu/-/raw/master/docs/devel/submitting-a-patch.rst
+[f] https://patchwork.kernel.org/project/qemu-devel/cover/20261017-fix-stdio-close-v3-0-cfff0122a2a4@gmail.com/mbox/
+[g] https://gcc.gnu.org/contribute.html
+[h] https://patchwork.sourceware.org/project/gcc/cover/cover.1792126589.git.kapellirohith@gmail.com/mbox/
+[i] https://raw.githubusercontent.com/git/git/master/Documentation/SubmittingPatches
+[j] https://raw.githubusercontent.com/git/git/master/Documentation/MyFirstContribution.adoc
+[k] https://raw.githubusercontent.com/git/git/master/.b4-config
+[l] https://patchwork.kernel.org/project/git/cover/20261016213716.593278-1-jltobler@gmail.com/mbox/
+[m] https://raw.githubusercontent.com/u-boot/u-boot/master/doc/develop/sending_patches.rst
+[n] http://patchwork.ozlabs.org/project/uboot/cover/20261016081719.814357-1-aristo.chen@canonical.com/mbox/
+[o] https://raw.githubusercontent.com/DPDK/dpdk/main/doc/guides/contributing/patches.rst
+[p] https://patches.dpdk.org/project/dpdk/cover/20261016223201.608942-1-stephen@networkplumber.org/mbox/
+[q] https://wiki.postgresql.org/wiki/Cfbot
+[r] https://wiki.postgresql.org/wiki/Submitting_a_Patch
+[s] https://buildroot.org/downloads/manual/manual.html
+[t] https://docs.yoctoproject.org/contributor-guide/submit-changes.html
+[u] https://wiki.freebsd.org/Phabricator
+[v] https://www.debian.org/Bugs/Reporting
+
+[1] id:afd24e03eb13e671bba3e8981ca9c6367d6b3662.1792023441.git.claude@p7x.dev
+[2] id:m27bjj6dje.fsf@beastie.p7x.dev
