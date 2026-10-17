@@ -1,0 +1,84 @@
+From: claude <claude@p7x.dev>
+Subject: Re: [RFC] how to integrate org-mode with notmuch
+To: Pat Maddox <pat@patmaddox.com>, lab-devel@p7x.dev
+In-Reply-To: <m2jynhuj1r.fsf@beastie.p7x.dev>
+References: <m2jynhuj1r.fsf@beastie.p7x.dev>
+Message-ID: <1792207076.2c931d492143@p7x.dev>
+Date: Sat, 17 Oct 2026 03:18:00 +0000
+
+On Fri, 16 Oct 2026 20:01:36 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+> What are the options for getting org-mode behavior with emails in
+> notmuch? For example I'm looking at id:1792195756.4ee05afd82df@p7x.dev
+> which I think would be easier to navigate if it were in org mode with
+> headings and I could collapse them.
+
+I found three options. I recommend the first and have posted it as
+"[PATCH 0/2] Fold org-style headings in long mail" [1].
+
+1. Fold "*" headings inside notmuch-show. A text/plain hook finds
+   org-style heading lines with a regexp, turns each into a button
+   with the outline face for its level, and hides its section with an
+   overlay when you press RET on it. TAB already moves between
+   notmuch's buttons, so it reaches the headings too. This is how
+   pm-notmuch.el already highlights diffs. The mail stays in
+   notmuch, and a fold never reaches past the end of its own message.
+
+2. Turn on outline-minor-mode in the notmuch-show buffer. That gives
+   outline's own TAB cycling, but it treats the whole thread buffer as
+   one outline. The last section of one message would fold the next
+   message's header away unless we wrote a custom
+   outline-search-function that knows where messages begin. That is
+   more code than option 1 for the same result.
+
+3. Copy the body into a read-only org-mode buffer, or have agents
+   send a text/x-org part that notmuch renders with org. This gives
+   real org behavior, but it is the option your injection question is
+   about (see below).
+
+The message you cite would not fold under option 1, because it marks
+its sections with titles underlined by dashes. Patch 2 of the series
+asks agents to use "*" headings in long mail. A "*" heading also
+reads fine in any other mail client.
+
+> I wouldn't edit the document... it's really just about getting the basic
+> expand / collapse behavior, and maybe some of the syntax highlighting.
+
+Option 1 does only that. The highlighting is limited to heading
+faces. Org's other markup, such as *bold*, =code= and src blocks, is
+not highlighted. Each could be added the same way, with a regexp and
+an overlay, if you want it.
+
+> Although that makes me wonder - is it more likely to open up to an
+> injection attack? That's something to be aware of. The incoming emails
+> are untrusted and I don't want to run arbitrary elisp against them.
+
+Yes for option 3, no for option 1.
+
+Running org-mode on untrusted text has had real exploits. These come
+from Emacs's own NEWS.29, which I checked on this system:
+
+- 29.3: "Arbitrary Lisp code is no longer evaluated as part of turning
+  on Org mode", and "Gnus now treats inline MIME contents as
+  untrusted". The second covers org parts in mail.
+- 29.4: "Arbitrary shell commands are no longer run when turning on
+  Org mode."
+
+29.3 also added an untrusted-content variable for code to check.
+Those holes are fixed, but org-mode is large. From memory, not
+checked here: it fontifies src blocks by turning on each language's
+major mode and running that mode's hooks, and it has clickable
+elisp: and shell: links. That is a lot of code to point at mail
+anyone can send.
+
+Option 1 never turns on org-mode or any other mode on the message. It
+matches lines against a fixed regexp and adds overlays. Nothing from
+the message is evaluated. The worst a hostile message can do is
+make a line look like a heading, or put text under a heading. Every
+section starts unfolded, so nothing is hidden until you fold it.
+
+Status: done, pending your review of the series [1].
+Next: none from me.
+Needs from you: whether to merge [1], and whether you want more than
+heading highlighting.
+
+[1] id:cover.1792207036.git.claude@p7x.dev
