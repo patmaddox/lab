@@ -1,0 +1,61 @@
+From: claude <claude@p7x.dev>
+Subject: Re: [RFC] lab-process-mail daemon
+To: Pat Maddox <pat@patmaddox.com>, lab-devel@p7x.dev
+In-Reply-To: <m2y0bxvzry.fsf@beastie.p7x.dev>
+References: <m2y0bxvzry.fsf@beastie.p7x.dev>
+Message-ID: <1792203947.8749806b660e@p7x.dev>
+Date: Sat, 17 Oct 2026 02:25:51 +0000
+
+On Fri, 16 Oct 2026 19:14:57 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+> I'd like to have another tool that uses daemon(8) to daemonize it. It
+> should loop and do the work, and sleep if there are no inbox messages.
+
+This is posted as "[PATCH] src/lab-process-mail: Add a loop to run
+under daemon(8)" [1]. It adds lab-process-mail-loop, which runs
+lab-process-mail, sleeps LAB_PROCESS_MAIL_INTERVAL seconds (300 by
+default), and runs it again. Each run already fetches and drains the
+inbox, so the sleep only happens once the inbox is empty. The
+environment passes through, so LAB_BASE_BRANCH and NOTIFY_URL work as
+they do today. Start it with:
+
+    daemon -f -o ~/lab/process-mail.log -p ~/lab/process-mail.pid \
+        lab-process-mail-loop
+
+and stop it with kill $(cat ~/lab/process-mail.pid).
+
+A failed run stops the loop. A stuck message is still the oldest in
+the inbox, so a retry would spend an agent pass on it every five
+minutes; lab-process-mail has already sent the "stuck" notice, and you
+restart the loop once it is dealt with. The cost is that a transient
+failure, such as a fetch during a network outage, also stops it, with
+no notice since lab-process-mail only notifies about stuck messages.
+If that bites, the fix I would propose is a distinct exit status for a
+stuck message, so the loop can retry everything else.
+
+The loop runs the installed lab-process-mail, so it does not fetch new
+versions of the code by itself. After installing an update, restart
+it.
+
+> Would it be better to have a dedicated script for this, or a -d flag? I
+> think a dedicated script makes more sense so it can easily call
+> lab-process-mail. It also won't risk coupling the daemon behavior and
+> the program logic. I really like the idea I got from s6 of writing
+> simple tools that process stdio, and using a tool like s6 or daemon(1)
+> to handle the daemonization, instead of forking in the process itself.
+
+Agreed, and the patch takes that shape. lab-process-mail is unchanged
+and stays a single drain. The loop never forks; daemon(8) owns
+detaching, the log file, and the pidfile, and the same loop runs
+under s6 as is. It ships in the existing lab-process-mail package, so
+"just install" puts both in ~/local/bin.
+
+Your "[RFC] processing the entire inbox at once" [2] would change what
+one lab-process-mail run does, but not this loop, which only looks at
+its exit status.
+
+Status: the loop is posted and ready for review; it was tested with
+kyua and under daemon(8) with a stubbed lab-process-mail. Nothing is
+needed from you beyond review.
+
+[1] id:f759841e25e29b5cf42bf0a033a2c583dc7255e7.1792203922.git.claude@p7x.dev
+[2] id:m2tsmlvzo7.fsf@beastie.p7x.dev
