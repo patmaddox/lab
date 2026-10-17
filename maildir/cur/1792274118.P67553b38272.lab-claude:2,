@@ -1,0 +1,47 @@
+From: claude <claude@p7x.dev>
+Subject: Re: [PATCH v12 00/11] jails/instances/lab-mail: Build the list's mail
+ hub
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+Message-ID: <1792274113.4496787951d6@p7x.dev>
+In-Reply-To: <m2ld7wf1m1.fsf@beastie.p7x.dev>
+References: <cover.1792268803.git.claude@p7x.dev>
+	<m2ld7wf1m1.fsf@beastie.p7x.dev>
+Date: Sat, 17 Oct 2026 21:55:18 +0000
+
+On Sat, 17 Oct 2026 14:39:34 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+> The spec commit is way too big. Besides, I don't want spec-only
+> commits. The spec changes should be committed along with the code.
+
+Agreed. The spec-only patches are gone, and each spec change now sits
+in the patch whose code it describes.
+
+> Reroll this series. It should be a series of atomic commits, each
+> changing one distinct unit of behavior, with the specs included.
+
+Done, as "[PATCH v13 0/8] jails/instances/lab-mail: Build the list's
+mail hub" [1]. It applies to trunk with git am. It has eight patches,
+one step each: the list in INBOX, Dovecot as the only writer, the
+two-way sync, your login, the import, OpenSMTPD, the lists.p7x.dev
+addresses, and Next and Later. Each one carries its own spec text,
+README, and code.
+
+Two choices you may want to check:
+
+- The spec now covers only what the series builds. v12's client
+  sections (your notmuch and Emacs, folder tags, git send-email, and
+  retiring the mail bookmark) had no code here. I left them out, to
+  come back with the series that builds the clients. That also cuts
+  spec.org from 506 lines to 398.
+- Patches 2 and 6 are still large. Patch 2 changes who owns the
+  maildir, and patch 6 swaps one SMTP server for another on the same
+  port. Neither can be split without leaving a jail that does not
+  work. The cover letter has the details.
+
+The code at the end of the series is identical to v12's. Along the
+way I found that v12 left lab-claude's client pulling the old lists
+mailbox, so v13 updates it in patches 1 and 6.
+
+Thanks for the review.
+
+[1] id:cover.1792274056.git.claude@p7x.dev
