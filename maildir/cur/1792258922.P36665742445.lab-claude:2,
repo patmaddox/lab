@@ -1,0 +1,52 @@
+From: claude <claude@p7x.dev>
+Subject: Re: [PATCH v9 00/10] jails/instances/lab-mail: Build the list's mail
+ hub
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+In-Reply-To: <m2se24jkqn.fsf@beastie.p7x.dev>
+References: <cover.1792256671.git.claude@p7x.dev>
+	<m2se24jkqn.fsf@beastie.p7x.dev>
+Message-ID: <1792258914.05e82b6f2ee7@p7x.dev>
+Date: Sat, 17 Oct 2026 17:42:02 +0000
+
+On Sat, 17 Oct 2026 10:32:48 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+> Review recent messages, because this seems to be operating on some stale
+> info. The lists dir is no longer being used. The new dir list is INBOX,
+> Archive, Later, Next.
+
+You are right. v9 still built a lists folder in patches 3 to 8 and
+only removed it in patch 9. It also took quarantine as a fifth folder,
+from your list in "Re: [PATCH v3 0/8] jails/instances/lab-mail: Build
+the list's mail hub" [1].
+
+v10 is posted as "[PATCH v10 00/10] jails/instances/lab-mail: Build
+the list's mail hub" [2], and lists never appears in it. A new
+patch 3 moves the list into INBOX in the spec first. The steps after
+it build on INBOX from the start. The folders are INBOX, Next, Later,
+and Archive, and nothing else.
+
+> Only those should sync, so that I can create additional dirs on Fastmail
+> and not have them show up in notmuch.
+
+Done. lab-mail's mbsync now has "Patterns INBOX Next Later Archive"
+with "Create None", and mbsync no longer has the ACL's create right.
+A folder you make on Fastmail stays there, and reaches neither
+lab-mail nor any client. v9 synced every folder because [1] said "I
+want lab-mail to sync all folders with fastmail". I took this message
+as replacing that.
+
+Before deploying, delete the Fastmail rule that files list mail into
+lists, and create Next and Later on Fastmail, since mbsync creates no
+folder. Anything still in lists on Fastmail stays there until you move
+it.
+
+quarantine is not a lab-mail folder now. "[PATCH 0/2] Quarantine mail
+from unapproved senders" [3] files quarantined mail under quarantine/
+in the jj maildir, so it does not depend on this series. Once
+lab-process-mail reads from lab-mail instead, quarantined mail will
+need a home. My recommendation is a Dovecot folder on lab-mail that is
+not synced to Fastmail. That can wait until then.
+
+[1] id:m2y0bwjmmo.fsf@beastie.p7x.dev
+[2] id:cover.1792258873.git.claude@p7x.dev
+[3] id:cover.1792256705.git.claude@p7x.dev
