@@ -1,0 +1,160 @@
+From: claude <claude@p7x.dev>
+Subject: Re: [PATCH v3 0/2] lab-process-mail: Add lab-process-maild
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+In-Reply-To: <m21p9oucpe.fsf@beastie.p7x.dev>
+References: <cover.1792207350.git.claude@p7x.dev>
+	<m2ik31t2qs.fsf@beastie.p7x.dev> <1792209082.f4b879550474@p7x.dev>
+	<m21p9oucpe.fsf@beastie.p7x.dev>
+Date: Sat, 17 Oct 2026 05:29:57 +0000
+
+Message-ID: <1792214992.f47fb7443c68@p7x.dev>
+
+On Fri, 16 Oct 2026 22:18:37 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+> claude <claude@p7x.dev> writes:
+> 
+> > One cost to note is that lab-process-mail answers one message per run
+> > and daemon(8) waits the full interval after every run. A batch of ten
+> > messages therefore takes nine extra minutes at the default of 60. A
+> > smaller lab_process_maild_interval shortens that, since a run on an
+> > empty inbox costs only a fetch.
+> 
+> That sucks. It would be much better for lab-process-mail to indicate
+> whether it needs to continue. What mechanisms are there available to do
+> that? Show code snippets of each approach.
+
+First, a limit that applies to every option. daemon(8) cannot act on
+an indication. -r and -R restart the child after a fixed delay
+whatever its exit status, and no option keys on the status (daemon(8)
+on 15.1). So whichever channel lab-process-mail uses, something
+between daemon(8) and lab-process-mail has to read it. That is a short
+foreground loop, with no "&" and no wait, which daemon(8) runs with -R
+as it runs lab-process-mail in v4 [1]:
+
+    daemon -f -H -o LOG -P PIDFILE -R INTERVAL \
+        -t lab-process-maild LOCALBASE/bin/lab-process-maild drain
+
+drain answers messages back to back while lab-process-mail says there
+is more, then exits. daemon(8) then owns the sleep, as it does now.
+I ran this shape under daemon(8) on this host with a stub that takes
+two seconds per pass:
+
+- Three messages were answered back to back, with no delay between
+  them.
+- A SIGTERM during the restart delay stopped daemon(8) at once.
+- A SIGTERM during a pass reached only drain, since daemon(8) signals
+  its child and not the group. sh holds a trapped signal until the
+  foreground command ends, so the pass finished. drain then exited,
+  and daemon(8) did not restart it.
+
+These are the channels lab-process-mail could use.
+
+1. Exit status
+
+lab-process-mail exits 0 once the inbox is empty, 75 (EX_TEMPFAIL in
+sysexits(3)) when it answered a message and more is waiting, and 1 on
+failure, as it does now. In lab-process-mail, after the notice:
+
+	notify "answered: ${subject} (inbox $(inbox_count))"
+	[ "$(inbox_count)" -eq 0 ] || exit 75
+
+In lab-process-maild:
+
+	drain() {
+		local status stopping
+
+		stopping=
+		trap 'stopping=1' TERM
+		while :; do
+			status=0
+			"${bindir}/lab-process-mail" || status="${?}"
+			[ "${status}" -eq 75 ] || exit "${status}"
+			[ -z "${stopping}" ] || exit 0
+		done
+	}
+
+The status is a channel only the program sets, read by the process
+that ran it, with nothing to store or clean up. A run by hand that
+clears the inbox still exits 0. The cost is one non-zero status that
+is not a failure. That needs documenting in lab-process-mail, and a
+caller that treats any non-zero status as an error, such as
+"just process-email", would need to accept 75.
+
+A failure still ends drain, and daemon(8) runs it again after the
+interval. A stuck message then fails at once, before the agent
+starts, as it does in v4.
+
+2. A file it writes
+
+lab-process-mail writes what is left, and drain reads it:
+
+	# lab-process-mail
+	inbox_count > "${HOME}/var/db/${PROGNAME}/pending"
+
+	# lab-process-maild drain
+	while "${bindir}/lab-process-mail" &&
+	    [ "$(cat "${HOME}/var/db/lab-process-mail/pending")" -gt 0 ] &&
+	    [ -z "${stopping}" ]; do
+		:
+	done
+
+This carries the same bit as option 1 through a second channel. Both
+programs must agree on the path, and a run that dies before writing
+the file leaves the last count behind, so drain can act on a stale
+value. A file is the right tool when a turn returns data. One bit
+fits in the exit status.
+
+3. Ask the inbox
+
+lab-process-mail says nothing, and drain checks the fact itself. This
+is the check v3's loop made:
+
+	while "${bindir}/lab-process-mail" &&
+	    [ "$(notmuch count tag:inbox)" -gt 0 ] &&
+	    [ -z "${stopping}" ]; do
+		:
+	done
+
+It reads a fact the program does not author, and it needs no
+protocol. The cost is that lab-process-maild must know notmuch, its
+environment, and what counts as work. That is lab-process-mail's
+knowledge, and the two drift apart if that definition changes, for
+example if a held message were left in the inbox. It is also not
+lab-process-mail indicating anything, which is what you asked for.
+
+4. Standard output
+
+lab-process-mail prints "more" or "done" and drain parses it. I would
+not do this. daemon(8) sends the same stdout to the log, so the
+signal shares a channel with the diagnostics, and it is the parsed
+control string that CLAUDE.md's "Own the loop" warns against, even
+though this script is deterministic.
+
+5. Exec itself again
+
+lab-process-mail continues by replacing itself, so daemon(8) -R stays
+as in v4 and needs no drain:
+
+	notify "answered: ${subject} (inbox $(inbox_count))"
+	[ "$(inbox_count)" -eq 0 ] || [ -n "${stopping}" ] ||
+	    exec "${bindir}/${PROGNAME}"
+
+Each pass gets a fresh process, but this is the internal loop you
+asked to remove, in the form of a tail call. A run by hand drains the
+whole inbox again, and the program decides when it runs again.
+
+I recommend option 1. It is the conventional way for a one-shot Unix
+program to report its outcome, and the program stays free of any loop
+or timing. The loop lives in lab-process-maild, which you said in the
+RFC thread should "loop and do the work, and sleep if there are no
+inbox messages" [2]. daemon(8) keeps the sleep, the log, the pidfile,
+and the signals. The drain loop is about ten lines. It needs no
+background process, because the stop behavior relies only on sh
+holding a trapped signal.
+
+If you pick one, v5 will carry it. It would be one patch for the exit
+status and one for drain and its man page entry, in place of v4's
+reliance on -R alone.
+
+[1] id:cover.1792209039.git.claude@p7x.dev
+[2] id:m2y0bxvzry.fsf@beastie.p7x.dev
