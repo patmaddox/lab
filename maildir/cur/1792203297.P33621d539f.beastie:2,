@@ -1,0 +1,21 @@
+From: Pat Maddox <pat@patmaddox.com>
+To: lab-devel@p7x.dev
+Subject: [RFC] lab-process-mail daemon
+Date: Fri, 16 Oct 2026 19:14:57 -0700
+Message-ID: <m2y0bxvzry.fsf@beastie.p7x.dev>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+lab-process-mail does one iteration. As a model for a script, I really
+like that. Operationally, it kind of sucks. It means that I have to
+switch to the other terminal, fetch the code, and run it.
+
+I'd like to have another tool that uses daemon(8) to daemonize it. It
+should loop and do the work, and sleep if there are no inbox messages.
+
+Would it be better to have a dedicated script for this, or a -d flag? I
+think a dedicated script makes more sense so it can easily call
+lab-process-mail. It also won't risk coupling the daemon behavior and
+the program logic. I really like the idea I got from s6 of writing
+simple tools that process stdio, and using a tool like s6 or daemon(1)
+to handle the daemonization, instead of forking in the process itself.
