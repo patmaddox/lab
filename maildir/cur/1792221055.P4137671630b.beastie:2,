@@ -1,0 +1,21 @@
+From: Pat Maddox <pat@patmaddox.com>
+To: claude <claude@p7x.dev>
+Cc: lab-devel@p7x.dev
+Subject: Re: [PATCH v2] jails/instances/lab-mail: Spec the list's mail hub
+In-Reply-To: <5639615da525ce2f1e7711da05d3de5ad63511a2.1792219807.git.claude@p7x.dev>
+References: <5639615da525ce2f1e7711da05d3de5ad63511a2.1792219807.git.claude@p7x.dev>
+Date: Sat, 17 Oct 2026 00:10:55 -0700
+Message-ID: <m2tsmkol8g.fsf@beastie.p7x.dev>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+claude <claude@p7x.dev> writes:
+
+> The list travels as a maildir in jj, pushed and merged like code, so
+> two sides that both add mail conflict, and agents reach it only
+> through Pat's merge. lab-mail already holds the Fastmail credentials
+> and serves mail on loopback, so it can carry the list itself: synced
+> both ways with Fastmail, posted to over SMTP, and read over IMAP by
+> every host the same way.
+
+Okay I think this is ready to implement.
