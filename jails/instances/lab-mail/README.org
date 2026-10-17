@@ -89,15 +89,16 @@ show it. lockf(1) skips a run while the previous one is still going.
 
 The sync job runs mbsync with =/usr/local/etc/mbsyncrc=. It logs in to
 Fastmail with =mail-creds=, and to Dovecot as =mbsync= with
-=mbsync-imap=, and syncs INBOX and =Archive= both ways: new messages,
-flags, moves, and deletions. Any other folder of the Fastmail account
-stays there. The folders come from Fastmail. A folder of the list
-that lab-mail lacks, such as =Archive= at the first sync, is created
-on lab-mail, and no folder is ever created on Fastmail. mbsync never
-expunges a message on either side. A message expunged on one side is
-only marked =\Deleted= on the other, so Fastmail keeps every message
-ever posted, and a mistaken deletion on lab-mail can be undone from
-there. mbsync keeps its sync state in =/data/mail/mbsync=.
+=mbsync-imap=, and syncs INBOX, =Next=, =Later=, and =Archive= both
+ways: new messages, flags, moves, and deletions. Any other folder of
+the Fastmail account stays there. The folders come from Fastmail. A
+folder of the list that lab-mail lacks, such as =Next= at the first
+sync, is created on lab-mail, and no folder is ever created on
+Fastmail. mbsync never expunges a message on either side. A message
+expunged on one side is only marked =\Deleted= on the other, so
+Fastmail keeps every message ever posted, and a mistaken deletion on
+lab-mail can be undone from there. mbsync keeps its sync state in
+=/data/mail/mbsync=.
 
 ** reading
 #+BEGIN_EXAMPLE
@@ -106,7 +107,8 @@ there. mbsync keeps its sync state in =/data/mail/mbsync=.
 
 rc(8) starts Dovecot when the jail starts; its config is
 =/usr/local/etc/dovecot/dovecot.conf=. It serves the maildir as the
-mailboxes INBOX and =Archive=, as on Fastmail. Every login sees the
+mailboxes INBOX, =Next=, =Later=, and =Archive=, as on Fastmail. It
+creates none of them. Each comes from Fastmail. Every login sees the
 same mailboxes, and runs as =vmail=, which keeps Dovecot's indexes in
 =/data/mail/dovecot=. What each login may do is in =dovecot-acl=, as
 rights describes.
@@ -180,6 +182,10 @@ install -d -o 15102 -g 15102 -m 0700 /jails/data/lab-mail/mail/mbsync
 itself, before Dovecot held the list, must be emptied, along with its
 =mbsync= directory: mbsync starting with no sync state would copy
 every message already on both sides to the other side again.
+
+Folders come from Fastmail, so the operator creates =Next= and =Later=
+on Fastmail, in its web interface, before the first sync. INBOX and
+=Archive= are there already.
 
 * operate
 Like the other instances; see =jails/README.org=:

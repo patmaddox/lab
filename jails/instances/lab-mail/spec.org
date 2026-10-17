@@ -22,10 +22,15 @@ provider: p7x.dev and lists.p7x.dev are hosted on Fastmail.
   No Fastmail rule files it elsewhere.
 - Fastmail's folder =Archive= is the account's archive folder. Over
   IMAP it carries the =\Archive= special-use flag.
+- The account's folders =Next= and =Later= are plain folders. The
+  operator creates them once on Fastmail.
 
-the list: the folders INBOX and =Archive= of the Fastmail account.
-- A message posted to the list lands in INBOX. Archiving a message
-  moves it to =Archive=. A message that needs no answer is archived.
+the list: the folders INBOX, =Next=, =Later=, and =Archive= of the
+Fastmail account.
+- A message posted to the list lands in INBOX. Pat moves a message
+  that needs work to =Next= when it comes up soon, or to =Later= when
+  it can wait. Archiving a message moves it to =Archive=. A message
+  that needs no answer is archived.
 - The folder a message is in is its state. That state lives in the
   list data, not in any one client, so Fastmail and every client see
   it, and a move on Fastmail's web interface counts like any other.
@@ -150,8 +155,9 @@ reading:
 - The operator creates that directory and its subdirectories on the
   host before the jail starts, as with the credentials. The jail does
   not create anything on the host.
-- Dovecot serves the list as the mailboxes INBOX and =Archive=, as on
-  Fastmail. INBOX is a folder of the maildir like the other. Every
+- Dovecot serves the list as the mailboxes INBOX, =Next=, =Later=,
+  and =Archive=, as on Fastmail. INBOX is a folder of the maildir like
+  the others. Every
   login sees the same mailboxes, and Dovecot's ACL gives each login
   the rights in the rights section.
 - Dovecot serves IMAP and LMTP only. It does not run POP3 or
@@ -160,9 +166,9 @@ reading:
 - Reading and posting keep working while Fastmail is down.
 
 sync with Fastmail:
-- mbsync in lab-mail syncs INBOX and =Archive= both ways between
-  Fastmail and Dovecot, as an IMAP client of each, and no other
-  folder. It logs in to Dovecot on 127.0.0.1:2143 as =mbsync=, with
+- mbsync in lab-mail syncs INBOX, =Next=, =Later=, and =Archive=
+  both ways between Fastmail and Dovecot, as an IMAP client of each,
+  and no other folder. It logs in to Dovecot on 127.0.0.1:2143 as =mbsync=, with
   the password in =mbsync-imap=. It never opens the maildir.
 - New messages, flag changes, moves, and deletions travel in both
   directions on the next run.
@@ -266,7 +272,8 @@ beastie.
     two minutes, it is in =Archive= and not in INBOX on lab-mail.
 12. Logged in as =pat@p7x.dev=, Pat moves a message from INBOX to
     =Archive= on lab-mail. Within two minutes, it is in =Archive= and
-    not in INBOX on Fastmail.
+    not in INBOX on Fastmail. The same holds for =Next= and =Later=,
+    and for a move back to INBOX.
 
 out of scope:
 - Moving the list's clients off the jj maildir. lab-process-mail, the
@@ -350,7 +357,8 @@ why.
 - Archive by folder, not by a tag in one client. A tag is not in the
   list data, so a rebuild of the index loses it and no agent sees it.
   Fastmail's own =Archive= folder is used, not a new one, so archiving
-  on Fastmail's web interface means the same.
+  on Fastmail's web interface means the same. =Next= and =Later= are
+  folders for the same reason.
 - Import the jj maildir once, not freeze it as an archive. A frozen
   archive would split the list into two places to search, and a reply
   to an old thread would arrive with no parent.
