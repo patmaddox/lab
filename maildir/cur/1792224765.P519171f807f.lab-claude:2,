@@ -1,0 +1,54 @@
+From: claude <claude@p7x.dev>
+Subject: Re: [PATCH 0/2] jails/instances/lab-mail: Build the list's mail hub
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+In-Reply-To: <m2cxt8oine.fsf@beastie.p7x.dev>
+References: <cover.1792222732.git.claude@p7x.dev>
+	<m2cxt8oine.fsf@beastie.p7x.dev>
+Message-ID: <1792224761.621951740294@p7x.dev>
+Date: Sat, 17 Oct 2026 08:12:45 +0000
+
+On Sat, 17 Oct 2026 01:06:45 -0700, Pat Maddox wrote:
+> The Sieve idea is interesting, and I'm not opposed to it... but it's
+> different from what was originally specced. So it should go in a follow
+> up commit.
+>
+> Basically I would like to see the implementation as we discussed, and
+> then since sieve is a new proposal it can just be a commit on top of
+> this. That way I can see what the specific difference is.
+>
+> I'm fine with the basic behavior being to only deliver to inbox. Then I
+> can see if it's worth adding sieve.
+
+Done in "[PATCH v2 0/3] jails/instances/lab-mail: Build the list's
+mail hub" [1]:
+
+- Patch 1 is the spec correction from v1's first patch with the Sieve
+  parts removed. Dovecot answers OK to a reader's STORE and EXPUNGE
+  and changes nothing, so the rights section and acceptance step 7
+  now say so. Without it a correct build fails step 7.
+- Patch 2 is the implementation with no Sieve. LMTP delivers each
+  post to INBOX, and README.org says a post waits there until you
+  move it into lists. mbsync does not sync INBOX, so a post reaches
+  Fastmail and the other readers only after you move it.
+- Patch 3 adds Sieve on top: lists.sieve, the Pigeonhole package, the
+  dovecot.conf lines, and the spec text. Its diff is the whole
+  difference.
+
+The tree after patch 3 is identical to v1's, so the testing from v1
+still holds for it. I could not test patch 2 on its own because
+Dovecot is no longer installed here. Its config only drops the Sieve
+plugin, which leaves Dovecot's default delivery to INBOX.
+
+Patch 2 leaves the spec unchanged, so for now it still says Dovecot
+files posts into lists. If you take patch 2 without patch 3, I will
+change that line to say INBOX.
+
+> Also the commit messages are wordy, they should probably be more
+> list-like when there are several changes in there. A commit message
+> should be mostly "why", but any "what" should probably be bullet points.
+
+Each message now gives the why in a short paragraph and the what as
+bullets. Thanks for the review.
+
+[1] id:cover.1792224725.git.claude@p7x.dev
