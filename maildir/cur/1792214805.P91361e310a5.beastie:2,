@@ -1,0 +1,115 @@
+From: Pat Maddox <pat@patmaddox.com>
+To: claude <claude@p7x.dev>, lab-devel@p7x.dev
+Subject: Re: [RFC] re-thinking SMTP relay
+In-Reply-To: <1792214276.d6e2c2f1559d@p7x.dev>
+References: <m2mrsdz1n0.fsf@beastie.p7x.dev>
+ <1792193020.cee32e2b1dec@p7x.dev> <m2cxt9vyub.fsf@beastie.p7x.dev>
+ <1792204889.a8a37790f517@p7x.dev> <m2se25t3bq.fsf@beastie.p7x.dev>
+ <1792207782.8a5252f19f7d@p7x.dev> <m2ecdpt2lh.fsf@beastie.p7x.dev>
+ <1792209288.c7f8aba8e086@p7x.dev> <m2a4ocud3r.fsf@beastie.p7x.dev>
+ <1792214276.d6e2c2f1559d@p7x.dev>
+Date: Fri, 16 Oct 2026 22:26:45 -0700
+Message-ID: <m2o6cssxre.fsf@beastie.p7x.dev>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+claude <claude@p7x.dev> writes:
+
+> On Fri, 16 Oct 2026 22:10:00 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+>> Okay well I think this is ready to move forward then. Get to work, and
+>> post any questions you have here (don't post patches if you have open
+>> questions).
+>
+> Two questions are still open, so this reply carries no patch. Both
+> were asked in "Re: How to configure beastie to use lab-mail" [1] and
+> never answered. Your answers in this thread settled the other two
+> from that message: one spec covers the whole move, and agent mail is
+> not moderated.
+>
+> The work is a revision of jails/instances/lab-mail/spec.org in place.
+> [fact] That spec and the jail it describes are on trunk, from
+> "[PATCH v11 0/8] jails/instances/lab-mail: Build the mail relay
+> jail" [2].
+>
+> 1. The jj history. [fact] The jj maildir holds 492 messages, the
+>    whole list so far. lab-mail's list starts empty.
+>
+>    a. Import the jj maildir into lab-mail's list once, before the
+>       switch. With your read-write login this is one mbsync run from
+>       beastie, and lab-mail's mbsync then copies it up to Fastmail.
+>       Old threads keep their context, replies to them still thread,
+>       and the replied tags come back from the list data, as you
+>       asked in [1].
+>    b. Freeze the jj maildir as an archive, and start the list empty.
+>       [inference] My pass reads earlier versions of a series and
+>       their reviews from the list, so it would have to search two
+>       places, and a reply to an old thread would arrive with no
+>       parent.
+>
+>    I recommend (a).
+>
+>    After the switch, may I retire the mail bookmark, the
+>    submissions remote, and ~/lab/mail.jj for mail? I would. The
+>    spec's end state would then say the list lives only on lab-mail
+>    and Fastmail. History would come from snapshots, as you said
+>    earlier in this thread.
+>
+> 2. Archiving. Today you archive by moving a file under archive/ in
+>    the jj maildir, and my unmerged "[PATCH v2 1/2] notmuch: Tag
+>    messages under archive/ as archived" [3] tags it by that folder.
+>    Under the hub, your beastie maildir is a two-way copy of
+>    lab-mail's.
+>
+>    a. An IMAP folder "archive" on lab-mail, beside "lists". You
+>       archive by moving a message there. mbsync carries the move to
+>       lab-mail, and so to every client, and notmuch tags by folder
+>       as [3] does now. Agent logins can read it but not move mail.
+>       [inference] The cost is the one you accepted for deletion.
+>       With Expunge None, Fastmail keeps its copy in "lists" until
+>       Expunge is turned on.
+>    b. A notmuch tag on beastie only. This is the simplest, but it is
+>       not in the list data. A rebuild of the index loses it, and no
+>       agent sees it.
+>
+>    I recommend (a). It keeps your current habit, and it keeps the
+>    archive state in the list data.
+>
+> These I will decide in the spec unless you object. Each one goes in
+> its alternatives section:
+>
+> - Dovecot alone writes the mailbox. OpenSMTPD hands list mail to
+>   Dovecot over LMTP, and mbsync syncs Fastmail with Dovecot over IMAP.
+
+Explain this more, I don't understand it.
+
+>   [inference] Today mbsync writes the maildir and Dovecot only reads
+>   it. With three writers, the chmod after each pull and the separate
+>   owners stop working.
+
+Explain.
+
+
+[...]
+
+>   ~/mail/<user>_at_p7x.dev for both. Agents send with git send-email
+
+We can just call this <user>@p7x.dev, I know that's a valid dir
+name. Nothing wrong with that, right?
+
+[...]
+
+> Asks:
+> - Point 1: import the jj history (a) or freeze it (b)? And may I
+>   retire the mail bookmark, submissions, and ~/lab/mail.jj after
+>   the switch?
+
+I will import the maildir the first time.
+
+Yes, retire the old mechanism.
+
+> - Point 2: archive to an IMAP folder (a) or a beastie-only tag (b)?
+
+Archive by dir, not tag.
+
+Also we will probably know what Fastmail calls the dir once the first
+sync takes place. It has an Archive dir already.
