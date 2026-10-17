@@ -1,0 +1,221 @@
+From: claude <claude@p7x.dev>
+Subject: Re: [PATCH 1/3] libexec/mail: Thread each revision under its first
+ version
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+In-Reply-To: <m2y0bwolig.fsf@beastie.p7x.dev>
+References: <cover.1792214740.git.claude@p7x.dev>
+	<61fcb03c0fcf8e5772a7c3eafbfa9022b57db11f.1792214740.git.claude@p7x.dev>
+	<m27bjgq0ei.fsf@beastie.p7x.dev> <1792220434.5646098e8874@p7x.dev>
+	<m2y0bwolig.fsf@beastie.p7x.dev>
+Message-ID: <1792221584.272356923532@p7x.dev>
+Date: Sat, 17 Oct 2026 07:20:57 +0000
+
+On Sat, 17 Oct 2026 00:04:55 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+> Do some more research. There's a lot more information on their workflow,
+> threading model, Junio's workflow, etc than just that.
+
+You were right, and my last reply was wrong. Until June 2026,
+git.git's rule was yours: the cover of v(N+1) replies to the cover of
+vN, so the versions form a spine. Junio still stated that preference
+on 4 June. git.git then switched to replying to v1, and the page I
+quoted is the result. A commit dated 15 June, merged in July,
+rewrote MyFirstContribution from "previous iteration" to "first
+iteration". GitGitGadget followed on 4 August, and practice on the
+list has moved with it.
+
+So "as git.git does" in patch 1 is true only of the last four months.
+It is not the long-standing rule, and in my last reply I was wrong to
+call your spine "b4's yes, not git.git's rule".
+
+Evidence follows: what Junio said, the change itself, what the tools
+do, and what a year of the list shows.
+
+What Junio said
+---------------
+
+On 4 June, in "Re: [PATCH 1/2] b4: introduce configuration for the
+Git project" [1]:
+
+  "We do not have a word to describe how the latest iteration refers
+  to its previous iteration via In-reply-to: or References: headers,
+  but our preference is to make the cover letter of iteration N+1 to
+  be a response to the cover letter of iteration N."
+
+  "Having said that, I've seen a cover letter of iteration N (for any
+  value of N > 1) that respondes to the cover letter of the initial
+  iteration. While it seems not to break "br" and the lore archive
+  does not seem unhappy about it, I am not sure if tooling used by
+  other people are also happy with it."
+
+He wrote the same thing a month earlier, in "Re: [PATCH v4 0/3] Avoid
+hardcoded "good"/"bad" bisect terms" [2]. There he asked that "[v4
+0/3] must be a reply to [v3 0/2]. Otherwise b4 will say that v3 is
+still the last iteration".
+
+In both messages his concern is tooling, not shape. He replaces a
+topic by handing "b4 am" the Message-ID of a patch he has queued; b4
+then follows the thread to the newest round, and he compares the two
+with "git range-diff @{-1}...". He describes this in "Re: [PATCH v2]
+doc: document and test `@` prefix for raw timestamps" [3] and in "Re:
+[PATCH v2] ls-files: filter pathspec before lstat" [4]. He also says
+there that a "Link to vN" line is not a substitute for In-Reply-To.
+A new thread for each version breaks his workflow, and the list
+regulars all reject it. Which earlier cover you reply to matters
+much less to him, and in "Re: [PATCH v3 0/3] Documentation: recommend
+the use of b4" [5] he gave way:
+
+  "As long as it does not hurt automation, I do not care too much"
+
+The change
+----------
+
+Patrick Steinhardt's series "[PATCH v4 0/3] Documentation: recommend
+the use of b4" [6] made the switch. Its commit 16b2924aa,
+"MyFirstContribution: recommend shallow threading of cover letters",
+says:
+
+  "The "MyFirstContribution" document recommends the use of deep
+  threading of cover letters: every cover letter of subsequent
+  iterations shall be linked to the cover letter of the preceding
+  version. The result of this is that eventually, threads with many
+  versions are getting nested so deep that it becomes hard to
+  follow."
+
+The same series added .b4-config with "send-same-thread = shallow".
+In "Re: [PATCH v2 1/3] Documentation/MyFirstContribution: recommend
+shallow threading", Kristoffer Haugsbakk gave the practical reason:
+on lore in mobile Safari, deep threads become "unclickable backticks"
+[7]. In the same thread Weijie Yuan argued for the spine. Each cover
+carries a range-diff against the previous version, so "chain-reply-to
+makes more sence to me" [8]. Toon Claes, on v3 of the series, did not
+"think it's worth it to keep bike shedding about this" [12]. In the
+v4 cover letter Patrick wrote "I wasn't really able to judge
+consensus one way or the other" [6]. Junio merged it, and "What's
+cooking in git.git (Jul 2026, #03)" lists ps/doc-recommend-b4 as
+graduated to master [9].
+
+After the change Junio spelled out the new shape himself, in "Re:
+[PATCH v2 0/5] Introduce 'uploadpack.lazyFetchTrusted'" [10]:
+
+  "* vN (1 < N) cover letter is a reply to v1 cover letter
+   * vN patch M (0 < M) is a reply to vN cover letter"
+
+Two points stay unsettled. SubmittingPatches never names v1 or
+v(N-1); it says only to reply to "either an additional 'cover
+letter' message (see below), the first patch, or the respective
+preceding patch", and the series left that unchanged. And Junio
+said on 4 June that a single-patch topic chains each version to the
+one before it [1]; no document has addressed that since.
+
+The tools
+---------
+
+- b4: src/b4/ez.py sets "oldrev = revision - 1" and then, for
+  shallow, "oldrev = 1". So "yes" replies to the previous cover and
+  "shallow" replies to the first, as b4's config docs say. b4's own
+  releases.rst says the opposite about shallow; that is a b4 doc bug.
+  b4 defaults to "no", which starts a new thread, but git.git's
+  .b4-config overrides that default.
+- GitGitGadget: until 4 August, lib/patch-series.ts passed every
+  earlier cover to format-patch as --in-reply-to. Only the last one
+  took effect, so each version replied to the one before it. Commit
+  567b4d8, "feat: use shallow threading for new versions of patches"
+  (merged as cadedf4, PR #2309), now passes only the first. The merge
+  message cites git.git's 16b2924aa, and the commit closes
+  gitgitgadget issue #2254, which Derrick Stolee opened on 3 June.
+- send-email and format-patch: --thread=shallow and deep concern only
+  the mails within one version, as SZEDER Gábor pointed out in
+  "Re: [PATCH 1/2] b4: introduce configuration for the Git project"
+  [11]. The --in-reply-to example in git-send-email(1) has only two
+  versions, so it cannot tell v1 apart from v(N-1).
+
+> Don't take that one page. Research this deeply - docs, mailing list
+> posts, and look at recent multi-version series to see the current
+> practice.
+
+Current practice
+----------------
+
+lore's web pages are behind a bot wall, but its git inbox can be
+cloned. I took a year of the list (October 2025 on, 27,630 messages).
+For each v3 or later series I followed the In-Reply-To of its cover,
+or of its only patch. I left out v2, where both rules give the same
+answer. Before 5 August 2026, 459 replied to v(N-1) and 144 to v1.
+From 5 August on, 52 replied to v(N-1) and 157 to v1.
+
+By sender:
+
+- GitGitGadget: 253 to v(N-1) up to 4 August, then 87 to v1 and none
+  to v(N-1). The switch is clean, and it lands on the day the commit
+  above was merged.
+- b4: mostly v1 (115 against 38), from git.git's .b4-config.
+  Patrick Steinhardt replied to v1 71 times out of 71, and Karthik
+  Nayak 32 out of 32.
+- Plain send-email still leans toward v(N-1), 47 against 35 since
+  August, because contributors set --in-reply-to by hand.
+- Some regulars keep the spine. Justin Tobler chained 16 of 16, and
+  Toon Claes, who uses b4, 17 of 18. Junio's own series are split,
+  6 to v(N-1) and 7 to v1.
+
+Across v2 and later, another 116 series heads replied to a review
+message rather than a cover, and 93 started a new thread.
+
+Recent examples of each shape:
+
+- Spine: "[PATCH v24 0/7] branch: delete-merged" replies to its v23
+  cover [13]. Its v25 came after GitGitGadget's switch and replies to
+  v1, so one thread now holds both shapes.
+- Fan: "[PATCH v9 0/5] fetch: avoid fetching every branch of a new
+  remote in a shallow repo" replies to its v1 patch [14].
+
+> Reply with conclusions and evidence.
+
+Conclusions
+-----------
+
+1. Neither of us had it entirely right. For years git.git's rule
+   was the spine you described, and it was Junio's stated
+   preference. Since June 2026 it has been the fan, which is what
+   the docs and both of its tools now produce.
+2. What git.git requires, and Junio enforces, is that every version
+   stays in one thread, with each version's patches replying to that
+   version's own cover. Which earlier cover a revision replies to is
+   a readability choice that the project argued about and settled
+   without real consensus.
+3. git.git moved to the fan to avoid deep nesting on lore's web view
+   and on phones. The spine's advantage, which Weijie argued, is that
+   the thread shows which version answers which review, and each
+   cover's range-diff sits under the version it is diffed against.
+
+So citing git.git does not settle which shape this list should use.
+You read the list in notmuch, not lore on a phone, and our longest
+series is ten versions, so the depth problem that drove git.git's
+switch hardly applies here. I still recommend the spine. Choose it
+as our own rule, and describe it in the docs as git.git's convention
+before June 2026 (b4's "send-same-thread = yes"), not as its current
+one.
+
+If you agree, v2 of "[PATCH 0/3] Thread each revision under its
+first version" [15] replies to v(N-1) and drops the walk to v1. Its
+commit messages then describe the spine as this list's rule and cite
+git.git's convention before June as its source. rethread.py relinks the list's revisions the same
+way. If you prefer to follow git.git's current docs, the posted
+series stands as it is, apart from correcting "as git.git does" to
+name the June change.
+
+[1] https://lore.kernel.org/git/xmqqmrxbp0s6.fsf@gitster.g/
+[2] https://lore.kernel.org/git/xmqqv7cpepec.fsf@gitster.g/
+[3] https://lore.kernel.org/git/xmqqik81xpqx.fsf@gitster.g/
+[4] https://lore.kernel.org/git/xmqqecigtm5z.fsf@gitster.g/
+[5] https://lore.kernel.org/git/xmqqh5nbsuxu.fsf@gitster.g/
+[6] https://lore.kernel.org/git/20260615-pks-b4-v4-0-22cfca8f19c5@pks.im/
+[7] https://lore.kernel.org/git/f1dbb848-2d9b-488a-835b-2d23006b5fa6@app.fastmail.com/
+[8] https://lore.kernel.org/git/aiACDLOtd_0_CCD7@wyuan.org/
+[9] https://lore.kernel.org/git/xmqqeche67lr.fsf@gitster.g/
+[10] https://lore.kernel.org/git/xmqqy0e9rcd9.fsf@gitster.g/
+[11] https://lore.kernel.org/git/aiAK9eLvew+mgWt+@szeder.dev/
+[12] https://lore.kernel.org/git/87a4t32a4g.fsf@emacs.iotcl.com/
+[13] https://lore.kernel.org/git/pull.2285.v24.git.git.1785419916.gitgitgadget@gmail.com/
+[14] https://lore.kernel.org/git/pull.2412.v9.git.git.1791961452.gitgitgadget@gmail.com/
+[15] id:cover.1792214740.git.claude@p7x.dev
