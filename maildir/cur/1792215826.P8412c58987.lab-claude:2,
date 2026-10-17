@@ -1,0 +1,71 @@
+Message-ID: <b115d308e743a3315de2f7b05e3ab1e64a045667.1792215772.git.claude@p7x.dev>
+In-Reply-To: <cover.1792215772.git.claude@p7x.dev>
+References: <cover.1792215772.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Subject: [PATCH 1/3] emacs: Drop the superseded filing key
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+Change-Id: pnrvwlowrloozomxzlsvurzwzrsmnprt
+Date: Sat, 17 Oct 2026 05:43:46 +0000
+
+A revision now replies to the first version of its series, so every
+version and its review share one thread. Filing the old version
+away would file the new one with it, and the reader no longer needs
+a breadcrumb to find the successor, since it sits in the same
+thread.
+---
+change-id: pnrvwlowrloozomxzlsvurzwzrsmnprt
+
+ dotfiles/emacs/lisp/pm-notmuch.el | 21 ++++-----------------
+ 1 file changed, 4 insertions(+), 17 deletions(-)
+
+diff --git a/dotfiles/emacs/lisp/pm-notmuch.el b/dotfiles/emacs/lisp/pm-notmuch.el
+index 42f278a..885a883 100644
+--- a/dotfiles/emacs/lisp/pm-notmuch.el
++++ b/dotfiles/emacs/lisp/pm-notmuch.el
+@@ -166,17 +166,13 @@ EVENT is the process status string."
+     (notmuch-search-find-thread-id))
+    (t (user-error "Not in a notmuch-search or notmuch-show buffer"))))
+ 
+-(defun pm-notmuch--mail-file (folder &optional superseded-by)
++(defun pm-notmuch--mail-file (folder)
+   "Move the thread at point into FOLDER via mail-file.
+-With SUPERSEDED-BY, pass it as the superseding message so the tool
+-posts the breadcrumb reply.  Poll and refresh afterward so the new
+-tag shows at once."
++Poll and refresh afterward so the new tag shows at once."
+   (let* ((thread (pm-notmuch--current-thread-id))
+-         (args (append (list folder thread)
+-                       (when superseded-by (list superseded-by))))
+          (buf (get-buffer-create "*mail-file*"))
+-         (status (apply #'call-process pm-notmuch-mail-file-program
+-                        nil buf nil args)))
++         (status (call-process pm-notmuch-mail-file-program
++                               nil buf nil folder thread)))
+     (unless (eq status 0)
+       (display-buffer buf)
+       (error "mail-file exited with status %s" status))
+@@ -199,20 +195,11 @@ tag shows at once."
+   (interactive)
+   (pm-notmuch--mail-file "archive"))
+ 
+-(defun pm-notmuch-file-superseded (superseded-by)
+-  "File the thread at point into superseded/.
+-SUPERSEDED-BY names the superseding message.  mail-file posts a
+-one-line breadcrumb reply on the thread pointing at it."
+-  (interactive
+-   (list (read-string "Superseded by (message id or query): ")))
+-  (pm-notmuch--mail-file "superseded" superseded-by))
+-
+ (defvar pm-notmuch-file-map
+   (let ((map (make-sparse-keymap)))
+     (define-key map "a" #'pm-notmuch-file-accepted)
+     (define-key map "r" #'pm-notmuch-file-rejected)
+     (define-key map "A" #'pm-notmuch-file-archived)
+-    (define-key map "s" #'pm-notmuch-file-superseded)
+     map)
+   "Keymap for filing a thread into a maildir lifecycle folder.")
+ 
+-- 
+2.56.0
+

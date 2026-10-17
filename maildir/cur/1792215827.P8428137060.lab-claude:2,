@@ -1,0 +1,321 @@
+Message-ID: <940b0667972aae2327f564a93abc3b3256af85f6.1792215772.git.claude@p7x.dev>
+In-Reply-To: <cover.1792215772.git.claude@p7x.dev>
+References: <cover.1792215772.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Subject: [PATCH 2/3] mail-file: Remove the superseded folder
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+Change-Id: kstsuxrklqzyvlpkmqkrxowyvuvxxkpr
+Date: Sat, 17 Oct 2026 05:43:47 +0000
+
+A revision now replies to the first version of its series, so the
+versions and their review share one thread, and the thread itself
+shows which version is current. Moving the old version into its own
+folder would carry the new one along, and the breadcrumb reply that
+named the successor points at a message already in view.
+
+Dropping the folder also drops mail-file's only use of mail delivery
+and jq, so the tool goes back to doing one thing: moving files.
+---
+change-id: kstsuxrklqzyvlpkmqkrxowyvuvxxkpr
+
+ src/mail-file/mail-file   | 123 ++------------------------------------
+ src/mail-file/mail-file.1 |  39 ++----------
+ src/mail-file/tests.sh    |  10 ----
+ 3 files changed, 10 insertions(+), 162 deletions(-)
+
+diff --git a/src/mail-file/mail-file b/src/mail-file/mail-file
+index ccb10ae..3f95c4a 100755
+--- a/src/mail-file/mail-file
++++ b/src/mail-file/mail-file
+@@ -16,27 +16,19 @@
+ #     mail-file accepted   thread:0000000000000abc
+ #     mail-file rejected   id:patch@example.com
+ #     mail-file archive    thread:0000000000000abc
+-#     mail-file superseded thread:<old> id:<new-version>
+-#
+-# Moving to superseded also drops a one-line breadcrumb reply on the
+-# old thread naming the version that supersedes it.  The superseding
+-# message is required, so the breadcrumb is never forgotten.
+ #
+ # The move is idempotent.  A file already in the target folder is left
+ # alone, and a stale path that notmuch still lists before the next new
+ # run is skipped once its source is gone.
+ #
+-# Override the notmuch binary with NOTMUCH and the delivery agent with
+-# MAILDIR_DELIVER.
++# Override the notmuch binary with NOTMUCH.
+ 
+ set -eu
+ 
+ readonly PROGNAME="${0##*/}"
+-readonly SCRIPT_DIR="$(dirname "$(realpath "$0")")"
+ 
+ : "${NOTMUCH:=notmuch}"
+-: "${MAILDIR_DELIVER:=${SCRIPT_DIR}/../../libexec/mail/maildir-deliver.sh}"
+-readonly NOTMUCH MAILDIR_DELIVER
++readonly NOTMUCH
+ 
+ err() {
+ 	echo "${PROGNAME}: ${*}" >&2
+@@ -49,29 +41,16 @@ die() {
+ 
+ usage() {
+ 	echo "usage: ${PROGNAME} accepted|rejected|archive query" >&2
+-	echo "       ${PROGNAME} superseded query superseded-by" >&2
+ 	exit 1
+ }
+ 
+ main() {
+-	local folder query superseded_by
+-	[ "${#}" -ge 2 ] || usage
++	local folder query
++	[ "${#}" -eq 2 ] || usage
+ 	folder="${1}"; shift
+ 	query="${1}"; shift
+ 	valid_folder "${folder}" || die "unknown folder: ${folder}"
+-
+-	if [ "${folder}" = superseded ]; then
+-		[ "${#}" -ge 1 ] || \
+-		    die "superseded requires a superseding message"
+-		superseded_by="${1}"; shift
+-	fi
+-	[ "${#}" -eq 0 ] || usage
+-
+-	if [ "${folder}" = superseded ]; then
+-		supersede "${query}" "${superseded_by}"
+-	else
+-		move_thread "${folder}" "${query}"
+-	fi
++	move_thread "${folder}" "${query}"
+ }
+ 
+ # Move every file in the thread matching QUERY into FOLDER's cur/.
+@@ -103,35 +82,6 @@ move_thread() {
+ 	done
+ }
+ 
+-# Move a thread to superseded and post the breadcrumb reply.
+-supersede() {
+-	local query="${1}"; shift
+-	local newref="${1}"; shift
+-	local root new_line new_bare new_subject last_line last_bare
+-
+-	root="$(mail_root)"
+-
+-	# Resolve the superseding message and the old thread's newest
+-	# message before touching any files.
+-	new_line="$("${NOTMUCH}" search --output=messages -- "${newref}" \
+-	    | head -1)"
+-	[ -n "${new_line}" ] || die "cannot find superseding message: ${newref}"
+-	new_bare="${new_line#id:}"
+-	new_subject="$(msg_subject "id:${new_bare}")"
+-
+-	last_line="$("${NOTMUCH}" search --output=messages \
+-	    --sort=newest-first -- "thread:{${query}}" | head -1)"
+-	[ -n "${last_line}" ] || die "no messages match: ${query}"
+-	last_bare="${last_line#id:}"
+-
+-	move_thread superseded "${query}"
+-
+-	# The breadcrumb rides in superseded/ alongside the versions it
+-	# points at, delivered through the same agent as any other mail.
+-	compose_breadcrumb "id:${last_bare}" "${new_subject}" "${new_bare}" \
+-	    | MAILDIR="${root}/superseded" "${MAILDIR_DELIVER}"
+-}
+-
+ # Return the notmuch mail root, where the folders live.
+ mail_root() {
+ 	local root
+@@ -143,7 +93,7 @@ mail_root() {
+ 
+ valid_folder() {
+ 	case "${1}" in
+-	accepted | rejected | superseded | archive)
++	accepted | rejected | archive)
+ 		return 0
+ 		;;
+ 	*)
+@@ -152,65 +102,4 @@ valid_folder() {
+ 	esac
+ }
+ 
+-# Build a one-line breadcrumb reply to REPLY_TO pointing at the new
+-# version.  notmuch reply supplies the threading headers off the old
+-# thread.  We add a Date and Message-ID and the one-line body.
+-compose_breadcrumb() {
+-	local reply_to="${1}"; shift
+-	local new_subject="${1}"; shift
+-	local new_bare="${1}"; shift
+-	local hdrs subject from to inreplyto references
+-
+-	hdrs="$("${NOTMUCH}" reply --format=json --reply-to=sender -- \
+-	    "${reply_to}")"
+-	subject="$(reply_header "${hdrs}" Subject)"
+-	from="$(reply_header "${hdrs}" From)"
+-	to="$(reply_header "${hdrs}" To)"
+-	inreplyto="$(reply_header "${hdrs}" In-reply-to)"
+-	references="$(reply_header "${hdrs}" References)"
+-
+-	printf 'From: %s\n' "${from}"
+-	if [ -n "${to}" ]; then
+-		printf 'To: %s\n' "${to}"
+-	fi
+-	printf 'Subject: %s\n' "${subject}"
+-	printf 'Date: %s\n' "$(date '+%a, %d %b %Y %H:%M:%S %z')"
+-	printf 'Message-ID: %s\n' "$(new_msgid)"
+-	if [ -n "${inreplyto}" ]; then
+-		printf 'In-Reply-To: %s\n' "${inreplyto}"
+-	fi
+-	if [ -n "${references}" ]; then
+-		printf 'References: %s\n' "${references}"
+-	fi
+-	printf 'MIME-Version: 1.0\n'
+-	printf 'Content-Type: text/plain\n'
+-	printf '\n'
+-	printf 'Superseded by %s <%s>\n' "${new_subject}" "${new_bare}"
+-}
+-
+-reply_header() {
+-	local hdrs="${1}"; shift
+-	local key="${1}"; shift
+-	printf '%s' "${hdrs}" \
+-	    | jq -r --arg k "${key}" '.["reply-headers"][$k] // empty'
+-}
+-
+-msg_subject() {
+-	local id="${1}"; shift
+-	"${NOTMUCH}" show --format=json --body=false -- "${id}" \
+-	    | jq -r '.. | objects | select(.match == true)
+-	             | .headers.Subject' \
+-	    | head -1
+-}
+-
+-new_msgid() {
+-	printf '<mailfile.%s.%s.%s@%s>' \
+-	    "$(date +%s)" "$$" "$(rand)" \
+-	    "$(hostname -s 2>/dev/null || hostname)"
+-}
+-
+-rand() {
+-	od -An -N3 -tx1 /dev/urandom | tr -d ' \n'
+-}
+-
+ main "${@}"
+diff --git a/src/mail-file/mail-file.1 b/src/mail-file/mail-file.1
+index 18791e3..abba756 100644
+--- a/src/mail-file/mail-file.1
++++ b/src/mail-file/mail-file.1
+@@ -1,4 +1,4 @@
+-.Dd September 8, 2026
++.Dd October 17, 2026
+ .Dt MAIL-FILE 1
+ .Os
+ .Sh NAME
+@@ -8,9 +8,6 @@
+ .Nm
+ .Cm accepted | rejected | archive
+ .Ar query
+-.Nm
+-.Cm superseded
+-.Ar query superseded-by
+ .Sh DESCRIPTION
+ .Nm
+ files the thread matching
+@@ -44,31 +41,15 @@ message id.
+ The whole thread moves, not just the matching message.
+ .Pp
+ The folders are:
+-.Bl -tag -width superseded
++.Bl -tag -width accepted
+ .It Cm accepted
+ Patches accepted and to be applied.
+ .It Cm rejected
+ Patches rejected and not to be applied.
+-.It Cm superseded
+-Old versions replaced by a later one.
+ .It Cm archive
+ No more action to be taken on the thread.
+ .El
+ .Pp
+-.Cm superseded
+-takes a third argument,
+-.Ar superseded-by ,
+-a query for the version that supersedes the thread.
+-After the move,
+-.Nm
+-posts a one-line breadcrumb reply on the old thread reading
+-.Dq Superseded by <new-subject> <new-message-id> .
+-The reply is threaded onto the old thread and delivered through
+-.Xr maildir-deliver.sh 1
+-into the superseded folder.
+-The argument is required, so a superseded thread always points at its
+-successor.
+-.Pp
+ The move is idempotent.
+ A file already in the target folder is left alone, and a stale path
+ that notmuch lists before the next
+@@ -78,17 +59,11 @@ Running
+ .Nm
+ twice on a thread is safe.
+ .Sh ENVIRONMENT
+-.Bl -tag -width MAILDIR_DELIVER
++.Bl -tag -width NOTMUCH
+ .It Ev NOTMUCH
+ The notmuch binary to run.
+ Defaults to
+ .Ic notmuch .
+-.It Ev MAILDIR_DELIVER
+-The sendmail-compatible delivery agent used for the superseded
+-breadcrumb.
+-Defaults to
+-.Pa libexec/mail/maildir-deliver.sh
+-in the repository holding this tool.
+ .El
+ .Sh EXIT STATUS
+ .Ex -std
+@@ -96,12 +71,6 @@ in the repository holding this tool.
+ Accept a patch series:
+ .Pp
+ .Dl mail-file accepted thread:0000000000000abc
+-.Pp
+-Retire v1 when posting v2, leaving a breadcrumb:
+-.Pp
+-.Dl mail-file superseded thread:<v1> id:<v2-message-id>
+ .Sh SEE ALSO
+ .Xr notmuch 1 ,
+-.Xr notmuch-search 1 ,
+-.Xr notmuch-reply 1 ,
+-.Xr maildir-deliver.sh 1
++.Xr notmuch-search 1
+diff --git a/src/mail-file/tests.sh b/src/mail-file/tests.sh
+index 86e448e..cfe9970 100644
+--- a/src/mail-file/tests.sh
++++ b/src/mail-file/tests.sh
+@@ -5,7 +5,6 @@ MAIL_FILE="$(atf_get_srcdir)/mail-file"
+ atf_init_test_cases() {
+     atf_add_test_case unknown_folder
+     atf_add_test_case missing_args
+-    atf_add_test_case superseded_requires_ref
+     atf_add_test_case move_to_accepted
+     atf_add_test_case move_is_idempotent
+ }
+@@ -47,15 +46,6 @@ missing_args_body() {
+     atf_check -s exit:1 -e match:"usage" "${MAIL_FILE}"
+ }
+ 
+-atf_test_case superseded_requires_ref
+-superseded_requires_ref_head() {
+-    atf_set "descr" "superseded demands the superseding message"
+-}
+-superseded_requires_ref_body() {
+-    atf_check -s exit:1 -e match:"superseding message" \
+-        "${MAIL_FILE}" superseded thread:x
+-}
+-
+ atf_test_case move_to_accepted
+ move_to_accepted_head() {
+     atf_set "descr" "Move a thread's file into accepted/cur"
+-- 
+2.56.0
+

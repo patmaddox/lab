@@ -1,0 +1,48 @@
+Message-ID: <acfef736df58eb32e038c0dfe9a3218dda75384f.1792215772.git.claude@p7x.dev>
+In-Reply-To: <cover.1792215772.git.claude@p7x.dev>
+References: <cover.1792215772.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Subject: [PATCH 3/3] claude/skills/patch-triage: Stop filtering the superseded
+ folder
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+Change-Id: vmsqzoytlxuplpqxqppvpwklmnomrxus
+Date: Sat, 17 Oct 2026 05:43:48 +0000
+
+mail-file no longer files threads into superseded, so no thread can
+land there and the query term matches nothing. The old version of a
+series is now handled by grouping, since it shares a thread with
+the revision that replaced it.
+---
+change-id: vmsqzoytlxuplpqxqppvpwklmnomrxus
+
+ .claude/skills/patch-triage/SKILL.md | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/.claude/skills/patch-triage/SKILL.md b/.claude/skills/patch-triage/SKILL.md
+index 14fe51c..e7005b7 100644
+--- a/.claude/skills/patch-triage/SKILL.md
++++ b/.claude/skills/patch-triage/SKILL.md
+@@ -39,8 +39,8 @@ on the list that is still open:
+ 
+     notmuch search --output=threads \
+       'subject:"[PATCH" and not folder:accepted and \
+-       not folder:rejected and not folder:superseded and \
+-       not folder:merged and not folder:archive'
++       not folder:rejected and not folder:merged and \
++       not folder:archive'
+ 
+ Then reduce to one entry per logical patch:
+ 
+@@ -49,7 +49,7 @@ Then reduce to one entry per logical patch:
+   Group threads by their base subject and keep only the highest N.
+ - Drop any thread Pat filed into a lifecycle folder; that is his
+   signal it is done. merged means it landed on trunk, as-is or
+-  reworded; superseded means a later version replaced it.
++  reworded.
+ 
+ Read each surviving thread with `notmuch show --format=raw <thread>`
+ before judging it. Read the whole batch first: a later message on a
+-- 
+2.56.0
+

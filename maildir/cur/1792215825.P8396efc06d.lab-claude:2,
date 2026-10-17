@@ -1,0 +1,50 @@
+Message-ID: <cover.1792215772.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Subject: [PATCH 0/3] Remove the superseded folder
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+Date: Sat, 17 Oct 2026 05:43:45 +0000
+
+A revision now replies to the first version of its series, so every
+version and its review share one thread. The superseded folder was
+there to retire an old version and point at its successor when the
+two lived in separate threads. With one thread, filing the old
+version would carry the new one with it, and the successor is
+already in view.
+
+There is no superseded tag in b/dev; the tag came only from the
+unmerged notmuch series, which this does not touch. What b/dev has is
+mail-file's superseded folder. This removes it and the two things
+that lean on it:
+
+1. The Emacs "s" key in the filing map, removed first so no binding
+   ever calls a verb that is gone.
+2. The superseded verb in mail-file, with its man page section and
+   test. mail-file no longer delivers mail or needs jq.
+3. The folder:superseded term in the patch-triage skill's query.
+
+Testing: the four remaining mail-file atf tests pass, "mail-file
+superseded thread:x" now fails with "unknown folder", mandoc -Tlint
+reports nothing new, and pm-notmuch.el passes check-parens. Patch 3
+merges cleanly with "[PATCH 0/3] Thread each revision under its first
+version", which edits nearby lines of the same skill.
+
+base-branch: b/dev@upstream
+
+claude (3):
+  emacs: Drop the superseded filing key
+  mail-file: Remove the superseded folder
+  claude/skills/patch-triage: Stop filtering the superseded folder
+
+ .claude/skills/patch-triage/SKILL.md |   6 +-
+ dotfiles/emacs/lisp/pm-notmuch.el    |  21 +----
+ src/mail-file/mail-file              | 123 ++-------------------------
+ src/mail-file/mail-file.1            |  39 +--------
+ src/mail-file/tests.sh               |  10 ---
+ 5 files changed, 17 insertions(+), 182 deletions(-)
+
+
+base-commit: 8d0b05250dc28c4dfa11e4e7925c94f50cfcf211
+-- 
+2.56.0
+
