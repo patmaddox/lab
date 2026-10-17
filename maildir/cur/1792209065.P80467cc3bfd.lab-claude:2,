@@ -1,0 +1,150 @@
+Message-ID: <a0c055dcd9037d1c63e74405b661f23edada1e59.1792209039.git.claude@p7x.dev>
+In-Reply-To: <cover.1792209039.git.claude@p7x.dev>
+References: <cover.1792209039.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Subject: [PATCH v4 1/4] lab-process-mail: Answer one message per run
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+Change-Id: orskzzltnpnptlnqysyzllwlyqvuvtrk
+Date: Sat, 17 Oct 2026 03:51:05 +0000
+
+lab-process-mail looped until the inbox was empty, so a single run
+could go on for hours, and stopping it meant interrupting whichever
+pass it had reached. A run that answers one message and exits does
+one thing that can be checked from outside, and leaves the decision
+of when to run again to whatever runs it, whether that is an operator,
+cron(8), or daemon(8).
+
+Running lab-process-mail by hand now answers the oldest message and
+nothing more.
+---
+change-id: orskzzltnpnptlnqysyzllwlyqvuvtrk
+
+ src/lab-process-mail/lab-process-mail      | 57 +++++++++++-----------
+ src/lab-process-mail/lab-process-mail_test | 14 +++---
+ 2 files changed, 35 insertions(+), 36 deletions(-)
+
+diff --git a/src/lab-process-mail/lab-process-mail b/src/lab-process-mail/lab-process-mail
+index bc5ce6c..bc8c43d 100755
+--- a/src/lab-process-mail/lab-process-mail
++++ b/src/lab-process-mail/lab-process-mail
+@@ -1,15 +1,16 @@
+ #!/bin/sh
+ #
+-# lab-process-mail -- answer the lab-devel inbox, one agent pass per
+-# message, oldest first.
++# lab-process-mail -- answer the oldest message in the lab-devel inbox
++# with one agent pass, and exit.
+ #
+-# The loop is deterministic and the agent is not, so the two are kept
+-# apart. Before each pass this script fetches, rebases your work and
+-# the mail outbox, and picks the oldest inbox message. It then runs a
+-# fresh claude with the prompt shipped beside it and that message's id.
+-# The agent's output goes to /dev/null; whether the pass worked is read
+-# from the notmuch index afterwards. A message still in the inbox stops
+-# the loop, rather than being retried forever.
++# The script is deterministic and the agent is not, so the two are
++# kept apart. Before the pass this script fetches, rebases your work
++# and the mail outbox, and picks the oldest inbox message. It then runs
++# a fresh claude with the prompt shipped beside it and that message's
++# id. The agent's output goes to /dev/null; whether the pass worked is
++# read from the notmuch index afterwards, and a message still in the
++# inbox is an error. With an empty inbox it does nothing. Whatever
++# runs it decides when to run it again.
+ #
+ # The trunk workspace is ${TRUNK_WORKSPACE}, or ~/lab/default.jj. Each
+ # pass runs in its own workspace, ${WORK_WORKSPACE}, or ~/lab/work.jj,
+@@ -99,8 +100,8 @@ inbox_count() {
+ }
+ 
+ # Post to the operator's ntfy topic. A failed or slow post must not
+-# stop the inbox from draining, so this gives up after ten seconds and
+-# only warns. Without a topic it does nothing.
++# fail the pass, so this gives up after ten seconds and only warns.
++# Without a topic it does nothing.
+ notify() {
+ 	[ -n "${NOTIFY_URL:-}" ] || return 0
+ 	curl -fsS -m 10 -o /dev/null -H "Title: ${PROGNAME}" -d "${*}" \
+@@ -123,28 +124,26 @@ main() {
+ 	[ -d "${mail}" ] || die "${mail}: no mail workspace"
+ 	[ -r "${prompt}" ] || die "${prompt}: no prompt"
+ 
+-	while :; do
+-		get_up_to_date
+-		prepare_workspace
+-		id="$(oldest_inbox_message)"
+-		[ -n "${id}" ] || break
+-		subject="$(notmuch search "${id}" |
+-		    sed -e 's/^[^;]*; //' -e 's/ ([^()]*)$//')"
+-		echo "${PROGNAME}: ${id} (${subject})"
+-		(cd "${ws}" &&
+-		    claude --permission-mode auto -p "$(cat "${prompt}")
++	get_up_to_date
++	prepare_workspace
++	id="$(oldest_inbox_message)"
++	[ -n "${id}" ] || exit 0
++	subject="$(notmuch search "${id}" |
++	    sed -e 's/^[^;]*; //' -e 's/ ([^()]*)$//')"
++	echo "${PROGNAME}: ${id} (${subject})"
++	(cd "${ws}" &&
++	    claude --permission-mode auto -p "$(cat "${prompt}")
+ 
+ Your workspace is ${ws}.
+ Your base is ${BASE}.
+ The message to answer is ${id}." </dev/null >/dev/null)
+-		notmuch new --quiet
+-		if [ "$(notmuch count "${id} and tag:inbox")" -ne 0 ]; then
+-			err "${id} is still in the inbox"
+-			notify "stuck: ${subject} (inbox $(inbox_count))"
+-			exit 1
+-		fi
+-		notify "answered: ${subject} (inbox $(inbox_count))"
+-	done
++	notmuch new --quiet
++	if [ "$(notmuch count "${id} and tag:inbox")" -ne 0 ]; then
++		err "${id} is still in the inbox"
++		notify "stuck: ${subject} (inbox $(inbox_count))"
++		exit 1
++	fi
++	notify "answered: ${subject} (inbox $(inbox_count))"
+ }
+ 
+ main "${@}"
+diff --git a/src/lab-process-mail/lab-process-mail_test b/src/lab-process-mail/lab-process-mail_test
+index ba1019b..dbbb0cc 100755
+--- a/src/lab-process-mail/lab-process-mail_test
++++ b/src/lab-process-mail/lab-process-mail_test
+@@ -6,7 +6,7 @@ atf_init_test_cases() {
+ 	atf_add_test_case answers_message
+ 	atf_add_test_case quiet_update
+ 	atf_add_test_case passes_prompt_and_id
+-	atf_add_test_case drains_oldest_first
++	atf_add_test_case answers_oldest_only
+ 	atf_add_test_case stuck_message
+ 	atf_add_test_case creates_workspace
+ 	atf_add_test_case leaves_trunk_working_copy
+@@ -224,15 +224,15 @@ passes_prompt_and_id_body() {
+ 	    tail -n 1 claude.log
+ }
+ 
+-atf_test_case drains_oldest_first
+-drains_oldest_first_body() {
++atf_test_case answers_oldest_only
++answers_oldest_only_body() {
+ 	setup
+ 	printf 'id:a@x First\nid:b@x Second\n' > inbox
+ 	export STUB_ANSWER=1
+-	printf '%s\n' 'lab-process-mail: id:a@x (First)' \
+-	    'lab-process-mail: id:b@x (Second)' > expout
+-	atf_check -s exit:0 -o file:expout -e ignore "${PROCESS_MAIL}"
+-	atf_check -o inline:"2\n" grep -c '^cwd ' claude.log
++	atf_check -s exit:0 -o inline:"lab-process-mail: id:a@x (First)\n" \
++	    -e ignore "${PROCESS_MAIL}"
++	atf_check -o inline:"1\n" grep -c '^cwd ' claude.log
++	atf_check -o inline:"id:b@x Second\n" cat inbox
+ }
+ 
+ atf_test_case stuck_message
+-- 
+2.56.0
+
