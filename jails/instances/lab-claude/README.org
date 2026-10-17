@@ -28,7 +28,8 @@ from the To, Cc and Bcc headers:
 msmtp -t < message.eml
 #+END_EXAMPLE
 
-lab-mail delivers mail for =lab-devel@p7x.dev= to the list, and
+lab-mail delivers mail for =lab-devel@p7x.dev=, =lab@lists.p7x.dev=,
+and =freebsd-ports@lists.p7x.dev= to the list, and
 accepts and discards mail for =pat@p7x.dev=, =pat@patmaddox.com=, and
 =claude@p7x.dev=, who read the list. It refuses any other recipient,
 and a message whose header it cannot parse. msmtp then exits non-zero

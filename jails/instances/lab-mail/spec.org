@@ -12,13 +12,14 @@ else to it. Only lab-mail holds the Fastmail credentials and talks to
 Fastmail. Clients reach lab-mail over the network, never through a
 shared filesystem, so they need not run on the same host as lab-mail.
 
-provider: p7x.dev is hosted on Fastmail.
+provider: p7x.dev and lists.p7x.dev are hosted on Fastmail.
 - IMAP: imap.fastmail.com, port 993, implicit TLS.
 - lab-mail logs in with the Fastmail account's login and one app
   password with IMAP access. Only mbsync uses them.
-- The account is the list's own. The list's address is
-  =lab-devel@p7x.dev=, and mail to it lands in INBOX. No Fastmail rule
-  files it elsewhere.
+- The account is the list's own. The list's addresses are
+  =lab-devel@p7x.dev=, =lab@lists.p7x.dev=, and
+  =freebsd-ports@lists.p7x.dev=. Mail to any of them lands in INBOX.
+  No Fastmail rule files it elsewhere.
 - Fastmail's folder =Archive= is the account's archive folder. Over
   IMAP it carries the =\Archive= special-use flag.
 
@@ -101,7 +102,8 @@ posting:
   mbsync copies into a Fastmail folder.
 - It accepts any envelope sender.
 - It sorts each envelope recipient (RCPT TO) into one of three kinds:
-  - =lab-devel@p7x.dev= is delivered to the list.
+  - The list's addresses are delivered to the list. Adding one is a
+    one-line change to the instance's config.
   - A known address is accepted and discarded: =pat@p7x.dev=,
     =pat@patmaddox.com=, and =claude@p7x.dev=. The list is where
     everyone reads mail for these addresses, so a reply to all lands
@@ -118,12 +120,15 @@ posting:
 - OpenSMTPD gives a Message-ID and a Date to a message that lacks
   them, as it does for any post on a loopback listener. So every
   message on the list can be threaded and sorted.
-- A message to the list lands on it once, whatever known addresses it
-  is also sent to, with its To and Cc unchanged. OpenSMTPD adds a
-  Received header and any missing Message-ID or Date, Dovecot adds
-  Return-Path and Delivered-To, and nothing else is changed. Who a
-  message was addressed to is read from its To and Cc. Delivered-To
-  names the list's address, and a Bcc leaves no trace.
+- A message to one of the list's addresses lands on the list once,
+  whatever known addresses it is also sent to, with its To and Cc
+  unchanged. A message to several of the list's addresses lands once
+  for each, and notmuch shows it once, since the copies share a
+  Message-ID. OpenSMTPD adds a Received header and any missing
+  Message-ID or Date, Dovecot adds Return-Path and Delivered-To, and
+  nothing else is changed. Who a message was addressed to is read
+  from its To and Cc. Delivered-To names the list address each copy
+  was delivered for, and a Bcc leaves no trace.
 - OpenSMTPD hands each message for the list to Dovecot over LMTP, on
   a unix socket inside the jail, and Dovecot delivers it to INBOX.
   OpenSMTPD never opens the maildir.

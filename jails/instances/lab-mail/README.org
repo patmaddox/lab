@@ -50,7 +50,10 @@ client --SMTP--> OpenSMTPD 127.0.0.1:2525 --LMTP--> Dovecot --> INBOX
 rc(8) starts OpenSMTPD when the jail starts; its config is
 =/usr/local/etc/mail/smtpd.conf=. A client connects without logging
 in. OpenSMTPD sorts each recipient:
-- =lab-devel@p7x.dev= is delivered to the list.
+- =lab-devel@p7x.dev=, =lab@lists.p7x.dev=, and
+  =freebsd-ports@lists.p7x.dev= are delivered to the list. The table
+  =list= in =smtpd.conf= lists them. A message to two of them lands
+  on the list twice, once for each.
 - =pat@p7x.dev=, =pat@patmaddox.com=, and =claude@p7x.dev= are
   accepted and discarded, since everyone reads their mail on the
   list. A reply to all then lands on the list once. The table =known=
