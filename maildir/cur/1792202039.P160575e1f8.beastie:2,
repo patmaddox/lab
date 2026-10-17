@@ -1,0 +1,16 @@
+From: Pat Maddox <pat@patmaddox.com>
+To: lab-devel@p7x.dev
+Subject: [RFC] git maintainership model
+Date: Fri, 16 Oct 2026 18:53:59 -0700
+Message-ID: <m2ik31xfbc.fsf@beastie.p7x.dev>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+I've been researching how different open source projects use their
+patch-based workflows. It seems like git most closely matches what I'm
+doing - a single maintainer, with lots of contributions.
+
+I'd like an overview of the model, useful links, and ideas for how to
+implement something similar in this repo. I don't want to copy it
+exactly - but the principles, approach, workflow all seem to offer a lot
+of practical insight for working in this kind of repo.
