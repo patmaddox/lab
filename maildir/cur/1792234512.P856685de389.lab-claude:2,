@@ -1,0 +1,104 @@
+From: claude <claude@p7x.dev>
+Subject: Re: Lab repo shouldn't operate on itself
+To: Pat Maddox <pat@patmaddox.com>, lab@lists.p7x.dev
+In-Reply-To: <m2h5ikli6x.fsf@beastie.p7x.dev>
+References: <m2h5ikli6x.fsf@beastie.p7x.dev>
+Message-ID: <1792234504.41ed157280b9@p7x.dev>
+Date: Sat, 17 Oct 2026 10:55:12 +0000
+
+On Sat, 17 Oct 2026 03:44:54 -0700, Pat Maddox wrote:
+> How is it currently configured, to prevent it from working on its own
+> files?
+
+There are two guards. Only the jail is enforced.
+
+1. The jail. lab-claude mounts /jails/share/lab.git read-only and
+   lab-submissions.git read-write
+   (jails/instances/lab-claude/jail.conf). Your checkouts on the host
+   are never visible to the agent. That is the only hard boundary.
+
+2. Separate jj workspaces inside the jail. lab-process-mail runs from
+   an installed copy in ~/local, with prompt.md shipped beside it, so
+   a pass cannot edit the loop that is running it ("[PATCH 1/5]
+   src/lab-process-mail: Answer the inbox from outside the tree" [1]).
+   Each pass works in its own workspace, work.jj, apart from
+   default.jj and mail.jj ("[PATCH 4/5] src/lab-process-mail: Run
+   each pass in its own workspace" [2]).
+
+The second guard is weak in three ways:
+
+- All three workspaces belong to one repo, and the only thing keeping
+  the agent out of default.jj is the line "Leave its working copy
+  alone" in prompt.md. The pass runs with --permission-mode auto, so
+  nothing technical stops it.
+- prompt.md has the agent run ${ws}/libexec/mail/format-patch.sh and
+  maildir-deliver.sh from the same workspace it is editing. A
+  half-done change to those scripts is the copy that posts the
+  series. This is the clearest case of lab operating on itself.
+- The paths are hardcoded to the lab repo:
+  ~/lab/{default,work,mail}.jj in lab-process-mail (overridable by
+  TRUNK_WORKSPACE, WORK_WORKSPACE, and MAIL_WORKSPACE), the same paths
+  as literals in prompt.md, /data/lab.git in the lab-claude
+  bootstrap.sh, and the notmuch hook_dir under default.jj. The list
+  is the `mail` bookmark of that same repo, too.
+
+> I think it needs some idea of repo resources that it can fetch -
+> it just so happens that it can also work on itself (in a different
+> checkout).
+
+I agree. Nothing on the list defines this yet; the nearest earlier
+sketch is my reply in "[RFC] designing a yolo box" [3]. Here is what I
+propose.
+
+A repo resource is a name plus what the tooling needs to fetch and
+deliver it:
+
+    name = lab
+    upstream = /data/lab.git (read-only)
+    submissions = /data/lab-submissions.git
+    base = trunk()
+    mail = mail@upstream (where its list lives)
+
+The tools (lab-process-mail, libexec/mail, and the notmuch hooks)
+ship as one installed package and never run from a checkout of a
+resource. A pass fetches the resources it needs into fresh checkouts
+it owns and works there. Lab is then one entry among many. Working on
+lab means checking out the lab resource, much as you would check out
+freebsd-ports, and that checkout has no bearing on the copy of the
+tools that is running.
+
+> Consider that the way I'm working with lab, I would also want to work
+> with any other number of repos.
+
+This fits the yolo box direction you set in [3]: one dataset per repo,
+a clone per run, and a jail started with whatever repos the run needs.
+A resource list is the input that tool takes.
+
+I would take it in three small series, each useful by itself:
+
+1. Install libexec/mail with lab-process-mail and make prompt.md call
+   the installed scripts, not ${ws}/libexec/mail. This closes the
+   self-editing hole now and costs little: one Makefile/Justfile
+   install rule and four lines of prompt.md.
+2. Replace the three *_WORKSPACE variables and the literals in
+   prompt.md and bootstrap.sh with one resource file per repo, e.g.
+   ~/.config/lab/repos/lab.conf, read by lab-process-mail and passed
+   to the prompt as variables. The prompt then names no path at all.
+3. Let a pass take more than one resource, with each checkout created
+   from its resource and dropped after the pass. This is where it
+   meets the yolo box work, and it waits on your answer there about
+   the trust model.
+
+I recommend starting with 1, since it is independent of the design
+questions. Two things I need from you before 2:
+
+- Should the list stay a bookmark inside each repo (one list per
+  repo), or become its own resource that several repos share? Today
+  the code assumes the former, but lab-devel already carries work
+  for jails and ports that isn't lab's own code.
+- Where should the resource files live: in the tools package, in
+  the jail's dist/ tree, or in a repo of their own?
+
+[1] id:55aa1ee0da4276bd4b9deaf6014ce57303768370.1792009878.git.claude@p7x.dev
+[2] id:5b4158de6daa04cc5cc177208ea3b027a70e355e.1792009878.git.claude@p7x.dev
+[3] id:m25wz1xenx.fsf@beastie.p7x.dev
