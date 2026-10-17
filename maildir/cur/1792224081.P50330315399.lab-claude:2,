@@ -1,0 +1,85 @@
+Message-ID: <7d063a157aaa73100051f6a3cb93cfb861fd670a.1792224065.git.claude@p7x.dev>
+In-Reply-To: <cover.1792224065.git.claude@p7x.dev>
+References: <cover.1792214740.git.claude@p7x.dev>
+	<cover.1792224065.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Subject: [PATCH v2 2/3] src/lab-process-mail: Thread each revision under the
+ one before
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+Change-Id: qwqznozzqsomwsomoqmsmqvmuszmtxtt
+Date: Sat, 17 Oct 2026 08:01:21 +0000
+
+The pass and the mail workflow guide said a revision is a fresh
+thread, which no longer matches what format-patch.sh produces. They
+now say a revision replies to the previous version, so the maintainer
+follows a series and its review in one thread, and that format-patch.sh
+picks the reply target, so the agent does not pass its own. The list
+researcher is told most earlier versions are now in the same thread.
+---
+change-id: qwqznozzqsomwsomoqmsmqvmuszmtxtt
+
+ doc/mail-workflow.md           | 10 ++++++----
+ src/lab-process-mail/prompt.md | 11 +++++++++--
+ 2 files changed, 15 insertions(+), 6 deletions(-)
+
+diff --git a/doc/mail-workflow.md b/doc/mail-workflow.md
+index ed9edd89..d5fe46ef 100644
+--- a/doc/mail-workflow.md
++++ b/doc/mail-workflow.md
+@@ -71,10 +71,12 @@ Conventions:
+ 
+ - One message (or one series) per commit, so the maintainer can accept
+   or reject at that granularity.
+-- A new revision of a series is a **fresh thread** subject
+-  `[PATCH vN]`, with a `v(N-1): <message-id>` link in the cover -- not a
+-  reply buried under the old thread. It carries an interdiff against
+-  v(N-1) as posted, rebuilt from the list:
++- A new revision of a series, subject `[PATCH vN]`, is a **reply to
++  the previous version's cover** (or only patch), with a
++  `Link to v(N-1): id:<message-id>` line in the cover. Every version
++  and its review stay in one thread, each version beneath the one
++  before; format-patch.sh replies to `--previous`. It carries an
++  interdiff against v(N-1) as posted, rebuilt from the list:
+   `libexec/mail/format-patch.sh --previous=<message-id>` requires it.
+ - Append; never rewrite already-published history.
+ 
+diff --git a/src/lab-process-mail/prompt.md b/src/lab-process-mail/prompt.md
+index 97d7ebd0..3ef81d63 100644
+--- a/src/lab-process-mail/prompt.md
++++ b/src/lab-process-mail/prompt.md
+@@ -136,7 +136,8 @@ plus any decision found elsewhere that constrains this work.
+ 
+ Second, if the target concerns a patch series, it finds every earlier
+ version: by `changeid:<id>` for each patch's change id, and by the
+-"Link to v(N-1)" lines in cover letters. It reads each earlier
++"Link to v(N-1)" lines in cover letters. Revisions reply to the
++version before, so most are in the same thread. It reads each earlier
+ version's whole thread, since that is where review happened, and
+ returns every review point raised there: who raised it, the subject
+ and Message-ID it was raised in, and whether the latest version
+@@ -170,7 +171,8 @@ each with its cost, and the one you recommend.
+ Skip this step if the work produced no commits.
+ 
+ A patch series is its own thread on the list, never a reply to the
+-message that asked for it. It follows the Linux kernel's conventions,
++message that asked for it; a revision joins the thread of the
++version before it, below. It follows the Linux kernel's conventions,
+ less the archive links. Format it with
+ `${ws}/libexec/mail/format-patch.sh`, which runs git
+ format-patch and gives each patch its commit's jj change id, as a
+@@ -219,6 +221,11 @@ version they read, computed from that mail rather than from your
+ tree. If v(N-1) does not apply onto the new base, it says so and adds
+ a range-diff instead; say in the cover letter why the base moved.
+ 
++A revision is posted as a reply to the previous version's cover
++letter, or its only patch, so every version and its review stay in
++one thread, each version beneath the one before. format-patch.sh
++passes `--previous` as `--in-reply-to`; do not pass your own.
++
+ Address every review point the list researcher found unaddressed, or
+ say why not. End the cover letter blurb with what changed and a link
+ to the previous version:
+-- 
+2.56.0
+
