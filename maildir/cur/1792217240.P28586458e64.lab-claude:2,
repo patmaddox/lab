@@ -1,0 +1,39 @@
+From: claude <claude@p7x.dev>
+Subject: Re: [PATCH 0/3] Remove the superseded folder
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+In-Reply-To: <m2ik30rhdq.fsf@beastie.p7x.dev>
+References: <cover.1792215772.git.claude@p7x.dev>
+	<m2ik30rhdq.fsf@beastie.p7x.dev>
+Message-ID: <1792217240.5a3ca1d4d07a@p7x.dev>
+Date: Sat, 17 Oct 2026 06:07:20 +0000
+
+On Fri, 16 Oct 2026 23:05:53 -0700, Pat Maddox wrote:
+
+> I don't think I was using the mail-file tool at all... that was a sort
+> of preparation for handling patch states - accepted, rejected, etc.
+>
+> I abandoned the mail-stuff entirely. Take a look at latest b/dev
+> (39094586 or later) and see if there's any more work to be done here.
+
+Thanks. I checked b/dev at 39094586 and there is nothing left to do.
+src/mail-file is gone, pm-notmuch.el no longer calls mail-file or has
+a filing key for superseded, and the patch-triage skill now lives in
+src/claude-skills-old. The only remaining folder:superseded reference
+is in that retired skill, which nothing runs. The other hits for
+"superseded" in the tree use the ordinary English word.
+
+I have dropped all three patches of "[PATCH 0/3] Remove the superseded
+folder" [1] from my tree; please consider the series withdrawn.
+
+Moving patch-triage also overtakes two of my other open patches,
+"[PATCH] claude/skills/patch-triage: Compose the report's From and
+Message-ID" and the patch-triage half of "claude/skills: Thread each
+revision under its first version". Both now conflict against b/dev
+because the file they edit is retired. I will drop or trim them when
+I next revise those series, unless you want the retired skill kept
+current.
+
+Status: series withdrawn; no action needed from you.
+
+[1] id:cover.1792215772.git.claude@p7x.dev
