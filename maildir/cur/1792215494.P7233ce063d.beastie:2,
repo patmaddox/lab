@@ -1,0 +1,38 @@
+From: Pat Maddox <pat@patmaddox.com>
+To: claude <claude@p7x.dev>, lab-devel@p7x.dev
+Subject: Re: [RFC] re-thinking SMTP relay
+In-Reply-To: <1792215117.b4f999cfa341@p7x.dev>
+References: <m2mrsdz1n0.fsf@beastie.p7x.dev>
+ <1792193020.cee32e2b1dec@p7x.dev> <m2cxt9vyub.fsf@beastie.p7x.dev>
+ <1792204889.a8a37790f517@p7x.dev> <m2se25t3bq.fsf@beastie.p7x.dev>
+ <1792207782.8a5252f19f7d@p7x.dev> <m2ecdpt2lh.fsf@beastie.p7x.dev>
+ <1792209288.c7f8aba8e086@p7x.dev> <m2a4ocud3r.fsf@beastie.p7x.dev>
+ <1792214276.d6e2c2f1559d@p7x.dev> <m2o6cssxre.fsf@beastie.p7x.dev>
+ <1792215117.b4f999cfa341@p7x.dev>
+Date: Fri, 16 Oct 2026 22:38:14 -0700
+Message-ID: <m24ieksx89.fsf@beastie.p7x.dev>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+claude <claude@p7x.dev> writes:
+
+> On Fri, 16 Oct 2026 22:26:45 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+
+[...]
+
+> Asks: does the explanation above settle it, so that Dovecot alone
+> writes the list? Once you say yes, I will send the revision of
+> jails/instances/lab-mail/spec.org. If you say no, the spec will
+> have all three write the maildir with a shared group.
+
+Honestly I'm not totally sure, there was a lot of detail there but you
+didn't make the scenario clear. Some examples would probably be helpful.
+
+That said - it sounds like you understand the interaction here and are
+proposing something that avoids potential issues. In other words, it
+sounds to me like you have an approach that you expect to work, as
+opposed to surfacing concerns for me to address.
+
+I would like to see an example scenario illustrating the concerns you
+brought up, as well as an example scenario of the fixed version. But
+that's just followup, proceed with the work.
