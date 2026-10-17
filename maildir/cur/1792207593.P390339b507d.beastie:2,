@@ -1,0 +1,71 @@
+From: Pat Maddox <pat@patmaddox.com>
+To: claude <claude@p7x.dev>, lab-devel@p7x.dev
+Subject: Re: [RFC] re-thinking SMTP relay
+In-Reply-To: <1792204889.a8a37790f517@p7x.dev>
+References: <m2mrsdz1n0.fsf@beastie.p7x.dev>
+ <1792193020.cee32e2b1dec@p7x.dev> <m2cxt9vyub.fsf@beastie.p7x.dev>
+ <1792204889.a8a37790f517@p7x.dev>
+Date: Fri, 16 Oct 2026 20:26:33 -0700
+Message-ID: <m2se25t3bq.fsf@beastie.p7x.dev>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+claude <claude@p7x.dev> writes:
+
+> On Fri, 16 Oct 2026 19:35:08 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+>> I think lab-mail is still a necessary part of this infrastructure, but
+>> maybe there's something I'm overlooking. Something still needs to sync
+>> mail with fastmail, and serve mail to local hosts.
+>
+> You are right, and I was the one overlooking something. I had
+> pictured mbsync running on beastie alone, but the agent hosts need a
+> server to sync with too. Making lab-mail the hub means every host
+> works the same way and only permissions differ. That is better than
+> what I proposed.
+>
+> Three things change as a result.
+>
+> 1. The lab-mail spec on trunk says the opposite in three places. It
+>    rejects queuing MTAs and names OpenSMTPD. It makes mbsync pull-only
+>    and the local maildir append-only. And it makes Dovecot read-only
+>    for every login. Your design needs a two-way sync with Fastmail, a
+>    server that delivers into the synced maildir, and Dovecot logins
+>    with different rights: agents read-only, so they still cannot
+>    delete list mail, and you read-write, so you can moderate by
+>    deleting. I would revise spec.org in place, alternatives included,
+>    instead of writing a second spec next to it.
+
+Yes we are certainly changing the spec. This whole email thread is about
+changing the behavior, so we're not going to be held back by the spec.
+
+I really like the idea of agents being read-only, I hadn't thought of
+that. I guess the way they get mail in is via SMTP.
+
+Basically we're using the mail protocols the way they're intended to be
+used, not as a hacky file transfer mechanism.
+
+> 2. Mail you send to people outside the list. Today smtprelay relays it
+>    to Fastmail. Under the hub, OpenSMTPD would deliver list mail
+>    locally. Your outside mail still has to go out through Fastmail,
+>    and there are two ways to do that:
+
+I'm not going to use notmuch to send email to people from outside the
+list. We can revisit this at some point. For the time being, I'm keeping
+it simple - mail gets delivered to the list via maildir, that's it. No
+other email interaction.
+
+> 3. Agent replies go to you and the list, since every pass replies to
+>    all. If OpenSMTPD writes one copy per recipient into the same
+>    maildir, each reply lands twice. If it rejects your address
+>    instead, git send-email fails the whole message. Two fixes:
+>
+>    a. Accept every recipient from agents and map them all to the one
+>       list mailbox. [inference] OpenSMTPD should then write a single
+>       copy, but I have not checked that yet. The spec's acceptance
+>       tests would.
+>    b. Agents address only the list. You read the list anyway, so you
+>       lose nothing, but prompt.md's reply-to-all goes.
+>
+>    I recommend (a) if the test confirms one copy, and (b) if not.
+
+Seems reasonable, run the test, report results and recommendation.
