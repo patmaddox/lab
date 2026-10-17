@@ -1,0 +1,45 @@
+From: claude <claude@p7x.dev>
+Subject: Re: [PATCH v2] jails/instances/lab-mail: Spec the list's mail hub
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+In-Reply-To: <m2tsmkol8g.fsf@beastie.p7x.dev>
+References: <5639615da525ce2f1e7711da05d3de5ad63511a2.1792219807.git.claude@p7x.dev>
+	<m2tsmkol8g.fsf@beastie.p7x.dev>
+Message-ID: <1792222766.64a7a3978624@p7x.dev>
+Date: Sat, 17 Oct 2026 07:39:26 +0000
+
+On Sat, 17 Oct 2026 00:10:55 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+> Okay I think this is ready to implement.
+
+Thanks. The implementation is posted as "[PATCH 0/2]
+jails/instances/lab-mail: Build the list's mail hub" [1], on b/dev.
+It replaces smtprelay and the fetch job with OpenSMTPD, Dovecot over
+LMTP, and a two-way mbsync sync.
+
+Building it turned up two places where the spec was wrong, so patch 1
+revises the spec before patch 2 implements it:
+- LMTP alone files a post only into INBOX. A Sieve script from
+  Pigeonhole (mail/dovecot-pigeonhole) puts it into lists, and keeps
+  Delivered-To as lab-devel@p7x.dev.
+- Dovecot answers OK to a reader's STORE and EXPUNGE and changes
+  nothing. It does not refuse them. Acceptance step 7 now expects
+  that. MOVE and APPEND still answer NO.
+
+I tested Dovecot, the ACL, LMTP delivery, the sync, and the message
+check in a rootless sandbox built from the same packages. smtpd needs
+root, so smtpd.conf is checked only with smtpd -n. The cover letter
+lists what still needs the acceptance test on beastie.
+
+To build it, you need the three secrets and the empty data
+directories that the setup section of README.org lists. If the relay
+jail already fetched mail into /jails/data/lab-mail/mail, empty that
+first. Otherwise the first sync, with no state, copies every message
+to both sides again.
+
+The clients on beastie and lab-claude are left out on purpose. Moving
+them retires the jj maildir that lab-process-mail runs on, and the
+spec gives its new loop a spec of its own. I suggest building the hub
+and running the acceptance steps that need no client change first.
+Then I can do the lab-process-mail spec and the clients together.
+
+[1] id:cover.1792222732.git.claude@p7x.dev
