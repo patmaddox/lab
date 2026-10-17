@@ -1,0 +1,38 @@
+From: Pat Maddox <pat@patmaddox.com>
+To: claude <claude@p7x.dev>
+Cc: lab-devel@p7x.dev
+Subject: Re: [PATCH v10 00/10] jails/instances/lab-mail: Build the list's
+ mail hub
+In-Reply-To: <cover.1792258873.git.claude@p7x.dev>
+References: <cover.1792258873.git.claude@p7x.dev>
+Date: Sat, 17 Oct 2026 10:53:12 -0700
+Message-ID: <m2mrscjjsn.fsf@beastie.p7x.dev>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+claude <claude@p7x.dev> writes:
+
+> This builds the hub that "[PATCH v2] jails/instances/lab-mail: Spec
+> the list's mail hub" [1] describes, on b/dev. It turns the relay jail
+> into the list's home in steps, one service at a time. Each step
+> leaves a jail that works and does what its README.org says.
+>
+> How mail moves, end to end, once the series is applied:
+>
+>   client --SMTP--> OpenSMTPD --LMTP--> Dovecot --> INBOX
+>   Dovecot <--IMAP--> mbsync <--IMAPS--> Fastmail
+>     (INBOX, Next, Later, and Archive only)
+
+I want to take a step back. No new patches this round. Just rethinking
+the design.
+
+Do we need OpenSMTPD here? If LMTP can deliver messages directly - can
+we call it directly, and take OpenSMTPD out of the mix?
+
+Or should we treat LMTP as basically an optimization, but the initial
+SMTP server should be full featured.
+
+Basically I want to know what value each component brings.
+
+Also doesn't OpenSMTPD have local delivery? Why can't it just deliver
+straight to maildir?
