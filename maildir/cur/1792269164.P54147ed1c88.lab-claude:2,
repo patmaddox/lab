@@ -1,0 +1,172 @@
+From: claude <claude@p7x.dev>
+Subject: Re: [RFC] documenting monorepos
+To: Pat Maddox <pat@patmaddox.com>, lab@lists.p7x.dev
+In-Reply-To: <m2qzhogjen.fsf@beastie.p7x.dev>
+References: <m2qzhogjen.fsf@beastie.p7x.dev>
+Message-ID: <1792269159.6ec7f2ffa153@p7x.dev>
+Date: Sat, 17 Oct 2026 20:32:44 +0000
+
+On Sat, 17 Oct 2026 13:29:52 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+> I want to come up with a good way of documenting this monorepo. Look at
+> other significant monorepo projects and see how they do it.
+
+I surveyed eight large repos. The aim was to find out how each one
+decides where a doc goes and how each one stops docs drifting away
+from the code. Rendering is out of scope here, since
+doc/llm-research/doc-site-for-monorepo.org already covers it (Hugo,
+ox-hugo, mdoc). Below, each project gets a short note on what it
+does, then I list the patterns they share, how our tree compares,
+and what I would do first.
+
+* What they do
+
+- FreeBSD. The top-level map is hier(7), a man page that names every
+  directory and what it is for. Each tool's reference is a man page
+  that sits next to its source and changes in the same commit. The
+  long-form docs (Handbook, articles, books) live in a separate doc
+  tree, sorted by type rather than by subsystem. Process lives in the
+  Committer's Guide, not in tooling config.
+
+- Linux. Documentation/ has been split into "books" written for
+  different readers: process/ (how to contribute), admin-guide/,
+  dev-tools/, core-api/, and per-subsystem dirs. API reference is
+  pulled out of kernel-doc comments in the source. MAINTAINERS maps
+  each path to its owner and gives it a status line ("S: Maintained",
+  "Odd Fixes", "Orphan", "Obsolete").
+
+- PostgreSQL. The user manual sits in doc/src/sgml. Design docs are
+  plain README files inside the code they describe, e.g.
+  src/backend/access/nbtree/README. Each one explains the algorithm
+  and its invariants for the next person to touch that code. Those
+  files are among the most respected docs in open source, and they
+  are not rendered anywhere.
+
+- git. Documentation/ holds the man pages (asciidoc). Next to them
+  are SubmittingPatches and MyFirstContribution for contributors,
+  howto/ for task guides, technical/ for design, and RelNotes/. Tools
+  and reviewers point at those files rather than restate the rules.
+
+- Google (g3doc) and Chromium. Docs live in the directory of the code
+  they describe and are reviewed in the same change. Every directory
+  is expected to have a README.md that says what it is and where to
+  start. Chromium adds a top-level docs/ for cross-cutting material,
+  with docs/README.md as the index. It also has OWNERS and
+  DIR_METADATA files for machine-readable ownership. "Software
+  Engineering at Google" (ch. 10) says why: a doc kept away from its
+  code goes stale, and stale docs are worse than none.
+
+- LLVM. It has one Sphinx tree per subproject (llvm/docs, clang/docs,
+  lld/docs) and a shared Developer Policy. Each subproject documents
+  itself, and the policy is written once.
+
+- rust-analyzer. It popularised ARCHITECTURE.md, one short file that
+  gives a codemap ("where is the thing that does X") and the
+  invariants, and leaves out details that change often. Rust itself
+  keeps contributor internals in a separate rustc-dev-guide.
+
+- Django and Ubuntu use Diataxis, which sorts every doc into one of
+  four kinds: tutorial, how-to guide, reference, or explanation. It
+  gives a fixed answer to "where does this go", which is the question
+  a monorepo keeps asking.
+
+* What they have in common
+
+1. A single map at the root. Every project has one entry point that
+   names every top-level area in a line or two: hier(7), Chromium's
+   docs/README.md, ARCHITECTURE.md.
+
+2. Reference docs live next to the code and change in the same
+   commit (man pages, kernel-doc, g3doc, the PostgreSQL READMEs). This
+   is the rule that does the most to stop drift.
+
+3. Process docs are written once and everything else points at them:
+   the Committer's Guide, Documentation/process, SubmittingPatches,
+   LLVM's Developer Policy.
+
+4. Every area has an owner and a status, so a reader knows whether it
+   is alive (MAINTAINERS S: lines, OWNERS, DIR_METADATA).
+
+5. Docs are sorted by kind (guide, reference, design), not by the
+   date they were written. Personal notes and task lists are not part
+   of the tree's documentation.
+
+6. Something checks the docs: kernel "make htmldocs" warnings,
+   Chromium presubmits, mandoc -Tlint. The checks are mechanical and
+   cheap.
+
+None of these projects needs many small files to work. Most of them
+use one README per area plus a few large books, which fits what you
+said in "[RFC] how to spec work in a way that's readable for humans"
+[1].
+
+* How our tree compares
+
+- No map. README.md lists three of about fifteen top-level
+  directories (src, oss, libexec) and describes "just dev".
+
+- No per-project convention. Most of src/ has no README. Where one
+  exists it is .md in some projects and .org in others. Specs are
+  spec.org, report.org, lore.org or decisions.org, depending on the
+  project. Six tools have mdoc pages, which is the FreeBSD pattern and
+  already works.
+
+- CLAUDE.md is the most complete process doc in the tree. That is the
+  inverse of git and Linux, where process lives in a doc and the tools
+  cite it. You started fixing this in "[RFC] commit style" [2] with
+  doc/style/commit.md.
+
+- Docs drift. doc/mail-workflow.md is stale, and a zib named a recipe
+  that does not exist, as found in "[doc] Need a guide for basic
+  operation of the patch workflow" [3].
+
+- Notes and docs are mixed together. doc/ holds tasks.org,
+  toread.org and fieldstones.org next to style/ and proposals/. The
+  root has todo.org, TODO.md and a second fieldstones.org.
+
+- zib/ is your notebook, which is explanation in Diataxis terms.
+  CLAUDE.md treats zib/patch-review-workflow.org as the authority on
+  the workflow, but a notebook is not something the code is held to.
+
+* What I would do
+
+These are ordered by value for effort. Each one is a small patch.
+
+1. Rewrite README.md as the map, hier(7)-style: one line for each
+   top-level directory, plus pointers to the doc categories below.
+   This is the cheapest step and the one with the most effect.
+
+2. Require a README in every src/<project>, with a fixed short
+   skeleton: what it is, status (active, experimental, dormant, dead,
+   after MAINTAINERS' S: field), how to build and run it, and where
+   its spec and man page are. A PostgreSQL-style design section goes
+   in the same file only if the project needs one. We should pick one
+   format. I would choose org, since specs and zibs already use it and
+   Hugo renders it.
+
+3. Give doc/ a Diataxis layout and nothing else: doc/guides/ (how-to),
+   doc/process/ and doc/style/ (written once, cited by CLAUDE.md and
+   prompts), and doc/design/ for settled explanation that has been
+   promoted out of zib/. Reference stays in man pages and READMEs next
+   to the code. Personal notes and task lists move out of doc/.
+
+4. Make CLAUDE.md thin. Keep the agent-specific rules and replace the
+   process prose with pointers into doc/process/. The nested CLAUDE.md
+   files work the same way as the AGENTS.md convention, so they need
+   no change.
+
+5. Docs change with code. A patch that changes a tool's behaviour
+   also updates its README or man page, and review checks for it.
+
+6. Add a cheap check, e.g. a libexec script that lists any src/*
+   without a README, any top-level directory missing from the map, and
+   any mandoc -Tlint warnings. It reports from the filesystem, which
+   fits "Own the loop".
+
+If you agree with the direction, tell me which steps you want. I
+would start with 1 and 2 as one series, since they are small and
+make the rest easy to see. Step 3 moves files, so I would rather you
+choose the directory names before I post it.
+
+[1] id:m2pkx8hz8i.fsf@beastie.p7x.dev
+[2] id:m2v770gjjb.fsf@beastie.p7x.dev
+[3] id:1791667393.f860235590ee@p7x.dev
