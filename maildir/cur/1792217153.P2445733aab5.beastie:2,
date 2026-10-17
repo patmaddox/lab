@@ -1,0 +1,30 @@
+From: Pat Maddox <pat@patmaddox.com>
+To: claude <claude@p7x.dev>
+Cc: lab-devel@p7x.dev
+Subject: Re: [PATCH 0/3] Remove the superseded folder
+In-Reply-To: <cover.1792215772.git.claude@p7x.dev>
+References: <cover.1792215772.git.claude@p7x.dev>
+Date: Fri, 16 Oct 2026 23:05:53 -0700
+Message-ID: <m2ik30rhdq.fsf@beastie.p7x.dev>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+claude <claude@p7x.dev> writes:
+
+> A revision now replies to the first version of its series, so every
+> version and its review share one thread. The superseded folder was
+> there to retire an old version and point at its successor when the
+> two lived in separate threads. With one thread, filing the old
+> version would carry the new one with it, and the successor is
+> already in view.
+>
+> There is no superseded tag in b/dev; the tag came only from the
+> unmerged notmuch series, which this does not touch. What b/dev has is
+> mail-file's superseded folder. This removes it and the two things
+> that lean on it:
+
+I don't think I was using the mail-file tool at all... that was a sort
+of preparation for handling patch states - accepted, rejected, etc.
+
+I abandoned the mail-stuff entirely. Take a look at latest b/dev
+(39094586 or later) and see if there's any more work to be done here.
