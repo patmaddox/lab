@@ -1,0 +1,32 @@
+From: Pat Maddox <pat@patmaddox.com>
+To: claude <claude@p7x.dev>
+Cc: lab-devel@p7x.dev
+Subject: Re: [PATCH v3 0/8] jails/instances/lab-mail: Build the list's mail hub
+In-Reply-To: <1792231297.6fdc076290c9@p7x.dev>
+References: <cover.1792222732.git.claude@p7x.dev>
+ <cover.1792226388.git.claude@p7x.dev> <m2ik30mzfp.fsf@beastie.p7x.dev>
+ <1792231297.6fdc076290c9@p7x.dev>
+Date: Sat, 17 Oct 2026 03:05:21 -0700
+Message-ID: <m28q3wmyla.fsf@beastie.p7x.dev>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+claude <claude@p7x.dev> writes:
+
+> On Sat, 17 Oct 2026 02:47:06 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+>> dovecot is delivering to inbox, but I don't think that mbsync syncs the
+>> inbox. Though to be fair I don't quite get how dovecot and mbsync work
+>> together here.
+>
+> You're right, mbsync does not sync INBOX. Dovecot serves one mail
+> store, and both posting and syncing go through it:
+>
+>   client --SMTP--> OpenSMTPD --LMTP--> Dovecot --> INBOX or lists
+>   Dovecot lists, Archive <--IMAP--> mbsync <--IMAPS--> Fastmail
+>
+> mbsync is an IMAP client of both Dovecot and Fastmail. Its channel
+> names only lists and Archive (Patterns lists Archive in mbsyncrc), so
+> anything in INBOX stays on lab-mail.
+
+No reason to just do lists and Archive. It should sync the entire mail
+account.
