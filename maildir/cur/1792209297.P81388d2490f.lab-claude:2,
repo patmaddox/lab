@@ -1,0 +1,64 @@
+From: claude <claude@p7x.dev>
+Subject: Re: [RFC] re-thinking SMTP relay
+To: Pat Maddox <pat@patmaddox.com>, lab-devel@p7x.dev
+In-Reply-To: <m2ecdpt2lh.fsf@beastie.p7x.dev>
+References: <m2mrsdz1n0.fsf@beastie.p7x.dev>
+	<1792193020.cee32e2b1dec@p7x.dev> <m2cxt9vyub.fsf@beastie.p7x.dev>
+	<1792204889.a8a37790f517@p7x.dev> <m2se25t3bq.fsf@beastie.p7x.dev>
+	<1792207782.8a5252f19f7d@p7x.dev> <m2ecdpt2lh.fsf@beastie.p7x.dev>
+Message-ID: <1792209288.c7f8aba8e086@p7x.dev>
+Date: Sat, 17 Oct 2026 03:54:57 +0000
+
+On Fri, 16 Oct 2026 20:42:18 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+> That's good, so long as one thing is true: the full To/CC list is in the
+> one delivered email, right? I think so... I always see when someone has
+> CCed other people.
+
+Yes. The recipients a server accepts or drops are the SMTP envelope
+(RCPT TO). To and Cc are part of the message itself, and every copy
+carries the same headers. Discarding the extra copies changes how many
+files land, not what any of them says.
+
+- [fact, OpenSMTPD master, mda.c] At delivery, mda_imsg() adds only
+  Return-Path and Delivered-To above the message. It does not touch
+  To or Cc.
+- [fact, smtp_session.c] smtp_message_begin() adds a Received header.
+  smtp_tx_dataline() passes To and Cc through
+  header_domain_append_callback(). That callback only appends the
+  server's hostname to a bare address with no domain, such as "To:
+  pat". An address that already has a domain is left as written. It
+  also unfolds the header onto one line, which changes whitespace but
+  not addresses.
+- [fact, maildir today] maildir-deliver.sh replaces only the Date
+  header. Your message I am answering arrived with "To: claude
+  <claude@p7x.dev>, lab-devel@p7x.dev", which is what you sent.
+
+> I ask because I want to use that as metadata - was something addressed
+> directly to me, or to an agent, etc.
+
+That works, with two limits:
+
+1. Bcc is invisible. smtp_tx_dataline() strips the Bcc header before
+   the message is queued, and the dropped envelope copies leave no
+   trace. A message that Bcc'd you looks like one that did not
+   address you. Nobody on the list uses Bcc now, so this is unlikely
+   to matter.
+
+2. Do not use Delivered-To. Under (c) it will name lab-devel@p7x.dev
+   on every message, since that is the only copy delivered. To and
+   Cc are the headers to read.
+
+notmuch already indexes both. "notmuch search to:pat@patmaddox.com"
+matches To and Cc, so the metadata needs no new tagging to start.
+
+> De-duplicating the emails, using only the list recipient, is fine so
+> long as the CC list is maintained, which I think it is.
+
+It is. The lab-mail spec revision should carry this as an acceptance
+test: send one message to lab-devel@ and claude@, then check that
+exactly one file lands and that its To and Cc are unchanged.
+
+I read the source upstream, so this is not yet a run against a live
+smtpd; that test is what confirms it. It still needs root and
+mail/opensmtpd, so it waits on you running the script from my
+previous message or giving me a jail where I have root.
