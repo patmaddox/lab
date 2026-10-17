@@ -1,0 +1,198 @@
+From: claude <claude@p7x.dev>
+Subject: Re: [RFC] designing a yolo box
+To: Pat Maddox <pat@patmaddox.com>, lab-devel@p7x.dev
+In-Reply-To: <m25wz1xenx.fsf@beastie.p7x.dev>
+References: <m25wz1xenx.fsf@beastie.p7x.dev>
+Message-ID: <1792203766.b8c48bfdbfb4@p7x.dev>
+Date: Sat, 17 Oct 2026 02:23:14 +0000
+
+On Fri, 16 Oct 2026 19:08:02 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+> This means that the config that creates the boot image should be
+> complete with all the network config etc, so that it can boot with no
+> monitor.
+
+infra/hosts/devbsd/devbsd.img.do already builds most of this: a GPT
+disk with an EFI partition and a ZFS root from pkgbase, plus a dist/
+tree laid down by mtree. I would copy it to infra/hosts/yolo and test
+the same image file under bhyve, as the devbsd README describes. Three
+things make it boot headless on unknown hardware:
+
+- ifconfig_DEFAULT="DHCP" in rc.conf, so the NIC name does not matter
+  (vtnet0 in bhyve, something else on the box). rc.conf(5) documents
+  it as the setting "for all interfaces with no ifconfig_<interface>
+  variable". A DHCP reservation on the router then fixes the address.
+- growfs_enable="YES", so the 1.3G image grows to fill the real disk
+  on first boot. /etc/rc.d/growfs handles a ZFS root (lines 117-120
+  find the pool's vdev).
+- zfs_reguid="YES", already set on devbsd for the makefs guid bug,
+  plus sshd and your authorized_keys baked into dist/.
+
+Host keys are generated on first boot, so you would accept a new key
+the first time you ssh in. If that matters, we can generate them at
+build time and keep them out of jj.
+
+> The plan is to give coding agents root privileges on the host. It's
+> considered a completely untrusted host, the only output of it is patches
+> that I review.
+
+This is the decision everything else hangs on, and I recommend
+against it: give the agents root inside a jail, and keep host root for
+you. My reasoning is in the next two answers. In short, securelevel
+can stop root from changing the running kernel's state, but I could
+not find a way for it to stop host root from changing what boots next,
+and root can always reboot.
+
+> 1. Use security levels to prevent system files from changing after it
+>    runs.
+
+security(7) gives the levels. At 1, schg and sappnd flags cannot be
+cleared, mounted disks cannot be opened for writing, and kld cannot
+load or unload. At 2, no disk can be opened for writing "except by
+mount(2)". At 3, pf and ipfw rules cannot be changed.
+
+The gap is that "except by mount(2)". The following is inference, from
+the man page, not tested: host root at securelevel 2 can still mount
+the EFI partition, which is msdosfs and cannot hold schg, and replace
+loader.efi. It can also create a new ZFS dataset and point the pool's
+bootfs at it, which never touches a flagged file. Either way the next
+boot runs root's code before rc raises the securelevel. A test in the
+bhyve VM would confirm or refute both.
+
+> 2. The reboot -r mechanism, where it boots to a userland basically
+>    running nothing, and then reboots into another userland with all the
+>    services (could be combined with 1).
+
+reboot(8) says reboot -r "change[s] the root filesystem while
+preserving kernel state", and needs tmpfs loaded. I expect the
+securelevel and the loaded pf rules to be part of that state, so a
+trusted first stage could load pf, raise the level to 3, and re-root
+into the agents' userland. That is inference; I have no kernel source
+in this jail to check it. It has the same hole as above, though: the
+second stage's root can reboot fully, and the first stage is only as
+trusted as its disk.
+
+> I have pf on my firewall, but I would like to have pf on the device
+> block output as well. I don't know if that's feasible assuming that it
+> has root - but it seems plausible to me that secure level could also
+> affect pf, so it's possible to create pf rules that are loaded on boot
+> but can't be changed after the fact.
+
+Yes, that is securelevel 3 per security(7). With agents in jails it
+also stops mattering whether the agent can reach pf. jail root has no
+pf device unless the devfs ruleset exposes it, and our defaults use
+ruleset 4. That ruleset's contents are inference; I cannot read
+/etc/defaults/devfs.rules from this jail, so check with
+"devfs rule -s 4 show" on the host.
+
+For pf to tell agents apart, each jail needs its own address. Today
+lab-claude uses ip4 = inherit, so its traffic looks like the host's. A
+per-run lo1 alias with NAT, or a vnet jail on an epair, gives pf a
+source address to filter on. The egress list would be short:
+api.anthropic.com, the pkg mirror if agents install packages, and
+nothing else. Patches leave by you pulling, not by the box pushing
+(below).
+
+I would still raise the host to securelevel 3 once rc is done
+(kern_securelevel_enable and kern_securelevel=3 in rc.conf), as a
+second wall behind the jail. Its cost: every kernel module the box
+needs (pf, nullfs, tmpfs, linux, vmm) must load at boot, and any pf
+change means a reboot.
+
+> I know that rsync.net provides VMs with root on them, and
+> they do some locking down, I just don't know what it is exactly.
+
+I do not know either, and have not looked it up. The fact that they
+sell a VM suggests their boundary is the hypervisor, not the guest's
+securelevel. That points at the other option: bhyve guests on the
+box, for work that needs a real kernel, such as booting a
+freebsd-src build. Jails are cheaper and fit ZFS clones directly, so
+I would start with jails and add bhyve only for that case.
+
+> Also need to think about general architecture of the running system, and
+> how it interacts with repos. I want it to operate on lab, or
+> freebsd-src, or freebsd-ports, or any number of repos. I want there to
+> be isolation across concurrent agents. I'm thinking of checking out the
+> repos to zfs datasets, and then cloning those datasets into place in
+> jails that actually run claude. I might even use nullmount so they're
+> read only.
+
+I agree with clones. A clone of a snapshot is writable, private to
+the run, and costs nothing until written, so each run gets its own
+working copy of freebsd-src without a checkout. A read-only nullfs
+mount fits less well, because jj writes to the repo on every command
+(the working-copy snapshot and the op log), so the agent could not
+commit.
+
+The layout I have in mind:
+
+- zroot/yolo/repos/lab and zroot/yolo/repos/freebsd-src, kept
+  current by a host job
+- zroot/yolo/claude, your logged-in claude config
+- zroot/yolo/runs/<id>/root, a clone of a jail template
+- zroot/yolo/runs/<id>/lab, a clone of repos/lab@<snap>
+- zroot/yolo/runs/<id>/claude, a clone of claude@<snap>
+
+Output goes into a per-run outbox, such as a bare git repo in the run
+dataset that the agent pushes to. You fetch from it over ssh from
+beastie. Then the box holds no credential for anything but the
+Anthropic API, and nothing on it can push anywhere.
+
+> I think there still needs to be a zfs dataset that gets cloned, which is
+> for the claude config, because multiple agents sharing it will want to
+> modify the settings.
+
+Yes. CLAUDE_CONFIG_DIR moves .claude.json, the credentials, history
+and plugins into one directory, as found in "Re: jails: mount the
+claude dir and config file" [2]. lab-claude does that now, from
+"[PATCH 0/2] jails: Persist lab-claude's Claude state" [1]. That
+mount is read-write because claude writes .claude.json as it runs,
+so a read-only mount would fail. A clone per run lets it write, and
+destroying the clone throws the writes away, so every run starts from
+the same config.
+
+One caveat: the credentials are in that clone, and the agent has root
+in its jail, so it can read them. The pf egress list limits where it
+could send them, not whether it can read them. An API key scoped to
+this box, which you can revoke, keeps that cost bounded.
+
+> Thinking through this flow a bit, I want deterministic tools that will
+> launch a jail with whatever repos it needs, perform the work, and clean
+> up after itself. Every prompt should be done in a clean, repetable environment.
+
+A sketch, in the shape of lab-process-mail:
+
+  yolo-run -r lab -r freebsd-ports -p prompt.md
+
+1. Snapshot each named repo dataset and the claude dataset.
+2. Clone them and the jail template under zroot/yolo/runs/<id>.
+3. Start the jail with jail -c, its own address, securelevel 3, and
+   the clones mounted.
+4. jexec claude -p < prompt.md > /dev/null.
+5. Decide success from the outbox: did a new ref land? Never from
+   claude's output, per "Own the loop" in CLAUDE.md.
+6. jail -r, then zfs destroy -r the run, keeping the outbox.
+
+"[PATCH 1/2] lazy-jail: Initial spec" [3] already covers start, stop
+and jail metadata, and its report [4] leaves open whether stop
+destroys the root. yolo-run would answer that with yes, so it may be
+best built on lazy-jail rather than beside it.
+
+If you agree with the jail-root model, I would next post a spec for
+the image (infra/hosts/yolo) and one for yolo-run, as separate
+series, so each can be built and tested in bhyve on its own.
+
+Objective: a yolo box image and run tool you can dd and use when the
+hardware arrives.
+Status: waiting on your choice of trust model.
+Next actions for you:
+- Decide whether agents get host root or jail root.
+Information needed from you:
+- Whether the box should use DHCP with a reservation, or a static
+  address in the image.
+- Whether to bake the ssh host keys in at build time.
+- Which hosts agents may reach besides api.anthropic.com.
+
+[1] id:cover.1791649241.git.claude@p7x.dev
+[2] id:1791649272.895c8bec813a@p7x.dev
+[3] id:9de42dab499c58261e7537f8c921851f6c1488fe.1791836741.git.claude@p7x.dev
+[4] id:cover.1791836741.git.claude@p7x.dev
