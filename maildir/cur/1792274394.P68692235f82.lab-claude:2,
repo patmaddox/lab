@@ -1,0 +1,77 @@
+From: claude <claude@p7x.dev>
+Subject: Re: [RFC] how to organize experiments in claude?
+To: Pat Maddox <pat@patmaddox.com>, lab@lists.p7x.dev
+In-Reply-To: <m25wz0f0vw.fsf@beastie.p7x.dev>
+References: <m2ld7wgj77.fsf@beastie.p7x.dev>
+	<1792269503.36e0b2321ada@p7x.dev> <m24iekgi6i.fsf@beastie.p7x.dev>
+	<1792270800.49ae42850b6b@p7x.dev> <m25wz0f0vw.fsf@beastie.p7x.dev>
+Message-ID: <1792274389.80d112e615af@p7x.dev>
+Date: Sat, 17 Oct 2026 21:59:54 +0000
+
+On Sat, 17 Oct 2026 14:55:15 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+> I think that's ugly, and also now that I look at it - it all breaks the
+> "own the loop" principle.
+
+Agreed. The choice of which skills a session has belongs to us, made
+before the model starts, and a deny list in claude's settings puts it
+in the wrong place.
+
+> I think the design then is a package that installs plugins to a known
+> location. Then it has an interface for executing prompts, and selecting
+> plugins to load. Something like:
+>
+>     skl p -p commit-first < prompt-file
+>
+> Start an RFC for a utility calld skl that lives in src/skl.
+
+It is posted as "[RFC] skl: Run a prompt with a chosen set of skills"
+[1]. It proposes:
+
+- installing src/claude-plugins/* to share/skl/plugins/,
+- "skl p [-p plugin[:skill]]... < prompt", which runs claude -p with
+  only the selected skills loaded, and "skl ls" to list what is
+  installed,
+- passing claude's output and exit status through unread,
+- a three-commit plan and four open questions.
+
+> I think I'm seeing a distinction here... skills in .claude are skills
+> that apply to that repo specifically. I may have some of that for the
+> lab repo - but a lot of what I've been trying to do is develop skills
+> that I can reuse in other contexts. If that's the case, they are not
+> .claude/skills - they are src/claude-plugins/<name>.
+
+The RFC uses that split as written: .claude/skills for skills about
+this repo, and src/claude-plugins/<name> for reusable ones.
+
+> At first I was thinking that I would have a different plugin per
+> skill. Perhaps I can package several skills in a single plugin, and then
+> my wrapper script produces the correct args to claude to override
+> specific skills?
+
+Several skills in one plugin works. Overriding them with claude
+arguments does not. I tested it with Claude Code 2.1.296, using a
+build plugin that holds by-commit and by-spec:
+
+- Passing --settings with skillOverrides set to "off" left
+  build:by-spec listed. I tried both "build:by-spec" and "by-spec" as
+  the key, so overrides do not reach plugin skills.
+- A temporary plugin dir with the same plugin.json and a symlink to
+  by-commit alone listed only build:by-commit.
+
+So the wrapper should build the selection, not override it. For each
+run, skl makes a temporary plugin dir with only the chosen skills
+linked in, and passes that with --plugin-dir. A skill you did not
+select is in no directory claude reads. This is also an allow list,
+which fixes the problem the deny list had.
+
+Objective: a way to try workflows like build-by-commit and
+build-by-spec side by side, without committing them to CLAUDE.md
+Status: skl RFC posted [1]; waiting on your review
+Next actions for you:
+- Review the RFC [1]
+Information needed from you:
+- Answers to the RFC's four open questions: the subcommand and
+  selector names, whether project settings load by default, one plugin
+  per job or one per variant, and where skl's docs live
+
+[1] id:1792274365.5977e358687d@p7x.dev
