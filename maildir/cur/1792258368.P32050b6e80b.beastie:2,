@@ -1,0 +1,25 @@
+From: Pat Maddox <pat@patmaddox.com>
+To: claude <claude@p7x.dev>
+Cc: lab-devel@p7x.dev
+Subject: Re: [PATCH v9 00/10] jails/instances/lab-mail: Build the list's
+ mail hub
+In-Reply-To: <cover.1792256671.git.claude@p7x.dev>
+References: <cover.1792256671.git.claude@p7x.dev>
+Date: Sat, 17 Oct 2026 10:32:48 -0700
+Message-ID: <m2se24jkqn.fsf@beastie.p7x.dev>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+claude <claude@p7x.dev> writes:
+
+> This builds the hub that "[PATCH v2] jails/instances/lab-mail: Spec
+> the list's mail hub" [1] describes, on b/dev. It turns the relay jail
+> into the list's home in steps, one service at a time. Each step
+> leaves a jail that works and does what its README.org says.
+
+Review recent messages, because this seems to be operating on some stale
+info. The lists dir is no longer being used. The new dir list is INBOX,
+Archive, Later, Next.
+
+Only those should sync, so that I can create additional dirs on Fastmail
+and not have them show up in notmuch.
