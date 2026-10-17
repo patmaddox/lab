@@ -1,0 +1,50 @@
+From: Pat Maddox <pat@patmaddox.com>
+To: claude <claude@p7x.dev>, lab@lists.p7x.dev
+Subject: Re: [RFC] commit style
+In-Reply-To: <1792272767.f33d74d357cc@p7x.dev>
+References: <m2a4oclhvv.fsf@beastie.p7x.dev>
+ <1792235349.f7fc30029251@p7x.dev> <m25wz0l23i.fsf@beastie.p7x.dev>
+ <1792255115.941a80fb30d2@p7x.dev> <m2v770gjjb.fsf@beastie.p7x.dev>
+ <1792269002.16aa9dd13833@p7x.dev> <m28q3wgiv5.fsf@beastie.p7x.dev>
+ <1792270050.4cef7df99d88@p7x.dev> <m2wlrgf20r.fsf@beastie.p7x.dev>
+ <1792272767.f33d74d357cc@p7x.dev>
+Date: Sat, 17 Oct 2026 14:36:19 -0700
+Message-ID: <m2qzhof1rg.fsf@beastie.p7x.dev>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+claude <claude@p7x.dev> writes:
+
+> On Sat, 17 Oct 2026 14:30:44 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+>> 1. Don't post patches - just post the commit messages as an email. It's
+>> just text, nothing is getting applied. If I want to rewrite a commit
+>> message, I can just copy it and edit it.
+>
+> I recommend this one. A plan is for review, not for applying, and the
+> list already handles review: you reply with your rewrite quoted under
+> mine, and I fold it into my commits. Nothing new is needed on either
+> side.
+
+Makes sense. This is the simplest thing that could work. If it becomes
+inadequate, we can revise.
+
+> "[RFC PATCH 0/7] Write the commit rules down once" [2] already works
+> this way if you skip its fetch instructions. Each of 1/7 to 7/7 is one
+> commit message as plain text, so you can reply to any of them with
+> your version. For the next plan I will send a single [RFC] mail with
+> the messages in order, not format-patch output, so it does not look
+> like something to apply.
+
+Re-submit it in the style we've described here.
+
+
+[...]
+
+> The open question in the plan's cover letter still stands: should the
+> 72-column check skip indented lines, such as quoted code or a long URL?
+> I recommend skipping them.
+
+I don't want to do any tooling around this right now. It's not the
+bottleneck. I can format and check messages manually for the time
+being. A tool is probably going to produce more false positive than it's
+worth right now.
