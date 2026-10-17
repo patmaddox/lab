@@ -28,6 +28,9 @@ the list: the folders INBOX and =Archive= of the Fastmail account.
 - The folder a message is in is its state. That state lives in the
   list data, not in any one client, so Fastmail and every client see
   it, and a move on Fastmail's web interface counts like any other.
+- The list holds every message from the jj maildir that carried it
+  before, imported once by the operator, so old threads keep their
+  context and replies to them still thread.
 - Pat removes a message he does not want on the list by deleting it,
   which his login may do. There is no moderation queue.
 - Any other folder of the account is not part of the list. Pat may
@@ -244,8 +247,9 @@ beastie.
     not in INBOX on Fastmail.
 
 out of scope:
-- The lab-devel list and the process-email workflow. They keep using
-  the maildir in jj.
+- Moving the list's clients off the jj maildir. lab-process-mail, the
+  =mail= bookmark, and Pat's notmuch keep using it until a change of
+  their own moves them to lab-mail.
 - An archive of the list in git. It is a separate artifact, and can
   be fed from the list's folders like any other client.
 - Restricting which jails or local users may use lab-mail.
@@ -314,6 +318,9 @@ why.
   list data, so a rebuild of the index loses it and no agent sees it.
   Fastmail's own =Archive= folder is used, not a new one, so archiving
   on Fastmail's web interface means the same.
+- Import the jj maildir once, not freeze it as an archive. A frozen
+  archive would split the list into two places to search, and a reply
+  to an old thread would arrive with no parent.
 - Passwords only for the logins that may write, not for every login.
   A read-only login can do nothing a password would guard against,
   and agents need no secret.
