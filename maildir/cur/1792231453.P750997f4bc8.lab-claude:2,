@@ -1,0 +1,134 @@
+Message-ID: <3e6c1af001ca2bfa6a8b208224634c788ee8a9fa.1792231441.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Subject: [PATCH v2] jails: Fetch base packages into the host's cache
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+Change-Id: rlrnvwpznomnnymxslvlslltypytlrvv
+Date: Sat, 17 Oct 2026 10:04:13 +0000
+
+pkg -r keeps its package cache under the root it installs into, and a
+clean build starts that root as an empty dataset, so every build
+fetched all of the base system's packages again, about 160 MiB each
+time. Pointing pkg at the host's own cache lets every build and
+instance reuse what was fetched before.
+
+Only the host's pkg reads and writes that cache. Nothing is mounted
+into the root, so neither the build's chroot nor the running jail can
+reach it.
+---
+change-id: rlrnvwpznomnnymxslvlslltypytlrvv
+
+base-branch: b/dev@upstream
+
+Only the base install is cached. The ports install runs under pkg -c,
+which chroots before it touches a cache, so only a mount would reach
+the host's; the reply to the issue thread weighs the options.
+
+Changes in v2:
+- Drop the shared nullfs-mounted cache, which let a build's chroot
+  write packages that other instances would later install. pkg -r now
+  uses the host's cache by -o PKG_CACHEDIR, which only the host's pkg
+  touches.
+- Leave the ports install uncached, for the reason above.
+- Link to v1: id:1daf75213370f9166672cd1626977587ceb16fc1.1792230947.git.claude@p7x.dev
+
+ jails/libexec/_jail.log.do | 7 ++++++-
+ 1 file changed, 6 insertions(+), 1 deletion(-)
+
+diff --git a/jails/libexec/_jail.log.do b/jails/libexec/_jail.log.do
+index 1007da74..db7a9321 100755
+--- a/jails/libexec/_jail.log.do
++++ b/jails/libexec/_jail.log.do
+@@ -68,7 +68,12 @@ install_freebsd() {
+ 
+ 	doas mkdir -p ${rootdir}${keys}
+ 	tar -C ${keys} -cf - . | doas tar -C ${rootdir}${keys} -xf -
+-	doas pkg -r ${rootdir} -C ${PKGBASE_CONF} install -r FreeBSD-base -y ${PKGBASE_PACKAGES}
++	# pkg -r keeps its cache under the root, which starts empty on a
++	# clean build, so point it at the host's cache instead. Only the
++	# host's pkg writes there; the jail never sees it.
++	doas pkg -r ${rootdir} -C ${PKGBASE_CONF} \
++	    -o PKG_CACHEDIR="$(pkg config PKG_CACHEDIR)" \
++	    install -r FreeBSD-base -y ${PKGBASE_PACKAGES}
+ 
+ 	if [ ! -f ${rootdir}/etc/resolv.conf ]; then
+ 		echo "nameserver 8.8.8.8" | doas tee ${rootdir}/etc/resolv.conf > /dev/null
+
+Interdiff against v1:
+  diff --git a/jails/README.org b/jails/README.org
+  index 82b6e2a5..77d764b1 100644
+  --- a/jails/README.org
+  +++ b/jails/README.org
+  @@ -13,10 +13,6 @@ jail. Each instance jail.conf includes it by absolute path:
+   cp share/jail.defaults.conf /etc/jail.conf.d/defaults.conf
+   #+END_EXAMPLE
+   
+  -Builds keep the packages they fetch in =/jails/cache/pkg=, shared by
+  -every instance, and create it on first use. Remove its contents to
+  -reclaim the space; the next build fetches what it needs again.
+  -
+   * operate
+   The Justfile drives a jail through service(8), which finds its config by
+   name in =/etc/jail.conf.d=:
+  diff --git a/jails/libexec/_jail.log.do b/jails/libexec/_jail.log.do
+  index b4e9f585..db7a9321 100755
+  --- a/jails/libexec/_jail.log.do
+  +++ b/jails/libexec/_jail.log.do
+  @@ -27,7 +27,6 @@ readonly PKGBASE_CONF="${jailsdir}/share/pkgbase.conf"
+   readonly PORTS_CONF="${jailsdir}/share/FreeBSD-ports.conf"
+   readonly PKGBASE_PACKAGES="${pkgbase_sets:-FreeBSD-set-base-jail} ${pkgbase_extras:-}"
+   readonly PACKAGES="${packages:-}"
+  -readonly PKG_CACHE="/jails/cache/pkg"
+   
+   # global vars created by functions
+   # rootdir
+  @@ -69,8 +68,12 @@ install_freebsd() {
+   
+   	doas mkdir -p ${rootdir}${keys}
+   	tar -C ${keys} -cf - . | doas tar -C ${rootdir}${keys} -xf -
+  -	mount_pkg_cache
+  -	doas pkg -r ${rootdir} -C ${PKGBASE_CONF} install -r FreeBSD-base -y ${PKGBASE_PACKAGES}
+  +	# pkg -r keeps its cache under the root, which starts empty on a
+  +	# clean build, so point it at the host's cache instead. Only the
+  +	# host's pkg writes there; the jail never sees it.
+  +	doas pkg -r ${rootdir} -C ${PKGBASE_CONF} \
+  +	    -o PKG_CACHEDIR="$(pkg config PKG_CACHEDIR)" \
+  +	    install -r FreeBSD-base -y ${PKGBASE_PACKAGES}
+   
+   	if [ ! -f ${rootdir}/etc/resolv.conf ]; then
+   		echo "nameserver 8.8.8.8" | doas tee ${rootdir}/etc/resolv.conf > /dev/null
+  @@ -84,7 +87,6 @@ install_freebsd() {
+   		doas pkg -c ${rootdir} install -y ${PACKAGES}
+   		verify_packages
+   	fi
+  -	umount_pkg_cache
+   
+   	# The goredo package installs only goredo itself, which creates
+   	# the redo commands as symlinks to it.  It runs with a clean
+  @@ -97,21 +99,6 @@ install_freebsd() {
+   	fi
+   }
+   
+  -# Both pkg -r and pkg -c keep their cache under the jail root, which
+  -# starts empty on every build, so each build would fetch every package
+  -# again. Lend the root a host cache shared by all instances for the
+  -# length of the install, then take it back so the jail never sees it.
+  -mount_pkg_cache() {
+  -	doas mkdir -p ${PKG_CACHE} ${rootdir}/var/cache/pkg
+  -	doas mount -t nullfs ${PKG_CACHE} ${rootdir}/var/cache/pkg
+  -	trap umount_pkg_cache EXIT
+  -}
+  -
+  -umount_pkg_cache() {
+  -	trap - EXIT
+  -	doas umount ${rootdir}/var/cache/pkg
+  -}
+  -
+   # pkg install exits 0 even when it drops requested packages to settle a
+   # conflict, so check that every requested origin is installed.
+   verify_packages() {
+
+base-commit: f6ba757868b6e16efee8bfb3882dc3339ef9fb69
+-- 
+2.56.0
+
