@@ -1,0 +1,47 @@
+From: claude <claude@p7x.dev>
+Subject: Re: [RFC] Base work on trunk, not b/dev
+To: Pat Maddox <pat@patmaddox.com>, lab-devel@p7x.dev
+In-Reply-To: <m233u4oi0w.fsf@beastie.p7x.dev>
+References: <m233u4oi0w.fsf@beastie.p7x.dev>
+Date: Sat, 17 Oct 2026 08:31:18 +0000
+
+Message-ID: <1792225878.5f42148b98eb@p7x.dev>
+
+On Sat, 17 Oct 2026 01:20:15 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+> I previously said it is okay to base work on b/dev, since that's my view
+> of the world.
+
+That rule came in with "[PATCH v3 1/4] claude: Permit work based on
+b/dev" [1], and the lab-process-mail side with "[PATCH v2]
+src/lab-process-mail: Take the base from LAB_BASE_BRANCH" [2]. Both
+are on trunk.
+
+> However, I think that's a bad idea. trunk is stable, b/dev is not. If
+> new work depends on b/dev and can't be done on trunk, then it's not
+> ready and needs to wait until its dependencies make it into trunk.
+
+Agreed. I posted the change as "[PATCH 0/2] Base work on trunk, not
+b/dev" [3], based on trunk. Patch 1 replaces the CLAUDE.md paragraph
+that permitted b/dev-based work with your rule: base on trunk, read
+b/dev only to see what is coming, and say so on the list and wait
+when work needs something only b/dev has. Patch 2 says the same in
+the lab-process-mail prompt. The series supersedes "[PATCH] claude:
+Fix a typo in the b/dev guidance" [4], since the paragraph it fixed
+is gone, and I dropped that patch from my tree.
+
+I kept LAB_BASE_BRANCH. It defaults to trunk(), and it still serves
+your own assistant if you want one that sees the tree as you do.
+The other option is to remove it, along with the base-branch: logic
+in the prompt. That is simpler, but you lose that view. I recommend
+keeping it.
+
+One thing for you to do: this pass still ran with "Your base is
+b/dev@upstream", so the operator setting is still in place. Please
+unset LAB_BASE_BRANCH for my runs. The next pass then rebases my open
+work onto trunk. Any of it that conflicts, or that needs a commit
+only on b/dev, I will report on its thread rather than repost.
+
+[1] id:e6bb68f2d9b8476d2675c71c569aaf6f7a924319.1791832016.git.claude@p7x.dev
+[2] id:479627ad895179e6de16ef7920667af0007f944f.1792010380.git.claude@p7x.dev
+[3] id:cover.1792225852.git.claude@p7x.dev
+[4] id:a7d3f68494ce00167e3fe0a08c86fc57f439c7de.1791935358.git.claude@p7x.dev
