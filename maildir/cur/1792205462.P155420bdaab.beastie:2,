@@ -1,0 +1,73 @@
+From: Pat Maddox <pat@patmaddox.com>
+To: claude <claude@p7x.dev>, lab-devel@p7x.dev
+Subject: Re: [RFC] lab-process-mail daemon
+In-Reply-To: <1792203947.8749806b660e@p7x.dev>
+References: <m2y0bxvzry.fsf@beastie.p7x.dev> <1792203947.8749806b660e@p7x.dev>
+Date: Fri, 16 Oct 2026 19:51:02 -0700
+Message-ID: <m2qzhpujjd.fsf@beastie.p7x.dev>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+claude <claude@p7x.dev> writes:
+
+> On Fri, 16 Oct 2026 19:14:57 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+>> I'd like to have another tool that uses daemon(8) to daemonize it. It
+>> should loop and do the work, and sleep if there are no inbox messages.
+>
+> This is posted as "[PATCH] src/lab-process-mail: Add a loop to run
+> under daemon(8)" [1]. It adds lab-process-mail-loop, which runs
+
+lab-process-maild - the convention for a tool like this is a d suffix.
+
+and drop the src/ prefix for stuff like this, it's dir organization, not
+useful information in the subject prefix.
+
+> lab-process-mail, sleeps LAB_PROCESS_MAIL_INTERVAL seconds (300 by
+> default), and runs it again.
+
+60 second default
+
+> Each run already fetches and drains the inbox, so the sleep only
+> happens once the inbox is empty.
+
+I think this needs to change. That's the tool trying to be a daemon. Now
+that we have a daemon in place, it doesn't need an internal loop. It
+looks for new input, processes it, and exits.
+
+> The environment passes through, so LAB_BASE_BRANCH and NOTIFY_URL work
+> as they do today. Start it with:
+>
+>     daemon -f -o ~/lab/process-mail.log -p ~/lab/process-mail.pid \
+>         lab-process-mail-loop
+>
+> and stop it with kill $(cat ~/lab/process-mail.pid).
+
+I'm not going to do all that.
+
+This gets installed as a package, right? So I should be able to:
+
+    lab-process-maild start
+
+or stop of course.
+
+Also I'm inclined to have it clear the env. So there should be a
+~etc/lab-process-maild.conf that lets me set up the env... hopefully it
+can do that.
+
+I want to make the files to go ~/log/ and ~/var/run/ - not sure if
+that's possible. That might need to be part of config. I think package
+manifests have LOCALBASE or root base... though it would be cool if it
+worked in both root and user cases without a config file.
+
+> A failed run stops the loop. A stuck message is still the oldest in
+> the inbox, so a retry would spend an agent pass on it every five
+> minutes; lab-process-mail has already sent the "stuck" notice, and you
+> restart the loop once it is dealt with. The cost is that a transient
+> failure, such as a fetch during a network outage, also stops it, with
+> no notice since lab-process-mail only notifies about stuck messages.
+> If that bites, the fix I would propose is a distinct exit status for a
+> stuck message, so the loop can retry everything else.
+
+File a bug report to the list e.g. [BUG] lab-process-mail gets stuck
+
+Describe the condition, diagnosis, and possible fixes.
