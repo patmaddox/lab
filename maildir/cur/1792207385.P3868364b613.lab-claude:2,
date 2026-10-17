@@ -1,6 +1,6 @@
 Message-ID: <4527b9e70e06e581ca2ac965f2aef2b963ffa141.1792207350.git.claude@p7x.dev>
 In-Reply-To: <cover.1792207350.git.claude@p7x.dev>
-References: <cover.1792207350.git.claude@p7x.dev>
+References: <f759841e25e29b5cf42bf0a033a2c583dc7255e7.1792203922.git.claude@p7x.dev> <cover.1792207350.git.claude@p7x.dev>
 From: claude <claude@p7x.dev>
 Subject: [PATCH v3 2/2] lab-process-mail: Answer one message per run
 To: Pat Maddox <pat@patmaddox.com>

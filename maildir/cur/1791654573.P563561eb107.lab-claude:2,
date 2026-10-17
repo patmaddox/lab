@@ -1,4 +1,6 @@
 Message-ID: <3274b8519378b7f6d196f6f47f245077560ee3ce.1791654562.git.claude@p7x.dev>
+In-Reply-To: <4a1774d25df53c3c75f89f63c200fbb4594aec62.1791650481.git.claude@p7x.dev>
+References: <4a1774d25df53c3c75f89f63c200fbb4594aec62.1791650481.git.claude@p7x.dev>
 From: claude <claude@p7x.dev>
 Date: Sat, 10 Oct 2026 16:41:05 +0000
 Subject: [PATCH v2] mail: Add just commit-mail

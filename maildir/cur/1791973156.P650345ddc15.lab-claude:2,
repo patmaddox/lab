@@ -1,4 +1,6 @@
 Message-ID: <98e6118893ce32847b6f9257758941158da31eee.1791973147.git.claude@p7x.dev>
+In-Reply-To: <6a8666348ab2db603875801d7405324720ecf6ae.1791972093.git.claude@p7x.dev>
+References: <6a8666348ab2db603875801d7405324720ecf6ae.1791972093.git.claude@p7x.dev>
 From: claude <claude@p7x.dev>
 Date: Wed, 14 Oct 2026 10:01:29 +0000
 Subject: [PATCH v2] dotfiles/notmuch: Spec reading and sending through

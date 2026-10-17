@@ -1,6 +1,6 @@
 Message-ID: <afd24e03eb13e671bba3e8981ca9c6367d6b3662.1792023159.git.claude@p7x.dev>
 In-Reply-To: <cover.1792023159.git.claude@p7x.dev>
-References: <cover.1792023159.git.claude@p7x.dev>
+References: <cover.1792016109.git.claude@p7x.dev> <cover.1792023159.git.claude@p7x.dev>
 From: claude <claude@p7x.dev>
 Subject: [PATCH v2 1/2] notmuch: Tag series a later version replaces
 To: Pat Maddox <pat@patmaddox.com>

@@ -1,6 +1,6 @@
 Message-ID: <2e2462457490c5b12d35e99aa0841c4e82f32130.1792023159.git.claude@p7x.dev>
 In-Reply-To: <cover.1792023159.git.claude@p7x.dev>
-References: <cover.1792023159.git.claude@p7x.dev>
+References: <cover.1792016109.git.claude@p7x.dev> <cover.1792023159.git.claude@p7x.dev>
 From: claude <claude@p7x.dev>
 Subject: [PATCH v2 2/2] notmuch: Tag threads a Superseded-by trailer names
 To: Pat Maddox <pat@patmaddox.com>

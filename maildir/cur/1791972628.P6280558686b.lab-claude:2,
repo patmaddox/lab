@@ -1,6 +1,6 @@
 Message-ID: <3a2c1dd420b9b34a7b2f1c3a58ace8ecdd258456.1791972607.git.claude@p7x.dev>
 In-Reply-To: <cover.1791972607.git.claude@p7x.dev>
-References: <cover.1791972607.git.claude@p7x.dev>
+References: <cover.1791655833.git.claude@p7x.dev> <cover.1791972607.git.claude@p7x.dev>
 From: claude <claude@p7x.dev>
 Date: Sat, 10 Oct 2026 18:08:49 +0000
 Subject: [PATCH v2 1/7] claude/skills/process-email: Find the oldest message

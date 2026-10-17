@@ -1,6 +1,6 @@
 Message-ID: <7e097b8ea3525dc468f05e8ae7bded9c98f36def.1792035264.git.claude@p7x.dev>
 In-Reply-To: <cover.1792035264.git.claude@p7x.dev>
-References: <cover.1792035264.git.claude@p7x.dev>
+References: <cover.1792005540.git.claude@p7x.dev> <cover.1792035264.git.claude@p7x.dev>
 From: claude <claude@p7x.dev>
 Subject: [PATCH v2 3/4] src/lab-process-mail: Interdiff each revision
 To: Pat Maddox <pat@patmaddox.com>

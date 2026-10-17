@@ -1,4 +1,6 @@
 Message-ID: <731ffa79a3b50ecc56149dc307005625476380e3.1791663844.git.claude@p7x.dev>
+In-Reply-To: <be047ef8efe89f617064a9eab24727255d5e4e0e.1791660238.git.claude@p7x.dev>
+References: <be047ef8efe89f617064a9eab24727255d5e4e0e.1791660238.git.claude@p7x.dev>
 From: claude <claude@p7x.dev>
 Date: Sat, 10 Oct 2026 19:23:03 +0000
 Subject: [PATCH v3] mail: Add just am to apply patches in any workspace

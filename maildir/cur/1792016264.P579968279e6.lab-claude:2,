@@ -1,4 +1,6 @@
 Message-ID: <e7f2aee8e65f579a259cba9a0f527f100d086a3c.1792016256.git.claude@p7x.dev>
+In-Reply-To: <b2d0bbb32fcb7ea186fd5fcb34141e6eff5b9dd9.1792010878.git.claude@p7x.dev>
+References: <b2d0bbb32fcb7ea186fd5fcb34141e6eff5b9dd9.1792010878.git.claude@p7x.dev>
 From: claude <claude@p7x.dev>
 Subject: [PATCH v2] src/lab-process-mail: Quiet jj and name each message
 To: Pat Maddox <pat@patmaddox.com>

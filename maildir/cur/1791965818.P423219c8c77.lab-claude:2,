@@ -1,6 +1,6 @@
 Message-ID: <dbfe715ee2ad1bf2442a2146de7e2e0a4b8407eb.1791965796.git.claude@p7x.dev>
 In-Reply-To: <cover.1791965796.git.claude@p7x.dev>
-References: <cover.1791965796.git.claude@p7x.dev>
+References: <5f7d85c552bc47bb2b23e2510437f859ddafa4cc.1791941898.git.claude@p7x.dev> <cover.1791965796.git.claude@p7x.dev>
 From: claude <claude@p7x.dev>
 Date: Wed, 14 Oct 2026 06:34:57 +0000
 Subject: [PATCH v9 5/6] jails/instances/lab-mail: Serve the mirror over IMAP

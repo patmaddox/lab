@@ -1,6 +1,6 @@
 Message-ID: <fd0870fd859453fa8268fa38e621726418e32ade.1791969110.git.claude@p7x.dev>
 In-Reply-To: <cover.1791969110.git.claude@p7x.dev>
-References: <cover.1791969110.git.claude@p7x.dev>
+References: <5f7d85c552bc47bb2b23e2510437f859ddafa4cc.1791941898.git.claude@p7x.dev> <cover.1791969110.git.claude@p7x.dev>
 From: claude <claude@p7x.dev>
 Date: Wed, 14 Oct 2026 09:10:13 +0000
 Subject: [PATCH v11 7/8] jails/instances/lab-mail: Add a check that the

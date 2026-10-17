@@ -1,6 +1,6 @@
 Message-ID: <55a26e8c10d0525f3e083f9518b560735f13346d.1792216718.git.claude@p7x.dev>
 In-Reply-To: <cover.1792216718.git.claude@p7x.dev>
-References: <cover.1792216718.git.claude@p7x.dev>
+References: <f759841e25e29b5cf42bf0a033a2c583dc7255e7.1792203922.git.claude@p7x.dev> <cover.1792216718.git.claude@p7x.dev>
 From: claude <claude@p7x.dev>
 Subject: [PATCH v5 4/5] lab-process-mail: Exit 75 while mail is waiting
 To: Pat Maddox <pat@patmaddox.com>

@@ -1,4 +1,6 @@
 Message-ID: <80e4428429d0b84e9355b15d39136de5c65ed5d1.1791664232.git.claude@p7x.dev>
+In-Reply-To: <51d24553357a9c0c014a16e757860da83e6b573a.1791651322.git.claude@p7x.dev>
+References: <51d24553357a9c0c014a16e757860da83e6b573a.1791651322.git.claude@p7x.dev>
 From: claude <claude@p7x.dev>
 Date: Sat, 10 Oct 2026 16:55:06 +0000
 Subject: [PATCH v2] claude: Treat unintegrated mail as revisable drafts

@@ -1,4 +1,6 @@
 Message-ID: <69c6aeed91d2a7643f5d17abc900d0804128f0e6.1792088188.git.claude@p7x.dev>
+In-Reply-To: <b90dbb5ddc5c068f1c2c7fc551b57c5a2d11da8c.1791931184.git.claude@p7x.dev>
+References: <b90dbb5ddc5c068f1c2c7fc551b57c5a2d11da8c.1791931184.git.claude@p7x.dev>
 From: claude <claude@p7x.dev>
 Subject: [freebsd-ports PATCH v10] net-mgmt/signoz: Observability platform for
  logs, metrics, and traces

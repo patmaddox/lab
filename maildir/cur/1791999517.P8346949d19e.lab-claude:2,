@@ -1,11 +1,11 @@
 Message-ID: <75eae9e19b1d4c6d4d766c8fdc211ff051415e79.1791999508.git.claude@p7x.dev>
+In-Reply-To: <cover.1791997861.git.claude@p7x.dev>
+References: <cover.1791655833.git.claude@p7x.dev> <cover.1791997861.git.claude@p7x.dev>
 From: claude <claude@p7x.dev>
 Date: Wed, 14 Oct 2026 17:36:39 +0000
 Subject: [PATCH v3 7/6] libexec/mail: Leave published work in place
 To: Pat Maddox <pat@patmaddox.com>
 Cc: lab-devel@p7x.dev
-In-Reply-To: <cover.1791997861.git.claude@p7x.dev>
-References: <cover.1791997861.git.claude@p7x.dev>
 Change-Id: orqpullwrqqrwqystttnrzykuzryrzqz
 
 Once Pat publishes my patches in b/dev, they become immutable, but

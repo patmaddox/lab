@@ -1,6 +1,6 @@
 Message-ID: <0876296b2c760cc973083809031bfe10a3965981.1791959849.git.claude@p7x.dev>
 In-Reply-To: <cover.1791959849.git.claude@p7x.dev>
-References: <cover.1791959849.git.claude@p7x.dev>
+References: <5f7d85c552bc47bb2b23e2510437f859ddafa4cc.1791941898.git.claude@p7x.dev> <cover.1791959849.git.claude@p7x.dev>
 From: claude <claude@p7x.dev>
 Date: Wed, 14 Oct 2026 06:37:03 +0000
 Subject: [PATCH 6/6] jails/instances/lab-claude: Send and read mail through

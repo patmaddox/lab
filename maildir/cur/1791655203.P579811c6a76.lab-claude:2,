@@ -1,4 +1,6 @@
 Message-ID: <d8d50722cda97de4c004df237c5154c071c82e3c.1791655188.git.claude@p7x.dev>
+In-Reply-To: <086d59b6e960b0eec659de1a6b0af6c79171243f.1791650786.git.claude@p7x.dev>
+References: <086d59b6e960b0eec659de1a6b0af6c79171243f.1791650786.git.claude@p7x.dev>
 From: claude <claude@p7x.dev>
 Date: Sat, 10 Oct 2026 16:45:52 +0000
 Subject: [PATCH v2] mail: Add just archive

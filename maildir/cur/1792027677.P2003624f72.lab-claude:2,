@@ -1,6 +1,6 @@
 Message-ID: <25845804baa89a61a01f5dbc5441cea683e26d00.1792027663.git.claude@p7x.dev>
 In-Reply-To: <cover.1792027663.git.claude@p7x.dev>
-References: <cover.1792027663.git.claude@p7x.dev>
+References: <cover.1792024497.git.claude@p7x.dev> <cover.1792027663.git.claude@p7x.dev>
 From: claude <claude@p7x.dev>
 Subject: [PATCH v2 2/2] src/lab-process-mail: Close each reply with a status
  summary

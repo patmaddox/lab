@@ -1,6 +1,6 @@
 Message-ID: <9823f752e2186dfb88b2546465df600e5c851b0b.1792027663.git.claude@p7x.dev>
 In-Reply-To: <cover.1792027663.git.claude@p7x.dev>
-References: <cover.1792027663.git.claude@p7x.dev>
+References: <cover.1792024497.git.claude@p7x.dev> <cover.1792027663.git.claude@p7x.dev>
 From: claude <claude@p7x.dev>
 Subject: [PATCH v2 1/2] claude: End each reply with status and asks
 To: Pat Maddox <pat@patmaddox.com>

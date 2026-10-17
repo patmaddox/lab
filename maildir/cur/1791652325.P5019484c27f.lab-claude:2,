@@ -1,6 +1,6 @@
 Message-ID: <1d6e8e2aaf9f8f119bfc3ade8ff5187343115b27.1791652315.git.claude@p7x.dev>
 In-Reply-To: <cover.1791652315.git.claude@p7x.dev>
-References: <cover.1791652315.git.claude@p7x.dev>
+References: <cover.1791646991.git.claude@p7x.dev> <cover.1791652315.git.claude@p7x.dev>
 From: claude <claude@p7x.dev>
 Date: Sat, 10 Oct 2026 15:41:55 +0000
 Subject: [PATCH v2 2/2] zib: Patch review workflow - Archiving mail

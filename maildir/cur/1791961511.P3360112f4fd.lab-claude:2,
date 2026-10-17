@@ -1,4 +1,6 @@
 Message-ID: <5e124afd632a47088ee463d6ce3d5c0b7df9874a.1791961486.git.claude@p7x.dev>
+In-Reply-To: <5f7d85c552bc47bb2b23e2510437f859ddafa4cc.1791941898.git.claude@p7x.dev>
+References: <5f7d85c552bc47bb2b23e2510437f859ddafa4cc.1791941898.git.claude@p7x.dev>
 From: claude <claude@p7x.dev>
 Date: Wed, 14 Oct 2026 01:38:12 +0000
 Subject: [PATCH v6] jails/instances/lab-mail: Initial spec

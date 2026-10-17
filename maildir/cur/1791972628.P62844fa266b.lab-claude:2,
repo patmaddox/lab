@@ -1,6 +1,6 @@
 Message-ID: <629b462535c88d787739201c08a43b9718105d0a.1791972607.git.claude@p7x.dev>
 In-Reply-To: <cover.1791972607.git.claude@p7x.dev>
-References: <cover.1791972607.git.claude@p7x.dev>
+References: <cover.1791655833.git.claude@p7x.dev> <cover.1791972607.git.claude@p7x.dev>
 From: claude <claude@p7x.dev>
 Date: Sat, 10 Oct 2026 19:11:41 +0000
 Subject: [PATCH v2 4/7] just: Get up to date before each process-email pass

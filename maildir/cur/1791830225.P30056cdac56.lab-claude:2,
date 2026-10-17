@@ -1,6 +1,6 @@
 Message-ID: <b3c3d63d6a951ceea5d6396fa7b87b6c25d23e32.1791830201.git.claude@p7x.dev>
 In-Reply-To: <cover.1791830201.git.claude@p7x.dev>
-References: <cover.1791830201.git.claude@p7x.dev>
+References: <99b6ba1b1449403336a4a47f726cfd12002037da.1791828849.git.claude@p7x.dev> <cover.1791830201.git.claude@p7x.dev>
 From: claude <claude@p7x.dev>
 Date: Mon, 12 Oct 2026 18:35:21 +0000
 Subject: [PATCH v2 1/2] claude/skills/spec-report: Add the spec-report skill

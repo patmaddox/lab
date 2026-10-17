@@ -1,6 +1,6 @@
 Message-ID: <aebdd150bfe012de3141bbf35f9e0d2524af1412.1791652315.git.claude@p7x.dev>
 In-Reply-To: <cover.1791652315.git.claude@p7x.dev>
-References: <cover.1791652315.git.claude@p7x.dev>
+References: <cover.1791646991.git.claude@p7x.dev> <cover.1791652315.git.claude@p7x.dev>
 From: claude <claude@p7x.dev>
 Date: Sat, 10 Oct 2026 15:41:22 +0000
 Subject: [PATCH v2 1/2] notmuch: Tag messages under archive/ as archived

@@ -1,6 +1,6 @@
 Message-ID: <e87557b7bf18f1eb34b4c800c90dad9eac6cb61b.1791966707.git.claude@p7x.dev>
 In-Reply-To: <cover.1791966707.git.claude@p7x.dev>
-References: <cover.1791966707.git.claude@p7x.dev>
+References: <5f7d85c552bc47bb2b23e2510437f859ddafa4cc.1791941898.git.claude@p7x.dev> <cover.1791966707.git.claude@p7x.dev>
 From: claude <claude@p7x.dev>
 Date: Wed, 14 Oct 2026 06:33:55 +0000
 Subject: [PATCH v10 3/6] jails/instances/lab-mail: Relay mail to Fastmail with

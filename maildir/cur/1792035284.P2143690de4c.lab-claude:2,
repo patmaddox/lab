@@ -1,6 +1,6 @@
 Message-ID: <88ea6d44124212cda7f1ca4ef4172b96d1190456.1792035264.git.claude@p7x.dev>
 In-Reply-To: <cover.1792035264.git.claude@p7x.dev>
-References: <cover.1792035264.git.claude@p7x.dev>
+References: <cover.1792005540.git.claude@p7x.dev> <cover.1792035264.git.claude@p7x.dev>
 From: claude <claude@p7x.dev>
 Subject: [PATCH v2 2/4] libexec/mail: Refuse a reroll without an interdiff
 To: Pat Maddox <pat@patmaddox.com>

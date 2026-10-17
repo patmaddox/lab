@@ -1,6 +1,6 @@
 Message-ID: <d080e5edab3c431e8cd59ba892b97a3dedb5d2f0.1791832016.git.claude@p7x.dev>
 In-Reply-To: <cover.1791832016.git.claude@p7x.dev>
-References: <cover.1791832016.git.claude@p7x.dev>
+References: <99b6ba1b1449403336a4a47f726cfd12002037da.1791828849.git.claude@p7x.dev> <cover.1791832016.git.claude@p7x.dev>
 From: Pat Maddox <pat@patmaddox.com>
 Date: Mon, 12 Oct 2026 10:17:04 -0700
 Subject: [PATCH v3 2/4] claude/skills/spec-report: Initial spec

@@ -1,6 +1,6 @@
 Message-ID: <9bcf8ec51e9a012a535cb4f4feb0b7fc63921bdc.1791997861.git.claude@p7x.dev>
 In-Reply-To: <cover.1791997861.git.claude@p7x.dev>
-References: <cover.1791997861.git.claude@p7x.dev>
+References: <cover.1791655833.git.claude@p7x.dev> <cover.1791997861.git.claude@p7x.dev>
 From: claude <claude@p7x.dev>
 Date: Sat, 10 Oct 2026 19:12:16 +0000
 Subject: [PATCH v3 4/6] claude/skills/process-email: Get up to date with just

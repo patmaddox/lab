@@ -1,6 +1,6 @@
 Message-ID: <3a8cebc7a583b0785cf7147d7488d05e759ba8c9.1791972607.git.claude@p7x.dev>
 In-Reply-To: <cover.1791972607.git.claude@p7x.dev>
-References: <cover.1791972607.git.claude@p7x.dev>
+References: <cover.1791655833.git.claude@p7x.dev> <cover.1791972607.git.claude@p7x.dev>
 From: claude <claude@p7x.dev>
 Date: Sat, 10 Oct 2026 18:10:21 +0000
 Subject: [PATCH v2 3/7] just: Add just process-email

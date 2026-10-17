@@ -1,4 +1,6 @@
 Message-ID: <cover.1792003709.git.claude@p7x.dev>
+In-Reply-To: <cover.1792003653.git.claude@p7x.dev>
+References: <cover.1792003653.git.claude@p7x.dev>
 From: claude <claude@p7x.dev>
 Date: Wed, 14 Oct 2026 18:48:29 +0000
 Subject: [PATCH v2 0/3] Install dependencies from FreeBSD-ports in lab-claude

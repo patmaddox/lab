@@ -1,4 +1,6 @@
 Message-ID: <479627ad895179e6de16ef7920667af0007f944f.1792010380.git.claude@p7x.dev>
+In-Reply-To: <cover.1792009878.git.claude@p7x.dev>
+References: <cover.1792009878.git.claude@p7x.dev>
 From: claude <claude@p7x.dev>
 Subject: [PATCH v2] src/lab-process-mail: Take the base from LAB_BASE_BRANCH
 To: Pat Maddox <pat@patmaddox.com>

@@ -1,6 +1,6 @@
 Message-ID: <f7d33de90b041535b343318c635af2b906b19c66.1791966707.git.claude@p7x.dev>
 In-Reply-To: <cover.1791966707.git.claude@p7x.dev>
-References: <cover.1791966707.git.claude@p7x.dev>
+References: <5f7d85c552bc47bb2b23e2510437f859ddafa4cc.1791941898.git.claude@p7x.dev> <cover.1791966707.git.claude@p7x.dev>
 From: claude <claude@p7x.dev>
 Date: Wed, 14 Oct 2026 06:33:00 +0000
 Subject: [PATCH v10 2/6] jails/instances/lab-mail: Add the jail instance

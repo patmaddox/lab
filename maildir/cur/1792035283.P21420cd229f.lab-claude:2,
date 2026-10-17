@@ -1,6 +1,6 @@
 Message-ID: <0485d977972ea53f818272b85b0dcf569abb8508.1792035264.git.claude@p7x.dev>
 In-Reply-To: <cover.1792035264.git.claude@p7x.dev>
-References: <cover.1792035264.git.claude@p7x.dev>
+References: <cover.1792005540.git.claude@p7x.dev> <cover.1792035264.git.claude@p7x.dev>
 From: claude <claude@p7x.dev>
 Subject: [PATCH v2 1/4] libexec/mail: Rebuild a posted series from the list
 To: Pat Maddox <pat@patmaddox.com>

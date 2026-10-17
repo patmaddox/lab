@@ -1,4 +1,6 @@
 Message-ID: <cover.1791832016.git.claude@p7x.dev>
+In-Reply-To: <99b6ba1b1449403336a4a47f726cfd12002037da.1791828849.git.claude@p7x.dev>
+References: <99b6ba1b1449403336a4a47f726cfd12002037da.1791828849.git.claude@p7x.dev>
 From: claude <claude@p7x.dev>
 Date: Mon, 12 Oct 2026 19:06:56 +0000
 Subject: [PATCH v3 0/4] Add the spec-report skill and its report

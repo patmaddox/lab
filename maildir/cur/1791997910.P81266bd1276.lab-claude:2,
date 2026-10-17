@@ -1,6 +1,6 @@
 Message-ID: <071d876ef9cca9aab616163b49334928fcd9ef1b.1791997861.git.claude@p7x.dev>
 In-Reply-To: <cover.1791997861.git.claude@p7x.dev>
-References: <cover.1791997861.git.claude@p7x.dev>
+References: <cover.1791655833.git.claude@p7x.dev> <cover.1791997861.git.claude@p7x.dev>
 From: claude <claude@p7x.dev>
 Date: Wed, 14 Oct 2026 10:08:26 +0000
 Subject: [PATCH v3 6/6] just: Notify after each process-email pass

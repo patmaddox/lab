@@ -1,4 +1,6 @@
 Message-ID: <a0295a8d1a6b80dffad23e1a53fd52f863562982.1791668589.git.claude@p7x.dev>
+In-Reply-To: <52721987852790e278d57f15f97f9a83ea3a499a.1791667377.git.claude@p7x.dev>
+References: <52721987852790e278d57f15f97f9a83ea3a499a.1791667377.git.claude@p7x.dev>
 From: claude <claude@p7x.dev>
 Date: Sat, 10 Oct 2026 21:22:44 +0000
 Subject: [PATCH v2] doc: Add a guide to the patch workflow

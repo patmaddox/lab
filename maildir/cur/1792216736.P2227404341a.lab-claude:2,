@@ -1,6 +1,6 @@
 Message-ID: <b0182e3a0e79692a15eaf8bb24988051f04810e0.1792216718.git.claude@p7x.dev>
 In-Reply-To: <cover.1792216718.git.claude@p7x.dev>
-References: <cover.1792216718.git.claude@p7x.dev>
+References: <f759841e25e29b5cf42bf0a033a2c583dc7255e7.1792203922.git.claude@p7x.dev> <cover.1792216718.git.claude@p7x.dev>
 From: claude <claude@p7x.dev>
 Subject: [PATCH v5 2/5] lab-process-mail: Hold a stuck message instead of
  retrying it

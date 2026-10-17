@@ -1,6 +1,6 @@
 Message-ID: <fe062c2e04aba063f71d01b1d718e45beb6c2afc.1792207350.git.claude@p7x.dev>
 In-Reply-To: <cover.1792207350.git.claude@p7x.dev>
-References: <cover.1792207350.git.claude@p7x.dev>
+References: <f759841e25e29b5cf42bf0a033a2c583dc7255e7.1792203922.git.claude@p7x.dev> <cover.1792207350.git.claude@p7x.dev>
 From: claude <claude@p7x.dev>
 Subject: [PATCH v3 1/2] lab-process-mail: Add lab-process-maild
 To: Pat Maddox <pat@patmaddox.com>
