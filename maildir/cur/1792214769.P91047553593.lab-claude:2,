@@ -1,0 +1,62 @@
+Message-ID: <dd5ab59a45257b05d6892ec91240bd75c7782c7a.1792214740.git.claude@p7x.dev>
+In-Reply-To: <cover.1792214740.git.claude@p7x.dev>
+References: <cover.1792214740.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Subject: [PATCH 3/3] claude/skills: Thread each revision under its first
+ version
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+Change-Id: rkrlzwxwostolzxrwwzpsqlpnklxmsns
+Date: Sat, 17 Oct 2026 05:26:09 +0000
+
+patch-triage grouped resends on the assumption that each is a thread
+of its own, and would read one thread holding v1 through v3 as a
+single entry without knowing why. It now expects versions in one
+thread, with older resends still apart.
+
+freebsd-port formats with plain git format-patch in a ports tree, so
+format-patch.sh never picks the reply target there. It now says to
+pass --in-reply-to with v1, so ports revisions thread like the rest.
+---
+change-id: rkrlzwxwostolzxrwwzpsqlpnklxmsns
+
+ .claude/skills/freebsd-port/SKILL.md | 3 +++
+ .claude/skills/patch-triage/SKILL.md | 8 +++++---
+ 2 files changed, 8 insertions(+), 3 deletions(-)
+
+diff --git a/.claude/skills/freebsd-port/SKILL.md b/.claude/skills/freebsd-port/SKILL.md
+index 7f7f831..8532a32 100644
+--- a/.claude/skills/freebsd-port/SKILL.md
++++ b/.claude/skills/freebsd-port/SKILL.md
+@@ -215,6 +215,9 @@ If v(N-1) does not apply onto the new base, run series-rebuild.sh
+ without `-o` and pass `--range-diff="${prev}"` instead; an interdiff
+ across two bases would show every commit that landed between them.
+ End the notes with what changed and a `Link to v(N-1):` line.
++Thread the revision under v1, as git.git does, by adding
++`--in-reply-to=<message-id of v1>`, so every version of the port and
++its review stay in one thread.
+ 
+ Deliver the series into the mail workspace and push it, as
+ zib/patch-review-workflow.org describes:
+diff --git a/.claude/skills/patch-triage/SKILL.md b/.claude/skills/patch-triage/SKILL.md
+index 14fe51c..9720663 100644
+--- a/.claude/skills/patch-triage/SKILL.md
++++ b/.claude/skills/patch-triage/SKILL.md
+@@ -44,9 +44,11 @@ on the list that is still open:
+ 
+ Then reduce to one entry per logical patch:
+ 
+-- A resend is a fresh thread with subject `[PATCH vN]` and a
+-  `v(N-1): <message-id>` link in its cover (see mail-workflow.md).
+-  Group threads by their base subject and keep only the highest N.
++- A resend has subject `[PATCH vN]` and a `Link to v(N-1):
++  id:<message-id>` line in its cover (see mail-workflow.md). It
++  replies to the first version, so one thread holds every version;
++  older resends may be threads of their own. Group by base subject
++  and keep only the highest N.
+ - Drop any thread Pat filed into a lifecycle folder; that is his
+   signal it is done. merged means it landed on trunk, as-is or
+   reworded; superseded means a later version replaced it.
+-- 
+2.56.0
+
