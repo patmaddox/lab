@@ -1,0 +1,92 @@
+From: claude <claude@p7x.dev>
+To: lab-devel@p7x.dev
+Cc: Pat Maddox <pat@patmaddox.com>
+Subject: [BUG] lab-process-mail gets stuck
+Message-ID: <1792206019.c7310968cbe0@p7x.dev>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: 8bit
+Date: Sat, 17 Oct 2026 03:01:03 +0000
+
+Condition
+---------
+
+lab-process-maild runs lab-process-mail and stops at the first run
+that exits non-zero, as posted in "[PATCH v2 0/2] lab-process-mail:
+Add lab-process-maild" [1]. Every failure therefore stops the inbox
+until someone notices and runs lab-process-maild start again.
+
+Only one of those failures tells anyone. When the agent pass leaves
+its message in the inbox, lab-process-mail posts "stuck: <subject>"
+to ntfy and exits 1. Every other failure exits non-zero in silence:
+
+- The fetch at the start of the run fails, for example during a
+  network outage (jj git fetch, src/lab-process-mail/lab-process-mail
+  line 62).
+- A rebase in get_up_to_date fails.
+- claude itself exits non-zero, for example on an expired login or a
+  usage limit. The pass runs in a subshell under set -e (line 135),
+  so the script exits with claude's status before it reaches the
+  inbox check and its notice. This is from reading the code; I have
+  not seen it happen. A quick check confirms the sh behavior:
+
+      $ sh -c 'set -e; (false); echo after'; echo $?
+      1
+
+Expected: a transient failure costs one interval and the daemon
+carries on; a stuck message is reported and stops the work only as
+far as it has to. Actual: both stop the daemon, and only the stuck
+case sends a notice.
+
+Diagnosis
+---------
+
+lab-process-mail gives every failure the same exit status, so the
+daemon cannot tell a message the agent could not answer from a run
+that never reached the agent. Stopping on every failure was the safe
+choice for the stuck case, where retrying spends an agent pass on the
+same message every interval. It is the wrong choice for a transient
+failure, where retrying is free and would succeed.
+
+The notice is tied to the one path that checks the inbox, not to the
+exit, so every other path is silent.
+
+Possible fixes
+--------------
+
+1. Distinct exit statuses. lab-process-mail exits 0 when it answered
+   a message or the inbox was empty, 2 when the message is stuck, and
+   1 for anything else. lab-process-maild stops on 2, and on 1 logs,
+   sleeps the interval, and tries again. Cost: a failure that is not
+   transient, such as a broken jj config, retries every minute, but
+   those runs end before the agent starts, so they cost a fetch, not
+   a pass. Small change, to both scripts and their tests.
+
+2. Notify on every failure. An EXIT trap in lab-process-mail posts
+   "failed: <status> (inbox N)" whenever it exits non-zero without
+   having sent the stuck notice. Cost: during an outage that lasts an
+   hour, combined with fix 1, that is sixty notices; the daemon could
+   instead notify only on the first failure after a success. Small
+   change.
+
+3. Skip a stuck message instead of stopping. lab-process-mail tags
+   the stuck message, say tag:stuck, and oldest_inbox_message skips
+   tag:stuck, so the rest of the inbox keeps moving while the stuck
+   message waits for you. Removing the tag retries it. Cost: a stuck
+   message is easier to overlook, and a pass that is stuck for a
+   reason that affects every message, such as a broken prompt,
+   would spend a pass on each one before anyone noticed. That case
+   is covered by stopping after a few stuck messages in a row. This
+   needs the tag to survive notmuch new, which I have not checked
+   against how the list's tags are derived.
+
+4. Restart under daemon(8) with -r or -R. No code, but it retries the
+   stuck message every interval too, which is the cost the current
+   design avoids.
+
+I recommend 1 and 2 together: the daemon survives an outage, the stuck
+case still stops it, and every failure tells you. 3 is worth doing
+once a stuck message has actually held up the inbox. I can send 1 and
+2 as a patch on top of the lab-process-maild series if you agree.
+
+[1] id:cover.1792205997.git.claude@p7x.dev
