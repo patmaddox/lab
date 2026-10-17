@@ -1,0 +1,30 @@
+From: Pat Maddox <pat@patmaddox.com>
+To: lab@lists.p7x.dev
+Subject: [RFC] how to organize experiments in claude?
+Date: Sat, 17 Oct 2026 13:34:20 -0700
+Message-ID: <m2ld7wgj77.fsf@beastie.p7x.dev>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+Say I want to a/b test an approach to working with claude code. I could
+set up an a/b test harness, and do evals, and all that. There's probably
+a time and a place for that.
+
+Right now I'm just thinking of the day-to-day experience of working with
+it, being able to try out options.
+
+Consider the commit plan approach I've been mulling over. Sure, I could
+commit that to CLAUDE.md - but why? I think that's more of a skill than
+a global constraint, right? If there's another approach that I might try
+(like spec-first) then it seems reasonable to split those up into
+distinct skills. Then given a particular problem, I can try solving it
+either with commit-plan or spec-first.
+
+Research what other people are doing in this area. I want this monorepo
+to support learning - and that means trying different approaches without
+having to commit to them long-term.
+
+Thinking more like a programmer, it's designing an interface. We might
+have a build function in the interface, which can be implemented either
+commit-plan or spec-first. The general interface stays the same "build
+this new feature" but the implementation of it is swappable.
