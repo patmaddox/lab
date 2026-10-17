@@ -1,0 +1,298 @@
+From: claude <claude@p7x.dev>
+Subject: Re: [RFC] commit style
+To: Pat Maddox <pat@patmaddox.com>, lab@lists.p7x.dev
+In-Reply-To: <m2a4oclhvv.fsf@beastie.p7x.dev>
+References: <m2a4oclhvv.fsf@beastie.p7x.dev>
+Message-ID: <1792235349.f7fc30029251@p7x.dev>
+Date: Sat, 17 Oct 2026 11:09:18 +0000
+
+On Sat, 17 Oct 2026 03:51:32 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+> I don't love some of the commits that have been coming through
+> lately. They often have verbose messages, and are large.
+
+The numbers agree with you. I measured the last 25 commits I wrote
+that are on b/dev. Their median body is about 10 lines, and their
+median diff is about 70 changed lines. Four of them change more than
+250 lines. The four projects all sit well below that:
+
+  project     median diff        median body
+  ----------  -----------------  ----------------------------
+  OpenBSD     10 lines, 1 file   0-1 lines; 29% are one line
+  FreeBSD     17 lines, 1 file   4 lines; 15% have no body
+  Linux       under 30 lines     5-7 lines
+  PostgreSQL  32 lines, 2 files  66 words, about 6 lines
+  lab.jj      about 70 lines     about 10 lines
+
+For FreeBSD, OpenBSD and PostgreSQL, the figures come from recent
+commits on main: 300-1500 for FreeBSD, 160 for OpenBSD, and 4231 for
+PostgreSQL. The Linux figures come from 40 recent commits in
+kernel/time. Treat them as orders of magnitude, not exact values.
+
+You have already raised this on the list. You said "the commit
+messages are wordy" and that any "what" should be bullet points [1].
+You asked for a big commit to be broken "into logical changes" so
+the series is "more evolutionary" [2]. You also asked for a refactor
+to land "bug and all", with the fix in a commit of its own [3]. All
+four projects say the same things.
+
+> Thoroughly research them to learn their patterns. Review their
+> documentation and explicit guidance. Read their commits - maybe some of
+> the more well-regarded ones. Look for the best possible examples of
+> commit style, both in terms of message and commit sizing and sequencing.
+
+Here is each project in turn, then where they agree and where they
+differ.
+
+FreeBSD
+=======
+
+Guidance is the Committer's Guide, "Commit Log Messages" and "The
+Big List of Rules" [4].
+
+- Subject: "stay below 67 characters, and aim for about 50 or
+  fewer". It may take a "component name and a colon" prefix, and
+  should reuse the prefix used before for the same files. It is
+  imperative ("when applied, this change will ..."), capitalized,
+  with no period.
+- Body: "Some trivial commits do not require a body." Otherwise
+  "Focus on what and why, not how". The message must stand alone "in
+  case these references are no longer available".
+- Trailers: Reviewed by, MFC after, Sponsored by, PR, Fixes, and
+  Differential Revision, which goes last.
+- Sizing: "Do not mix style fixes with new functionality". Split a
+  change "into multiple smaller patches that build on each other",
+  and plan the split from the start, because splitting "is often
+  difficult after the fact". For GitHub PRs, "Each logical change is
+  a separate commit", and a PR should touch "roughly 10 or fewer
+  files and fewer than 200 lines".
+
+Examples:
+
+  74d2a0b79ffd pf: Parse the GETSTATES state id as 64 bits
+
+    The GETSTATES dump sends PF_ST_ID as a u64, but the request
+    parser reads it as a u32 and rejects an id taken from the dump
+    with EINVAL. Nothing in base sends PF_ST_ID. Parse and document
+    it as a u64.
+
+    Fixes: 2cef62886dc7 ("pf: convert state retrieval to netlink")
+
+  These three sentences give the bug, its impact and the fix. The
+  diff is 6 lines.
+
+  dd51cef58311 sound: Whitespace cleanup
+
+    In advance of additional sound(4) work, remove EOL whitespace
+    and mixed tab/space.
+
+  This is the labeled style-only commit that the rules ask for, and
+  it lands before the functional work. It is 862 lines, yet the
+  message is one sentence, because a mechanical change needs no more.
+
+Linux
+=====
+
+Guidance is Documentation/process/submitting-patches.rst [5], plus
+the tip tree's maintainer-tip.rst [6].
+
+- "Solve only one problem per patch. If your description starts to
+  get long, that's a sign that you probably need to split up your
+  patch."
+- "Describe your problem" first, then the user-visible impact, then
+  the fix. The tip tree asks for "the context, the problem and the
+  solution in separate paragraphs and this order".
+- Imperative, "as if you are giving orders to the codebase". The
+  subject is "subsystem: summary", at most 70-75 characters, and it
+  is "a globally-unique identifier" within the series.
+- "Changelogs written in abstract words are more precise and tend to
+  be less confusing than those written in the form of novels."
+- Each patch must build and run, for bisect. An API change and its
+  first user go in separate patches. One mechanical change across
+  many files is one patch. Post "only ... 15 or so at a time".
+- Version notes go below the ---, where they are "automatically
+  stripped off when applying the patch".
+
+Examples:
+
+  494af3ed7848 timers: Give a few structs and members proper names
+    "Clean it up before we switch the wheel implementation over to
+    the new scheme. No functional change."
+
+  500462a9de65 timers: Switch to a non-cascading wheel
+
+  Thomas Gleixner's timer wheel series. A rename lands first and
+  says "No functional change". The redesign that follows has a
+  message of about 90 lines. That length is justified: it is a
+  design change with data, and it states its trade-off ("worst case
+  inaccuracy of 12.5%"). It also states its scope: "This patch does
+  not address the 'fast lookup' issue". So in Linux, message length
+  scales with risk and subtlety, not with diff size.
+
+  c21eaa72f02f posix-cpu-timers: Prevent freeing a timer which is
+               queued on the expiry list
+
+  A 40-line fix with a CPU0/CPU1 race table. It ends with the fix in
+  one sentence: "Check whether the timer is queued on the expiry
+  list or not instead."
+
+OpenBSD
+=======
+
+OpenBSD writes almost nothing down about commit messages. FAQ 5 says
+only to send an inline diff against -current to tech@ [7]. The style
+is pure habit: one or two lines, often lowercase, with no
+subject/body split, followed by who reviewed it.
+
+Examples:
+
+  8551051e7f3f (usr.bin/mg, +7/-8)
+
+    remove unused findfname() argument
+    ok tb@ florian@
+
+  The diff went to tech@ with a one-line reason. Two developers
+  replied "ok", and it was committed the next day.
+
+  573f7b81039c (uvm_vnode.c, +3/-2)
+
+    Revert rev. 1.134 of uvm_vnode.c because it introduces a
+    reference race
+
+  A 5-line kernel diff still gets two short paragraphs of why,
+  because the reasoning is subtle. Even OpenBSD writes a body when
+  the change needs one.
+
+Sequencing is many tiny commits, each with its own ok. One recent
+ocspcheck hardening landed as five commits of 5-20 lines each,
+within 35 minutes.
+
+PostgreSQL
+==========
+
+Guidance is the wiki: "Commit Message Guidance" (still marked as a
+draft), "Submitting a Patch", and "Creating Clean Patches" [8].
+
+- Subject under 64 characters, a complete imperative sentence.
+- A narrative body, then machine-parsed trailers: Author,
+  Reviewed-by, Reported-by, Discussion: https://postgr.es/m/<id>,
+  and Backpatch-through.
+- "Resist the temptation to build a giant patch all at once." "The
+  fastest way to get your patch rejected is to make unrelated
+  changes." "The new code you wrote is not the final product here;
+  the patch diff is."
+
+PostgreSQL is the odd one out: committers rewrite the message. In
+99% of commits the git author is the committer, and the real author
+is credited in an Author: trailer. A contributor's 0001..000N set is
+either squashed or committed in order as separate commits. One
+example is the pg_waldump tar series. It landed as four commits: a
+move to common code, preparatory refactoring, the feature, and then
+its consumer.
+
+  94e1385ed285 Fix two edge cases in numeric log(base, val).
+
+  Tom Lane, 33+/3- with tests. Three paragraphs give the bug, the
+  new behavior, and the back-patch decision: "it's not clear that
+  people would appreciate such a behavior change in stable
+  branches, so fix master only."
+
+> Not all of them will be the same, of course. Clearly identify where they
+> are similar or agree, and where they differ.
+
+Where all four agree
+====================
+
+1. One logical change per commit. Unrelated changes in one commit
+   are the most common reason for rejection.
+2. Preparation lands first and on its own. Renames, moves, style
+   cleanup and new interfaces come first, marked "No functional
+   change" where true. The behavior change comes after. Fixes to
+   moved code are their own commits.
+3. Every commit builds and works, so bisect and cherry-pick are
+   safe.
+4. Imperative subject with an area prefix: FreeBSD, Linux, modern
+   OpenBSD, and about half of PostgreSQL. It runs about 50-75
+   characters, and the subject alone tells a reader whether to care.
+5. The body explains why: the problem and its impact, then the fix
+   in a sentence. The diff carries the how.
+6. A small or mechanical change gets a small message, often one
+   line or none.
+7. The message stands alone. Version notes go below the --- or in
+   the cover letter. When you cite another commit, give its hash and
+   subject.
+
+Where they differ
+=================
+
+- Body length. OpenBSD is near zero, FreeBSD and PostgreSQL are a
+  few lines, and Linux runs from a few lines to 90 for a design
+  change. In all four, length tracks how subtle the change is, not
+  how big the diff is.
+- Who writes the message. PostgreSQL committers rewrite it and often
+  squash the series. In the other three, the author's message
+  lands.
+- Trailers. Linux and PostgreSQL rely on them for credit,
+  backports, and links to the discussion. FreeBSD uses them for
+  review and MFC tracking. OpenBSD writes "ok tb@" in prose.
+- Prefix. Linux's tip tree says "do not use file names" and wants
+  subsys/component. FreeBSD wants whatever prefix the same files
+  used before. Old-style OpenBSD logs drop the prefix entirely,
+  because the commit mail already lists the directories.
+- Series size. Linux caps a posting at about 15 patches, and
+  FreeBSD PRs at about 200 lines. PostgreSQL says to send one patch
+  normally, and to split only when the parts can be committed
+  separately.
+
+> I am looking for a thorough
+> analysis of these commit styles, to inform future style guidelines for
+> this repo.
+
+Here is how I read it against what we do now.
+
+Our format already matches the consensus. We use an area prefix, an
+imperative subject of about 50 characters, a 72-column body, and we
+explain why rather than what. The excess is in the content and the
+cut of each commit:
+
+- My bodies explain every decision in the diff, as one paragraph
+  each. In the four projects, a body has one reason, and the
+  per-decision detail goes in a code comment, or nowhere. That is
+  your "wordy" point. When a commit needs more than one paragraph of
+  why, it is usually two commits, which is Linux's own test.
+- My commits bundle a new service with its config, credentials,
+  checks and docs. The projects would land each of those as its own
+  step.
+
+If you want this turned into rules, I would propose these:
+
+1. Body: say why in one short paragraph of 1-4 lines. No body at
+   all for mechanical changes such as renames, moves, style fixes
+   and typos. Any "what" goes in bullets, per [1].
+2. Write more than one paragraph only for a subtle change, such as a
+   race, a trade-off, or a rejected alternative a reviewer would
+   otherwise suggest.
+3. If the message needs a second reason, split the commit.
+4. Land preparatory commits first, marked "No functional change"
+   where true. Move or extract code as it is, then fix it in its own
+   commit, per [3].
+5. Aim for diffs under about 50 changed lines. Treat 200 as a reason
+   to split, unless the change is mechanical.
+6. Keep explanations of how the code works in code comments, not in
+   the commit message.
+
+I have not touched CLAUDE.md. Tell me which of these you want, and
+I will send the CLAUDE.md change as its own patch.
+
+[1] "Re: [PATCH 0/2] jails/instances/lab-mail: Build the list's mail
+    hub", id:m2cxt8oine.fsf@beastie.p7x.dev
+[2] "Re: [PATCH v2 2/3] jails/instances/lab-mail: Carry the list
+    instead of relaying it", id:m2y0bwn3ca.fsf@beastie.p7x.dev
+[3] "Re: [PATCH v3 0/6] Add just process-email",
+    id:m2a4ogb0ju.fsf@beastie.p7x.dev
+[4] https://docs.freebsd.org/en/articles/committers-guide/
+[5] https://docs.kernel.org/process/submitting-patches.html
+[6] https://docs.kernel.org/process/maintainer-tip.html
+[7] https://www.openbsd.org/faq/faq5.html
+[8] https://wiki.postgresql.org/wiki/Commit_Message_Guidance
+    https://wiki.postgresql.org/wiki/Submitting_a_Patch
+    https://wiki.postgresql.org/wiki/Creating_Clean_Patches
