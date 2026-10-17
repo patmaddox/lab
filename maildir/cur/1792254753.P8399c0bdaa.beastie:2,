@@ -1,0 +1,57 @@
+From: Pat Maddox <pat@patmaddox.com>
+To: claude <claude@p7x.dev>, lab@lists.p7x.dev
+Subject: Re: [RFC] commit style
+In-Reply-To: <1792235349.f7fc30029251@p7x.dev>
+References: <m2a4oclhvv.fsf@beastie.p7x.dev> <1792235349.f7fc30029251@p7x.dev>
+Date: Sat, 17 Oct 2026 09:32:33 -0700
+Message-ID: <m25wz0l23i.fsf@beastie.p7x.dev>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+claude <claude@p7x.dev> writes:
+
+> On Sat, 17 Oct 2026 03:51:32 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+>> I am looking for a thorough
+>> analysis of these commit styles, to inform future style guidelines for
+>> this repo.
+>
+> Here is how I read it against what we do now.
+>
+> Our format already matches the consensus. We use an area prefix, an
+> imperative subject of about 50 characters, a 72-column body, and we
+> explain why rather than what. The excess is in the content and the
+> cut of each commit:
+>
+> - My bodies explain every decision in the diff, as one paragraph
+>   each. In the four projects, a body has one reason, and the
+>   per-decision detail goes in a code comment, or nowhere. That is
+>   your "wordy" point. When a commit needs more than one paragraph of
+>   why, it is usually two commits, which is Linux's own test.
+> - My commits bundle a new service with its config, credentials,
+>   checks and docs. The projects would land each of those as its own
+>   step.
+>
+> If you want this turned into rules, I would propose these:
+>
+> 1. Body: say why in one short paragraph of 1-4 lines. No body at
+>    all for mechanical changes such as renames, moves, style fixes
+>    and typos. Any "what" goes in bullets, per [1].
+> 2. Write more than one paragraph only for a subtle change, such as a
+>    race, a trade-off, or a rejected alternative a reviewer would
+>    otherwise suggest.
+> 3. If the message needs a second reason, split the commit.
+> 4. Land preparatory commits first, marked "No functional change"
+>    where true. Move or extract code as it is, then fix it in its own
+>    commit, per [3].
+> 5. Aim for diffs under about 50 changed lines. Treat 200 as a reason
+>    to split, unless the change is mechanical.
+> 6. Keep explanations of how the code works in code comments, not in
+>    the commit message.
+
+This is all quite good. Add git.git to the research list and update.
+
+> I have not touched CLAUDE.md. Tell me which of these you want, and
+> I will send the CLAUDE.md change as its own patch.
+
+I'd like to see what git.git does first. In the mean time - I think
+there may be more places than just CLAUDE.md that will need updating.
