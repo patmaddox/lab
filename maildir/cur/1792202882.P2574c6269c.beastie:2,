@@ -1,0 +1,72 @@
+From: Pat Maddox <pat@patmaddox.com>
+To: lab-devel@p7x.dev
+Subject: [RFC] designing a yolo box
+Date: Fri, 16 Oct 2026 19:08:02 -0700
+Message-ID: <m25wz1xenx.fsf@beastie.p7x.dev>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+I am planning to deploy a yolo box - a dedicated hardware unit for
+running attended agents.
+
+In terms of config, it will be pretty similar to any other machine I
+have in here. I'd like to think through how to design this, and start by
+running it in a VM (although not actually running the coding
+agents). Basically get the config set up so that when the box arrives, I
+can deploy it quickly.
+
+One thing about that: it doesn't have any kind of IPMI, so I plan to set
+it up this way:
+
+- put it on a desk with no network connection, attach a monitor, and
+  dd a boot image into place
+- power off and move it into its actual location hooked up to the network
+
+This means that the config that creates the boot image should be
+complete with all the network config etc, so that it can boot with no
+monitor.
+
+The plan is to give coding agents root privileges on the host. It's
+considered a completely untrusted host, the only output of it is patches
+that I review.
+
+I would like to see how much I can lock it down from the kernel
+standpoint. I know that rsync.net provides VMs with root on them, and
+they do some locking down, I just don't know what it is exactly.
+
+I'm imagining two different approaches:
+
+1. Use security levels to prevent system files from changing after it
+   runs.
+
+2. The reboot -r mechanism, where it boots to a userland basically
+   running nothing, and then reboots into another userland with all the
+   services (could be combined with 1).
+
+I have pf on my firewall, but I would like to have pf on the device
+block output as well. I don't know if that's feasible assuming that it
+has root - but it seems plausible to me that secure level could also
+affect pf, so it's possible to create pf rules that are loaded on boot
+but can't be changed after the fact.
+
+We need to think about how we can best lock down a device while still
+granting root access to an untrusted user.
+
+Also need to think about general architecture of the running system, and
+how it interacts with repos. I want it to operate on lab, or
+freebsd-src, or freebsd-ports, or any number of repos. I want there to
+be isolation across concurrent agents. I'm thinking of checking out the
+repos to zfs datasets, and then cloning those datasets into place in
+jails that actually run claude. I might even use nullmount so they're
+read only.
+
+I think there still needs to be a zfs dataset that gets cloned, which is
+for the claude config, because multiple agents sharing it will want to
+modify the settings. The idea is that I log in on the host, with claude
+config in a dataset, and then clone that dataset everywhere. Although if
+I can tell the tools not to write, or use an env var to tell them where
+to write, then I could do a read-only null mount for this as well.
+
+Thinking through this flow a bit, I want deterministic tools that will
+launch a jail with whatever repos it needs, perform the work, and clean
+up after itself. Every prompt should be done in a clean, repetable environment.
