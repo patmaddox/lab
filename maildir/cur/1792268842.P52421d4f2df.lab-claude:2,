@@ -1,0 +1,129 @@
+Message-ID: <cover.1792268803.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Subject: [PATCH v12 00/11] jails/instances/lab-mail: Build the list's mail hub
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+Date: Sat, 17 Oct 2026 20:27:22 +0000
+
+This builds the list's mail hub on trunk. It turns the relay jail
+into the list's home in steps, one service at a time. Each step
+leaves a jail that works and does what its README.org says.
+
+How mail moves, end to end, once the series is applied:
+
+  client --SMTP--> OpenSMTPD --LMTP--> Dovecot --> INBOX
+  Dovecot <--IMAP--> mbsync <--IMAPS--> Fastmail
+    (INBOX, Next, Later, and Archive only)
+
+New mail lands in INBOX, whether it is posted to lab-mail or arrives
+at Fastmail. lab-mail syncs exactly four folders with Fastmail: INBOX,
+Next, Later, and Archive. Any other folder Pat makes on Fastmail
+stays there, and reaches neither lab-mail nor any notmuch. There is no
+lists folder, no Sieve, and no Fastmail rule. Dovecot is the only
+program that writes the maildir. Every reader may read every folder,
+and only Pat and mbsync may change anything.
+
+The folders come from Fastmail. Dovecot creates none, and mbsync
+creates on lab-mail whichever of the four it finds on Fastmail. It
+never creates one on Fastmail.
+
+- Patch 1 is "[PATCH v2] jails/instances/lab-mail: Spec the list's
+  mail hub" [1], unchanged. You found it ready to implement [2], but
+  it is not on trunk, and the rest of the series edits the spec it
+  adds, so the series carries it.
+- Patch 2 corrects the spec on what Dovecot does to a reader's write.
+  A STORE or EXPUNGE answers OK and changes nothing. Only append,
+  copy, and move are refused.
+- Patch 3 narrows the spec's header check to what OpenSMTPD does on
+  its own.
+- Patch 4 changes the spec to keep the list in INBOX of the list's
+  own account, and to sync INBOX and Archive and no other folder,
+  with the folders made on Fastmail only. The Fastmail rule, the
+  lists folder, and the moderation queue go.
+- Patch 5 makes Dovecot the only writer of the list. mbsync fetches
+  Fastmail's INBOX one way into Dovecot's INBOX over IMAP, as the
+  login mbsync. This is the one step that needs the maildir and
+  mbsync's state emptied first.
+- Patch 6 turns the fetch into a two-way sync of INBOX and Archive.
+  mbsync creates Archive on lab-mail from Fastmail's.
+- Patch 7 adds Pat's login, so he can archive and delete on lab-mail.
+- Patch 8 swaps smtprelay for OpenSMTPD, which hands posts to Dovecot
+  over LMTP, into INBOX. smtprelay, jq, and the mailcred group go
+  with it.
+- Patch 9 documents the one-time import of the jj maildir into INBOX.
+- Patch 10 adds lab@lists.p7x.dev and freebsd-ports@lists.p7x.dev to
+  the addresses OpenSMTPD delivers to the list.
+- Patch 11 syncs Next and Later beside INBOX and Archive, and specs
+  the client side: the folder is a message's only state, clients
+  derive their tags from it, and Pat's notmuch syncs flags.
+
+Before deploying: delete the Fastmail rule that files list mail into
+lists, and create Next and Later on Fastmail. Mail still in lists on
+Fastmail stays there, outside the list, until you move it to INBOX or
+Archive.
+
+I applied the series with git am onto a fresh export of trunk, and
+each libexec script passes sh -n. Dovecot, smtpd, and the jail build
+are not installed here, so no step was run on a jail. In particular,
+that the ACL's k right lets mbsync create a top-level mailbox under
+acl_globals_only is untested.
+
+Changes in v12:
+- Base the series on trunk instead of b/dev, so it applies to trunk.
+  v11 sat on the spec patch [1] as b/dev carried it, and b/dev no
+  longer does, so the spec patch is now patch 1.
+- The other patches are unchanged, and the lab-mail tree at the end
+  of the series is identical to v11's. There is no interdiff, since
+  one against v11 would show only the change of base.
+- Link to v11: id:cover.1792261243.git.claude@p7x.dev
+
+[1] id:5639615da525ce2f1e7711da05d3de5ad63511a2.1792219807.git.claude@p7x.dev
+[2] id:m2tsmkol8g.fsf@beastie.p7x.dev
+    "Re: [PATCH v2] jails/instances/lab-mail: Spec the list's mail hub"
+
+claude (11):
+  jails/instances/lab-mail: Spec the list's mail hub
+  jails/instances/lab-mail: Say what Dovecot does to a reader's write
+  jails/instances/lab-mail: Leave the header check to OpenSMTPD
+  jails/instances/lab-mail: Keep the list in INBOX
+  jails/instances/lab-mail: Let Dovecot write the list
+  jails/instances/lab-mail: Sync the list both ways with Fastmail
+  jails/instances/lab-mail: Let Pat archive and delete
+  jails/instances/lab-mail: Take posts with OpenSMTPD
+  jails/instances/lab-mail: Document importing the jj maildir
+  jails/instances/lab-mail: Take posts for the lists.p7x.dev lists
+  jails/instances/lab-mail: Sync the Next and Later folders
+
+ jails/instances/lab-mail/README.org           | 271 +++++---
+ jails/instances/lab-mail/dist.mtree           |   9 +-
+ .../lab-mail/dist/etc/cron.d/lab-mail         |   6 +-
+ .../dist/etc/newsyslog.conf.d/lab-mail.conf   |   4 +-
+ .../lab-mail/dist/etc/rc.conf.d/smtpd         |   1 +
+ .../lab-mail/dist/etc/rc.conf.d/smtprelay     |   4 -
+ .../lab-mail/dist/etc/syslog.d/lab-mail.conf  |   8 +-
+ .../dist/usr/local/etc/dovecot/dovecot-acl    |   8 +
+ .../dist/usr/local/etc/dovecot/dovecot.conf   |  57 +-
+ .../dist/usr/local/etc/mail/smtpd.conf        |  28 +
+ .../lab-mail/dist/usr/local/etc/mbsyncrc      |  36 +-
+ .../dist/usr/local/etc/smtprelay/remotes.env  |  19 -
+ .../usr/local/etc/smtprelay/smtprelay.ini     |  20 -
+ .../dist/usr/local/libexec/lab-mail/check     |  82 ++-
+ .../dist/usr/local/libexec/lab-mail/fetch     |  39 --
+ .../dist/usr/local/libexec/lab-mail/sync      |  35 +
+ jails/instances/lab-mail/instance.conf        |  16 +-
+ jails/instances/lab-mail/jail.conf            |   7 +-
+ jails/instances/lab-mail/spec.org             | 639 ++++++++++++------
+ 19 files changed, 851 insertions(+), 438 deletions(-)
+ create mode 100644 jails/instances/lab-mail/dist/etc/rc.conf.d/smtpd
+ delete mode 100644 jails/instances/lab-mail/dist/etc/rc.conf.d/smtprelay
+ create mode 100644 jails/instances/lab-mail/dist/usr/local/etc/mail/smtpd.conf
+ delete mode 100644 jails/instances/lab-mail/dist/usr/local/etc/smtprelay/remotes.env
+ delete mode 100644 jails/instances/lab-mail/dist/usr/local/etc/smtprelay/smtprelay.ini
+ delete mode 100755 jails/instances/lab-mail/dist/usr/local/libexec/lab-mail/fetch
+ create mode 100755 jails/instances/lab-mail/dist/usr/local/libexec/lab-mail/sync
+
+
+base-commit: 9fd84bc7d15e98423c9ba6a800555b19fd2f5822
+-- 
+2.56.0
+

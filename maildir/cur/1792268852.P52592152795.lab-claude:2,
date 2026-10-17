@@ -1,0 +1,113 @@
+Message-ID: <bf9445e1832a5bd915988790443f7ebd106ae902.1792268803.git.claude@p7x.dev>
+In-Reply-To: <cover.1792268803.git.claude@p7x.dev>
+References: <cover.1792268803.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Subject: [PATCH v12 10/11] jails/instances/lab-mail: Take posts for the
+ lists.p7x.dev lists
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+Change-Id: mxytnonnzulosvkynknsvqvvotnplwmv
+Date: Sat, 17 Oct 2026 20:27:32 +0000
+
+The hub should carry lab@lists.p7x.dev and freebsd-ports@lists.p7x.dev
+as well as lab-devel@p7x.dev. Mail to either of those addresses would
+otherwise be refused at RCPT TO, so the client would drop the message
+and it would reach no one.
+
+- smtpd.conf's table list names all three addresses.
+- The spec and README.org name them.
+- A message to two list addresses lands once for each, since
+  OpenSMTPD delivers each recipient separately. The spec says so,
+  and that notmuch still shows it once.
+---
+change-id: mxytnonnzulosvkynknsvqvvotnplwmv
+
+ jails/instances/lab-mail/README.org           |  5 ++++-
+ .../dist/usr/local/etc/mail/smtpd.conf        |  8 +++----
+ jails/instances/lab-mail/spec.org             | 21 ++++++++++++-------
+ 3 files changed, 21 insertions(+), 13 deletions(-)
+
+diff --git a/jails/instances/lab-mail/README.org b/jails/instances/lab-mail/README.org
+index e8060473..d87a7065 100644
+--- a/jails/instances/lab-mail/README.org
++++ b/jails/instances/lab-mail/README.org
+@@ -50,7 +50,10 @@ client --SMTP--> OpenSMTPD 127.0.0.1:2525 --LMTP--> Dovecot --> INBOX
+ rc(8) starts OpenSMTPD when the jail starts; its config is
+ =/usr/local/etc/mail/smtpd.conf=. A client connects without logging
+ in. OpenSMTPD sorts each recipient:
+-- =lab-devel@p7x.dev= is delivered to the list.
++- =lab-devel@p7x.dev=, =lab@lists.p7x.dev=, and
++  =freebsd-ports@lists.p7x.dev= are delivered to the list. The table
++  =list= in =smtpd.conf= lists them. A message to two of them lands
++  on the list twice, once for each.
+ - =pat@p7x.dev=, =pat@patmaddox.com=, and =claude@p7x.dev= are
+   accepted and discarded, since everyone reads their mail on the
+   list. A reply to all then lands on the list once. The table =known=
+diff --git a/jails/instances/lab-mail/dist/usr/local/etc/mail/smtpd.conf b/jails/instances/lab-mail/dist/usr/local/etc/mail/smtpd.conf
+index 775620b9..80b39f59 100644
+--- a/jails/instances/lab-mail/dist/usr/local/etc/mail/smtpd.conf
++++ b/jails/instances/lab-mail/dist/usr/local/etc/mail/smtpd.conf
+@@ -4,10 +4,10 @@
+ # over LMTP. It never relays, so nothing posted leaves lab-mail except
+ # as a message mbsync copies into a Fastmail folder.
+ 
+-# The list, and the known addresses: everyone reads mail for these on
+-# the list, so a reply to all lands once, there. To add an address,
+-# add it here.
+-table list { "lab-devel@p7x.dev" }
++# The list's addresses, and the known addresses: everyone reads mail
++# for the known ones on the list, so a reply to all lands once, there.
++# To add an address, add it here.
++table list { "lab-devel@p7x.dev", "lab@lists.p7x.dev", "freebsd-ports@lists.p7x.dev" }
+ table known { "pat@p7x.dev", "pat@patmaddox.com", "claude@p7x.dev" }
+ 
+ # Delivery to the list runs as vmail, the only user that may connect
+diff --git a/jails/instances/lab-mail/spec.org b/jails/instances/lab-mail/spec.org
+index 4941d80a..8edd208c 100644
+--- a/jails/instances/lab-mail/spec.org
++++ b/jails/instances/lab-mail/spec.org
+@@ -18,7 +18,8 @@ provider: p7x.dev is hosted on Fastmail.
+   password with IMAP access. Only mbsync uses them.
+ - The account is the list's own. Pat makes and names its folders on
+   Fastmail.
+-- The list's address is =lab-devel@p7x.dev=. Mail to it lands in
++- The list's addresses are =lab-devel@p7x.dev=, =lab@lists.p7x.dev=,
++  and =freebsd-ports@lists.p7x.dev=. Mail to any of them lands in
+   INBOX. No Fastmail rule files it elsewhere.
+ - Fastmail's folder =Archive= is the account's archive folder. Over
+   IMAP it carries the =\Archive= special-use flag.
+@@ -104,7 +105,8 @@ posting:
+   mbsync copies into a Fastmail folder.
+ - It accepts any envelope sender.
+ - It sorts each envelope recipient (RCPT TO) into one of three kinds:
+-  - =lab-devel@p7x.dev= is delivered to the list.
++  - The list's addresses are delivered to the list. Adding one is a
++    one-line change to the instance's config.
+   - A known address is accepted and discarded: =pat@p7x.dev=,
+     =pat@patmaddox.com=, and =claude@p7x.dev=. The list is where
+     everyone reads mail for these addresses, so a reply to all lands
+@@ -121,12 +123,15 @@ posting:
+ - OpenSMTPD gives a Message-ID and a Date to a message that lacks
+   them, as it does for any post on a loopback listener. So every
+   message on the list can be threaded and sorted.
+-- A message to several recipients lands on the list once, with its
+-  To and Cc unchanged. OpenSMTPD adds a Received header and any
+-  missing Message-ID or Date, Dovecot adds Return-Path and
+-  Delivered-To, and nothing else is changed. Who a message was
+-  addressed to is read from its To and Cc. Delivered-To names
+-  =lab-devel@p7x.dev= on every message, and a Bcc leaves no trace.
++- A message to one of the list's addresses lands on the list once,
++  whatever known addresses it is also sent to, with its To and Cc
++  unchanged. A message to several of the list's addresses lands once
++  for each, and notmuch shows it once, since the copies share a
++  Message-ID. OpenSMTPD adds a Received header and any missing
++  Message-ID or Date, Dovecot adds Return-Path and Delivered-To, and
++  nothing else is changed. Who a message was addressed to is read
++  from its To and Cc. Delivered-To names the list address each copy
++  was delivered for, and a Bcc leaves no trace.
+ - OpenSMTPD hands each message for the list to Dovecot over LMTP, on
+   a unix socket inside the jail, and Dovecot delivers it to INBOX.
+   OpenSMTPD never opens the maildir.
+-- 
+2.56.0
+
