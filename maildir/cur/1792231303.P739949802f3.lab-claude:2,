@@ -1,0 +1,81 @@
+From: claude <claude@p7x.dev>
+Subject: Re: [PATCH v3 0/8] jails/instances/lab-mail: Build the list's mail
+ hub
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+In-Reply-To: <m2ik30mzfp.fsf@beastie.p7x.dev>
+References: <cover.1792222732.git.claude@p7x.dev>
+	<cover.1792226388.git.claude@p7x.dev> <m2ik30mzfp.fsf@beastie.p7x.dev>
+Message-ID: <1792231297.6fdc076290c9@p7x.dev>
+Date: Sat, 17 Oct 2026 10:01:43 +0000
+
+On Sat, 17 Oct 2026 02:47:06 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+> add acceptable destination addresses: lab@lists.p7x.dev
+> freebsd-ports@lists.p7x.dev
+
+Done in patch 9 of "[PATCH v5 0/9] jails/instances/lab-mail: Build the
+list's mail hub" [1]. Both addresses join lab-devel@p7x.dev in the
+table list in smtpd.conf, so OpenSMTPD delivers them to lists, and
+the spec and README.org name them.
+
+Two things follow from it:
+- The Fastmail rule that files lab-devel@p7x.dev into lists has to
+  cover the two new addresses as well. Otherwise mail sent to them
+  from outside stays in Fastmail's INBOX, which mbsync does not sync.
+  That rule is in your account, so it is yours to change.
+- A message sent to two of the list's addresses lands in lists twice,
+  since OpenSMTPD delivers each recipient on its own. notmuch shows it
+  once, because both copies share a Message-ID, and the spec now says
+  so. If you want one copy, Pigeonhole's duplicate extension can drop
+  the second in lists.sieve (four lines, keyed on Message-ID). I left
+  it out because I cannot run Dovecot here to test it.
+
+> dovecot is delivering to inbox, but I don't think that mbsync syncs the
+> inbox. Though to be fair I don't quite get how dovecot and mbsync work
+> together here.
+
+You're right, mbsync does not sync INBOX. Dovecot serves one mail
+store, and both posting and syncing go through it:
+
+  client --SMTP--> OpenSMTPD --LMTP--> Dovecot --> INBOX or lists
+  Dovecot lists, Archive <--IMAP--> mbsync <--IMAPS--> Fastmail
+
+mbsync is an IMAP client of both Dovecot and Fastmail. Its channel
+names only lists and Archive (Patterns lists Archive in mbsyncrc), so
+anything in INBOX stays on lab-mail.
+
+> - mbsync syncs messages from fastmail to /data/mail/maildir
+> - smtp gets delivered to /data/mail/dovecot/inbox/new
+
+Both are what the config does. /data/mail/maildir is the root of
+Dovecot's mail store, so lists lives in /data/mail/maildir/lists, and
+mbsync writes there through Dovecot. mail_location in dovecot.conf
+keeps INBOX apart, in /data/mail/dovecot/inbox. LMTP on its own
+delivers only to INBOX.
+
+> I don't know how that message is supposed to get synced to fastmail.
+
+The Sieve patch is what gets it there: lists.sieve files each post
+into lists instead of INBOX, and the next sync carries it to Fastmail.
+That patch was last in v3 and v4, as a proposal on top, so a tree
+without it has exactly the gap you saw. The v2 and v3 cover letters
+named this gap, but the implementation patch did not make the cost
+clear.
+
+v5 moves the Sieve patch up to patch 7, right after OpenSMTPD, so the
+INBOX-only step is one patch wide and the next patch reads as its fix.
+Nothing else changes, as the range-diff in the cover shows. I
+recommend taking it. The other way, with no Sieve, is to let mbsync
+push INBOX into Fastmail's lists. Then each post would come back on
+the next sync and land in lists a second time, unless INBOX were
+expunged after each push, so it is more moving parts than four lines
+of Sieve.
+
+Any posts already in INBOX can be moved to lists from your login,
+pat@p7x.dev, with any IMAP client. The next sync then carries them to
+Fastmail.
+
+Thanks for testing it on the jail. Dovecot is not installed here, so
+your run is the first real one past the config checks.
+
+[1] id:cover.1792231246.git.claude@p7x.dev
