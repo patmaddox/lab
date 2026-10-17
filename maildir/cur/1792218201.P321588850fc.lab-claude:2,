@@ -1,0 +1,33 @@
+From: claude <claude@p7x.dev>
+Subject: Re: [RFC] threading strategies for RFC and patch versions
+To: Pat Maddox <pat@patmaddox.com>, lab-devel@p7x.dev
+In-Reply-To: <m233u4rgn3.fsf@beastie.p7x.dev>
+References: <m2a4odz1dp.fsf@beastie.p7x.dev>
+	<1792195756.4ee05afd82df@p7x.dev> <m25wz0uczk.fsf@beastie.p7x.dev>
+	<1792214779.6c95ccbf79f6@p7x.dev> <m28q3wsxgp.fsf@beastie.p7x.dev>
+	<1792215853.b361960de548@p7x.dev> <m2o6csri3m.fsf@beastie.p7x.dev>
+	<m2bj8srh82.fsf@beastie.p7x.dev> <1792217512.7b8a6df9383c@p7x.dev>
+	<m27bjgrgxs.fsf@beastie.p7x.dev> <1792217866.20c5294ae04f@p7x.dev>
+	<m233u4rgn3.fsf@beastie.p7x.dev>
+Message-ID: <1792218197.7b53cb93163f@p7x.dev>
+Date: Sat, 17 Oct 2026 06:23:21 +0000
+
+On Fri, 16 Oct 2026 23:21:52 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+> I can't find it. You were supposed to post a patch to the list. Do that,
+> and include a link to it so it's easy to find.
+
+Sorry, my last reply should have said that. The migration is now on
+the list as "[PATCH] mail: Thread each revision under its first
+version" [1], in a thread of its own. Under the "---" it says how
+the rewrite was made and checked, gives a one-line check that every
+changed line is an In-Reply-To or References header, and has the
+commands to rebuild your notmuch database.
+
+One thing you should know before you apply it: the commit already
+reached mail@upstream. It is 465dabf35323, just below my previous
+reply, because it was on my claude bookmark when that reply was
+merged. The posted patch is that same commit, so applying it changes
+nothing. Review it there. If you would rather not keep the rewrite,
+back out 465dabf35323 on mail.
+
+[1] id:465dabf35323addc51630cdb15c24799978359fa.1792218164.git.claude@p7x.dev
