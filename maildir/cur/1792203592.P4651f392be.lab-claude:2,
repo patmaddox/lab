@@ -1,0 +1,168 @@
+From: claude <claude@p7x.dev>
+Subject: Re: [RFC] git maintainership model
+To: Pat Maddox <pat@patmaddox.com>, lab-devel@p7x.dev
+In-Reply-To: <m2ik31xfbc.fsf@beastie.p7x.dev>
+References: <m2ik31xfbc.fsf@beastie.p7x.dev>
+Message-ID: <1792203585.78370ec2be55@p7x.dev>
+Date: Sat, 17 Oct 2026 02:19:52 +0000
+
+On Fri, 16 Oct 2026 18:53:59 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+> It seems like git most closely matches what I'm
+> doing - a single maintainer, with lots of contributions.
+
+Agreed. Git has one maintainer, Junio Hamano, who applies every patch
+from mail. The exceptions are a few subtrees (git-gui, gitk, po/) whose
+own maintainers send him merges. That is close to you on trunk with
+agents and others posting to lab-devel.
+
+> I'd like an overview of the model, useful links, and ideas for how to
+> implement something similar in this repo.
+
+The overview below comes from the four documents linked after it,
+which I read today. Where I give my own view, I say so.
+
+The model
+---------
+
+1. Topic branches. Each series Junio picks up goes on its own branch,
+   named with the author's initials and a topic, e.g. ai/topic. It
+   forks from the oldest branch it will land on. A reroll replaces
+   the branch. He compares the versions with git range-diff.
+
+2. Integration branches, from most to least settled:
+
+   - maint: fixes for the last release. Never rewound.
+   - master: the next release. Never rewound, and meant to be "more
+     stable than any tagged releases".
+   - next: topics that look ready. It is rewound only once per release
+     cycle, early in the cycle.
+   - seen: everything else he found worth testing. It is rebuilt from
+     the topic branches every time he integrates. In SubmittingPatches'
+     words, "Being in 'seen' has no other meaning."
+
+   A topic graduates by merging its branch upward. Nobody may base
+   work on next or seen; gitworkflows calls seen a throw-away
+   integration branch.
+
+3. Timeboxes. A topic waits in next for at least 7 calendar days before
+   it goes to master. maintain-git says a topic in seen that has been
+   inactive for 3 weeks may be discarded. SubmittingPatches says the
+   same of one with unaddressed review after 4 weeks.
+
+4. Replace, then append. Until a topic reaches next, each version
+   replaces the last whole. After it reaches next, fixes come as
+   incremental patches on top.
+
+5. "What's cooking in git.git". This report goes to the list a few
+   times a week. Its script, Meta/cook, walks the topic merges in
+   master..seen and keeps one entry per topic, with Junio's verdict
+   ("Will merge to 'next'.", "Expecting a reroll.") carried forward
+   from the previous issue. I explained how its entries link commits
+   to mail in my reply on "Supporting status trailers in emails" [1].
+   It covers only topics he applied. Mail he never picks up is
+   tracked nowhere, which is how Git keeps the noise down.
+
+6. Contributor duties. A contributor bases work on maint or master,
+   never on next or seen. They try a merge into seen and next and say
+   in the cover letter which topics conflict. They answer review on
+   the list before sending a reroll, and send at most one version a
+   day. Credit goes in trailers: Reviewed-by may be given only by the
+   reviewer, and Helped-by, Suggested-by and Reported-by name the
+   others.
+
+7. The maintainer's tools are themselves published. The todo branch of
+   git.git holds Meta/cook, Meta/Reintegrate (which rebuilds next and
+   seen from the topics), whats-cooking.txt with its full history,
+   and MaintNotes. MaintNotes is "A note from the maintainer", which
+   Junio posts to the list now and then to explain all of the above.
+
+Links
+-----
+
+- SubmittingPatches, the contributor's side:
+  https://git-scm.com/docs/SubmittingPatches
+- howto/maintain-git, Junio's daily routine and branch rules:
+  https://github.com/git/git/blob/master/Documentation/howto/maintain-git.adoc
+- gitworkflows, the branch model in general terms:
+  https://git-scm.com/docs/gitworkflows
+- MyFirstContribution, a tutorial from patch to reroll:
+  https://git-scm.com/docs/MyFirstContribution
+- The todo branch, with MaintNotes, cook and whats-cooking.txt:
+  https://github.com/git/git/tree/todo
+- The list archive. Search it for "What's cooking" to read real issues:
+  https://lore.kernel.org/git/
+
+How it maps here
+----------------
+
+- trunk is master. There are no releases, so nothing plays maint.
+- b/dev sits between next and seen. You rebuild it freely, as Junio
+  rebuilds seen. CLAUDE.md, however, calls it "more mature than a
+  random list patch" and lets work build on it, as next allows.
+- The list is the topic store. Change-Id headers from format-patch.sh
+  join a commit to its mail ("notmuch search changeid:<id>"), which is
+  the job git-am notes do for Meta/cook.
+- The rules already line up in several places: one logical change per
+  commit, the area prefix, new threads for each vN, an interdiff on
+  each reroll ("New patch series must have an interdiff" [2]), and
+  "-A trunk -B b/dev" so each topic stays separable.
+
+Ideas, in the order I recommend
+-------------------------------
+
+These are my proposals, not anything Git prescribes.
+
+1. Generate a "What's cooking" report. A script would walk
+   trunk..b/dev, group commits into topics by series, and use each
+   Change-Id to find the topic's thread in notmuch. It would then add
+   your latest verdict per topic and the open series not yet on b/dev,
+   and mail the result to the list. This is the WIP view I proposed in
+   "Re: [RFC] planning and organizing tasks" [3]. It would replace the
+   folder-based ranking in the patch-triage skill on b/dev. It depends
+   on how verdicts are written. You left that open in "Supporting
+   status trailers in emails" [4], and settling it is the one decision
+   this needs from you.
+
+2. Build b/dev from topic bookmarks. Keep one bookmark per series
+   (t/<topic>) on upstream, and make b/dev a jj merge of them. Then
+   dropping or replacing a topic means rebuilding the merge, which is
+   what Reintegrate does for seen. jj makes this cheap, since a
+   rewritten topic rebases its merge automatically. I would not split
+   b/dev into next and seen yet. At today's volume I think one staging
+   tier is enough; a second tier pays off once things are often
+   pulled back out of b/dev.
+
+3. Adopt Git's inactivity rule. A series with unanswered review and no
+   activity for 3 weeks is tagged stale and drops out of the default
+   searches. Derive the tag from dates, the way the superseded tag is
+   derived in "[PATCH 0/3] notmuch: Tag superseded series and hide
+   them" [5]. This goes straight at the noise from old patches you
+   raised in [4], and it needs no tagging by hand.
+
+4. Write a note from the maintainer. That is one short file: the
+   branches and what being on each one means, the timeboxes, and what
+   you expect from a contributor. doc/mail-workflow.md is stale, and
+   this would replace it. lab-process-mail and patch-triage could cite
+   it instead of restating the rules.
+
+5. Leave out the parts that do not fit: maint and releases, the 7-day
+   wait in next (with no outside users, b/dev gets its testing from
+   use), and the merge-fix refs that patch up semantic conflicts
+   between topics. Revisit them if they start to hurt.
+
+If you want any of these, say which and I will post a series. 1 and 3
+are the most useful. 3 can start now. 1 waits on the verdict format.
+
+Objective: adapt Git's maintainership model to the lab-devel workflow
+Status: waiting on your choice of ideas
+Next actions for you:
+- Pick which of ideas 1-5 to pursue.
+Information needed from you:
+- How you will write approve/reject verdicts (open in [4]), which the
+  report in idea 1 depends on.
+
+[1] id:1792016195.922937034816@p7x.dev
+[2] id:m2ecdr3aq6.fsf@beastie.p7x.dev
+[3] id:1792197184.aaa3969db87f@p7x.dev
+[4] id:m2zewg6ilz.fsf@beastie.p7x.dev
+[5] id:cover.1792016109.git.claude@p7x.dev
