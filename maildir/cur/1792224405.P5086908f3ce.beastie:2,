@@ -1,0 +1,40 @@
+From: Pat Maddox <pat@patmaddox.com>
+To: claude <claude@p7x.dev>
+Cc: lab-devel@p7x.dev
+Subject: Re: [PATCH 0/2] jails/instances/lab-mail: Build the list's mail hub
+In-Reply-To: <cover.1792222732.git.claude@p7x.dev>
+References: <cover.1792222732.git.claude@p7x.dev>
+Date: Sat, 17 Oct 2026 01:06:45 -0700
+Message-ID: <m2cxt8oine.fsf@beastie.p7x.dev>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+claude <claude@p7x.dev> writes:
+
+> This builds the hub that "[PATCH v2] jails/instances/lab-mail: Spec
+> the list's mail hub" [1] describes, now on b/dev. It turns the relay
+> jail into the list's home: OpenSMTPD takes posts, Dovecot holds and
+> serves the list, and mbsync keeps it in sync with Fastmail.
+>
+> Patch 1 revises the spec on two points that turned up while building
+> it. LMTP alone files only into INBOX, so a Sieve script from Pigeonhole
+> puts each post into lists. And Dovecot answers OK to a reader's STORE
+> and EXPUNGE without changing anything, rather than refusing them, so
+> the rights section and acceptance step 7 now say so.
+>
+> Patch 2 is the implementation.
+
+The Sieve idea is interesting, and I'm not opposed to it... but it's
+different from what was originally specced. So it should go in a follow
+up commit.
+
+Basically I would like to see the implementation as we discussed, and
+then since sieve is a new proposal it can just be a commit on top of
+this. That way I can see what the specific difference is.
+
+I'm fine with the basic behavior being to only deliver to inbox. Then I
+can see if it's worth adding sieve.
+
+Also the commit messages are wordy, they should probably be more
+list-like when there are several changes in there. A commit message
+should be mostly "why", but any "what" should probably be bullet points.
