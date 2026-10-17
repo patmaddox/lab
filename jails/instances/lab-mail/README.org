@@ -15,9 +15,10 @@ rules.
   so it cannot archive or delete a message, or mark one read for
   anyone else. An agent logs in as its own address, such as
   =claude@p7x.dev=.
-- One login may change the list: =mbsync=. It must give the password
-  in =imap-users=, and a wrong one fails. mbsync syncs with Fastmail,
-  and creates on lab-mail the folders it finds there.
+- Two logins may change the list: =pat@p7x.dev= and =mbsync=. Each
+  must give the password in =imap-users=, and a wrong one fails. Pat
+  archives and deletes, and mbsync syncs with Fastmail. Only mbsync
+  may create a folder, one it finds on Fastmail.
 - Dovecot's ACL enforces these rights, not file permissions. Dovecot's
   user can write the whole maildir, so a fault in =dovecot-acl= or in
   the passdbs of =dovecot.conf= would let every login change the list.
@@ -38,9 +39,9 @@ The Fastmail credentials never leave =/data/secrets=. Only the
 services that talk to Fastmail can read them, as members of the
 =mailcred= group.
 
-Dovecot is the only program that writes the list. Every change to it
-is a sync from Fastmail, and goes through Dovecot, as the user
-=vmail=.
+Dovecot is the only program that writes the list. Every change to it,
+a sync from Fastmail, or a move or deletion by Pat, goes through
+Dovecot, as the user =vmail=.
 
 ** sending
 #+BEGIN_EXAMPLE
@@ -124,12 +125,13 @@ mounts it.
   it, as members of the =mailcred= group.
 - =mbsync-imap= holds the password of mbsync's Dovecot login. Only
   mbsync reads it.
-- =imap-users= holds the login that may change the list, =mbsync=,
-  as =login:hash=. Only Dovecot's auth process, as the user
-  =dovecot=, reads it.
+- =imap-users= holds the logins that may change the list, one per
+  line as =login:hash=: =pat@p7x.dev= and =mbsync=. Only Dovecot's
+  auth process, as the user =dovecot=, reads it.
 
-lab-mail holds only the hash of each password in =imap-users=. Hash
-a password with Dovecot's doveadm, which prompts for it:
+Pat keeps the password for =pat@p7x.dev= on beastie, in pass(1).
+lab-mail holds only its hash. Hash each password with Dovecot's
+doveadm, which prompts for it:
 #+BEGIN_EXAMPLE
 doas jexec lab-mail doveadm pw -s BLF-CRYPT
 #+END_EXAMPLE
@@ -142,7 +144,7 @@ mkdir -p /jails/data/lab-mail/secrets
 cd /jails/data/lab-mail/secrets
 printf '%s\n' 'login@example.com' 'app-password' > mail-creds
 printf '%s\n' 'mbsync-password' > mbsync-imap
-printf '%s\n' 'mbsync:{BLF-CRYPT}...' > imap-users
+printf '%s\n' 'pat@p7x.dev:{BLF-CRYPT}...' 'mbsync:{BLF-CRYPT}...' > imap-users
 chown 0:0 .
 chmod 0711 .
 chown 0:15100 mail-creds

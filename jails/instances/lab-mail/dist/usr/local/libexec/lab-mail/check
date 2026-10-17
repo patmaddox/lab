@@ -76,6 +76,7 @@ synced_recently() {
 check "${creds} exists" test -f ${creds}
 check "${creds} has the login on line 1" has_line 1
 check "${creds} has the password on line 2" has_line 2
+check "${users} has pat@p7x.dev" has_user pat@p7x.dev
 check "${users} has mbsync" has_user mbsync
 check "${mbpass} is not empty" test -s ${mbpass}
 check "smtprelay can read ${creds}" can_read smtprelay ${creds}

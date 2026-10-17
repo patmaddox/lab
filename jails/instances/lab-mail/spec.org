@@ -28,6 +28,8 @@ the list: the folders INBOX and =Archive= of the Fastmail account.
 - The folder a message is in is its state. That state lives in the
   list data, not in any one client, so Fastmail and every client see
   it, and a move on Fastmail's web interface counts like any other.
+- Pat removes a message he does not want on the list by deleting it,
+  which his login may do. There is no moderation queue.
 - Any other folder of the account is not part of the list. Pat may
   make one on Fastmail for anything else, and it never reaches
   lab-mail.
@@ -37,13 +39,16 @@ rights: who may do what to the list.
   password, and that login may list, fetch, search, and IDLE, and
   nothing else. Dovecot's ACL opens every mailbox read-only for it:
   its attempts to set flags or expunge change nothing, and its
-  attempts to append, copy into a mailbox, or move fail.
+  attempts to append, copy into a mailbox, or move fail. So it cannot
+  archive or delete a message, and it cannot mark one read for anyone
+  else.
 - IMAP has no anonymous mode, so an agent logs in as its own address,
   such as =claude@p7x.dev=, with any password.
-- One login may change the list: =mbsync=. It must give the password
-  in =imap-users=, and a wrong one fails. It may set flags, append,
-  copy, move, and expunge, and it may create a folder, so it can
-  bring one over from Fastmail.
+- Two logins may change the list: =pat@p7x.dev= and =mbsync=. Each
+  must give the password in =imap-users=, and a wrong one fails. They
+  may set flags, append, copy, move, and expunge, so Pat archives and
+  deletes, and mbsync syncs with Fastmail. mbsync may also create a
+  folder, so it can bring one over from Fastmail.
 - These rights are enforced by Dovecot's ACL, not by file
   permissions. Dovecot's user can write the whole maildir, so a fault
   in the ACL config would let every login change the list. Steps 7
@@ -71,10 +76,13 @@ credentials: the operator stores three files on the host, in
   password on its second. Each line is taken whole, so nothing
   depends on where a space falls in it. Only smtprelay and mbsync can
   read it.
-- =imap-users= holds the login that may write the list, =mbsync=,
-  with a password hash. Only Dovecot's auth process can read it.
+- =imap-users= holds the logins that may write the list, each with a
+  password hash: =pat@p7x.dev= and =mbsync=. Only Dovecot's auth
+  process can read it.
 - =mbsync-imap= holds the password of mbsync's own Dovecot login.
   Only mbsync can read it.
+- Pat keeps the password for =pat@p7x.dev= on beastie, in pass(1).
+  lab-mail holds only its hash.
 - The directory is nullfs-mounted read-only into lab-mail, and into
   no other jail.
 - smtprelay refuses to start, and the sync job to run, unless both
@@ -183,8 +191,8 @@ check:
   - the jail is running;
   - =mail-creds= is present, neither of its lines is empty, and
     smtprelay and mbsync can read it while Dovecot's user cannot;
-  - =imap-users= has an entry for =mbsync=, and =mbsync-imap= is not
-    empty;
+  - =imap-users= has entries for =pat@p7x.dev= and =mbsync=, and
+    =mbsync-imap= is not empty;
   - each of those two is readable by its reader and by no other
     service user;
   - the mail state directories exist with the owners the README
@@ -225,12 +233,15 @@ beastie.
    followed by EXPUNGE on INBOX changes nothing, and an APPEND to
    INBOX fails. The message stays in place, its flags unchanged, in
    lab-mail's maildir and on Fastmail.
-8. A login as =mbsync= with a wrong password fails.
+8. A login as =pat@p7x.dev= or =mbsync= with a wrong password fails.
 9. On beastie, =just check= exits 0.
 10. On beastie, with smtprelay stopped, =just check= exits non-zero
     and a FAIL line names smtprelay.
 11. On Fastmail, Pat moves a message from INBOX to =Archive=. Within
     two minutes, it is in =Archive= and not in INBOX on lab-mail.
+12. Logged in as =pat@p7x.dev=, Pat moves a message from INBOX to
+    =Archive= on lab-mail. Within two minutes, it is in =Archive= and
+    not in INBOX on Fastmail.
 
 out of scope:
 - The lab-devel list and the process-email workflow. They keep using
