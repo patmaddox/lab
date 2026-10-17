@@ -1,0 +1,77 @@
+From: claude <claude@p7x.dev>
+Subject: Re: [RFC] threading strategies for RFC and patch versions
+To: Pat Maddox <pat@patmaddox.com>, lab-devel@p7x.dev
+In-Reply-To: <m28q3wsxgp.fsf@beastie.p7x.dev>
+References: <m2a4odz1dp.fsf@beastie.p7x.dev>
+	<1792195756.4ee05afd82df@p7x.dev> <m25wz0uczk.fsf@beastie.p7x.dev>
+	<1792214779.6c95ccbf79f6@p7x.dev> <m28q3wsxgp.fsf@beastie.p7x.dev>
+Message-ID: <1792215853.b361960de548@p7x.dev>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=utf-8
+Date: Sat, 17 Oct 2026 05:44:18 +0000
+
+On Fri, 16 Oct 2026 22:33:10 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+> This sounds good. As a matter of fact - rewrite the mail history to
+> follow this new convention. I assume it's possible and cheap. It should
+> just be adjusting the headers to versions produce trees with spines,
+> instead of the linked list of top-level patches. It will certainly help
+> me read the current list a lot better.
+
+It is possible and cheap, and the tool is posted as "[PATCH]
+libexec/mail: Add rethread.py" [1]. It follows each revision's "Link
+to v(N-1)" line back to the first version and rewrites only
+In-Reply-To and References. On a copy of the list it changes 117
+files and folds 142 threads into 99. The signoz port, for example,
+becomes one 42-message thread with v2 to v10 under v1.
+
+I could not apply it to the list myself. My sandbox refused to let
+me edit messages already on the list, which seems right for a pass
+that should only add mail, so I have not tried to work around it.
+That leaves two options:
+
+1. You apply the patch and run the three commands under its "---"
+   in ~/lab/mail.jj. That is a minute of work, and you see the
+   result in your own notmuch at once. I recommend this.
+2. You allow me to edit existing maildir files, and I commit the
+   rewrite on my bookmark in the next pass for you to merge.
+
+Either way, drop "[PATCH v3] notmuch: Tag series a later version
+replaces" [2] from your tree first. It tags the whole thread a Link
+line names as superseded. Once every version shares one thread, it
+would tag each series superseded, current version included.
+
+> aside: what's the difference between interdiff and range diff? I wonder
+> if I used the wrong terminology. Post to a separate thread, no link to
+> this one.
+
+Posted as "Interdiff and range-diff" [3]. The short answer is that
+your wording was fine.
+
+> I think now we no longer need the superseded tag. That was for when
+> there was no clear relationship between the patch versions. Now it is
+> clear, so we can remove the version supersession. I'm not aware of any
+> other place that we use supersedes right now, do we?
+
+There is no superseded tag in b/dev. It exists only in your tree,
+from v3 [2]. I withdraw it, along with its v4 [4] and "[PATCH v3]
+notmuch: Tag threads a Superseded-by trailer names" [5], which only
+served the same purpose.
+
+b/dev has one other use: mail-file's superseded folder, which files
+the old version away and posts a breadcrumb reply naming its
+successor. The Emacs "s" key in the filing map calls it, and the
+patch-triage skill excludes folder:superseded. No thread in the list
+lives in that folder. "[PATCH 0/3] Remove the superseded folder" [6]
+removes all three.
+
+"[PATCH 0/3] Thread each revision under its first version" [7] no
+longer needs v4 applied before it. Its commits do not touch the
+superseded tag; only its cover letter mentioned it.
+
+[1] id:9ef57c72b2797c869c37c3f737bb13e9738754e0.1792215772.git.claude@p7x.dev
+[2] id:afd24e03eb13e671bba3e8981ca9c6367d6b3662.1792023441.git.claude@p7x.dev
+[3] id:1792215814.12e6bbed0a59@p7x.dev
+[4] id:0f6347b356e24ffcddf498e0c9803fade571dd58.1792214740.git.claude@p7x.dev
+[5] id:bb661865e7c5aaba8bc6e62e8c467255ad9db807.1792027881.git.claude@p7x.dev
+[6] id:cover.1792215772.git.claude@p7x.dev
+[7] id:cover.1792214740.git.claude@p7x.dev
