@@ -1,0 +1,150 @@
+From: claude <claude@p7x.dev>
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab@lists.p7x.dev
+Subject: [RFC] skl: Run a prompt with a chosen set of skills
+Message-ID: <1792274365.5977e358687d@p7x.dev>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=utf-8
+Date: Sat, 17 Oct 2026 21:59:33 +0000
+
+This proposes skl, a utility in src/skl. You asked for it in "Re:
+[RFC] how to organize experiments in claude?" [1]. It is a design to
+argue with, and I have written no code yet. Anything marked [T] I ran
+here with Claude Code 2.1.296.
+
+* Why
+
+We want to try different ways of working, such as build-by-commit and
+build-by-spec, on real asks. A session must have the skill we chose
+and nothing else. It must not be able to pick the other variant, or
+even know that it exists.
+
+The choice is ours, and it is made before the model starts. Hiding
+skills with claude flags, like skillOverrides or disallowedTools,
+puts that choice in claude's config, where it is a deny list. Every
+new variant is live until someone remembers to hide it. skl moves the
+choice outside claude. We name what we want, skl builds a session that
+contains only that, and claude is just the thing it runs. That is "Own
+the loop" applied to configuration and not only to output.
+
+* Where things live
+
+- src/claude-plugins/<plugin>/ holds reusable skills, the ones meant
+  for use outside this repo. Each is a normal Claude Code plugin:
+  .claude-plugin/plugin.json plus skills/<skill>/SKILL.md. One plugin
+  can hold several skills, e.g. src/claude-plugins/build/ with
+  skills/by-commit and skills/by-spec.
+- .claude/skills/ keeps only skills about this repo itself.
+- src/skl/ holds the tool: skl, skl.1, skl_test, Kyuafile, and a
+  Justfile and pkg recipe like the ones in src/lab-process-mail.
+- Installing skl installs every plugin under src/claude-plugins to
+  ${PREFIX}/share/skl/plugins/<plugin>/. Sessions load that copy and
+  never the working tree, as in "Lab repo shouldn't operate on itself"
+  [2]. Editing a skill takes effect at the next install, not in
+  sessions already running.
+
+* Interface
+
+    skl p [-p plugin[:skill]]... [-C dir] [-- claude-args...] < prompt
+    skl ls [plugin]
+
+skl p runs one prompt. It reads the prompt from stdin and runs claude
+-p in dir, the current directory by default, with exactly the selected
+skills loaded:
+
+- "-p build" loads the whole build plugin.
+- "-p build:by-commit" loads only that skill from it.
+- -p repeats. With no -p, no plugin skills are loaded.
+- Anything after -- goes to claude unchanged, e.g. --permission-mode.
+
+skl ls lists the installed plugins, or one plugin's skills. Its output
+has one name per line, so a script can check a selector before using
+it.
+
+skl never reads claude's output. Its stdout and stderr are claude's,
+and its exit status is claude's, except that skl exits 64 for a bad
+usage and 66 for a selector that names no installed plugin or skill.
+A caller that needs a result checks the side effect, just as
+lab-process-mail checks the inbox today.
+
+* How selection works
+
+claude only loads what is in a --plugin-dir. So for each run, skl
+builds a temporary directory with one plugin per selected name. Each
+has a copy of the installed plugin.json and a symlink for each chosen
+skill. It passes each one with --plugin-dir and removes the directory
+on exit. A skill that was not selected is not in any directory claude
+reads, so it cannot be loaded. I tested both halves of this:
+
+- [T] With the whole build plugin passed, both build:by-commit and
+  build:by-spec are listed. With a plugin dir holding only a symlink
+  to by-commit, only build:by-commit is listed.
+- [T] skillOverrides set to "off" did not hide a plugin skill. I tried
+  both "build:by-spec" and "by-spec" as the key, and both stayed
+  listed. So the override approach does not work for skills inside
+  plugins. It would only work for skills under .claude/skills.
+
+The skill keeps its plugin's namespace, so by-commit is still invoked
+as build:by-commit. A prompt that should work with either variant
+cannot name the skill directly. It has to say "use the build skill
+you have" or something similar. See open question 3.
+
+* What skl does not control
+
+The selected plugins are added to what claude already loads, which is
+its built-in skills and anything from user and project settings.
+
+- [T] --setting-sources user dropped a skill that a default session in
+  this workspace lists from project scope. I did not trace where that
+  skill came from. skl could pass --setting-sources user by default,
+  but then the project's permissions in .claude/settings.json would be
+  dropped too. See open question 2.
+- Built-in skills such as /init and /code-review are always present.
+  I found no flag that removes them, and they are not variants we test.
+
+* Commit plan
+
+1. skl: Add skl p to run a prompt with chosen skills
+
+   Adds skl with p and ls, skl.1, and kyua tests. The tests stub
+   claude and check the --plugin-dir arguments, the contents of the
+   temporary directory, the cleanup, and the exit statuses.
+
+2. skl: Install the plugins under src/claude-plugins
+
+   Adds the Justfile and pkg recipe. The package carries the plugins
+   in share/skl/plugins.
+
+3. claude-plugins/build: Add the by-commit and by-spec skills
+
+   by-commit uses the commit-plan rules from "Re: [RFC] how to spec
+   work in a way that's readable for humans" [3]. by-spec is built
+   from the old spec-report skill.
+
+Changing lab-process-mail to run through skl is left for a separate
+series, once skl exists.
+
+* Open questions
+
+1. Is "p" the subcommand name you want, and should "-p" be the
+   selector? -p also means "print" to claude, so "skl p -p" might
+   mislead a reader who knows claude. "-s" for skill is an option.
+2. Should skl p load project and user settings by default, or pass
+   --setting-sources user and make you opt in to the rest?
+3. Should variants of the same job live in one plugin (build:by-commit,
+   build:by-spec) or in separate plugins that share a skill name
+   (by-commit:build, by-spec:build)? One plugin is easier to browse.
+   Separate plugins let a prompt name "build" without knowing which
+   variant is loaded, but then two of them cannot be loaded together.
+   I lean to one plugin per job and prompts written to be neutral
+   about the variant.
+4. Where does skl's own documentation live? skl.1 is sure. Whether
+   there is also a README.org depends on "[RFC] documenting monorepos"
+   [4], which is still open.
+
+Based on trunk.
+
+[1] id:m25wz0f0vw.fsf@beastie.p7x.dev
+[2] id:m2h5ikli6x.fsf@beastie.p7x.dev
+[3] id:m2pkx8hz8i.fsf@beastie.p7x.dev
+[4] id:m2qzhogjen.fsf@beastie.p7x.dev
