@@ -1,0 +1,73 @@
+From: claude <claude@p7x.dev>
+Subject: Re: [RFC] lab-process-mail daemon
+To: Pat Maddox <pat@patmaddox.com>, lab-devel@p7x.dev
+In-Reply-To: <m28q3xuibp.fsf@beastie.p7x.dev>
+References: <m2y0bxvzry.fsf@beastie.p7x.dev>
+	<1792203947.8749806b660e@p7x.dev> <m2qzhpujjd.fsf@beastie.p7x.dev>
+	<1792206085.948ac615b248@p7x.dev> <m28q3xuibp.fsf@beastie.p7x.dev>
+Message-ID: <1792207398.b3d6ffd6b220@p7x.dev>
+Date: Sat, 17 Oct 2026 03:23:23 +0000
+
+On Fri, 16 Oct 2026 20:17:14 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+> Make sure this is documented in the man page for lab-process-maild.
+
+Done in "[PATCH v3 0/2] lab-process-mail: Add lab-process-maild" [1].
+Patch 1 adds lab-process-maild(8) and the package installs it under
+share/man/man8, so "man lab-process-maild" finds it once ~/local/bin
+is on PATH. It documents start, stop, status, and run, the conf, and
+every setting with its default, and has an example conf.
+
+> Yeah here's where I was going with that... a package installs to
+> LOCALBASE, but often creates files in /var/run or whatever.
+>
+> So I goofed, this shouldn't be installing directly to ~. It should have
+> a LOCALBASE, which in this case is ~/local.
+>
+> The package won't create the log of pid files I assume, or even their
+> dirs. So I think needs vars for both of those, just like an ordinary
+> rc.conf.
+
+Right; the package installs only bin/, share/, and the man page. The
+daemon's LOCALBASE is the parent of its bin/, ~/local after "just
+install", and only the conf is found there:
+
+    ~/local/etc/lab-process-maild.conf
+
+The log and pidfile each have a variable:
+
+    lab_process_maild_logfile
+    lab_process_maild_pidfile
+
+They default to ~/log/lab-process-maild.log and
+~/var/run/lab-process-maild.pid, or to /var/log and /var/run when the
+daemon runs as root, so neither case needs a conf. start creates their
+directories if they are missing, since nothing else will.
+
+> In fact rather than setting env directly, let's configure this like an
+> rc script.
+
+It now reads rc.conf(5)-style variables, set but not exported:
+
+    lab_process_maild_env="LAB_BASE_BRANCH=b/dev@upstream \
+        NOTIFY_URL=https://ntfy.sh/my-topic"
+    lab_process_maild_interval=60
+
+lab_process_maild_env works like ${name}_env in rc.subr(8): the words
+are added to the otherwise empty environment of each lab-process-mail
+run. As in rc.subr, a value cannot contain a space. run applies it,
+not start, so it holds under s6 or any other supervisor too. Any other
+variable in the conf stays in the daemon and never reaches
+lab-process-mail.
+
+I did not write an actual rc(8) script. rc.subr wants the script in
+an rc.d directory that rc(8) reads, which a ~/local install does not
+have, and start, stop, and status are already in lab-process-maild.
+
+Status: v3 is posted for review. kyua passes, 28/28 for the series
+and 27/27 with patch 1 alone. Two earlier questions are still open.
+First, whether CLAUDE.md should name the commit area by component
+instead of subdirectory. Second, which fix you want from "[BUG]
+lab-process-mail gets stuck" [2].
+
+[1] id:cover.1792207350.git.claude@p7x.dev
+[2] id:1792206019.c7310968cbe0@p7x.dev
