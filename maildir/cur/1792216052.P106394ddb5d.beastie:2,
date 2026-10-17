@@ -1,0 +1,96 @@
+From: Pat Maddox <pat@patmaddox.com>
+To: claude <claude@p7x.dev>
+Cc: lab-devel@p7x.dev
+Subject: Re: [PATCH v3 0/2] lab-process-mail: Add lab-process-maild
+In-Reply-To: <notmuch-sha1-e529ac8aacc4812250748bde985c6f7d43fa2c56>
+References: <cover.1792207350.git.claude@p7x.dev>
+ <m2ik31t2qs.fsf@beastie.p7x.dev> <1792209082.f4b879550474@p7x.dev>
+ <m21p9oucpe.fsf@beastie.p7x.dev>
+Date: Fri, 16 Oct 2026 22:47:32 -0700
+Message-ID: <m2tsmkri8b.fsf@beastie.p7x.dev>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+claude <claude@p7x.dev> writes:
+
+> Message-ID: <1792214992.f47fb7443c68@p7x.dev>
+>
+> On Fri, 16 Oct 2026 22:18:37 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+>> claude <claude@p7x.dev> writes:
+>> 
+>> > One cost to note is that lab-process-mail answers one message per run
+>> > and daemon(8) waits the full interval after every run. A batch of ten
+>> > messages therefore takes nine extra minutes at the default of 60. A
+>> > smaller lab_process_maild_interval shortens that, since a run on an
+>> > empty inbox costs only a fetch.
+>> 
+>> That sucks. It would be much better for lab-process-mail to indicate
+>> whether it needs to continue. What mechanisms are there available to do
+>> that? Show code snippets of each approach.
+>
+
+[...]
+
+> These are the channels lab-process-mail could use.
+>
+> 1. Exit status
+>
+> lab-process-mail exits 0 once the inbox is empty, 75 (EX_TEMPFAIL in
+> sysexits(3)) when it answered a message and more is waiting, and 1 on
+> failure, as it does now. In lab-process-mail, after the notice:
+>
+> 	notify "answered: ${subject} (inbox $(inbox_count))"
+> 	[ "$(inbox_count)" -eq 0 ] || exit 75
+>
+> In lab-process-maild:
+>
+> 	drain() {
+> 		local status stopping
+>
+> 		stopping=
+> 		trap 'stopping=1' TERM
+> 		while :; do
+> 			status=0
+> 			"${bindir}/lab-process-mail" || status="${?}"
+> 			[ "${status}" -eq 75 ] || exit "${status}"
+> 			[ -z "${stopping}" ] || exit 0
+> 		done
+> 	}
+
+I like this a lot.
+
+> The status is a channel only the program sets, read by the process
+> that ran it, with nothing to store or clean up. A run by hand that
+> clears the inbox still exits 0. The cost is one non-zero status that
+> is not a failure. That needs documenting in lab-process-mail, and a
+> caller that treats any non-zero status as an error, such as
+> "just process-email", would need to accept 75.
+
+That sounds good to me. It's a clear contract.
+
+The one thing I don't understand is "A run by hand that clears the inbox
+still exits 0." By that I suppose you mean if I run lab-process-mail on
+an inbox with size 0 or 1, then it exits 0? That's fine. But I assume
+there's no special "being run in daemon" logic. If there's a message at
+the end of the run, it exits 75.
+
+> A failure still ends drain, and daemon(8) runs it again after the
+> interval. A stuck message then fails at once, before the agent
+> starts, as it does in v4.
+
+Then it just gets into an infinite loop, right? Until we address the bug
+report about stuck messages?
+
+[...]
+
+> I recommend option 1. It is the conventional way for a one-shot Unix
+> program to report its outcome, and the program stays free of any loop
+> or timing. The loop lives in lab-process-maild, which you said in the
+> RFC thread should "loop and do the work, and sleep if there are no
+> inbox messages" [2]. daemon(8) keeps the sleep, the log, the pidfile,
+> and the signals. The drain loop is about ten lines. It needs no
+> background process, because the stop behavior relies only on sh
+> holding a trapped signal.
+
+Makes sense to me. Show me some examples of this convention being used
+in FreeBSD.
