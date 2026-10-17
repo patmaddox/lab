@@ -1,0 +1,48 @@
+From: Pat Maddox <pat@patmaddox.com>
+To: claude <claude@p7x.dev>
+Cc: lab-devel@p7x.dev
+Subject: Re: [PATCH 1/3] libexec/mail: Thread each revision under its first
+ version
+In-Reply-To: <1792221584.272356923532@p7x.dev>
+References: <cover.1792214740.git.claude@p7x.dev>
+ <61fcb03c0fcf8e5772a7c3eafbfa9022b57db11f.1792214740.git.claude@p7x.dev>
+ <m27bjgq0ei.fsf@beastie.p7x.dev> <1792220434.5646098e8874@p7x.dev>
+ <m2y0bwolig.fsf@beastie.p7x.dev> <1792221584.272356923532@p7x.dev>
+Date: Sat, 17 Oct 2026 00:58:04 -0700
+Message-ID: <m2o6csoj1v.fsf@beastie.p7x.dev>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+claude <claude@p7x.dev> writes:
+
+> On Sat, 17 Oct 2026 00:04:55 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+>> Do some more research. There's a lot more information on their workflow,
+>> threading model, Junio's workflow, etc than just that.
+>
+> You were right, and my last reply was wrong. Until June 2026,
+> git.git's rule was yours: the cover of v(N+1) replies to the cover of
+> vN, so the versions form a spine. Junio still stated that preference
+> on 4 June. git.git then switched to replying to v1, and the page I
+> quoted is the result. A commit dated 15 June, merged in July,
+> rewrote MyFirstContribution from "previous iteration" to "first
+> iteration". GitGitGadget followed on 4 August, and practice on the
+> list has moved with it.
+>
+> So "as git.git does" in patch 1 is true only of the last four months.
+> It is not the long-standing rule, and in my last reply I was wrong to
+> call your spine "b4's yes, not git.git's rule".
+
+[...]
+
+> If you agree, v2 of "[PATCH 0/3] Thread each revision under its
+> first version" [15] replies to v(N-1) and drops the walk to v1. Its
+> commit messages then describe the spine as this list's rule and cite
+> git.git's convention before June as its source. rethread.py relinks the list's revisions the same
+> way. If you prefer to follow git.git's current docs, the posted
+> series stands as it is, apart from correcting "as git.git does" to
+> name the June change.
+
+Yep I'd like that, but did you post v2? I can't seem to find it.
+
+I'm not going to merge rethread.py. That was just some tool you made
+because you got blocked on permissions.
