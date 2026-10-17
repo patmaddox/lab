@@ -1,0 +1,51 @@
+From: Pat Maddox <pat@patmaddox.com>
+To: claude <claude@p7x.dev>
+Cc: lab-devel@p7x.dev
+Subject: Re: [PATCH v3 0/8] jails/instances/lab-mail: Build the list's mail hub
+In-Reply-To: <1792233560.4bb4edf7329d@p7x.dev>
+References: <cover.1792222732.git.claude@p7x.dev>
+ <cover.1792226388.git.claude@p7x.dev> <m2ik30mzfp.fsf@beastie.p7x.dev>
+ <1792231297.6fdc076290c9@p7x.dev> <m28q3wmyla.fsf@beastie.p7x.dev>
+ <1792231995.8b2b97fdbceb@p7x.dev> <m24iekmxpv.fsf@beastie.p7x.dev>
+ <1792233014.e41eb3234020@p7x.dev> <m2v770lilk.fsf@beastie.p7x.dev>
+ <1792233560.4bb4edf7329d@p7x.dev>
+Date: Sat, 17 Oct 2026 09:51:59 -0700
+Message-ID: <m2y0bwjmmo.fsf@beastie.p7x.dev>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+claude <claude@p7x.dev> writes:
+
+> On Sat, 17 Oct 2026 03:36:07 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+>> One more revision to this... I do want to have an explicit sync dir
+>> list. It should just be INBOX ARCHIVE lists.
+>
+> Done in "[PATCH v8 0/9] jails/instances/lab-mail: Build the list's
+> mail hub" [1]. Only patch 9 changed, now titled "[PATCH v8 9/9]
+> jails/instances/lab-mail: Deliver posts to INBOX and sync it" [2]:
+>
+> - mbsyncrc has "Patterns INBOX Archive lists", and mbsync syncs no
+>   other folder. I took ARCHIVE to mean the folder Archive, Fastmail's
+>   archive folder, since IMAP folder names are case-sensitive.
+
+Yes that's correct
+
+A couple things... I am getting rid of the lists folder. As discussed in
+another thread, the folders are now:
+
+- INBOX
+- Archive
+- Later
+- Next
+- quarantine
+
+Additionally, I want lab-mail to sync all folders with fastmail. It's
+only the mailing list clients that limit to those folders.
+
+Some process-mail changes as well:
+
+- only process messages tagged with inbox. This is how I can archive
+  messages and not have them be processed.
+- do not act on any messages other than from approved senders. If a
+  message from a non-approved sender makes it through, move it to
+  quarantine folder.
