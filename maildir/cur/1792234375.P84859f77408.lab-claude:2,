@@ -1,0 +1,84 @@
+From: claude <claude@p7x.dev>
+Subject: Re: [RFC] removing inbox tags in notmuch
+To: Pat Maddox <pat@patmaddox.com>, lab@lists.p7x.dev
+In-Reply-To: <m2mrsclibd.fsf@beastie.p7x.dev>
+References: <m2zewclirl.fsf@beastie.p7x.dev>
+	<1792233320.bba5ad97363a@p7x.dev> <m2mrsclibd.fsf@beastie.p7x.dev>
+Message-ID: <1792234363.98f33d8068fb@p7x.dev>
+Date: Sat, 17 Oct 2026 10:52:55 +0000
+
+On Sat, 17 Oct 2026 03:42:14 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+> Well we're moving towards real servers now, so I want to sync flags
+> again. notmuch should be a legit mail client for my Fastmail account.
+
+Agreed. The patch cited below writes it into the spec for your
+notmuch on beastie, once it reads ~/mail/pat@p7x.dev from lab-mail.
+Then unread, flagged, and replied match \Seen, \Flagged, and
+\Answered on Fastmail. Until then
+it has to stay off, because your notmuch still reads the jj maildir,
+and flag sync renames files that jj tracks.
+
+It stays off for the agent. Its login cannot set flags on lab-mail,
+and its replied tag means the agent replied, not you.
+
+> Let's make two... Next and Later. This mirrors my Nirvana setup.
+
+A correction to my last message first. I said lab-mail syncs every
+folder (Patterns *) and that a new folder shows up on the other side
+by itself. That is wrong. You asked for an explicit list in "Re:
+[PATCH v3 0/8] jails/instances/lab-mail: Build the list's mail hub"
+[1], and v8 syncs only INBOX, Archive, and lists with Create None. So
+new folders take a patch.
+
+The patch is "[PATCH] jails/instances/lab-mail: Sync the Next and
+Later folders" [2]. It applies on top of "[PATCH v8 0/9]
+jails/instances/lab-mail: Build the list's mail hub" [3]. Dovecot
+creates both folders, mbsync syncs them, and the spec makes the folder
+the only state. You need to create Next and Later once in Fastmail's
+web interface before the first sync, because mbsync creates no
+folder.
+
+> What will be the interface for making something as next or later in
+> notmuch? Do I just tag it, and it moves? I think we've looked at
+> something like this before, and that that's backwards... I need to move
+> it into the folder, and derive the tag from the folder. I think?
+
+Yes: move it, and derive the tag. We did look at the other way
+around. "[PATCH] emacs: Archive notmuch mail by moving its file" [4]
+moved a file when you tagged it archived. It was never applied.
+
+Tagging first is backwards because it keeps the state in two places.
+If the move fails, or the tag is set somewhere the hook does not run,
+the tag and the folder disagree. A move made on Fastmail or on your
+phone has no tag at all. With the folder as the only state, every
+route is the same move, and the tag cannot drift. The spec says the
+post-new hook sets next, later, and archived from the folder on every
+run. A tag you add by hand lasts only until the next notmuch new.
+
+In Emacs, that means one key each for INBOX, Next, Later, and Archive.
+The command moves the message's file into that folder's cur/, keeping
+the :2, flags and dropping mbsync's ,U= part of the name. Then it
+runs notmuch new, so the tag shows up at once. Your next mbsync pushes
+the move to lab-mail, and lab-mail pushes it to Fastmail. Moving it in
+Fastmail works the same in reverse, and so does any other IMAP client.
+
+The keys are your call. A prefix that matches your Nirvana shortcuts
+seems natural to me. Tell me which you want.
+
+The client side cannot land yet. mail-tag.sh, the Emacs command, and
+flag sync all assume beastie reads ~/mail/pat@p7x.dev from lab-mail,
+and today it reads the jj maildir, which has no Next or Later. That
+work follows once the v8 series is applied and beastie's notmuch moves
+over.
+
+There is a conflict to fix at the same time. "[PATCH] dotfiles/notmuch:
+Spec reading and sending through lab-mail" [5] makes beastie's mbsync
+pull-only. A pull-only sync would undo every move you make locally,
+so that spec has to change to two-way with Expunge Both, the way the
+lab-mail spec already says.
+
+[1] id:m2v770lilk.fsf@beastie.p7x.dev
+[2] id:0624860e63dfebac51eab175a3d6daa1449ecfc6.1792234320.git.claude@p7x.dev
+[3] id:cover.1792233517.git.claude@p7x.dev
+[4] id:42a305bfe3b8b6eb570642a6ba258aafcabf240d.1791660619.git.claude@p7x.dev
+[5] id:6a8666348ab2db603875801d7405324720ecf6ae.1791972093.git.claude@p7x.dev
