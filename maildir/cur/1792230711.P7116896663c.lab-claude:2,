@@ -1,0 +1,543 @@
+Message-ID: <035be58b852a5efd1c9ff64f8ad061571139671b.1792230700.git.claude@p7x.dev>
+In-Reply-To: <cover.1792230700.git.claude@p7x.dev>
+References: <cover.1792230700.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Subject: [PATCH v4 6/8] jails/instances/lab-mail: Take posts with OpenSMTPD
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+Change-Id: qnuuzmntpryrvxvlnxrkumrlulzwtmmx
+Date: Sat, 17 Oct 2026 09:51:51 +0000
+
+smtprelay relays each post to Fastmail, so a post reaches the list
+only by a round trip through Fastmail, and posting fails whenever
+Fastmail does. OpenSMTPD hands a post straight to Dovecot, and holds
+it in its queue while Dovecot is down. Nothing posted leaves lab-mail
+except through the sync, so the Fastmail app password no longer needs
+SMTP access, and mbsync is left as its only reader.
+
+- OpenSMTPD takes posts on loopback and hands mail for the list to
+  Dovecot over LMTP. It discards copies to the known addresses, and
+  refuses any other recipient while the client is connected.
+- OpenSMTPD's own parser refuses a header it cannot read, and adds a
+  missing Message-ID and Date, as the spec asks.
+- LMTP delivers each post to INBOX, where it waits for Pat to move it
+  into lists. The spec files posts into lists; that needs a filter
+  the spec does not name.
+- smtprelay, jq, and the mailcred group are removed.
+- check covers OpenSMTPD, its queue, and that only mbsync can read
+  mail-creds.
+---
+change-id: qnuuzmntpryrvxvlnxrkumrlulzwtmmx
+
+ jails/instances/lab-mail/README.org           | 104 ++++++++++--------
+ jails/instances/lab-mail/dist.mtree           |   7 +-
+ .../dist/etc/newsyslog.conf.d/lab-mail.conf   |   2 +-
+ .../lab-mail/dist/etc/rc.conf.d/smtpd         |   1 +
+ .../lab-mail/dist/etc/rc.conf.d/smtprelay     |   4 -
+ .../lab-mail/dist/etc/syslog.d/lab-mail.conf  |   4 +-
+ .../dist/usr/local/etc/dovecot/dovecot.conf   |  28 ++++-
+ .../dist/usr/local/etc/mail/smtpd.conf        |  28 +++++
+ .../dist/usr/local/etc/smtprelay/remotes.env  |  19 ----
+ .../usr/local/etc/smtprelay/smtprelay.ini     |  20 ----
+ .../dist/usr/local/libexec/lab-mail/check     |  32 ++++--
+ jails/instances/lab-mail/instance.conf        |  16 +--
+ 12 files changed, 143 insertions(+), 122 deletions(-)
+ create mode 100644 jails/instances/lab-mail/dist/etc/rc.conf.d/smtpd
+ delete mode 100644 jails/instances/lab-mail/dist/etc/rc.conf.d/smtprelay
+ create mode 100644 jails/instances/lab-mail/dist/usr/local/etc/mail/smtpd.conf
+ delete mode 100644 jails/instances/lab-mail/dist/usr/local/etc/smtprelay/remotes.env
+ delete mode 100644 jails/instances/lab-mail/dist/usr/local/etc/smtprelay/smtprelay.ini
+
+diff --git a/jails/instances/lab-mail/README.org b/jails/instances/lab-mail/README.org
+index d5133cbc..181dcb37 100644
+--- a/jails/instances/lab-mail/README.org
++++ b/jails/instances/lab-mail/README.org
+@@ -1,14 +1,17 @@
+ #+TITLE: lab-mail
+ 
+ The mail hub for the lab-devel list. lab-mail holds the list, synced
+-both ways with Fastmail, and serves it over IMAP to every host that
+-uses it. It also relays mail to Fastmail over SMTP. It holds the
+-Fastmail credentials and is the only thing that talks to Fastmail.
+-spec.org has the design.
++both ways with Fastmail, takes posts over SMTP, and serves the list
++over IMAP to every host that uses it. It holds the Fastmail
++credentials and is the only thing that talks to Fastmail. spec.org
++has the design.
+ 
+ * rights
+ Who may do what to the list. Everything below follows from these
+ rules.
++- Anyone who can reach lab-mail may post to the list over SMTP, with
++  no login. Posting only adds a message. It cannot change or remove
++  one already there.
+ - Anyone may read the list over IMAP. Any user name logs in with any
+   password, and that login may list, fetch, search, and IDLE, and
+   nothing else. It cannot set flags, append, copy, move, or expunge,
+@@ -34,31 +37,44 @@ Two host directories are mounted into the jail, and into no other:
+ - =/jails/data/lab-mail/mail= at =/data/mail=, read-write. It holds
+   the list and the mail state, which survive a rebuild of the jail.
+ 
+-The Fastmail credentials never leave =/data/secrets=. Only the
+-services that talk to Fastmail can read them, as members of the
+-=mailcred= group.
+-
+ Dovecot is the only program that writes the list. Every change to it,
+-a sync from Fastmail, or a move or deletion by Pat, goes through
+-Dovecot, as the user =vmail=.
++a post, a sync from Fastmail, or a move or deletion by Pat, goes
++through Dovecot, as the user =vmail=.
+ 
+-** sending
++** posting
+ #+BEGIN_EXAMPLE
+-client --SMTP--> smtprelay 127.0.0.1:2525 --SMTPS--> smtp.fastmail.com:465
++client --SMTP--> OpenSMTPD 127.0.0.1:2525 --LMTP--> Dovecot --> INBOX
+ #+END_EXAMPLE
+ 
+-smtprelay is the only way out. rc(8) starts it when the jail starts,
+-under daemon(8) as the user =smtprelay=; its config is
+-=/usr/local/etc/smtprelay/smtprelay.ini=. Before it starts,
+-=remotes.env= reads =mail-creds= and passes the Fastmail login to it
+-in its environment.
+-
+-A client connects without logging in. smtprelay checks the envelope
+-sender and each recipient against the allowlists in =smtprelay.ini=,
+-and refuses any address that is not on them. It then logs in to
+-Fastmail and relays the message while the client waits, so the
+-client gets Fastmail's answer. Nothing is queued: a message that
+-fails is not sent, and the client must send it again.
++rc(8) starts OpenSMTPD when the jail starts; its config is
++=/usr/local/etc/mail/smtpd.conf=. A client connects without logging
++in. OpenSMTPD sorts each recipient:
++- =lab-devel@p7x.dev= is delivered to the list.
++- =pat@p7x.dev=, =pat@patmaddox.com=, and =claude@p7x.dev= are
++  accepted and discarded, since everyone reads their mail on the
++  list. A reply to all then lands on the list once. The table =known=
++  in =smtpd.conf= lists them.
++- Any other recipient is refused with a 5xx reply, and the client
++  abandons the whole message.
++
++Before it answers the client's DATA, OpenSMTPD parses the header. It
++refuses a message with a header line that is neither a field nor the
++continuation of one, while the client is still connected. It adds a
++Message-ID and a Date to a message that lacks them, as it does on any
++loopback listener.
++
++OpenSMTPD then queues the message and hands it to Dovecot over LMTP,
++on the socket =/var/run/dovecot/lmtp=, which only =vmail= may open.
++LMTP delivers it to INBOX. OpenSMTPD never opens the maildir. If
++Dovecot is stopped, the message waits in OpenSMTPD's queue and lands
++when Dovecot is back.
++
++A post stays in INBOX until Pat moves it into =lists=. mbsync does
++not sync INBOX, so a post reaches Fastmail and the readers of =lists=
++only once Pat has moved it.
++
++OpenSMTPD never relays. Nothing posted leaves lab-mail except as a
++message that mbsync copies into a Fastmail folder.
+ 
+ ** reading
+ #+BEGIN_EXAMPLE
+@@ -67,12 +83,12 @@ fails is not sent, and the client must send it again.
+ 
+ rc(8) starts Dovecot when the jail starts; its config is
+ =/usr/local/etc/dovecot/dovecot.conf=. It serves the maildir as the
+-mailboxes =lists= and =Archive=, beside an empty INBOX, as on
+-Fastmail. Every login sees the same mailboxes, and runs as =vmail=,
+-which keeps Dovecot's indexes in =/data/mail/dovecot=. What each login
+-may do is in =dovecot-acl=, as rights describes.
++mailboxes =lists= and =Archive=, as on Fastmail, beside an INBOX that
++holds new posts. Every login sees the same mailboxes, and runs as
++=vmail=, which keeps Dovecot's indexes in =/data/mail/dovecot=. What
++each login may do is in =dovecot-acl=, as rights describes.
+ 
+-Reading keeps working while Fastmail is down.
++Reading and posting keep working while Fastmail is down.
+ 
+ ** syncing with Fastmail
+ #+BEGIN_EXAMPLE
+@@ -98,11 +114,11 @@ its sync state in =/data/mail/mbsync=.
+ ** logs
+ Each service logs through syslogd(8) in the jail, to a file of its
+ own under =/var/log/lab-mail/=, and all of them to =/var/log/maillog=:
+-- =smtprelay.log=: each session, with the client, the envelope, and
+-  Fastmail's reply.
++- =smtpd.log=: each session, with the client, the envelope, each
++  recipient's fate, and each delivery to Dovecot.
+ - =sync.log=: each sync that moved mail, with mbsync's counts, and
+   every sync failure.
+-- =dovecot.log=: each IMAP login, and every error.
++- =dovecot.log=: each IMAP login, each LMTP delivery, and every error.
+ 
+ A sync that moves nothing logs nothing, so a quiet =sync.log= is
+ normal. The routing is in =/etc/syslog.d/lab-mail.conf=, and
+@@ -117,9 +133,8 @@ The operator stores three secrets on the host, in
+ mounts the directory read-only at =/data/secrets=, and no other jail
+ mounts it.
+ - =mail-creds= holds two lines: the Fastmail login on the first, and
+-  an app password with IMAP and SMTP access on the second. Each line
+-  is taken whole, whatever it contains. Only smtprelay and mbsync read
+-  it, as members of the =mailcred= group.
++  an app password with IMAP access on the second. Each line is taken
++  whole, whatever it contains. Only mbsync reads it.
+ - =mbsync-imap= holds the password of mbsync's Dovecot login. Only
+   mbsync reads it.
+ - =imap-users= holds the logins that may change the list, one per
+@@ -133,9 +148,8 @@ doveadm, which prompts for it:
+ doas jexec lab-mail doveadm pw -s BLF-CRYPT
+ #+END_EXAMPLE
+ 
+-The host knows each reader only by number: 15100 is the =mailcred=
+-group and 15102 is mbsync, from =instance.conf=, and 143 is dovecot,
+-from the package:
++The host knows each reader only by number: 15102 is mbsync, from
++=instance.conf=, and 143 is dovecot, from the package:
+ #+BEGIN_EXAMPLE
+ mkdir -p /jails/data/lab-mail/secrets
+ cd /jails/data/lab-mail/secrets
+@@ -144,8 +158,7 @@ printf '%s\n' 'mbsync-password' > mbsync-imap
+ printf '%s\n' 'pat@p7x.dev:{BLF-CRYPT}...' 'mbsync:{BLF-CRYPT}...' > imap-users
+ chown 0:0 .
+ chmod 0711 .
+-chown 0:15100 mail-creds
+-chown 0:15102 mbsync-imap
++chown 0:15102 mail-creds mbsync-imap
+ chown 0:143 imap-users
+ chmod 0640 mail-creds mbsync-imap imap-users
+ #+END_EXAMPLE
+@@ -186,15 +199,16 @@ $ just check
+ ok the jail is running
+ ok /data/secrets/mail-creds exists
+ ...
+-FAIL smtprelay is running
+-FAIL smtprelay accepts connections on 127.0.0.1:2525
++FAIL OpenSMTPD is running
++FAIL OpenSMTPD accepts connections on 127.0.0.1:2525
+ ...
+ #+END_EXAMPLE
+ 
+ It checks the jail, that each secret is present and readable by its
+-readers and no other service user, the owners of the mail state
+-directories, that syslogd, cron, smtprelay, and Dovecot are running,
+-that smtprelay and Dovecot accept connections, that a sync succeeded
++reader and no other service user, the owners of the mail state
++directories, that syslogd, cron, OpenSMTPD, and Dovecot are running,
++that OpenSMTPD and Dovecot accept connections, that OpenSMTPD's queue
++holds no message older than five minutes, that a sync succeeded
+ within the last five minutes, and that the log files exist. The sync
+ job touches =/data/mail/mbsync/last-sync= after each successful run,
+ so a quiet list still passes. The check only reads, so it is safe to
+diff --git a/jails/instances/lab-mail/dist.mtree b/jails/instances/lab-mail/dist.mtree
+index dc496e66..a76b279f 100644
+--- a/jails/instances/lab-mail/dist.mtree
++++ b/jails/instances/lab-mail/dist.mtree
+@@ -6,17 +6,16 @@
+ ./etc/newsyslog.conf.d/lab-mail.conf
+ ./etc/rc.conf.d type=dir mode=0755
+ ./etc/rc.conf.d/dovecot
+-./etc/rc.conf.d/smtprelay
++./etc/rc.conf.d/smtpd
+ ./etc/rc.conf.d/syslogd
+ ./etc/syslog.d type=dir mode=0755
+ ./etc/syslog.d/lab-mail.conf
+ ./usr/local/etc/dovecot type=dir mode=0755
+ ./usr/local/etc/dovecot/dovecot-acl
+ ./usr/local/etc/dovecot/dovecot.conf
++./usr/local/etc/mail type=dir mode=0755
++./usr/local/etc/mail/smtpd.conf
+ ./usr/local/etc/mbsyncrc
+-./usr/local/etc/smtprelay type=dir mode=0755
+-./usr/local/etc/smtprelay/remotes.env
+-./usr/local/etc/smtprelay/smtprelay.ini
+ ./usr/local/libexec/lab-mail type=dir mode=0755
+ ./usr/local/libexec/lab-mail/check mode=0755
+ ./usr/local/libexec/lab-mail/sync mode=0755
+diff --git a/jails/instances/lab-mail/dist/etc/newsyslog.conf.d/lab-mail.conf b/jails/instances/lab-mail/dist/etc/newsyslog.conf.d/lab-mail.conf
+index 8ce8158c..e252f759 100644
+--- a/jails/instances/lab-mail/dist/etc/newsyslog.conf.d/lab-mail.conf
++++ b/jails/instances/lab-mail/dist/etc/newsyslog.conf.d/lab-mail.conf
+@@ -1,5 +1,5 @@
+ # Rotated like /var/log/maillog. C creates each file at boot, since
+ # syslogd logs only to files that exist.
+-/var/log/lab-mail/smtprelay.log	640	7	*	@T00	JC
++/var/log/lab-mail/smtpd.log	640	7	*	@T00	JC
+ /var/log/lab-mail/sync.log	640	7	*	@T00	JC
+ /var/log/lab-mail/dovecot.log	640	7	*	@T00	JC
+diff --git a/jails/instances/lab-mail/dist/etc/rc.conf.d/smtpd b/jails/instances/lab-mail/dist/etc/rc.conf.d/smtpd
+new file mode 100644
+index 00000000..13010cc2
+--- /dev/null
++++ b/jails/instances/lab-mail/dist/etc/rc.conf.d/smtpd
+@@ -0,0 +1 @@
++smtpd_enable="YES"
+diff --git a/jails/instances/lab-mail/dist/etc/rc.conf.d/smtprelay b/jails/instances/lab-mail/dist/etc/rc.conf.d/smtprelay
+deleted file mode 100644
+index 85b8cd22..00000000
+--- a/jails/instances/lab-mail/dist/etc/rc.conf.d/smtprelay
++++ /dev/null
+@@ -1,4 +0,0 @@
+-smtprelay_enable="YES"
+-# daemon(8) options; they come before the smtprelay command line.
+-smtprelay_flags="-u smtprelay -l mail -T smtprelay"
+-smtprelay_env_file="/usr/local/etc/smtprelay/remotes.env"
+diff --git a/jails/instances/lab-mail/dist/etc/syslog.d/lab-mail.conf b/jails/instances/lab-mail/dist/etc/syslog.d/lab-mail.conf
+index ebadd716..413c192a 100644
+--- a/jails/instances/lab-mail/dist/etc/syslog.d/lab-mail.conf
++++ b/jails/instances/lab-mail/dist/etc/syslog.d/lab-mail.conf
+@@ -1,7 +1,7 @@
+ # Each lab-mail service also logs to a file of its own. maillog still
+ # gets all of them, through the mail.info line in syslog.conf.
+-!smtprelay
+-*.*					/var/log/lab-mail/smtprelay.log
++!smtpd
++*.*					/var/log/lab-mail/smtpd.log
+ !lab-mail-sync
+ *.*					/var/log/lab-mail/sync.log
+ !dovecot
+diff --git a/jails/instances/lab-mail/dist/usr/local/etc/dovecot/dovecot.conf b/jails/instances/lab-mail/dist/usr/local/etc/dovecot/dovecot.conf
+index ea622dc8..5791ade0 100644
+--- a/jails/instances/lab-mail/dist/usr/local/etc/dovecot/dovecot.conf
++++ b/jails/instances/lab-mail/dist/usr/local/etc/dovecot/dovecot.conf
+@@ -2,9 +2,10 @@
+ #
+ # Dovecot holds the list, the mailboxes lists and Archive, and is the
+ # only program that writes it. It serves the list over IMAP on
+-# loopback. Nothing else: no POP3, LMTP, or submission.
++# loopback, and takes posted mail from OpenSMTPD over LMTP on a socket
++# inside the jail. Nothing else: no POP3 or submission.
+ 
+-protocols = imap
++protocols = imap lmtp
+ listen = 127.0.0.1
+ 
+ # Clients connect over loopback only, so there is no TLS.
+@@ -21,6 +22,15 @@ service imap-login {
+   }
+ }
+ 
++# Only OpenSMTPD's delivery, which runs as vmail, may connect.
++service lmtp {
++  unix_listener lmtp {
++    user = vmail
++    group = vmail
++    mode = 0600
++  }
++}
++
+ # The logins that may change the list must give the password in
+ # imap-users, and a wrong one fails: their names never reach the
+ # static passdb below. Every other user name logs in with any
+@@ -37,12 +47,12 @@ passdb {
+   username_filter = !pat@p7x.dev !mbsync
+ }
+ 
+-# Every login is the same user, vmail, which owns the maildir. The
+-# indexes, the UID lists, and an empty INBOX, which IMAP requires,
+-# live in a directory of vmail's own.
++# Every login, and every LMTP delivery, is the same user, vmail, which
++# owns the maildir. The indexes, the UID lists, and INBOX, where LMTP
++# delivers each post, live in a directory of vmail's own.
+ userdb {
+   driver = static
+-  args = uid=vmail gid=vmail home=/data/mail/dovecot
++  args = uid=vmail gid=vmail home=/data/mail/dovecot allow_all_users=yes
+ }
+ 
+ namespace inbox {
+@@ -72,3 +82,9 @@ plugin {
+   acl = vfile:/usr/local/etc/dovecot/dovecot-acl
+   acl_globals_only = yes
+ }
++
++# LMTP delivers each posted message to INBOX. The ACL governs IMAP
++# logins, not delivery: only vmail can reach the LMTP socket. Dovecot
++# adds Return-Path and Delivered-To, and no Received header of its
++# own; OpenSMTPD's is enough.
++lmtp_add_received_header = no
+diff --git a/jails/instances/lab-mail/dist/usr/local/etc/mail/smtpd.conf b/jails/instances/lab-mail/dist/usr/local/etc/mail/smtpd.conf
+new file mode 100644
+index 00000000..775620b9
+--- /dev/null
++++ b/jails/instances/lab-mail/dist/usr/local/etc/mail/smtpd.conf
+@@ -0,0 +1,28 @@
++# OpenSMTPD for lab-mail; see spec.org.
++#
++# Takes posted mail on loopback and hands mail for the list to Dovecot
++# over LMTP. It never relays, so nothing posted leaves lab-mail except
++# as a message mbsync copies into a Fastmail folder.
++
++# The list, and the known addresses: everyone reads mail for these on
++# the list, so a reply to all lands once, there. To add an address,
++# add it here.
++table list { "lab-devel@p7x.dev" }
++table known { "pat@p7x.dev", "pat@patmaddox.com", "claude@p7x.dev" }
++
++# Delivery to the list runs as vmail, the only user that may connect
++# to Dovecot's LMTP socket. rcpt-to keeps the list's address in the
++# LMTP RCPT TO, so Delivered-To names it.
++table to-vmail { "@" = "vmail" }
++table to-nobody { "@" = "nobody" }
++
++# Loopback on a non-standard port, so only beastie and the jails that
++# share its addresses can reach it, and no tool finds it by default.
++listen on 127.0.0.1 port 2525
++
++action "list" lmtp "/var/run/dovecot/lmtp" rcpt-to virtual <to-vmail>
++action "discard" mda "/bin/cat >/dev/null" virtual <to-nobody>
++
++# Any other recipient matches no rule and is refused with a 5xx reply.
++match from any for rcpt-to <list> action "list"
++match from any for rcpt-to <known> action "discard"
+diff --git a/jails/instances/lab-mail/dist/usr/local/etc/smtprelay/remotes.env b/jails/instances/lab-mail/dist/usr/local/etc/smtprelay/remotes.env
+deleted file mode 100644
+index adb8baed..00000000
+--- a/jails/instances/lab-mail/dist/usr/local/etc/smtprelay/remotes.env
++++ /dev/null
+@@ -1,19 +0,0 @@
+-# Sourced by rc.subr(8) as root when smtprelay starts. The remote
+-# carries the Fastmail login, so it is built from mail-creds here and
+-# handed to smtprelay in its environment, never written to a file.
+-#
+-# mail-creds holds the login on line 1 and the password on line 2.
+-# Both are percent-encoded, since an "@", ":", "/" or "#" in them
+-# would otherwise end its field in the URL. jq is named in full: at
+-# boot, rc(8) runs with a PATH that leaves out /usr/local/bin.
+-_login="$(sed -n 1p /data/secrets/mail-creds)"
+-_password="$(sed -n 2p /data/secrets/mail-creds)"
+-if [ -z "${_login}" ] || [ -z "${_password}" ]; then
+-	err 1 "/data/secrets/mail-creds needs the login on line 1" \
+-	    "and the password on line 2"
+-fi
+-SMTPRELAY_REMOTES="smtps://\
+-$(printf '%s\n' "${_login}" | /usr/local/bin/jq -Rr @uri):\
+-$(printf '%s\n' "${_password}" | /usr/local/bin/jq -Rr @uri)\
+-@smtp.fastmail.com:465"
+-unset _login _password
+diff --git a/jails/instances/lab-mail/dist/usr/local/etc/smtprelay/smtprelay.ini b/jails/instances/lab-mail/dist/usr/local/etc/smtprelay/smtprelay.ini
+deleted file mode 100644
+index 974ce245..00000000
+--- a/jails/instances/lab-mail/dist/usr/local/etc/smtprelay/smtprelay.ini
++++ /dev/null
+@@ -1,20 +0,0 @@
+-; smtprelay for lab-mail; see spec.org.
+-;
+-; Each message is relayed to Fastmail during the client's session, so
+-; the client gets Fastmail's answer. The remote comes from
+-; SMTPRELAY_REMOTES; see remotes.env.
+-
+-hostname = lab-mail.p7x.dev
+-log_format = plain
+-
+-; Loopback on a non-standard port, so only beastie and the jails that
+-; share its addresses can reach it, and no tool finds it by default.
+-listen = 127.0.0.1:2525
+-allowed_nets = 127.0.0.0/8
+-
+-; Envelope allowlists, checked at MAIL FROM and RCPT TO before
+-; Fastmail is contacted. Domains match exactly and without regard to
+-; case; p7x.dev does not match its subdomains. To allow an address,
+-; add an alternative to the line.
+-allowed_sender = (?i)^claude@p7x\.dev$
+-allowed_recipients = (?i)^(pat@patmaddox\.com|[^@]+@p7x\.dev|[^@]+@lists\.p7x\.dev)$
+diff --git a/jails/instances/lab-mail/dist/usr/local/libexec/lab-mail/check b/jails/instances/lab-mail/dist/usr/local/libexec/lab-mail/check
+index 663cbe02..9ea7a4db 100755
+--- a/jails/instances/lab-mail/dist/usr/local/libexec/lab-mail/check
++++ b/jails/instances/lab-mail/dist/usr/local/libexec/lab-mail/check
+@@ -14,7 +14,7 @@ readonly stamp=/data/mail/mbsync/last-sync
+ 
+ # Every user a lab-mail service runs as. Each secret must be readable
+ # by its reader and by none of the others.
+-readonly service_users="smtprelay mbsync vmail dovecot dovenull"
++readonly service_users="mbsync vmail dovecot dovenull _smtpd _smtpq nobody"
+ 
+ failed=0
+ 
+@@ -68,6 +68,17 @@ listening() {
+ 	nc -z -w 5 127.0.0.1 "${1}"
+ }
+ 
++# The eighth field of smtpctl show queue is when the envelope was
++# queued, in seconds since the epoch.
++queue_is_fresh() {
++	local queue limit ctime
++	queue=$(smtpctl show queue) || return 1
++	limit=$(($(date +%s) - 300))
++	for ctime in $(printf '%s\n' "${queue}" | cut -d '|' -f 8); do
++		[ "${ctime}" -ge "${limit}" ] || return 1
++	done
++}
++
+ # find prints the stamp only if it changed in the last five minutes.
+ synced_recently() {
+ 	[ -n "$(find ${stamp} -mmin -5)" ]
+@@ -79,9 +90,7 @@ check "${creds} has the password on line 2" has_line 2
+ check "${users} has pat@p7x.dev" has_user pat@p7x.dev
+ check "${users} has mbsync" has_user mbsync
+ check "${mbpass} is not empty" test -s ${mbpass}
+-check "smtprelay can read ${creds}" can_read smtprelay ${creds}
+-check "mbsync can read ${creds}" can_read mbsync ${creds}
+-check "vmail cannot read ${creds}" cannot_read vmail ${creds}
++check "only mbsync can read ${creds}" readable_only_by ${creds} mbsync
+ check "only mbsync can read ${mbpass}" readable_only_by ${mbpass} mbsync
+ check "only dovecot can read ${users}" readable_only_by ${users} dovecot
+ 
+@@ -92,17 +101,20 @@ check "/data/mail/dovecot is owned by vmail (15103)" \
+ check "/data/mail/mbsync is owned by mbsync (15102)" \
+     owned_by /data/mail/mbsync 15102
+ 
+-for s in syslogd cron smtprelay dovecot; do
+-	check "${s} is running" service ${s} status
+-done
++check "syslogd is running" service syslogd status
++check "cron is running" service cron status
++check "OpenSMTPD is running" service smtpd status
++check "Dovecot is running" service dovecot status
+ 
+-check "smtprelay accepts connections on 127.0.0.1:2525" listening 2525
+-check "dovecot accepts connections on 127.0.0.1:2143" listening 2143
++check "OpenSMTPD accepts connections on 127.0.0.1:2525" listening 2525
++check "Dovecot accepts connections on 127.0.0.1:2143" listening 2143
+ 
++check "OpenSMTPD's queue holds no message older than five minutes" \
++    queue_is_fresh
+ check "the last successful sync was within five minutes" \
+     synced_recently
+ 
+-for l in smtprelay sync dovecot; do
++for l in smtpd sync dovecot; do
+ 	check "/var/log/lab-mail/${l}.log exists" \
+ 	    test -f /var/log/lab-mail/${l}.log
+ done
+diff --git a/jails/instances/lab-mail/instance.conf b/jails/instances/lab-mail/instance.conf
+index 25b73fdc..93de96bd 100644
+--- a/jails/instances/lab-mail/instance.conf
++++ b/jails/instances/lab-mail/instance.conf
+@@ -1,19 +1,13 @@
+-# Members of mailcred can read the Fastmail credentials. vmail is
+-# Dovecot's mail user; it is left out so it cannot read them.
+-# README.org has the numeric ids the host side depends on.
+-readonly groups="
+-mailcred:15100
+-"
+-
++# vmail owns the list's maildir, and Dovecot runs every login and
++# delivery as vmail. mbsync syncs the list with Fastmail. README.org
++# has the numeric ids the host side depends on.
+ readonly users="
+-smtprelay:15101:15101:mailcred
+-mbsync:15102:15102:mailcred
++mbsync:15102:15102
+ vmail:15103:15103
+ "
+ 
+ readonly packages="
+ mail/dovecot
+ mail/isync
+-mail/smtprelay
+-textproc/jq
++mail/opensmtpd
+ "
+-- 
+2.56.0
+
