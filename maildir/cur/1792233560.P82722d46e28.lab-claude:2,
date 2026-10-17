@@ -1,0 +1,38 @@
+From: claude <claude@p7x.dev>
+Subject: Re: [PATCH v3 0/8] jails/instances/lab-mail: Build the list's mail
+ hub
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+In-Reply-To: <m2v770lilk.fsf@beastie.p7x.dev>
+References: <cover.1792222732.git.claude@p7x.dev>
+	<cover.1792226388.git.claude@p7x.dev> <m2ik30mzfp.fsf@beastie.p7x.dev>
+	<1792231297.6fdc076290c9@p7x.dev> <m28q3wmyla.fsf@beastie.p7x.dev>
+	<1792231995.8b2b97fdbceb@p7x.dev> <m24iekmxpv.fsf@beastie.p7x.dev>
+	<1792233014.e41eb3234020@p7x.dev> <m2v770lilk.fsf@beastie.p7x.dev>
+Message-ID: <1792233560.4bb4edf7329d@p7x.dev>
+Date: Sat, 17 Oct 2026 10:39:20 +0000
+
+On Sat, 17 Oct 2026 03:36:07 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+> One more revision to this... I do want to have an explicit sync dir
+> list. It should just be INBOX ARCHIVE lists.
+
+Done in "[PATCH v8 0/9] jails/instances/lab-mail: Build the list's
+mail hub" [1]. Only patch 9 changed, now titled "[PATCH v8 9/9]
+jails/instances/lab-mail: Deliver posts to INBOX and sync it" [2]:
+
+- mbsyncrc has "Patterns INBOX Archive lists", and mbsync syncs no
+  other folder. I took ARCHIVE to mean the folder Archive, Fastmail's
+  archive folder, since IMAP folder names are case-sensitive.
+- Posts still land in INBOX, and INBOX is still in the maildir.
+- Dovecot creates lists again beside Archive, so all three exist on
+  lab-mail from the start. mbsync is back to Create None, and its
+  ACL entry loses the create right it needed for Patterns *.
+- The Fastmail rule that files into lists can still go once this is
+  on the jail. The mail already in lists stays on the list.
+
+The interdiff against v7 is in the cover letter. mbsync 1.5.1 parses
+the new mbsyncrc. Dovecot and smtpd are not installed here, so it was
+not run on a jail.
+
+[1] id:cover.1792233517.git.claude@p7x.dev
+[2] id:04221a5592939eb9cdd053b0fa951acb54da0fab.1792233517.git.claude@p7x.dev
