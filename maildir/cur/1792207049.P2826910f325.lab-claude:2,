@@ -1,0 +1,45 @@
+Message-ID: <cover.1792207036.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Subject: [PATCH 0/2] Fold org-style headings in long mail
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+Date: Sat, 17 Oct 2026 03:17:29 +0000
+
+Long agent replies are hard to navigate in notmuch-show, which only
+collapses whole messages. This series gives a message's sections the
+expand and collapse of org-mode, without running org-mode on mail.
+
+Patch 1 makes each org-style heading in a text/plain part a button
+that folds its section. It uses a regexp and overlays only, the same
+way the diff highlighting in pm-notmuch.el works, because list mail is
+untrusted and turning on org-mode has run code from the text it was
+turned on for.
+
+Patch 2 asks agents to head the sections of long mail that way, since
+they use dash-underlined titles today, which do not fold.
+
+Testing: I indexed a two-message thread in a scratch notmuch database
+and ran notmuch-show over it in emacs --batch with pm-notmuch loaded.
+The reply, shown at depth 1, had "* One", "** One.a" and "* Two" and a
+quoted "> * quoted heading". The three headings became buttons with
+the outline-1 and outline-2 faces, and the quoted line stayed plain
+text. Pushing each button hid exactly its section, and pushing it
+again showed it. Folding "* Two", the last section, stopped at the end
+of the part. pm-notmuch.el byte-compiles with no new warnings. I have
+not tried it in a graphical session.
+
+base-branch: b/dev@upstream
+
+claude (2):
+  emacs: Fold org-style headings in notmuch-show
+  CLAUDE.md: Head long mail sections with org headings
+
+ CLAUDE.md                         | 11 ++++++
+ dotfiles/emacs/lisp/pm-notmuch.el | 60 +++++++++++++++++++++++++++++++
+ 2 files changed, 71 insertions(+)
+
+
+base-commit: 8d0b05250dc28c4dfa11e4e7925c94f50cfcf211
+-- 
+2.56.0
+

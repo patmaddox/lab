@@ -1,0 +1,103 @@
+Message-ID: <07c96456ab09078dbfa989c78da43c42c6159710.1792207036.git.claude@p7x.dev>
+In-Reply-To: <cover.1792207036.git.claude@p7x.dev>
+References: <cover.1792207036.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Subject: [PATCH 1/2] emacs: Fold org-style headings in notmuch-show
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+Change-Id: yukztumuzvvtmypovmyskqmlpxxvmqnm
+Date: Sat, 17 Oct 2026 03:17:30 +0000
+
+Long agent replies are hard to navigate in notmuch-show, which can
+only collapse whole messages. Letting each "* " heading in a
+text/plain part fold its section gives the expand and collapse of
+org-mode without leaving the mail.
+
+Mail on the list is untrusted, so the headings are found with a
+regexp and folded with overlays. Org-mode never runs on a message.
+Turning on org-mode has run Lisp and shell commands from the text it
+was turned on for, as the Emacs 29.3 and 29.4 security releases
+record. Each heading is a notmuch-style button, so TAB reaches it
+and RET toggles it, and its face is the outline face for its level.
+A section ends at the next heading of its level or above, or at the
+end of its part, so folding never hides the next message.
+---
+change-id: yukztumuzvvtmypovmyskqmlpxxvmqnm
+
+ dotfiles/emacs/lisp/pm-notmuch.el | 60 +++++++++++++++++++++++++++++++
+ 1 file changed, 60 insertions(+)
+
+diff --git a/dotfiles/emacs/lisp/pm-notmuch.el b/dotfiles/emacs/lisp/pm-notmuch.el
+index 42f278a..65cd76d 100644
+--- a/dotfiles/emacs/lisp/pm-notmuch.el
++++ b/dotfiles/emacs/lisp/pm-notmuch.el
+@@ -79,6 +79,66 @@ Added to `notmuch-show-insert-text/plain-hook'."
+ (add-hook 'notmuch-show-insert-text/plain-hook
+           #'pm-notmuch-highlight-diff-regions)
+ 
++;;; Folding org-style headings in notmuch-show
++
++;; Mail is untrusted, so this reads headings with a regexp and folds
++;; them with overlays. It never turns on org-mode for a message:
++;; org-mode has run Lisp and shell commands found in the text it was
++;; turned on for (see Emacs 29.3 and 29.4 NEWS).
++
++(require 'outline)
++
++(defconst pm-notmuch-heading-regexp "^\\(\\*+\\)[ \t]+[^ \t\n]"
++  "Regexp for an org-style heading line; group 1 is its stars.")
++
++(define-button-type 'pm-notmuch-heading
++  'action #'pm-notmuch-toggle-section
++  'follow-link t
++  'help-echo "mouse-1, RET: fold or unfold this section")
++
++(defun pm-notmuch-toggle-section (button)
++  "Fold or unfold the section headed by BUTTON."
++  (let ((ov (button-get button 'pm-notmuch-section)))
++    (overlay-put ov 'invisible
++                 (unless (overlay-get ov 'invisible)
++                   'pm-notmuch-section))))
++
++(defun pm-notmuch-fold-headings (_msg _depth)
++  "Make org-style headings in notmuch text/plain parts fold.
++Each heading becomes a button that hides the text up to the next
++heading of the same or a higher level.
++Added to `notmuch-show-insert-text/plain-hook'."
++  (add-to-invisibility-spec '(pm-notmuch-section . t))
++  (save-excursion
++    (goto-char (point-min))
++    (let (headings)
++      (while (re-search-forward pm-notmuch-heading-regexp nil t)
++        (push (list (match-beginning 0)
++                    (line-end-position)
++                    (- (match-end 1) (match-beginning 1)))
++              headings))
++      (setq headings (nreverse headings))
++      (while headings
++        (pcase-let* ((`(,beg ,eol ,level) (pop headings))
++                     (next (seq-find (lambda (h) (<= (nth 2 h) level))
++                                     headings))
++                     (end (if next
++                              (1- (car next))
++                            (if (eq (char-before (point-max)) ?\n)
++                                (1- (point-max))
++                              (point-max))))
++                     (ov (make-overlay eol (max eol end))))
++          (overlay-put ov 'pm-notmuch-section t)
++          (make-button beg eol
++                       :type 'pm-notmuch-heading
++                       'face (aref outline-font-lock-faces
++                                   (% (1- level)
++                                      (length outline-font-lock-faces)))
++                       'pm-notmuch-section ov))))))
++
++(add-hook 'notmuch-show-insert-text/plain-hook
++          #'pm-notmuch-fold-headings)
++
+ ;;; Claude message handling
+ 
+ (defvar pm-notmuch-claude-handle-message-program "claude-handle-message"
+-- 
+2.56.0
+

@@ -1,0 +1,46 @@
+Message-ID: <9fa75f229e36eb765c15ed80a96d9ce51d2b3a8d.1792207036.git.claude@p7x.dev>
+In-Reply-To: <cover.1792207036.git.claude@p7x.dev>
+References: <cover.1792207036.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Subject: [PATCH 2/2] CLAUDE.md: Head long mail sections with org headings
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+Change-Id: yotmvyxortuurlyrzswtqouumvyqprkr
+Date: Sat, 17 Oct 2026 03:17:31 +0000
+
+Agents mark sections of long replies with dash-underlined titles,
+which nothing can fold. Pat's notmuch folds sections under org-style
+"*" headings, so asking for that form lets him skim a long reply
+and open only the part he needs. Lists move to "-" because a "* "
+line at the margin would fold as a heading.
+---
+change-id: yotmvyxortuurlyrzswtqouumvyqprkr
+
+ CLAUDE.md | 11 +++++++++++
+ 1 file changed, 11 insertions(+)
+
+diff --git a/CLAUDE.md b/CLAUDE.md
+index f5de49f..f8c7bd5 100644
+--- a/CLAUDE.md
++++ b/CLAUDE.md
+@@ -212,6 +212,17 @@ are how each of them earns trust.
+ - Do not use double spaces anywhere (content or commit messages)
+ - Prefer complete sentences over fragments using semicolons
+ 
++## Headings in mail
++
++When a message is long enough to need sections, head each one with
++an org-style heading: one or more "*" at the left margin, a space,
++and the title. Use "**" for a subsection. Pat's notmuch folds each
++such section under its heading, so he can skim a long message and
++open only the parts he needs. Titles underlined with dashes do not
++fold. For the same reason, start list items with "-", never with
++"*" at the margin, which would read as a heading. A short reply
++needs no headings.
++
+ ## Dependencies
+ - Do not install dependencies.
+ - If you get blocked on a missing dependency, report to user the
+-- 
+2.56.0
+
