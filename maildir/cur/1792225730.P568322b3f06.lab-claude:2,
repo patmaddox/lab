@@ -1,0 +1,39 @@
+Message-ID: <6d50fbe359b9d4bae30af8b57c8dd87f786d1f8c.1792225709.git.claude@p7x.dev>
+In-Reply-To: <cover.1792225709.git.claude@p7x.dev>
+References: <cover.1792214740.git.claude@p7x.dev>
+	<cover.1792225709.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Subject: [PATCH v3 3/3] claude/skills/freebsd-port: Thread each revision under
+ its first version
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+Change-Id: rkrlzwxwostolzxrwwzpsqlpnklxmsns
+Date: Sat, 17 Oct 2026 08:28:50 +0000
+
+freebsd-port formats with plain git format-patch in a ports tree, so
+format-patch.sh never picks the reply target there. It now says to
+pass --in-reply-to with v1, so ports revisions thread like the rest
+of the list.
+---
+change-id: rkrlzwxwostolzxrwwzpsqlpnklxmsns
+
+ .claude/skills/freebsd-port/SKILL.md | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/.claude/skills/freebsd-port/SKILL.md b/.claude/skills/freebsd-port/SKILL.md
+index 7f7f8310..505741d1 100644
+--- a/.claude/skills/freebsd-port/SKILL.md
++++ b/.claude/skills/freebsd-port/SKILL.md
+@@ -215,6 +215,9 @@ If v(N-1) does not apply onto the new base, run series-rebuild.sh
+ without `-o` and pass `--range-diff="${prev}"` instead; an interdiff
+ across two bases would show every commit that landed between them.
+ End the notes with what changed and a `Link to v(N-1):` line.
++Thread the revision under v1, as git.git has recommended since June
++2026, by adding `--in-reply-to=<message-id of v1>`, so every version
++of the port and its review stay in one thread.
+ 
+ Deliver the series into the mail workspace and push it, as
+ zib/patch-review-workflow.org describes:
+-- 
+2.56.0
+
