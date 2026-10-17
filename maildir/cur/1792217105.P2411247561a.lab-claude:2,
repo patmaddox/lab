@@ -1,0 +1,307 @@
+Message-ID: <2da03c7ec55d578a5c45008694ebc958583ecdf0.1792217092.git.claude@p7x.dev>
+In-Reply-To: <9ef57c72b2797c869c37c3f737bb13e9738754e0.1792215772.git.claude@p7x.dev>
+References: <9ef57c72b2797c869c37c3f737bb13e9738754e0.1792215772.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Subject: [PATCH v2] libexec/mail: Add rethread.py
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+Change-Id: trrnuplquxrlsnurxvsosnvkxplqpwos
+Date: Sat, 17 Oct 2026 06:05:05 +0000
+
+A revision now replies to the first version of its series, but the
+series posted before that convention are still a chain of top-level
+threads, one per version, joined only by the "Link to v(N-1)" line
+in each cover letter. Reading the history of any of them means
+following those links by hand, one thread at a time, and its review
+is scattered across all of them.
+
+rethread.py follows the links back to the first version and rewrites
+the threading headers of each older revision, so the list as it
+stands reads the same way as the series posted from now on. On the
+list today it moves 123 messages and folds 147 threads into 103. It
+changes only In-Reply-To and References, and a rerun changes
+nothing.
+---
+change-id: trrnuplquxrlsnurxvsosnvkxplqpwos
+
+base-branch: b/dev@upstream
+
+With this applied, rewrite the list in ~/lab/mail.jj and rebuild
+your notmuch database. Run the plan first and read it:
+
+    ~/lab/default.jj/libexec/mail/rethread.py maildir/cur
+    ~/lab/default.jj/libexec/mail/rethread.py --apply maildir/cur
+    jj commit -m "mail: Thread each revision under its first version"
+    notmuch dump > /tmp/notmuch.tags
+    rm -rf <your database's xapian directory>
+    notmuch new
+    notmuch restore < /tmp/notmuch.tags
+
+Testing: on a copy of the list, --apply rewrites 123 files and a
+second dry run plans nothing. Every changed line is an In-Reply-To
+or References header. A fresh notmuch database on the copy shows 103
+threads where there were 147; the signoz port is one 42-message
+thread with v2 to v10 under v1. Reindexing the changed messages in
+the old database only reached 119, since it leaves replies in their
+old threads, while dump, rebuild, and restore reached 103 and kept a
+tag set by hand.
+
+Changes in v2:
+- Rebuild the notmuch database after the rewrite, keeping the tags
+  with dump and restore. Reindexing the changed messages, as v1
+  said, leaves their replies in the old threads.
+- Update the counts in the commit message to today's list.
+- Link to v1: id:9ef57c72b2797c869c37c3f737bb13e9738754e0.1792215772.git.claude@p7x.dev
+
+ libexec/mail/rethread.py | 185 +++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 185 insertions(+)
+ create mode 100755 libexec/mail/rethread.py
+
+diff --git a/libexec/mail/rethread.py b/libexec/mail/rethread.py
+new file mode 100755
+index 0000000..fa50b7d
+--- /dev/null
++++ b/libexec/mail/rethread.py
+@@ -0,0 +1,185 @@
++#!/usr/bin/env python3
++#
++# rethread.py -- thread each revision of a series under its first
++# version.
++#
++#     rethread.py [--apply] <maildir>/cur
++#
++# A revision now replies to the first version of its series, as
++# git.git does, so every version and its review share one thread.
++# Series posted before that started a fresh thread for each version,
++# linked only by the "Link to v(N-1): id:<message-id>" line in the
++# cover letter or below the "---" of a single patch. This follows
++# those links back to the first version and rewrites the threading
++# headers to match what format-patch.sh now writes:
++#
++#   - the cover, or only patch, of each revision gets In-Reply-To and
++#     References naming the first version
++#   - each k/N patch under that cover gets References naming the first
++#     version and the cover
++#
++# Nothing else in a message changes, and a message already threaded
++# this way is left alone, so a rerun is a no-op. Without --apply it
++# only prints the plan. With --apply it writes the files in place and
++# prints the id of each message it changed, one per line.
++#
++# An existing notmuch database does not follow the change. notmuch new
++# skips an edited file that keeps its name, and notmuch reindex moves
++# the edited message into its new thread but leaves the replies below
++# it in the old one. Rebuild the database instead, keeping the tags:
++#
++#     rethread.py --apply maildir/cur
++#     notmuch dump > /tmp/notmuch.tags
++#     rm -rf <the database's xapian directory>
++#     notmuch new
++#     notmuch restore < /tmp/notmuch.tags
++
++import email
++import email.policy
++import glob
++import os
++import re
++import sys
++
++REVISION = re.compile(r"^\[[^\]]*\b(?:PATCH|RFC)\b[^\]]*?\bv(\d+)\b", re.I)
++NUMBERED = re.compile(r"^\[[^\]]*\b(\d+)/(\d+)\]")
++LINK = re.compile(r"Link to v\d+[^:\n]*:\s*(?:id:)?<?([^\s>]+?)>?\s*$", re.M)
++
++# The lab-mail jail series was first posted unversioned, then
++# renumbered after the spec it carried. Its v8 cover names that
++# posting only as "the earlier posting", so it is linked here.
++EXTRA_LINKS = {
++    "cover.1791959849.git.claude@p7x.dev":
++        "9480e8c6bfeafcf6a37fce4a2f7e508bc3031423.1791961946.git.claude@p7x.dev",
++}
++
++
++def read_messages(cur):
++    msgs = {}
++    for path in sorted(glob.glob(os.path.join(cur, "*"))):
++        with open(path, "rb") as f:
++            m = email.message_from_binary_file(
++                f, policy=email.policy.compat32)
++        mid = (m["Message-ID"] or "").strip().strip("<>")
++        if not mid:
++            continue
++        body = ""
++        for part in m.walk():
++            if part.get_content_type() == "text/plain":
++                payload = part.get_payload(decode=True)
++                if payload:
++                    body += payload.decode("utf-8", "replace")
++        msgs[mid] = {
++            "path": path,
++            "subject": re.sub(r"\s+", " ", str(m["Subject"] or "")),
++            "in_reply_to": (m["In-Reply-To"] or "").strip().strip("<>"),
++            "body": body,
++        }
++    return msgs
++
++
++def is_numbered_patch(subject):
++    n = NUMBERED.match(subject)
++    return bool(n) and int(n.group(1)) != 0
++
++
++def previous_versions(msgs):
++    prev = {}
++    for mid, msg in msgs.items():
++        subject = msg["subject"]
++        if subject.lower().startswith("re:"):
++            continue
++        if not REVISION.match(subject) or is_numbered_patch(subject):
++            continue
++        links = LINK.findall(msg["body"])
++        if links:
++            prev[mid] = links[0]
++        else:
++            print(f"no link to the previous version: {subject}",
++                  file=sys.stderr)
++    prev.update((k, v) for k, v in EXTRA_LINKS.items() if k in msgs)
++    return prev
++
++
++def first_version(mid, prev, msgs):
++    seen = set()
++    while mid in prev and prev[mid] in msgs and mid not in seen:
++        seen.add(mid)
++        mid = prev[mid]
++    return mid
++
++
++# Replace the named headers, keeping every other header byte for byte.
++# The new ones go after Message-ID, where git format-patch puts them.
++def set_headers(path, headers, apply):
++    with open(path, "rb") as f:
++        raw = f.read()
++    end = raw.find(b"\n\n")
++    if end < 0:
++        return False
++    lines = raw[:end].split(b"\n")
++    names = {k.lower().encode() for k in headers}
++    kept = []
++    dropping = False
++    for line in lines:
++        if dropping and line[:1] in (b" ", b"\t"):
++            continue
++        dropping = line.split(b":", 1)[0].lower() in names
++        if not dropping:
++            kept.append(line)
++    at = len(kept)
++    for i, line in enumerate(kept):
++        if line.split(b":", 1)[0].lower() == b"message-id":
++            at = i + 1
++            while at < len(kept) and kept[at][:1] in (b" ", b"\t"):
++                at += 1
++            break
++    kept[at:at] = [f"{k}: {v}".encode() for k, v in headers.items()]
++    data = b"\n".join(kept) + raw[end:]
++    if data == raw:
++        return False
++    if apply:
++        with open(path, "wb") as f:
++            f.write(data)
++    return True
++
++
++def main(argv):
++    apply = "--apply" in argv
++    args = [a for a in argv if a != "--apply"]
++    if len(args) != 1:
++        print("usage: rethread.py [--apply] <maildir>/cur",
++              file=sys.stderr)
++        return 1
++    msgs = read_messages(args[0])
++    prev = previous_versions(msgs)
++    children = {}
++    for mid, msg in msgs.items():
++        children.setdefault(msg["in_reply_to"], []).append(mid)
++
++    for mid in sorted(prev, key=lambda m: msgs[m]["subject"]):
++        v1 = first_version(mid, prev, msgs)
++        if v1 == mid:
++            continue
++        changes = [(mid, {"In-Reply-To": f"<{v1}>",
++                          "References": f"<{v1}>"})]
++        for child in children.get(mid, []):
++            subject = msgs[child]["subject"]
++            if not subject.lower().startswith("re:") and \
++               is_numbered_patch(subject):
++                changes.append((child, {
++                    "In-Reply-To": f"<{mid}>",
++                    "References": f"<{v1}> <{mid}>"}))
++        for cid, headers in changes:
++            if not set_headers(msgs[cid]["path"], headers, apply):
++                continue
++            if apply:
++                print(f"id:{cid}")
++            else:
++                print(f"{msgs[cid]['subject']}\n"
++                      f"    under {msgs[v1]['subject']}")
++    return 0
++
++
++if __name__ == "__main__":
++    sys.exit(main(sys.argv[1:]))
+
+Interdiff against v1:
+  diff --git a/libexec/mail/rethread.py b/libexec/mail/rethread.py
+  index 921837f..fa50b7d 100755
+  --- a/libexec/mail/rethread.py
+  +++ b/libexec/mail/rethread.py
+  @@ -9,7 +9,7 @@
+   # git.git does, so every version and its review share one thread.
+   # Series posted before that started a fresh thread for each version,
+   # linked only by the "Link to v(N-1): id:<message-id>" line in the
+  -# cover letter or below the "---" of a single patch.  This follows
+  +# cover letter or below the "---" of a single patch. This follows
+   # those links back to the first version and rewrites the threading
+   # headers to match what format-patch.sh now writes:
+   #
+  @@ -19,14 +19,20 @@
+   #     version and the cover
+   #
+   # Nothing else in a message changes, and a message already threaded
+  -# this way is left alone, so a rerun is a no-op.  Without --apply it
+  -# only prints the plan.  With --apply it writes the files in place
+  -# and prints the id of each message it changed, one per line, for
+  -# notmuch reindex; notmuch new does not see an edit that keeps the
+  -# file name:
+  +# this way is left alone, so a rerun is a no-op. Without --apply it
+  +# only prints the plan. With --apply it writes the files in place and
+  +# prints the id of each message it changed, one per line.
+   #
+  -#     rethread.py --apply maildir/cur |
+  -#         while read -r id; do notmuch reindex "${id}"; done
+  +# An existing notmuch database does not follow the change. notmuch new
+  +# skips an edited file that keeps its name, and notmuch reindex moves
+  +# the edited message into its new thread but leaves the replies below
+  +# it in the old one. Rebuild the database instead, keeping the tags:
+  +#
+  +#     rethread.py --apply maildir/cur
+  +#     notmuch dump > /tmp/notmuch.tags
+  +#     rm -rf <the database's xapian directory>
+  +#     notmuch new
+  +#     notmuch restore < /tmp/notmuch.tags
+   
+   import email
+   import email.policy
+  @@ -40,7 +46,7 @@ NUMBERED = re.compile(r"^\[[^\]]*\b(\d+)/(\d+)\]")
+   LINK = re.compile(r"Link to v\d+[^:\n]*:\s*(?:id:)?<?([^\s>]+?)>?\s*$", re.M)
+   
+   # The lab-mail jail series was first posted unversioned, then
+  -# renumbered after the spec it carried.  Its v8 cover names that
+  +# renumbered after the spec it carried. Its v8 cover names that
+   # posting only as "the earlier posting", so it is linked here.
+   EXTRA_LINKS = {
+       "cover.1791959849.git.claude@p7x.dev":
+
+base-commit: 8d0b05250dc28c4dfa11e4e7925c94f50cfcf211
+-- 
+2.56.0
+
