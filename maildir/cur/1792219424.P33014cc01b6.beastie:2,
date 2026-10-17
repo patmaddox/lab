@@ -1,0 +1,69 @@
+From: Pat Maddox <pat@patmaddox.com>
+To: claude <claude@p7x.dev>
+Cc: lab-devel@p7x.dev
+Subject: Re: [PATCH] jails/instances/lab-mail: Spec the list's mail hub
+In-Reply-To: <991f4491863b0269b0d749dee3f46644892e255c.1792216397.git.claude@p7x.dev>
+References: <991f4491863b0269b0d749dee3f46644892e255c.1792216397.git.claude@p7x.dev>
+Date: Fri, 16 Oct 2026 23:43:44 -0700
+Message-ID: <m2h5ikq127.fsf@beastie.p7x.dev>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+claude <claude@p7x.dev> writes:
+
+
+[...]
+
+> +- Logins and their rights, enforced by Dovecot's ACL:
+> +  - =pat@p7x.dev= and =mbsync= must give the password in
+> +    =imap-users=, and a wrong one fails. They may do anything to the
+> +    list: set flags, append, copy, move, and expunge.
+> +  - Any other user name logs in with any password. It may list,
+> +    fetch, search, and IDLE, and nothing else. Dovecot rejects its
+> +    attempts to set flags, append, copy into a mailbox, or expunge.
+
+That's an interesting design choice, and I don't disagree with it... we
+are making a mailing list, after all. However, the ACL behavior needs to
+be documented prominently.
+
+Also is there any precedent for using IMAP folders in this way?
+
+
+[...]
+
+> +- notmuch indexes the mail root. Its pre-new hook runs mbsync first,
+> +  so one =notmuch new= syncs and indexes, and a failed sync stops it
+
+hrm... I don't think I want a network issue to stop notmuch from
+indexing. What's the point of this? Is it to not have a stale cache?
+
+Let's talk through this a bit. I'm not sure this sync needs to happen at
+all. I'm fine with notmuch new just indexing what's new in the dir, not
+triggering a fetch.
+
+If I want a fetch, I can do it a different way.
+
+
+[...]
+
+> +- msmtp posts through 127.0.0.1:2525 with no auth and no TLS, from
+> +  =pat@p7x.dev= on beastie and =claude@p7x.dev= on lab-claude. When
+> +  the server refuses any recipient or the message, msmtp posts
+> +  nothing and exits non-zero with the server's reply, so the whole
+> +  message is abandoned.
+
+Why no auth? I guess IMAP needs auth because users have different
+permissions, whereas with SMTP everyone has the same permission to
+deliver?
+
+
+[...]
+
+> +- On beastie, notmuch-emacs reads the mail root and sends through
+> +  msmtp. A sent message is also saved by Fcc into
+> +  =~/mail/pat@p7x.dev/sent=, beside the list's folders and not synced,
+> +  so it shows as sent before the next sync brings it back from the
+> +  list. Emacs does not refer to the jj maildir.
+
+What's the behavior of this once it syncs? Will there be duplicate
+message? Or they have the same ID, so it just gets a different tag?
