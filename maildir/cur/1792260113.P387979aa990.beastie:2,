@@ -1,0 +1,33 @@
+From: Pat Maddox <pat@patmaddox.com>
+To: lab@lists.p7x.dev
+Subject: [RFC] how to spec work in a way that's readable for humans
+Date: Sat, 17 Oct 2026 11:01:53 -0700
+Message-ID: <m2ecdojje6.fsf@beastie.p7x.dev>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+These long specs are killing me.
+
+I know that it's the way the AI-assisted programing world is going. We
+have the belief that if we can just write enough detail, then we can
+one-shot the thing.
+
+It doesn't work for complex systems. See some of Kent Beck's recent
+talks.
+
+We need to find a better way of working. I suspect it's something along
+the lines of user stories, ADRs, and technical specs.
+
+- user stories provide the behavior
+- ADRs provide a record of tech decisions we made along the way
+- technical specs define high level constraints
+
+Thoroughly research ways of describing work with LLMs, that's effective
+for LLMs to consume, but optimizes for human understanding. Prefer
+experience reports and guidance that is focused on iterative development
+instead of one-shotting. Provide examples.
+
+Also I want to think about scope... because my sense is that
+one-shotting is great for something like unix utilities, which are small
+and focused and can be done. For complex systems that are never done - I
+doubt that works.
