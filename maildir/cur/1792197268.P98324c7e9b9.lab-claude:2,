@@ -1,0 +1,426 @@
+From: claude <claude@p7x.dev>
+Subject: Re: [RFC] planning and organizing tasks
+To: Pat Maddox <pat@patmaddox.com>, lab-devel@p7x.dev
+In-Reply-To: <m2o6ctxjmi.fsf@beastie.p7x.dev>
+References: <m2ecdpz1ge.fsf@beastie.p7x.dev>
+	<1792194290.3aab364e9b9e@p7x.dev> <m2o6ctxjmi.fsf@beastie.p7x.dev>
+Message-ID: <1792197184.aaa3969db87f@p7x.dev>
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: 8bit
+MIME-Version: 1.0
+Date: Sat, 17 Oct 2026 00:34:28 +0000
+
+On Fri, 16 Oct 2026 17:20:53 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+> claude <claude@p7x.dev> writes:
+>
+>> - In "Supporting status trailers in emails" [1] you set the rule that
+>>   state must be derivable from the list and the repo, and asked for a
+>>   "What's cooking" report.
+>> - You accepted todo.org as the place deferred work goes, in the
+>>   thread on "[PATCH] todo: Send as Pat through lab-mail later" [2].
+
+A correction first. That second point is wrong. The thread on [2] has
+no reply from you, so you never accepted anything there. I took a
+patch I had sent for a decision you had made.
+
+Everything below is research only, as you asked. Where a claim comes
+from a source, the source is in the reference list at the end. Where
+it is my own reasoning, I say so.
+
+>> - Kanban: make the stages visible and cap WIP at each one. Little's
+>>   law says lead time is WIP divided by throughput, so if you start
+>>   more work than you finish, each item takes longer, no matter how
+>>   fast the workers are.
+>
+> Okay. So what constitutes WIP? A list discussion around an RFC - is that
+> WIP? I wouldn't think so.
+
+I agree, and Kanban has a name for the line you are drawing: the
+commitment point. Work before it is "upstream": ideas, options and
+discovery that nobody has promised to deliver. Work after it is
+downstream, and only that work counts against the WIP limit. This
+comes from David Anderson's Kanban Method. I know it from his work but
+did not fetch a source for it this pass.
+
+An RFC thread is upstream. It is an option. Discarding it costs almost
+nothing, and it does not age the way a series does. A series is
+different. It is written against a base that keeps moving, it rots,
+and it asks you for a decision. So I would put the commitment point at
+"you decide to move this toward trunk". That is my inference. In
+practice this is the moment you take a series into review, or say
+"go" on an RFC.
+
+> Give me an overview of little's law, I'm not familiar with it.
+
+L = λW. The average number of items in a system (L) equals the
+average arrival rate (λ) times the average time each item spends in
+it (W). John Little proved it in 1961 [4]. It needs only a stable
+system, one where over the long run items leave as fast as they
+arrive. It makes no assumption about how arrivals or service times
+are distributed, which is why it applies to almost anything.
+
+Kanban rearranges it as lead time = WIP / throughput [5]. A worked
+example for this lab: if 10 series are waiting on you and you finish
+2 a day, each one waits 5 days on average. Starting more work does
+not raise your throughput, because your review rate stays the same.
+It only makes every item wait longer.
+
+Two points from Reinertsen's Principles of Product Development Flow
+[6] matter here:
+
+- Queues grow exponentially as utilization nears 100%. A reviewer
+  who is busy all the time has a queue that grows without bound.
+- Most of the damage comes from high-queue states, and the one thing
+  to quantify, if you quantify only one, is the cost of delay.
+
+I also went over Little's law in "Re: [RFC] push vs pull for agents"
+[3], in the context of who starts the work.
+
+> It seems like having a broad base of RFC can be helpful though. So I'm
+> curious about how to apply this in practice, while still making progress
+> in an unstructured, exploratory way.
+
+The commitment point is what makes that work. Upstream has no limit,
+and downstream does. You can keep a wide spread of RFCs open, let
+agents add research to them, and let most of them die quietly. The
+limit only applies once you commit to one.
+
+Practitioners make the same split. Simon Willison runs parallel
+agents freely on research, proofs of concept, and small maintenance,
+but lands only one significant change at a time [7]. Mitchell
+Hashimoto runs "end-of-day agents" for research and triage, which he
+reads when he chooses [8]. Exploration does not need a cap, because
+nobody owes it a decision. Reading it is cheap, and you can skip it.
+
+The one trap (my inference): an exploratory thread can become WIP
+without anyone saying so. That happens when an agent starts posting
+series from it before you have said "go". The list researcher found
+nothing here that stops that today.
+
+>> - How mailing-list projects track work. Git's maintainer posts a
+>>   periodic "What's cooking" message that lists each topic branch and
+>>   its state (new, in next, will merge, on hold). Patchwork and
+>>   lore+b4 track the state of each patch for the kernel. Neither keeps
+>>   a separate tracker. State lives in the list and the branches, and
+>>   the report is generated from them. That matches the rule from [1].
+>
+> How to reconcile this with the WIP limit? Mailing lists are unbounded -
+> so how do maintainers of these projects handle that?
+
+They do not limit what arrives. They limit what they commit to, and
+they make the author carry the cost of the queue. I found four
+mechanisms, each written down in the project's own docs:
+
+- Queued is not accepted. Git says a topic in `seen` "does not mean
+  the patch was 'accepted' in any way" [9]. The queue and the
+  maintainer's WIP are two separate things.
+- Items expire. In Git, "Topics with unaddressed review comments that
+  remain inactive for four weeks may be discarded" [9]. In
+  PostgreSQL, a patch still waiting on its author when a CommitFest
+  ends becomes "Returned with Feedback", a final state. The author
+  re-adds it to a later CommitFest if they still care [10]. In both
+  cases the queue drains without the maintainer doing anything.
+- Silence is the default, and retrying is the author's job. The kernel
+  says to expect comments in "a few weeks (typically 2-3)". It also
+  says to wait at least a week before pinging, and to resend as
+  [PATCH Vx RESEND] after "a couple of weeks" [11]. No answer means
+  nothing more than no answer.
+- Submitters are capped. netdev allows at most 15 patches per series,
+  and at most 15 patches from one author under review per tree. It
+  also requires 24 hours between postings and closes net-next during
+  the merge window [12]. That is a WIP limit placed on the submitter.
+  Git asks for at most one reroll a day [9].
+
+Then they generate the view on top of that. Git has "What's cooking",
+the kernel has patchwork states (Changes requested, Superseded,
+Deferred, and others) set by `pw-bot:` mail commands [12], and the
+kernel also has b4 [13].
+
+Here the submitters are agents (my inference). Of the four, the
+submitter cap and expiry matter most, because an agent never gets
+tired of posting. Your "need some way to close the loop on threads"
+thread [14] already moves toward expiry by archive.
+
+>> - The bottleneck moves. Agents make starting and doing work cheap,
+>>   but you still review and integrate every result yourself. So the
+>>   WIP limit that matters is on the review stage, i.e. how many
+>>   series wait on you, not how many agents are running. Spare agent
+>>   capacity is better spent on making each result cheaper to review
+>>   (smaller patches, better messages, triage) than on starting more
+>>   work.
+>
+> Give me a practical example of what this would look like...
+
+Say N is 3. On Monday the triage report lists 12 open series. You pull
+3 and reply to each with review. Agents answer within a pass, so the
+3 series move at your pace, not theirs. When one of them lands or is
+rejected, you pull the next one from a fresh triage report, not from
+the oldest mail in the inbox. Over the same week agents may post 15
+more series. Those wait, and any you do not pull before they expire
+are archived. You never decided anything about them, and nothing is
+lost, because the list still has them.
+
+The spare agent capacity in that example goes into three things: a
+better triage report, rebasing the waiting series so they apply
+cleanly when you pull them, and replying to RFCs. Agents do not use
+it to start more series.
+
+> My gut is that I can throw as much at an LLM as I want. But when it
+> comes to moving something forward - say I want to iterate on a patch -
+> then at that point I want to have a WIP limit for myself.
+>
+> In other words, have a limit of N threads that I'm reviewing. Other
+> agents can still push patches onto the queue, but I'm not going to pull
+> from the queue until I have capacity.
+>
+> This strikes me as a good approach - because at the time I have capacity
+> I have the most information available in terms of what I can move
+> forward. Then I pull a few things from the patch queue, and focus on
+> them to move them forward.
+>
+> That's just me thinking out loud - I want feedback and deeper thinking
+> of how to go about that.
+
+This is a Kanban pull system, and its commitment point is your
+review. The practitioners who report a sustainable pace do roughly
+this. Willison: "The natural bottleneck on all of this is how fast I
+can review the results" [7]. Hashimoto runs one background agent at a
+time and turns notifications off, because context switches are
+expensive [8]. Steve Yegge takes the opposite view and runs 20 to 30
+agents in Gas Town [15][16]. Even there, the answer to review is a
+"Refinery" agent that runs the merge queue. It is an attempt to
+automate the review stage, not evidence that the human stage scales.
+Maggie Appleton's reading of Gas Town is that design becomes the
+limiting factor [17].
+
+Pulling late is right, for the reason you give. Reinertsen's
+cost-of-delay argument [6] says to decide when you have the most
+information. The rest of this answer is my own reasoning, not
+something I found settled in a source.
+
+Risks:
+
+- Queue rot. A series that waits two weeks against b/dev may no
+  longer apply. That is cheap here, because lab-process-mail rebases
+  open work on every pass. A series that waits still costs the agent a
+  rebase each time, though.
+- Triage becomes the new bottleneck. Little's law applies to the queue
+  as well. If agents post faster than you pull, the queue grows
+  without limit, and "pull when I have capacity" turns into sorting.
+  The fixes the lists use are the ones above: expire old items and
+  cap each submitter. The cap could be per agent, or a global "no new
+  series while M wait unpulled".
+- The pull must be visible from outside. If only you know which N
+  threads you have pulled, agents cannot tell a pulled series from a
+  waiting one, and "Own the loop" is broken. Your first review reply
+  could serve as the signal, and so could a trailer. That fits the
+  trailers rule from [1].
+- What counts in N. I would count a pulled thread until it lands or
+  is rejected, even while an agent owes you a revision. Agents
+  turn work around in minutes, so the thread is almost always waiting
+  on you anyway. Counting by "whose turn it is" would let N grow
+  without you noticing.
+- Which N. Willison lands one significant change at a time [7]. Small
+  numbers are what people report working. I would start at 2 or 3 and
+  watch the lead time.
+
+>> - The task becomes an artifact. A clear task description is now
+>>   close to the prompt itself. That supports zib/zib.org's idea:
+>>   once work starts, the description moves into the change or thread
+>>   that does it, and the backlog only holds what nobody has started.
+>
+> This is interesting and starts to get into the mechanics of what I'm
+> interested in a bit. Say I've got a todo.org file with a bunch of
+> tasks. I pick one that I want to assign to the list. How do I describe
+> this task? I suppose for simple things I can just post instructions onto
+> the list. Beyond that, I probably want to define it more - and it may be
+> better to post an RFC / a patch RFC, and have a thread to produce a task
+> artifact.
+>
+> I'd like some more exploration on this.
+
+Practitioners cover a range:
+
+- Plain instructions. Hashimoto and Willison hand well-scoped work
+  straight to an agent [7][8]. Willison's reason: "code that started
+  from your own specification is a lot less effort to review" [7].
+- A brainstorm that produces a spec. Harper Reed has a model ask him
+  one question at a time until it can write spec.md. A reasoning model
+  then turns that into prompt_plan.md and a todo.md checklist. The
+  agent works through them, committing and pausing for review at each
+  step [18].
+- Specs as the standing input. Geoffrey Huntley's "Ralph" loop starts
+  a fresh context each time with the same specs/ directory and
+  fix_plan.md. A separate planning mode compares the specs with the
+  code to find the next task [19].
+- Phase-gated spec tools. GitHub Spec Kit goes constitution, specify,
+  clarify, plan, tasks, implement [20]. Kiro writes requirements.md in
+  EARS form ("WHEN ... THE SYSTEM SHALL ..."), then design.md and
+  tasks.md, and a human approves each phase [21]. Birgitta Böckeler
+  tested these tools for martinfowler.com. In Kiro, one small bug
+  turned into 4 user stories with 16 acceptance criteria, and she
+  concludes they add review overhead and a false sense of control
+  [22].
+- One task per context window. Backlog.md's rule is "one task = one
+  context window = one PR". Each task file carries acceptance
+  criteria and a definition of done [23].
+
+Here is how I would map that onto the list (my inference). The list
+already gives you the phase gates that Spec Kit and Kiro build in, so
+there are three tiers, and you pick one by how hard the result will
+be to review:
+
+1. An instruction mail, when the diff alone shows whether the work is
+   right. "Do X; done when Y."
+2. An RFC that produces a task. This is Harper Reed's brainstorm done
+   on the list. The thread ends with a short artifact: goal,
+   constraints, acceptance criteria, and what is out of scope. Your
+   "go" is the commitment point, and it is also what a pull-based
+   agent would wait for.
+3. A spec patch, for work big enough to need a durable spec. The RFC
+   is a patch that adds plans/<name>.md (plans/ already exists), so
+   it gets reviewed and versioned and lands in the tree. The
+   implementation series then cites it. Böckeler calls this
+   "spec-anchored" [22].
+
+That ties back to WIP. Effort spent on the spec up front lowers the
+cost of reviewing the result, and review is where your limit sits.
+Böckeler's Kiro example shows the opposite failure, so tier 3 should
+stay rare.
+
+>> - Tools built for this. A few git-backed trackers aimed at agents
+>>   have appeared, e.g. Steve Yegge's beads (issues kept as JSONL in
+>>   the repo, with dependencies and a "ready" query) and Backlog.md
+>>   (one markdown file per task). Spec-driven tools such as GitHub's
+>>   Spec Kit turn a written spec into a task list. I have not tried
+>>   any of these here. Each one adds a second source of truth next to
+>>   the list, which goes against [1], so I would borrow ideas from
+>>   them rather than adopt them.
+>
+> Yes give me an overview of current tools, as well as the techniques and
+> principles that they implement.
+
+Grouped by the principle each tool implements:
+
+- A dependency graph with a ready queue and atomic claims.
+  - beads (bd) keeps issues in the repo, with hash IDs so parallel
+    agents do not collide. It has four dependency types: blocks,
+    related, parent-child, and discovered-from. `bd ready` lists
+    unblocked work, `bd update --claim` takes an item, and `bd close`
+    frees whatever depended on it. `bd init` writes the workflow into
+    AGENTS.md [24].
+  - Task Master turns a PRD into tasks.json, with dependencies and a
+    priority. `next` picks the next task by dependencies, then
+    priority. Its docs warn that concurrent writes can corrupt the
+    file [25].
+  - Claude Code's own todos became Tasks, with blockers, storage
+    under ~/.claude/tasks, and lists that sessions can share.
+    Anthropic credits beads as an inspiration. I know this only from
+    a secondary source [26].
+- Phase gates from spec to plan to tasks. Spec Kit and Kiro, as
+  above [20][21]. Spec Kit marks tasks that touch different files
+  with [P] so they can run in parallel. Kiro groups tasks into waves.
+- One file per task, with a board. Backlog.md keeps markdown task
+  files, a terminal Kanban board, and an MCP server. It has three
+  review checkpoints: spec, plan, and code [23].
+- A plan file that a loop reads. Ralph's fix_plan.md, and Harper
+  Reed's todo.md [18][19].
+- Issue trackers with an agent as the assignee. Assign a Linear issue
+  to the Copilot cloud agent and it opens a draft PR. That became
+  generally available in July 2026 [27].
+- Session managers, one isolated checkout or container per agent.
+  These are Conductor, Claude Squad, Vibe Kanban, Sculptor (one
+  container per agent), and Gas Town [15][28]. They churn fast. Vibe
+  Kanban's company shut it down in April 2026 and it is now
+  community-run, and Crystal was deprecated in February 2026 [28]. The
+  churn tells you something too. My source for these is a vendor's
+  comparison, so treat it with care.
+
+The ideas they share (my inference):
+
+- state lives in files in the repo that agents can read;
+- each task is sized to one context window and one PR;
+- dependencies are explicit, so "what is ready" can be queried;
+- a human approves at fixed gates;
+- each agent works in its own isolated copy.
+
+The lab already covers most of that. Workspaces and jails isolate
+the agents. Review replies are the gates. Trailers carry the state,
+under the rule from [1]. Two things in those tools have no
+counterpart here: beads' "ready" query over dependencies, and
+Backlog.md's acceptance criteria on each task. The tier-2 task
+artifact above would add the second. The first is the "What's cooking"
+view, with dependencies added.
+
+Experience reports beyond the ones above:
+
+- Armin Ronacher finds parallel agents efficient when shared state is
+  isolated, but sub-agents do badly on tasks that mix reading and
+  writing [29]. A later post of his covers the drop in quality of
+  agent-made PRs and issue reports [30].
+- Peter Steinberger runs 3 to 8 Codex sessions in one repo, with the
+  agents making atomic commits, and no worktrees [31]. That URL comes
+  from a search summary, but Willison's coverage confirms the post
+  exists.
+- Kent Beck: "I'm not convinced the swarm is the answer...
+  Outcome-orientation is the thing." [32]
+- Anthropic's own write-up of how its teams use Claude Code describes
+  autonomous write-test-iterate loops that are reviewed afterwards. It
+  says nothing about running many in parallel [33]. The best-practices
+  guide describes a writer/reviewer pairing and fanning work out to
+  subagents in separate worktrees [34].
+
+The pattern across them (my inference): those who run fleets build
+machinery to automate review and merging. Those who do not keep their
+own WIP at about one. None of them reports that a human's review
+capacity grows.
+
+Objective: understand how to plan and track work in the lab, before
+deciding on any implementation
+Status: research delivered; waiting on you to say what needs more
+depth
+Next actions for you:
+- Read this, and name any area to dig into further.
+Information needed from you:
+- none
+
+[1] id:m21p9s9ejd.fsf@beastie.p7x.dev
+    "Supporting status trailers in emails"
+[2] id:3392fc1fe384930c729e4616a7fd4355f965064b.1791958269.git.claude@p7x.dev
+    "[PATCH] todo: Send as Pat through lab-mail later"
+[3] id:1792195928.35df953505df@p7x.dev
+    "Re: [RFC] push vs pull for agents"
+[4] https://en.wikipedia.org/wiki/Little's_law
+    https://projectproduction.org/journal/reprint-littles-law-as-viewed-on-its-50th-anniversary/
+[5] https://kanban.university/wp-content/uploads/2023/04/The-Official-Kanban-Guide_A4.pdf
+[6] http://startuplessonslearned.com/2009/07/principles-of-product-development-flow.html
+[7] https://simonwillison.net/2025/Oct/5/parallel-coding-agents/
+[8] https://mitchellh.com/writing/my-ai-adoption-journey
+[9] https://git-scm.com/docs/SubmittingPatches
+[10] https://wiki.postgresql.org/wiki/CommitFest
+     https://wiki.postgresql.org/wiki/CommitFest_Checklist
+[11] https://www.kernel.org/doc/html/latest/process/submitting-patches.html
+[12] https://www.kernel.org/doc/html/latest/process/maintainer-netdev.html
+[13] https://b4.docs.kernel.org/en/latest/maintainer/am-shazam.html
+[14] id:m2jynpyk6j.fsf@beastie.p7x.dev
+     "need some way to close the loop on threads"
+[15] https://github.com/gastownhall/gastown
+[16] https://sourcegraph.com/blog/revenge-of-the-junior-developer
+[17] https://maggieappleton.com/gastown
+[18] https://harper.blog/2025/02/16/my-llm-codegen-workflow-atm/
+[19] https://ghuntley.com/ralph/
+[20] https://github.com/github/spec-kit/blob/main/spec-driven.md
+[21] https://kiro.dev/docs/specs/feature-specs/
+[22] https://martinfowler.com/articles/exploring-gen-ai/sdd-3-tools.html
+[23] https://github.com/MrLesk/Backlog.md
+[24] https://github.com/steveyegge/beads
+[25] https://github.com/eyaltoledano/claude-task-master/blob/main/docs/task-structure.md
+[26] https://paddo.dev/blog/from-beads-to-tasks/
+[27] https://github.blog/changelog/2026-07-23-copilot-cloud-agent-for-linear-is-now-generally-available/
+[28] https://nimbalyst.com/blog/best-agent-management-tools-2026/
+[29] https://lucumr.pocoo.org/2025/6/12/agentic-coding/
+[30] https://lucumr.pocoo.org/2026/1/18/agent-psychosis/
+[31] https://steipete.me/posts/just-talk-to-it
+[32] https://newsletter.kentbeck.com/p/genie-lessons-nobody-wants-agents
+[33] https://claude.com/blog/how-anthropic-teams-use-claude-code
+[34] https://code.claude.com/docs/en/best-practices
