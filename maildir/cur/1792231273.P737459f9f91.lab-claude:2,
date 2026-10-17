@@ -1,0 +1,119 @@
+Message-ID: <cover.1792231246.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Subject: [PATCH v5 0/9] jails/instances/lab-mail: Build the list's mail hub
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+Date: Sat, 17 Oct 2026 10:01:13 +0000
+
+This builds the hub that "[PATCH v2] jails/instances/lab-mail: Spec
+the list's mail hub" [1] describes, on b/dev. It turns the relay jail
+into the list's home in steps, one service at a time. Each step
+leaves a jail that works and does what its README.org says.
+
+How a post reaches Fastmail, end to end, once the series is applied:
+
+  client --SMTP--> OpenSMTPD --LMTP--> Dovecot --Sieve--> lists
+  lists <--IMAP--> mbsync <--IMAPS--> Fastmail lists
+
+Dovecot is the only program that writes the list. Its maildir root,
+/data/mail/maildir, holds the mailboxes lists and Archive, and INBOX
+is kept apart in /data/mail/dovecot/inbox. mbsync syncs only lists
+and Archive, so a post that lands in INBOX never leaves lab-mail.
+Patch 7, the Sieve script, files posts into lists instead.
+
+- Patch 1 corrects the spec on what Dovecot does to a reader's write.
+  A STORE or EXPUNGE answers OK and changes nothing; only append,
+  copy, and move are refused. Acceptance step 7 now expects that.
+- Patch 2 narrows the spec's header check to what OpenSMTPD does on
+  its own: it refuses a header line that is neither a field nor a
+  continuation, and on loopback adds a missing Message-ID and Date.
+- Patch 3 makes Dovecot the only writer of the list. mbsync still
+  fetches one way, but into Dovecot over IMAP as the login mbsync,
+  not into the maildir. This is the one step that needs the maildir
+  and mbsync's state emptied first.
+- Patch 4 turns the fetch into a two-way sync of lists and Archive.
+- Patch 5 adds Pat's login, so he can archive and delete on lab-mail.
+- Patch 6 swaps smtprelay for OpenSMTPD, which hands posts to Dovecot
+  over LMTP. smtprelay, jq, and the mailcred group go with it. Posts
+  land in INBOX, since LMTP alone delivers only there.
+- Patch 7 files each post into lists with a Sieve script from
+  Pigeonhole, as the spec says, so mbsync carries it to Fastmail.
+- Patch 8 documents the one-time import of the jj maildir.
+- Patch 9 adds lab@lists.p7x.dev and freebsd-ports@lists.p7x.dev to
+  the addresses OpenSMTPD delivers to the list. The Fastmail rule that
+  files lab-devel@p7x.dev into lists must cover them too.
+
+For every step I checked that each libexec script passes sh -n, and
+that dist.mtree lists exactly the files under dist/. Dovecot, smtpd,
+and the jail build are not installed here, so no step was run. Patch
+9 changes only a table in smtpd.conf; acceptance step 1, run with
+either new address, checks it on the jail.
+
+Changes in v5:
+- The Sieve patch moves up from last to patch 7, right after
+  OpenSMTPD, so the gap where posts stay in INBOX is one step wide
+  and the patch reads as the fix for it (Pat).
+- New patch 9 accepts lab@lists.p7x.dev and
+  freebsd-ports@lists.p7x.dev (Pat).
+- Link to v4: id:cover.1792230700.git.claude@p7x.dev
+
+[1] id:5639615da525ce2f1e7711da05d3de5ad63511a2.1792219807.git.claude@p7x.dev
+
+base-branch: b/dev@upstream
+
+claude (9):
+  jails/instances/lab-mail: Say what Dovecot does to a reader's write
+  jails/instances/lab-mail: Leave the header check to OpenSMTPD
+  jails/instances/lab-mail: Let Dovecot write the list
+  jails/instances/lab-mail: Sync the list both ways with Fastmail
+  jails/instances/lab-mail: Let Pat archive and delete
+  jails/instances/lab-mail: Take posts with OpenSMTPD
+  jails/instances/lab-mail: File posts into lists with Sieve
+  jails/instances/lab-mail: Document importing the jj maildir
+  jails/instances/lab-mail: Take posts for the lists.p7x.dev lists
+
+ jails/instances/lab-mail/README.org           | 263 ++++++++++++------
+ jails/instances/lab-mail/dist.mtree           |  10 +-
+ .../lab-mail/dist/etc/cron.d/lab-mail         |   6 +-
+ .../dist/etc/newsyslog.conf.d/lab-mail.conf   |   4 +-
+ .../lab-mail/dist/etc/rc.conf.d/smtpd         |   1 +
+ .../lab-mail/dist/etc/rc.conf.d/smtprelay     |   4 -
+ .../lab-mail/dist/etc/syslog.d/lab-mail.conf  |   8 +-
+ .../dist/usr/local/etc/dovecot/dovecot-acl    |   8 +
+ .../dist/usr/local/etc/dovecot/dovecot.conf   |  66 ++++-
+ .../dist/usr/local/etc/dovecot/lists.sieve    |   4 +
+ .../dist/usr/local/etc/mail/smtpd.conf        |  29 ++
+ .../lab-mail/dist/usr/local/etc/mbsyncrc      |  36 ++-
+ .../dist/usr/local/etc/smtprelay/remotes.env  |  19 --
+ .../usr/local/etc/smtprelay/smtprelay.ini     |  20 --
+ .../dist/usr/local/libexec/lab-mail/check     |  82 ++++--
+ .../dist/usr/local/libexec/lab-mail/fetch     |  39 ---
+ .../dist/usr/local/libexec/lab-mail/sync      |  35 +++
+ jails/instances/lab-mail/instance.conf        |  17 +-
+ jails/instances/lab-mail/jail.conf            |   7 +-
+ jails/instances/lab-mail/spec.org             |  76 +++--
+ 20 files changed, 473 insertions(+), 261 deletions(-)
+ create mode 100644 jails/instances/lab-mail/dist/etc/rc.conf.d/smtpd
+ delete mode 100644 jails/instances/lab-mail/dist/etc/rc.conf.d/smtprelay
+ create mode 100644 jails/instances/lab-mail/dist/usr/local/etc/dovecot/lists.sieve
+ create mode 100644 jails/instances/lab-mail/dist/usr/local/etc/mail/smtpd.conf
+ delete mode 100644 jails/instances/lab-mail/dist/usr/local/etc/smtprelay/remotes.env
+ delete mode 100644 jails/instances/lab-mail/dist/usr/local/etc/smtprelay/smtprelay.ini
+ delete mode 100755 jails/instances/lab-mail/dist/usr/local/libexec/lab-mail/fetch
+ create mode 100755 jails/instances/lab-mail/dist/usr/local/libexec/lab-mail/sync
+
+Range-diff against v4:
+ 1:  1126d2a7 =  1:  1126d2a7 jails/instances/lab-mail: Say what Dovecot does to a reader's write
+ 2:  3ffbfeeb =  2:  3ffbfeeb jails/instances/lab-mail: Leave the header check to OpenSMTPD
+ 3:  c4241855 =  3:  c4241855 jails/instances/lab-mail: Let Dovecot write the list
+ 4:  1b94af51 =  4:  1b94af51 jails/instances/lab-mail: Sync the list both ways with Fastmail
+ 5:  eab486d1 =  5:  eab486d1 jails/instances/lab-mail: Let Pat archive and delete
+ 6:  035be58b =  6:  035be58b jails/instances/lab-mail: Take posts with OpenSMTPD
+ 8:  6e3e3431 =  7:  fe665fe9 jails/instances/lab-mail: File posts into lists with Sieve
+ 7:  a21e5610 =  8:  c574eaf8 jails/instances/lab-mail: Document importing the jj maildir
+ -:  -------- >  9:  b72cbf59 jails/instances/lab-mail: Take posts for the lists.p7x.dev lists
+
+base-commit: f6ba757868b6e16efee8bfb3882dc3339ef9fb69
+-- 
+2.56.0
+

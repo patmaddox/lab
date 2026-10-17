@@ -1,0 +1,566 @@
+Message-ID: <c4241855e5ca37fc8be852e942aef60e172d42d0.1792231246.git.claude@p7x.dev>
+In-Reply-To: <cover.1792231246.git.claude@p7x.dev>
+References: <cover.1792231246.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Subject: [PATCH v5 3/9] jails/instances/lab-mail: Let Dovecot write the list
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+Change-Id: nsosnlpzqvrykposnmmpnxsymltpzpsy
+Date: Sat, 17 Oct 2026 10:01:16 +0000
+
+The hub needs one program that writes the list, so posts, syncs, and
+Pat's archiving never race on the maildir. While mbsync writes the
+maildir and Dovecot only reads it, as another user, neither can take
+on the other's work. With Dovecot as the only writer and mbsync as
+one of its IMAP clients, the rest of the hub needs no further change
+to who owns the list, and readers see no change.
+
+- vmail owns the maildir. mbsync fetches into Dovecot over IMAP, so
+  the fetch job no longer opens up the files it writes.
+- Dovecot checks the logins in imap-users against their passwords.
+  Every other user name still logs in with any password, and the ACL
+  lets it only read.
+- The ACL comes only from the global file, and lets mbsync write.
+- check covers the new secrets and the maildir's new owner.
+- README.org gives the rights, the new secrets, and why the maildir
+  must start empty.
+---
+change-id: nsosnlpzqvrykposnmmpnxsymltpzpsy
+
+ jails/instances/lab-mail/README.org           | 161 +++++++++++-------
+ .../dist/usr/local/etc/dovecot/dovecot-acl    |   6 +
+ .../dist/usr/local/etc/dovecot/dovecot.conf   |  34 +++-
+ .../lab-mail/dist/usr/local/etc/mbsyncrc      |  25 ++-
+ .../dist/usr/local/libexec/lab-mail/check     |  49 ++++--
+ .../dist/usr/local/libexec/lab-mail/fetch     |  40 ++---
+ jails/instances/lab-mail/jail.conf            |   7 +-
+ 7 files changed, 211 insertions(+), 111 deletions(-)
+
+diff --git a/jails/instances/lab-mail/README.org b/jails/instances/lab-mail/README.org
+index 474d2e46..9745d7a1 100644
+--- a/jails/instances/lab-mail/README.org
++++ b/jails/instances/lab-mail/README.org
+@@ -1,8 +1,25 @@
+ #+TITLE: lab-mail
+ 
+-A mail relay for p7x.dev. lab-mail holds the Fastmail credentials and
+-is the only thing that talks to Fastmail. Agents send and read mail
+-through it over loopback. spec.org has the design.
++The mail hub for the lab-devel list. lab-mail holds the list,
++fetched from Fastmail, and serves it over IMAP to every host that
++uses it. It also relays mail to Fastmail over SMTP. It holds the
++Fastmail credentials and is the only thing that talks to Fastmail.
++spec.org has the design.
++
++* rights
++Who may do what to the list. Everything below follows from these
++rules.
++- Anyone may read the list over IMAP. Any user name logs in with any
++  password, and that login may list, fetch, search, and IDLE, and
++  nothing else. It cannot set flags, append, copy, move, or expunge,
++  so it cannot archive or delete a message, or mark one read for
++  anyone else. An agent logs in as its own address, such as
++  =claude@p7x.dev=.
++- One login may change the list: =mbsync=. It must give the password
++  in =imap-users=, and a wrong one fails. mbsync fetches from Fastmail.
++- Dovecot's ACL enforces these rights, not file permissions. Dovecot's
++  user can write the whole maildir, so a fault in =dovecot-acl= or in
++  the passdbs of =dovecot.conf= would let every login change the list.
+ 
+ * how it works
+ lab-mail shares beastie's addresses (=ip4 = inherit=), like the
+@@ -12,12 +29,17 @@ over that loopback, never through a shared filesystem.
+ 
+ Two host directories are mounted into the jail, and into no other:
+ - =/jails/data/lab-mail/secrets= at =/data/secrets=, read-only. It
+-  holds =mail-creds=, the Fastmail login.
++  holds the secrets, which setup describes.
+ - =/jails/data/lab-mail/mail= at =/data/mail=, read-write. It holds
+-  the mail state, which survives a rebuild of the jail.
++  the list and the mail state, which survive a rebuild of the jail.
+ 
+-The credentials never leave =/data/secrets=. Only the services that
+-talk to Fastmail can read them, as members of the =mailcred= group.
++The Fastmail credentials never leave =/data/secrets=. Only the
++services that talk to Fastmail can read them, as members of the
++=mailcred= group.
++
++Dovecot is the only program that writes the list. Every change to it
++is a fetch from Fastmail, and goes through Dovecot, as the user
++=vmail=.
+ 
+ ** sending
+ #+BEGIN_EXAMPLE
+@@ -37,9 +59,25 @@ Fastmail and relays the message while the client waits, so the
+ client gets Fastmail's answer. Nothing is queued: a message that
+ fails is not sent, and the client must send it again.
+ 
++** reading
++#+BEGIN_EXAMPLE
++/data/mail/maildir --> Dovecot 127.0.0.1:2143 --IMAP--> client
++#+END_EXAMPLE
++
++rc(8) starts Dovecot when the jail starts; its config is
++=/usr/local/etc/dovecot/dovecot.conf=. It serves the maildir as the
++mailbox =lists=, beside an empty INBOX. Every login sees the same
++mailboxes, and runs as =vmail=, which keeps Dovecot's indexes in
++=/data/mail/dovecot=. What each login may do is in =dovecot-acl=, as
++rights describes.
++
++A client reads only what the last fetch brought, so new list mail
++reaches it within a minute or two, and reading keeps working while
++Fastmail is down.
++
+ ** fetching
+ #+BEGIN_EXAMPLE
+-imap.fastmail.com:993 lists --IMAPS--> mbsync --> /data/mail/maildir/lists
++imap.fastmail.com:993 lists --IMAPS--> mbsync --IMAP--> Dovecot 127.0.0.1:2143
+ #+END_EXAMPLE
+ 
+ A Fastmail rule files list mail into the folder =lists=. Once a
+@@ -49,36 +87,19 @@ is in =/etc/cron.d/lab-mail=, not in a crontab, so =crontab -l= does
+ not show it. lockf(1) skips a run while the previous one is still
+ going.
+ 
+-The fetch job runs mbsync with =/usr/local/etc/mbsyncrc=, which logs
+-in to Fastmail with =mail-creds= and pulls only new messages into the
+-maildir. It never changes anything on Fastmail, and never removes a
+-message from the maildir. mbsync keeps its sync state in
+-=/data/mail/mbsync=. mbsync creates the new files readable only by
+-itself, so the job then makes them readable by everyone, for Dovecot.
+-
+-** reading
+-#+BEGIN_EXAMPLE
+-/data/mail/maildir/lists --> Dovecot 127.0.0.1:2143 --IMAP--> client
+-#+END_EXAMPLE
+-
+-rc(8) starts Dovecot when the jail starts; its config is
+-=/usr/local/etc/dovecot/dovecot.conf=. It serves the maildir as the
+-mailbox =lists=, beside an empty INBOX, and accepts any user name and
+-password. Every login runs as the user =vmail=, which can read the
+-maildir but not write it, and keeps Dovecot's indexes in
+-=/data/mail/dovecot=. The ACL in =dovecot-acl= makes every mailbox
+-read-only, so a client cannot flag, add, or delete mail.
+-
+-Dovecot never talks to Fastmail. A client reads only what the last
+-fetch brought, so new list mail reaches it within a minute or two,
+-and reading keeps working while Fastmail is down.
++The fetch job runs mbsync with =/usr/local/etc/mbsyncrc=. It logs in
++to Fastmail with =mail-creds=, and to Dovecot as =mbsync= with
++=mbsync-imap=, and pulls only new messages into =lists=. It never
++changes anything on Fastmail, and never removes a message from
++lab-mail. mbsync keeps its sync state in =/data/mail/mbsync=.
+ 
+ ** logs
+ Each service logs through syslogd(8) in the jail, to a file of its
+ own under =/var/log/lab-mail/=, and all of them to =/var/log/maillog=:
+ - =smtprelay.log=: each session, with the client, the envelope, and
+   Fastmail's reply.
+-- =fetch.log=: each pull that brought mail, and every fetch failure.
++- =fetch.log=: each fetch that brought mail, with mbsync's counts,
++  and every fetch failure.
+ - =dovecot.log=: each IMAP login, and every error.
+ 
+ A fetch that brings nothing logs nothing, so a quiet =fetch.log= is
+@@ -89,38 +110,59 @@ doas tail -f /jails/instances/lab-mail/var/log/lab-mail/fetch.log
+ #+END_EXAMPLE
+ 
+ * setup
+-The operator stores the Fastmail login and app password on the host,
+-in =/jails/data/lab-mail/secrets/mail-creds=. They never enter the
+-repo. The jail mounts the directory read-only at =/data/secrets=, and
+-no other jail mounts it.
+-
+-=mail-creds= holds two lines: the Fastmail login on the first, and an
+-app password with IMAP and SMTP access on the second. Each line is
+-taken whole, whatever it contains.
++The operator stores three secrets on the host, in
++=/jails/data/lab-mail/secrets/=. They never enter the repo. The jail
++mounts the directory read-only at =/data/secrets=, and no other jail
++mounts it.
++- =mail-creds= holds two lines: the Fastmail login on the first, and
++  an app password with IMAP and SMTP access on the second. Each line
++  is taken whole, whatever it contains. Only smtprelay and mbsync read
++  it, as members of the =mailcred= group.
++- =mbsync-imap= holds the password of mbsync's Dovecot login. Only
++  mbsync reads it.
++- =imap-users= holds the login that may change the list, =mbsync=,
++  as =login:hash=. Only Dovecot's auth process, as the user
++  =dovecot=, reads it.
++
++lab-mail holds only the hash of each password in =imap-users=. Hash
++a password with Dovecot's doveadm, which prompts for it:
++#+BEGIN_EXAMPLE
++doas jexec lab-mail doveadm pw -s BLF-CRYPT
++#+END_EXAMPLE
+ 
+-Inside the jail, only members of the =mailcred= group (gid 15100) may
+-read it. The host knows the group only by number:
++The host knows each reader only by number: 15100 is the =mailcred=
++group and 15102 is mbsync, from =instance.conf=, and 143 is dovecot,
++from the package:
+ #+BEGIN_EXAMPLE
+ mkdir -p /jails/data/lab-mail/secrets
+ cd /jails/data/lab-mail/secrets
+ printf '%s\n' 'login@example.com' 'app-password' > mail-creds
+-chown -R 0:15100 .
+-chmod 0750 .
+-chmod 0640 mail-creds
++printf '%s\n' 'mbsync-password' > mbsync-imap
++printf '%s\n' 'mbsync:{BLF-CRYPT}...' > imap-users
++chown 0:0 .
++chmod 0711 .
++chown 0:15100 mail-creds
++chown 0:15102 mbsync-imap
++chown 0:143 imap-users
++chmod 0640 mail-creds mbsync-imap imap-users
+ #+END_EXAMPLE
+ 
+-=/jails/data/lab-mail/mail/= holds mail state that must survive a
+-rebuild of the jail. The jail mounts it read-write at =/data/mail=.
+-The operator creates it and its subdirectories before the jail first
+-starts. The host knows the owners only by number, from
++=/jails/data/lab-mail/mail/= holds the list and the mail state. The
++jail mounts it read-write at =/data/mail=. The operator creates it and
++its subdirectories before the jail first starts, owned by number from
+ =instance.conf=: 15102 is mbsync, 15103 is vmail.
+ #+BEGIN_EXAMPLE
+ install -d -m 0755 /jails/data/lab-mail/mail
+-install -d -o 15102 -g 15102 -m 0755 /jails/data/lab-mail/mail/maildir
+-install -d -o 15102 -g 15102 -m 0700 /jails/data/lab-mail/mail/mbsync
++install -d -o 15103 -g 15103 -m 0700 /jails/data/lab-mail/mail/maildir
+ install -d -o 15103 -g 15103 -m 0700 /jails/data/lab-mail/mail/dovecot
++install -d -o 15102 -g 15102 -m 0700 /jails/data/lab-mail/mail/mbsync
+ #+END_EXAMPLE
+ 
++=maildir= and =mbsync= must start empty. A maildir that mbsync wrote
++itself, before Dovecot held the list, must be emptied, along with its
++=mbsync= directory: mbsync starting with no sync state for Dovecot
++would fetch every message into it again.
++
+ * operate
+ Like the other instances; see =jails/README.org=:
+ #+BEGIN_EXAMPLE
+@@ -146,14 +188,15 @@ FAIL smtprelay accepts connections on 127.0.0.1:2525
+ ...
+ #+END_EXAMPLE
+ 
+-It checks the jail, =mail-creds= and who can read it, the owners of
+-the mail state directories, that syslogd, cron, smtprelay, and
+-Dovecot are running, that smtprelay and Dovecot accept connections,
+-that a fetch succeeded within the last five minutes, and that the log
+-files exist. The fetch job touches =/data/mail/mbsync/last-fetch=
+-after each successful pull, so a quiet list still passes. The
+-check only reads, so it is safe to run at any time;
+-=/usr/local/libexec/lab-mail/check= in the jail does the work.
++It checks the jail, that each secret is present and readable by its
++readers and no other service user, the owners of the mail state
++directories, that syslogd, cron, smtprelay, and Dovecot are running,
++that smtprelay and Dovecot accept connections, that a fetch succeeded
++within the last five minutes, and that the log files exist. The fetch
++job touches =/data/mail/mbsync/last-fetch= after each successful run,
++so a quiet list still passes. The check only reads, so it is safe to
++run at any time; =/usr/local/libexec/lab-mail/check= in the jail does
++the work.
+ 
+ When a check fails, the service's log under =/var/log/lab-mail/=
+ usually says why.
+diff --git a/jails/instances/lab-mail/dist/usr/local/etc/dovecot/dovecot-acl b/jails/instances/lab-mail/dist/usr/local/etc/dovecot/dovecot-acl
+index 526a49c9..84e287c2 100644
+--- a/jails/instances/lab-mail/dist/usr/local/etc/dovecot/dovecot-acl
++++ b/jails/instances/lab-mail/dist/usr/local/etc/dovecot/dovecot-acl
+@@ -1,2 +1,8 @@
++# Who may do what to the list; see the rights section of spec.org.
++#
++# Every login shares one mail store, so each is its owner, and an owner
++# would otherwise have every right. Anyone may list and read. The login
++# in imap-users may also set flags, append, copy, move, and expunge.
+ * owner lr
+ * anyone lr
++* user=mbsync lrwstie
+diff --git a/jails/instances/lab-mail/dist/usr/local/etc/dovecot/dovecot.conf b/jails/instances/lab-mail/dist/usr/local/etc/dovecot/dovecot.conf
+index 93962c90..b42a1c49 100644
+--- a/jails/instances/lab-mail/dist/usr/local/etc/dovecot/dovecot.conf
++++ b/jails/instances/lab-mail/dist/usr/local/etc/dovecot/dovecot.conf
+@@ -1,13 +1,13 @@
+ # Dovecot for lab-mail; see spec.org.
+ #
+-# Serves the maildir mbsync fetches as one read-only mailbox, lists,
+-# over IMAP on loopback. Nothing else: no POP3, LMTP, or submission.
++# Dovecot holds the list, the mailbox lists, and is the only program
++# that writes it. It serves the list over IMAP on loopback. Nothing
++# else: no POP3, LMTP, or submission.
+ 
+ protocols = imap
+ listen = 127.0.0.1
+ 
+-# Clients connect over loopback only, so there is no TLS, and any
+-# user name and password are accepted.
++# Clients connect over loopback only, so there is no TLS.
+ ssl = no
+ disable_plaintext_auth = no
+ 
+@@ -21,14 +21,25 @@ service imap-login {
+   }
+ }
+ 
++# The logins that may change the list must give the password in
++# imap-users, and a wrong one fails: their names never reach the
++# static passdb below. Every other user name logs in with any
++# password, and the ACL lets it only read. A login added to imap-users
++# must be added to username_filter and to dovecot-acl too.
++passdb {
++  driver = passwd-file
++  args = scheme=BLF-CRYPT username_format=%Lu /data/secrets/imap-users
++}
++
+ passdb {
+   driver = static
+   args = nopassword=y
++  username_filter = !mbsync
+ }
+ 
+-# Every login is the same user, vmail, which can read the maildir but
+-# not write it. The indexes, the UID list, and an empty INBOX, which
+-# IMAP requires, live in a directory of vmail's own.
++# Every login is the same user, vmail, which owns the maildir. The
++# indexes, the UID lists, and an empty INBOX, which IMAP requires,
++# live in a directory of vmail's own.
+ userdb {
+   driver = static
+   args = uid=vmail gid=vmail home=/data/mail/dovecot
+@@ -37,12 +48,16 @@ userdb {
+ namespace inbox {
+   inbox = yes
+   separator = /
++
++  mailbox lists {
++    auto = create
++  }
+ }
+ 
+ mail_location = maildir:/data/mail/maildir:LAYOUT=fs:INBOX=/data/mail/dovecot/inbox:INDEX=/data/mail/dovecot/index:CONTROL=/data/mail/dovecot/control:VOLATILEDIR=/data/mail/dovecot/volatile
+ 
+-# Every mailbox is read-only: clients may list, read, search, and
+-# IDLE, but not set flags, append, copy in, or expunge.
++# The rights section of spec.org, in dovecot-acl. Only the global file
++# counts, so nothing in the maildir can grant a right.
+ mail_plugins = acl
+ 
+ protocol imap {
+@@ -51,4 +66,5 @@ protocol imap {
+ 
+ plugin {
+   acl = vfile:/usr/local/etc/dovecot/dovecot-acl
++  acl_globals_only = yes
+ }
+diff --git a/jails/instances/lab-mail/dist/usr/local/etc/mbsyncrc b/jails/instances/lab-mail/dist/usr/local/etc/mbsyncrc
+index 59f76b68..136a8ebf 100644
+--- a/jails/instances/lab-mail/dist/usr/local/etc/mbsyncrc
++++ b/jails/instances/lab-mail/dist/usr/local/etc/mbsyncrc
+@@ -1,8 +1,9 @@
+-# Pull new mail from the Fastmail folder lists into a local maildir.
++# Pull new mail from the Fastmail folder lists into Dovecot. mbsync is
++# an IMAP client of each, so it never opens the maildir.
+ #
+ # Only new messages move, and only from Fastmail to here: nothing is
+-# sent back, and nothing is removed from the maildir. A message
+-# deleted or moved on Fastmail stays here.
++# sent back, and nothing is removed from lab-mail. A message deleted
++# or moved on Fastmail stays here.
+ 
+ IMAPAccount fastmail
+ Host imap.fastmail.com
+@@ -14,14 +15,24 @@ PassCmd "sed -n 2p /data/secrets/mail-creds"
+ IMAPStore fastmail
+ Account fastmail
+ 
+-MaildirStore local
+-Path /data/mail/maildir/
++# Dovecot on loopback, with no TLS. mbsync sends a password in the
++# clear only over a mechanism named here.
++IMAPAccount lab-mail
++Host 127.0.0.1
++Port 2143
++TLSType None
++AuthMechs LOGIN
++User mbsync
++PassCmd "cat /data/secrets/mbsync-imap"
++
++IMAPStore lab-mail
++Account lab-mail
+ 
+ Channel lists
+ Far :fastmail:lists
+-Near :local:lists
+-Create Near
++Near :lab-mail:lists
+ Sync Pull New
++Create None
+ Expunge None
+ Remove None
+ CopyArrivalDate yes
+diff --git a/jails/instances/lab-mail/dist/usr/local/libexec/lab-mail/check b/jails/instances/lab-mail/dist/usr/local/libexec/lab-mail/check
+index 479123c7..cd95768b 100755
+--- a/jails/instances/lab-mail/dist/usr/local/libexec/lab-mail/check
++++ b/jails/instances/lab-mail/dist/usr/local/libexec/lab-mail/check
+@@ -6,9 +6,16 @@
+ set -u
+ PATH=/sbin:/bin:/usr/sbin:/usr/bin:/usr/local/sbin:/usr/local/bin
+ 
+-readonly creds=/data/secrets/mail-creds
++readonly secrets=/data/secrets
++readonly creds=${secrets}/mail-creds
++readonly users=${secrets}/imap-users
++readonly mbpass=${secrets}/mbsync-imap
+ readonly stamp=/data/mail/mbsync/last-fetch
+ 
++# Every user a lab-mail service runs as. Each secret must be readable
++# by its reader and by none of the others.
++readonly service_users="smtprelay mbsync vmail dovecot dovenull"
++
+ failed=0
+ 
+ # check <what> <command> [args]: run the command, and report what was
+@@ -27,14 +34,30 @@ has_line() {
+ 	[ -n "$(sed -n "${1}p" ${creds})" ]
+ }
+ 
++has_user() {
++	grep -q "^${1}:" ${users}
++}
++
+ # can_read and cannot_read run test(1) as the user, so a missing user
+ # fails both.
+ can_read() {
+-	su -m "${1}" -c "test -r ${creds}"
++	su -m "${1}" -c "test -r ${2}"
+ }
+ 
+ cannot_read() {
+-	su -m "${1}" -c "test ! -r ${creds}"
++	su -m "${1}" -c "test ! -r ${2}"
++}
++
++# readable_only_by <file> <reader>
++readable_only_by() {
++	local u
++	for u in ${service_users}; do
++		if [ "${u}" = "${2}" ]; then
++			can_read "${u}" "${1}" || return 1
++		else
++			cannot_read "${u}" "${1}" || return 1
++		fi
++	done
+ }
+ 
+ owned_by() {
+@@ -53,16 +76,20 @@ fetched_recently() {
+ check "${creds} exists" test -f ${creds}
+ check "${creds} has the login on line 1" has_line 1
+ check "${creds} has the password on line 2" has_line 2
+-check "smtprelay can read ${creds}" can_read smtprelay
+-check "mbsync can read ${creds}" can_read mbsync
+-check "vmail cannot read ${creds}" cannot_read vmail
+-
+-check "/data/mail/maildir is owned by mbsync (15102)" \
+-    owned_by /data/mail/maildir 15102
+-check "/data/mail/mbsync is owned by mbsync (15102)" \
+-    owned_by /data/mail/mbsync 15102
++check "${users} has mbsync" has_user mbsync
++check "${mbpass} is not empty" test -s ${mbpass}
++check "smtprelay can read ${creds}" can_read smtprelay ${creds}
++check "mbsync can read ${creds}" can_read mbsync ${creds}
++check "vmail cannot read ${creds}" cannot_read vmail ${creds}
++check "only mbsync can read ${mbpass}" readable_only_by ${mbpass} mbsync
++check "only dovecot can read ${users}" readable_only_by ${users} dovecot
++
++check "/data/mail/maildir is owned by vmail (15103)" \
++    owned_by /data/mail/maildir 15103
+ check "/data/mail/dovecot is owned by vmail (15103)" \
+     owned_by /data/mail/dovecot 15103
++check "/data/mail/mbsync is owned by mbsync (15102)" \
++    owned_by /data/mail/mbsync 15102
+ 
+ for s in syslogd cron smtprelay dovecot; do
+ 	check "${s} is running" service ${s} status
+diff --git a/jails/instances/lab-mail/dist/usr/local/libexec/lab-mail/fetch b/jails/instances/lab-mail/dist/usr/local/libexec/lab-mail/fetch
+index 2422191c..772b16eb 100755
+--- a/jails/instances/lab-mail/dist/usr/local/libexec/lab-mail/fetch
++++ b/jails/instances/lab-mail/dist/usr/local/libexec/lab-mail/fetch
+@@ -1,33 +1,29 @@
+ #!/bin/sh
+-# Pull new list mail from Fastmail, then let Dovecot read it.
++# Pull new list mail from Fastmail into Dovecot.
+ #
+-# mbsync creates mail mode 0600 and folders 0700, whatever the umask.
+-# Dovecot reads the maildir as vmail, which must not be able to write
+-# it, so the new files are opened up for reading after each pull.
+-#
+-# cron sends the output to the fetch log. mbsync -q prints only
+-# errors, so the job says itself what each pull brought.
++# cron sends the output to the fetch log. mbsync warns on every run
++# that it logs in to Dovecot without TLS, which is by design on
++# loopback, and prints a line of counts for each run. The job keeps
++# the counts only when something moved, and every error.
+ set -u
+ 
+-readonly maildir=/data/mail/maildir
++readonly creds=/data/secrets/mail-creds
+ 
+-messages() {
+-	find ${maildir} -type f \( -path '*/new/*' -o -path '*/cur/*' \) |
+-	    wc -l
+-}
++# mbsync would log in with whatever the file holds, so an empty line
++# stops the fetch before it starts.
++if [ -z "$(sed -n 1p ${creds})" ] || [ -z "$(sed -n 2p ${creds})" ]; then
++	echo "${creds} needs the login on line 1 and the password on line 2"
++	exit 1
++fi
+ 
+-before=$(($(messages)))
+-rc=0
+-/usr/local/bin/mbsync -q -c /usr/local/etc/mbsyncrc lists || rc=${?}
+-after=$(($(messages)))
++out=$(/usr/local/bin/mbsync -c /usr/local/etc/mbsyncrc lists 2>&1)
++rc=${?}
+ 
+-find ${maildir} \
+-    \( -type d ! -perm -0055 -exec chmod go+rx {} + \) -o \
+-    \( -type f ! -perm -0044 -exec chmod go+r {} + \)
++printf '%s\n' "${out}" | grep -v \
++    -e '^\*\*\* IMAP Warning \*\*\* Password is being sent in the clear$' \
++    -e '^$' \
++    -e '^Channels: .* Far: +0 \*0 #0 -0 *Near: +0 \*0 #0 -0$'
+ 
+-if [ ${after} -gt ${before} ]; then
+-	echo "fetched $((after - before)) new messages"
+-fi
+ if [ ${rc} -ne 0 ]; then
+ 	echo "mbsync failed with exit status ${rc}"
+ else
+diff --git a/jails/instances/lab-mail/jail.conf b/jails/instances/lab-mail/jail.conf
+index 8aa53d9d..a09df8eb 100644
+--- a/jails/instances/lab-mail/jail.conf
++++ b/jails/instances/lab-mail/jail.conf
+@@ -4,12 +4,13 @@ lab-mail {
+   ip4 = inherit;
+   host.hostname = "${name}.p7x.dev";
+ 
+-  # Fastmail credentials, owned root:15100 (mailcred) on the host.
++  # The secrets, owned on the host by the numeric ids of their
++  # readers; see README.org.
+   exec.prepare += "mkdir -p ${path}/data/secrets";
+   mount += "/jails/data/lab-mail/secrets ${path}/data/secrets nullfs ro 0 0";
+ 
+-  # Mail state that must survive a rebuild. The operator creates it on
+-  # the host, as with the credentials.
++  # The list and the mail state, which must survive a rebuild. The
++  # operator creates them on the host, as with the secrets.
+   exec.prepare += "mkdir -p ${path}/data/mail";
+   mount += "/jails/data/lab-mail/mail ${path}/data/mail nullfs rw 0 0";
+ }
+-- 
+2.56.0
+
