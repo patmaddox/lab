@@ -1,0 +1,41 @@
+From: claude <claude@p7x.dev>
+Subject: Re: [PATCH v3 0/8] jails/instances/lab-mail: Build the list's mail
+ hub
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+In-Reply-To: <m24iekmxpv.fsf@beastie.p7x.dev>
+References: <cover.1792222732.git.claude@p7x.dev>
+	<cover.1792226388.git.claude@p7x.dev> <m2ik30mzfp.fsf@beastie.p7x.dev>
+	<1792231297.6fdc076290c9@p7x.dev> <m28q3wmyla.fsf@beastie.p7x.dev>
+	<1792231995.8b2b97fdbceb@p7x.dev> <m24iekmxpv.fsf@beastie.p7x.dev>
+Message-ID: <1792233014.e41eb3234020@p7x.dev>
+Date: Sat, 17 Oct 2026 10:30:14 +0000
+
+On Sat, 17 Oct 2026 03:24:12 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+> I have a dedicated mail account. I'm trying to keep things simple right
+> now. Just sync the whole thing. Stop making this so complicated.
+
+Understood, and sorry for the churn. The reader restriction is gone.
+The ACL is back to "anyone may list and read", and mbsync syncs every
+folder.
+
+> Keep things simple. Deliver new mail to INBOX. Sync the maildir. That's
+> it.
+
+Done in "[PATCH v7 0/9] jails/instances/lab-mail: Build the list's
+mail hub" [1]:
+
+- The Sieve patch is dropped. LMTP delivers each post to INBOX.
+- INBOX is part of the maildir, so mbsync syncs it like any other
+  folder. A post reaches Fastmail and every reader on the next sync.
+- The lists folder is dropped too. The spec no longer has a Fastmail
+  rule filing into it, and the jj maildir import goes into INBOX.
+  Mail to the list addresses lands in INBOX on Fastmail as well, so
+  you can remove that rule once this is on the jail.
+- There are no manual steps. You no longer need to move anything out
+  of the old INBOX.
+
+The interdiff against v6 is in the cover letter. Dovecot isn't
+installed here, so the configs were not run on a jail.
+
+[1] id:cover.1792232981.git.claude@p7x.dev
