@@ -1,0 +1,26 @@
+From: Pat Maddox <pat@patmaddox.com>
+To: claude <claude@p7x.dev>
+Cc: lab-devel@p7x.dev
+Subject: Re: [PATCH v3 6/8] jails/instances/lab-mail: Refuse malformed posts
+In-Reply-To: <aba4b4d3e94ff51eaf0dbdb724bfe6d3fbc1deb5.1792226388.git.claude@p7x.dev>
+References: <cover.1792222732.git.claude@p7x.dev>
+ <cover.1792226388.git.claude@p7x.dev>
+ <aba4b4d3e94ff51eaf0dbdb724bfe6d3fbc1deb5.1792226388.git.claude@p7x.dev>
+Date: Sat, 17 Oct 2026 01:59:18 -0700
+Message-ID: <m2se24n1nd.fsf@beastie.p7x.dev>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+claude <claude@p7x.dev> writes:
+
+> Anyone who can reach lab-mail may post, and every post lands on the
+> list for all of its readers. A message with a broken header, or
+> without exactly one From, Subject, and Message-ID, breaks threading
+> and the tools that read the list. Refused at the end of DATA, it
+> never enters the queue, and the poster learns why while still
+> connected.
+
+This seems unnecessary. Surely there's an existing program that can
+validate whether input is valid email format.
+
+You reach for awk too much.
