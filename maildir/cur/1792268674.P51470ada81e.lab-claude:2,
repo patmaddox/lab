@@ -1,0 +1,282 @@
+From: claude <claude@p7x.dev>
+Subject: Re: [RFC] how to spec work in a way that's readable for humans
+To: Pat Maddox <pat@patmaddox.com>, lab@lists.p7x.dev
+In-Reply-To: <m2pkx8hz8i.fsf@beastie.p7x.dev>
+References: <m2ecdojje6.fsf@beastie.p7x.dev>
+	<1792261013.247738d4dc2e@p7x.dev> <m2pkx8hz8i.fsf@beastie.p7x.dev>
+Message-ID: <1792268664.8a0da20e9047@p7x.dev>
+Date: Sat, 17 Oct 2026 20:24:34 +0000
+
+On Sat, 17 Oct 2026 13:02:37 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+> It seems like you just took the three things I did and accepted them. I
+> want to know what other people are doing. Thoroughly research and see
+> what tools and techniques people are putting into practice for iterative
+> development with LLMs. Don't just affirm what I've written.
+
+Fair. I went looking for what people actually run, and for where it
+disagrees with the triad. Most of the material is self-report by the
+author of the method. The independent evaluations are Boeckeler's [1],
+Eberhardt's [2], and two papers on AGENTS.md files [13][14]. I note
+where evidence is thin.
+
+Phased spec tools. You write the whole spec up front for each feature.
+
+- Kiro writes requirements.md (stories, with EARS clauses like "WHEN
+  <event> THE SYSTEM SHALL <behavior>"), design.md, and tasks.md. [3]
+- spec-kit adds a "constitution" of standing principles, loaded on
+  every command, then spec.md, plan.md, and tasks.md. [4]
+- Tessl makes the spec the source and marks the code "GENERATED FROM
+  SPEC - DO NOT EDIT". Boeckeler got different code from the same
+  spec on different runs. [1]
+- Eberhardt timed spec-kit on one CRUD feature. It made about 2,577
+  lines of markdown and took 3.5 hours of review for 689 lines of
+  code. Plain prompting took 8 minutes of agent time and 15 of review.
+  The generated docs invented rationale, and a bug got through anyway.
+  He calls it a "reinvented waterfall". [2]
+- OpenSpec is the one tool built for changing existing code. It keeps
+  a living spec, and each change is a delta against it, with ADDED,
+  MODIFIED, and REMOVED requirements and GIVEN/WHEN/THEN scenarios.
+  When the change lands, the delta is merged into the spec. [5] I
+  found no independent reports.
+
+Iterative loops. Here the work happens in a small, mutable queue, and
+the stable documents stay thin.
+
+- Beck: plan.md is an ordered list of tests. "When I say 'go', find
+  the next unmarked test in plan.md, implement the test, then
+  implement only enough code to make that test pass." Structural and
+  behavioural changes go in separate commits. [6]
+- Harper Reed: spec.md, then prompt_plan.md (small steps written as
+  prompts), then todo.md, which the agent ticks off. [7]
+- Huntley's "Ralph" loop: specs/ has one short file per topic.
+  fix_plan.md is a prioritized list that the agent rewrites every pass
+  from the gap between specs and code. Each pass starts fresh, does
+  the most important item, tests, and commits. He says the plan "may
+  be incorrect" and regenerates it when it goes stale. [8]
+- Anthropic's harness for long-running agents: an initial session
+  writes feature_list.json, with every feature set to "passes": false,
+  and a progress file. Each later session reads both and the git log,
+  does one feature, and commits. They chose JSON because the model is
+  "less likely to inappropriately change or overwrite" it than
+  markdown. [9]
+- Jesse Vincent's Superpowers: brainstorm a design and get it
+  approved, then write a plan of bite-sized tasks, each ending in a
+  commit, then execute in batches with review checkpoints. [10]
+- Yegge's Beads is a git-backed issue tracker with dependencies,
+  built after he had piled up 605 markdown plan files that the agents
+  lost track of. [11]
+
+Standing context and scope. These shape behavior across all work.
+
+- Devin playbooks have Outcome, Procedure, Specifications,
+  "Forbidden Actions", and "Advice". [12] Osmani splits boundaries
+  into Always, Ask first, and Never. [15]
+- Gloaguen et al. (ETH, 2026) found that context files did not
+  generally raise success and raised cost by over 20%. They helped
+  mainly when they recorded non-standard, project-specific practice.
+  [13] Lulla et al. found shorter runs at comparable success. [14]
+  The two disagree, but both point away from generic overviews.
+- Shape Up pitches carry appetite, rabbit holes, and no-gos, and a
+  few people feed them to Claude Code. The evidence is early. [16]
+
+What the triad misses, by that survey:
+
+1. A work queue with state. Almost every iterative method has one
+   (plan.md, fix_plan.md, todo.md, feature_list.json, Beads). Stories
+   say what is wanted. Nothing in the triad says what is next, what is
+   done, or what we learned on the way.
+2. A check the agent cannot argue with. Beck's tests and Anthropic's
+   "passes" flags are both pass or fail. A story's acceptance criteria
+   in prose are not.
+3. Change as a delta. Stories only add behavior. OpenSpec's MODIFIED
+   ("sessions expire after 15 min (Previously: 30)") states a change
+   to existing behavior, which is most of what we do to lab-mail.
+4. Scope bounds. Non-goals, no-gos, and appetite say what we will not
+   build. Beck names "functionality I hadn't asked for" as a warning
+   sign. Our constraints are technical rules, not a scope budget.
+5. Proportion. Claude Code's docs say to skip the plan "if you could
+   describe the diff in one sentence". [17] Boeckeler's main complaint
+   is that one process for all sizes turned a bug fix into 16
+   acceptance criteria.
+
+Where the triad holds up is the stable layer. Constraints match
+spec-kit's constitution, decisions match the design rationale that
+Kiro and OpenSpec keep, and stories match their requirements. What it
+lacks is the iteration layer (queue, progress, and checks), which is
+where the people reporting sustained success spend their effort.
+
+> That's pretty nice. Is status a standard part of ADR? It feels more like
+> RFD to me. I'm not very familiar with ADR though.
+
+It is in Nygard's original, which has Title, Context, Decision,
+Status, and Consequences. He writes: 'A decision may be "proposed" if
+the project stakeholders haven't agreed with it yet, or "accepted"
+once it is agreed. If a later ADR changes or reverses a decision, it
+may be marked as "deprecated" or "superseded"'. [18] MADR makes status
+an optional front-matter field. [19] adr-tools flips the old record to
+"superseded" when you write its replacement. [20]
+
+The two statuses answer different questions, though. An ADR's status
+says whether the decision still holds, and the record is never edited
+after it is accepted; you supersede it. An RFD's state tracks an idea
+through prediscussion, ideation, discussion, published, committed, or
+abandoned, and the document stays living. [21] So your instinct is
+right whenever the status is about progress. On this list, the thread
+is the RFD: a patch or RFC is "in discussion" until you apply it.
+Only "superseded" would add anything in the repo.
+
+On one file: Nygard and Fowler both say one file per decision. [18]
+[22] But arc42 keeps decisions as a list inside one document, [23]
+and src/diffwise/decisions.org and src/jc/decisions.org already work
+as one file of headings, superseding in prose ("Supersedes the earlier
+--help -> help decision"). A single decisions.org, or a decisions
+heading in spec.org, loses nothing that matters to us.
+
+> Right now I want to assess the components. I like stories, decisions,
+> and constraints. I also wonder if design docs fit in here somewhere? Not
+> visual design - but system design.
+
+They do, and they fill a gap. Ubl's account of Google design docs [24]
+lists the sections: context and scope ("isn't a requirements doc"),
+goals and non-goals, the actual design ("the place to write down the
+trade-offs"), alternatives considered, and cross-cutting concerns such
+as security and observability. Agents use them too. Kiro's design.md
+holds architecture, sequence diagrams, and error handling, [3] and
+spec-kit's plan.md requires that "every technology choice has
+documented rationale". [4]
+
+A design doc holds the whole shape of the system in one place: the
+parts, how data moves between them, and the trade-offs weighed
+together. Stories hold behavior one slice at a time, and ADRs hold
+one choice each. For lab-mail it would be the page that says Fastmail,
+mbsync, Dovecot, and OpenSMTPD sit like this and mail flows this way.
+Today that is scattered through spec.org. Ubl also says design docs
+drift from the code over time. Nobody I read has solved that, so I
+would keep it short and update it in the same series as the code it
+describes.
+
+My assessment of the components, for work like lab-mail:
+
+- Constraints, with non-goals added. Keep them short, project-specific,
+  and phrased as always, ask first, or never.
+- Design. One living page, updated with the code.
+- Decisions. One file of headings, and "superseded" as the only status.
+- Per change, a story or a delta with one or two concrete examples,
+  plus a check the agent can run.
+- Per change, a work queue. Your commit plan is the best version of
+  this I found; see below.
+
+For a small change, all of it collapses to a commit message.
+
+> Here's another idea I had when thinking through this... what about
+> preparing a commit plan before doing the work? Instead of solving the
+> problem and then slicing it into commits, produce a series of commits,
+> with commit messages and all, that describe the evolution of the
+> work. If we can't describe the evolution in a series of commits when
+> there's no code changing - how will we be able to do it once we have the
+> code?
+
+Others have arrived at it.
+
+- Carlo Gilmar's "Commit Driven Development" (Git Merge 2022): "Write
+  the commit plan: Before coding, write down: commit titles, one per
+  meaningful change." And: "If something unexpected happens, adjust
+  your plan. It's not rigid." [25]
+- Arialdo Martini, "Pre-emptive commit comments": "First you write
+  it, then you make it true." He checks each commit with "Have I done
+  all and only what I committed to?", and notes that the order is
+  natural in jj. [26]
+- In jj it is plain workflow: make the empty changes with jj new -m,
+  insert a forgotten step with jj new -B, and route stray hunks with
+  jj absorb. [27] Kurilyak runs Claude on empty jj changes like this
+  and says of a separate TODO file: "The file always drifts from
+  reality because it's duplicated state". For him, "jj log is the
+  todo list". [28]
+
+It also fills the gap the triad leaves: a commit plan is a work queue
+whose state is the VCS, which is what "Own the loop" asks for. A
+change is done when it is non-empty and builds, not when the agent
+says so. And you would review the shape of a series before any code
+exists, which is cheaper than reviewing a badly cut series after.
+
+The risk is the one Beck and Fowler raise against specs: you learn
+while implementing. Detailed bodies for commits 6 through 10 are
+guesses dressed as decisions, and an agent tends to make a message
+true rather than report that it is wrong. The Mikado Method [29] is
+the counterweight. You try the change, note what breaks as a
+prerequisite, revert, and do the prerequisite first. To keep the plan
+iterative:
+
+1. Rolling detail. The next two or three changes get full messages.
+   Later ones get a subject line only.
+2. The plan is the empty jj changes, not a file.
+3. When a change turns up a missing prerequisite, stop. Insert it with
+   jj new -B and revert the attempt, rather than stretching the
+   current change.
+4. Before posting, rewrite each message against its actual diff and
+   abandon changes that stayed empty, so the series describes the
+   patch as it stands.
+
+To try it on the next piece of work, I would post the plan first as
+an RFC: subjects for every change, full messages for the first few,
+and no code. You would review the cut, then I would fill it in and
+post the series. If you want this, name the work and I will start with
+the plan.
+
+[1] Birgitta Boeckeler, "Understanding Spec-Driven-Development: Kiro,
+    spec-kit, and Tessl", 2025-10-15.
+    https://martinfowler.com/articles/exploring-gen-ai/sdd-3-tools.html
+[2] Colin Eberhardt, Scott Logic, on spec-kit, 2025-11-26.
+    https://blog.scottlogic.com/
+[3] Kiro, "Feature specs". https://kiro.dev/docs/specs/
+[4] GitHub spec-kit, "Spec-Driven Development".
+    https://github.com/github/spec-kit/blob/main/spec-driven.md
+[5] Fission-AI, OpenSpec, docs/concepts.md.
+    https://github.com/Fission-AI/OpenSpec
+[6] Kent Beck, "Augmented Coding: Beyond the Vibes", 2025-06-25.
+    https://newsletter.kentbeck.com/p/augmented-coding-beyond-the-vibes
+[7] Harper Reed, "My LLM codegen workflow atm", 2025-02-16.
+    https://harper.blog/2025/02/16/my-llm-codegen-workflow-atm/
+[8] Geoffrey Huntley, "Ralph Wiggum as a software engineer".
+    https://ghuntley.com/ralph/
+    https://github.com/ghuntley/how-to-ralph-wiggum
+[9] Justin Young, Anthropic, "Effective harnesses for long-running
+    agents", 2025-11-26. https://www.anthropic.com/engineering/
+    effective-harnesses-for-long-running-agents
+[10] Jesse Vincent, "Superpowers", 2025-10-09.
+    https://blog.fsck.com/2025/10/09/superpowers/
+[11] Steve Yegge, "Introducing Beads", 2025-10.
+    https://steve-yegge.medium.com/
+[12] Devin, "Creating playbooks".
+    https://docs.devin.ai/product-guides/creating-playbooks
+[13] Gloaguen et al., arXiv:2602.11988, 2026-02.
+[14] Lulla et al., arXiv:2601.20404, 2026-01.
+[15] Addy Osmani, "How to write a good spec for AI agents", 2026-01.
+    https://addyosmani.com/blog/good-spec/
+[16] For example https://github.com/rafae2k/rafoflow and
+    https://github.com/abreed05/claude-shapeup
+[17] Anthropic, "Best practices for Claude Code".
+    https://code.claude.com/docs/en/best-practices
+[18] Michael Nygard, "Documenting Architecture Decisions", 2011-11-15.
+    https://cognitect.com/blog/2011/11/15/documenting-architecture-decisions
+[19] MADR 4.0.0, 2024-09-17. https://adr.github.io/madr/
+[20] Nat Pryce, adr-tools. https://github.com/npryce/adr-tools
+[21] Oxide, "RFD 1 Requests for Discussion".
+    https://rfd.shared.oxide.computer/rfd/0001
+[22] Martin Fowler, "Architecture Decision Record".
+    https://martinfowler.com/bliki/ArchitectureDecisionRecord.html
+[23] arc42, section 9, "Architecture Decisions".
+    https://docs.arc42.org/section-9/
+[24] Malte Ubl, "Design Docs at Google", 2020-07-06.
+    https://www.industrialempathy.com/posts/design-docs-at-google/
+[25] Carlo Gilmar, "Commit Driven Development", Git Merge 2022.
+    https://github.com/carlogilmar/commit-driven-development
+[26] Arialdo Martini, "Pre-emptive commit comments", 2026-02-20.
+    https://arialdomartini.github.io/pre-emptive-commit-comments
+[27] Majid Jabrayilov, "Introducing Jujutsu VCS. Edit Workflow",
+    2025-10-22. https://swiftwithmajid.com/2025/10/22/
+    introducing-jujutsu-vcs-edit-workflow/
+[28] Slava Kurilyak, "Parallel Claude Code with Jujutsu", 2025-07-22.
+    https://slavakurilyak.com/posts/parallel-claude-code-with-jujutsu
+[29] Ola Ellnestam and Daniel Brolund, "The Mikado Method", Manning,
+    2014.
