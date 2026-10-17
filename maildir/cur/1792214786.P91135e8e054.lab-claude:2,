@@ -1,0 +1,57 @@
+From: claude <claude@p7x.dev>
+Subject: Re: [RFC] threading strategies for RFC and patch versions
+To: Pat Maddox <pat@patmaddox.com>, lab-devel@p7x.dev
+In-Reply-To: <m25wz0uczk.fsf@beastie.p7x.dev>
+References: <m2a4odz1dp.fsf@beastie.p7x.dev>
+	<1792195756.4ee05afd82df@p7x.dev> <m25wz0uczk.fsf@beastie.p7x.dev>
+Message-ID: <1792214779.6c95ccbf79f6@p7x.dev>
+Date: Sat, 17 Oct 2026 05:26:26 +0000
+
+On Fri, 16 Oct 2026 22:12:31 -0700, Pat Maddox wrote:
+> I'm convinced by the git approach. It will be a lot easier for me to
+> track work going on in the list if it's all in a thread.
+>
+> Yep, get to work on whatever changes need to be made to support
+> this.
+
+Done. It took two series:
+
+"[PATCH 0/3] Thread each revision under its first version" [1]
+changes the tooling and the docs. format-patch.sh already gets
+v(N-1) from --previous. It now follows In-Reply-To from there back
+to v1 and passes that as --in-reply-to, so the agent never picks the
+reply target. A revision that was posted in a thread of its own,
+under the old convention, ends the walk, so its next version joins
+that thread. lab-process-mail's prompt, doc/mail-workflow.md,
+patch-triage, and freebsd-port now describe the new threading. The
+"Link to v(N-1)" line stays, since readers and the superseded tag
+both use it.
+
+The series builds on "[PATCH v2 0/4] Require an interdiff on revised
+series" [2], which is not applied yet and is what adds --previous.
+
+"[PATCH v4] notmuch: Tag series a later version replaces" [3] fixes
+the superseded tag. v3, the version you are running, tags the whole
+thread a Link line names. Once revisions share v1's thread, the
+first v2 would mark the whole thread superseded, including v2
+itself. v4 tags only the replaced version and the replies below it.
+It applies to b/dev on its own. Please apply it before, or together
+with, the threading series. I posted it as a reply to v3, the way
+the new convention handles a series that started in its own thread.
+
+One thing on b/dev also assumes one thread per version, and I left
+it alone. "mail-file superseded thread:<old> id:<new>" moves the
+whole thread into superseded/ and posts a breadcrumb reply there.
+Under the new threading, that would file the current version away
+together with the old ones. Since the tag now tracks supersession
+automatically, and you dropped the breadcrumb reply in "Re: [PATCH
+0/3] notmuch: Tag superseded series and hide them" [4], I recommend
+removing the superseded verb from mail-file, its man page, tests,
+and the Emacs binding. The alternative is to teach it to move a
+single version, but that duplicates what the tag already does. Say
+which you want and I will send it.
+
+[1] id:cover.1792214740.git.claude@p7x.dev
+[2] id:cover.1792035264.git.claude@p7x.dev
+[3] id:0f6347b356e24ffcddf498e0c9803fade571dd58.1792214740.git.claude@p7x.dev
+[4] id:m27bjj6dje.fsf@beastie.p7x.dev
