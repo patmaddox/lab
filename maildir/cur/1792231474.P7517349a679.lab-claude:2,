@@ -1,0 +1,63 @@
+From: claude <claude@p7x.dev>
+Subject: Re: [ISSUE] Building jail instances fetches all the packages
+To: Pat Maddox <pat@patmaddox.com>, lab-devel@p7x.dev
+In-Reply-To: <m2ecdomyuu.fsf@beastie.p7x.dev>
+References: <m2mrscn1bg.fsf@beastie.p7x.dev>
+	<1792230983.9f42e529f186@p7x.dev> <m2ecdomyuu.fsf@beastie.p7x.dev>
+Message-ID: <1792231468.5ea73e61587c@p7x.dev>
+Date: Sat, 17 Oct 2026 10:04:34 +0000
+
+On Sat, 17 Oct 2026 02:59:37 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+> That's not a good fix. This lets any jail write to the package cache for
+> any other jail - including the claude code user. The permissions are
+> such that it shouldn't be possible, but that's still too close of a
+> config.
+
+Agreed. v1 is withdrawn. The revision is posted as "[PATCH v2] jails:
+Fetch base packages into the host's cache" [1]. It mounts nothing into
+the root, so the cache is never reachable from a build's chroot or a
+running jail.
+
+> I thought when using pkg from the host like that, it can use the host's
+> package cache. Am I wrong about that?
+
+Not by default, but it can be told to. I traced pkg 2.8.4 here with
+truss(1). Run as "pkg -r /tmp/rt clean -n", it opens the root's
+/tmp/rt/var/cache/pkg, along with the root's /var/db/pkg. With
+"-o PKG_CACHEDIR=/var/cache/pkg" added it opens the host's
+/var/cache/pkg as given, without the root prefix. The -C config file
+does not change that. That is why your build fetched all 188 base
+packages each time.
+
+v2 does what you describe for the base install. It passes
+-o PKG_CACHEDIR with the host's own setting, read by "pkg config
+PKG_CACHEDIR", so only the host's pkg writes there. That covers the
+163 MiB of base packages in your output.
+
+The ports install (the 51 MiB part) is left uncached. It runs as
+"pkg -c", which chroots before it looks at a cache, so the host's
+cache is out of reach without a mount. The options I see:
+
+1. Leave it uncached. It costs about 51 MiB per lab-mail build, and
+   nothing is shared. I recommend this for now.
+
+2. Install ports packages with pkg -r too, so they share the host's
+   cache. I advise against it. My understanding is that pkg -r runs a
+   package's shell scripts on the host, not chrooted, with
+   PKG_ROOTDIR set; that is an inference from how ports write those
+   scripts, which I could not confirm against the pkg source here.
+   If it holds, every third-party post-install script would run as
+   root on the host.
+
+3. Fetch on the host, then copy into the root. Run "pkg -r ... fetch
+   -d" against the jail's repo config into the host's cache, then copy
+   those files into the root's /var/cache/pkg before pkg -c. Nothing
+   is shared and the jail only writes its own copy. The costs are
+   resolving the jail's repo config under -r and a copy per build.
+   That is worth doing if the 51 MiB matters to you.
+
+As before, I could not run a real build here, because lab-claude has
+no zroot/jails. To check on the host, run a clean build twice. The
+second should fetch no FreeBSD-* packages.
+
+[1] id:3e6c1af001ca2bfa6a8b208224634c788ee8a9fa.1792231441.git.claude@p7x.dev
