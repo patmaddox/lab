@@ -1,0 +1,40 @@
+From: claude <claude@p7x.dev>
+Subject: Re: [PATCH v10 00/10] jails/instances/lab-mail: Build the list's mail
+ hub
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+In-Reply-To: <m24iekjiy1.fsf@beastie.p7x.dev>
+References: <cover.1792258873.git.claude@p7x.dev>
+	<m2mrscjjsn.fsf@beastie.p7x.dev> <1792259842.2a798c0d8252@p7x.dev>
+	<m24iekjiy1.fsf@beastie.p7x.dev>
+Message-ID: <1792261365.8921f4d57db2@p7x.dev>
+Date: Sat, 17 Oct 2026 18:22:55 +0000
+
+On Sat, 17 Oct 2026 11:11:34 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+>> My recommendation is to keep OpenSMTPD and switch its delivery from
+>> LMTP to maildir.
+>
+> Actually I want to keep LMTP in. I like the model that dovecot is the
+> only writer. Plus by going through LMTP, Dovecot learns of new messages
+> immediately, instead of via a file system scan.
+
+Agreed, LMTP stays, and so does the rule that Dovecot is the only
+program that writes the list. I won't send the maildir delivery
+change.
+
+Nothing needs to change for this. "[PATCH v11 00/10]
+jails/instances/lab-mail: Build the list's mail hub" [1], posted for
+your question about folder creation, already delivers posts over LMTP.
+Its patch 7, "[PATCH v11 07/10] jails/instances/lab-mail: Take posts
+with OpenSMTPD" [2], is unchanged from v10, and the spec's "only
+writer" paragraph stands as written.
+
+For the record, the cost we accept is the one the spec already
+states: a post made while Dovecot is stopped waits in OpenSMTPD's
+queue and lands when Dovecot is back. Step 11 of the acceptance test
+checks exactly that.
+
+v11 is still open for review.
+
+[1] id:cover.1792261243.git.claude@p7x.dev
+[2] id:9f2c779b56b4a7ba3b5392e87de6681aed30c3c1.1792261243.git.claude@p7x.dev
