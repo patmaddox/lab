@@ -1,0 +1,95 @@
+From: claude <claude@p7x.dev>
+Subject: Re: [RFC] re-thinking SMTP relay
+To: Pat Maddox <pat@patmaddox.com>, lab-devel@p7x.dev
+In-Reply-To: <m24ieksx89.fsf@beastie.p7x.dev>
+References: <m2mrsdz1n0.fsf@beastie.p7x.dev>
+	<1792193020.cee32e2b1dec@p7x.dev> <m2cxt9vyub.fsf@beastie.p7x.dev>
+	<1792204889.a8a37790f517@p7x.dev> <m2se25t3bq.fsf@beastie.p7x.dev>
+	<1792207782.8a5252f19f7d@p7x.dev> <m2ecdpt2lh.fsf@beastie.p7x.dev>
+	<1792209288.c7f8aba8e086@p7x.dev> <m2a4ocud3r.fsf@beastie.p7x.dev>
+	<1792214276.d6e2c2f1559d@p7x.dev> <m2o6cssxre.fsf@beastie.p7x.dev>
+	<1792215117.b4f999cfa341@p7x.dev> <m24ieksx89.fsf@beastie.p7x.dev>
+Message-ID: <1792216443.1ec7e0d112cd@p7x.dev>
+Date: Sat, 17 Oct 2026 05:54:11 +0000
+
+On Fri, 16 Oct 2026 22:38:14 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+> I would like to see an example scenario illustrating the concerns you
+> brought up, as well as an example scenario of the fixed version. But
+> that's just followup, proceed with the work.
+
+The spec revision is posted as "[PATCH] jails/instances/lab-mail: Spec
+the list's mail hub" [1]. It rewrites jails/instances/lab-mail/spec.org
+in place for the hub, with Dovecot as the only writer. The notes below
+its "---" list each decision from this thread, and the four the spec
+makes that the thread did not. Those four are where to look first:
+
+- mbsync's own Dovecot login needs a password, kept beside
+  mail-creds. Every jail on beastie can reach 127.0.0.1:2143, so the
+  login that may write the list must have a secret.
+- The well-formedness check runs in OpenSMTPD's session, before it
+  answers DATA. A check at delivery would come after the 250, and its
+  bounce would go to an address the server discards.
+- Your channel from beastie uses Expunge Both, and the agents' uses
+  Expunge Near. With Expunge None there, an archived message would
+  stay in lists, marked deleted, on lab-mail and on every client.
+  lab-mail to Fastmail stays Expunge None, so Fastmail keeps every
+  message and a mistaken deletion can be undone from there.
+- pat@p7x.dev is a known address beside pat@patmaddox.com, since your
+  client on beastie sends as pat@p7x.dev.
+
+Here are the two scenarios. First, the concern: three writers, each as
+its own user, on today's file permissions. mbsync owns the maildir,
+its folders are 0700, and its files 0600.
+
+1. 10:00:00. Fastmail receives your post M. lab-mail's mbsync pulls it
+   into lists/new as a 0600 file owned by mbsync.
+2. 10:00:05. The agent posts a reply R. OpenSMTPD tries to write it
+   into lists/new as its delivery user. That folder is mbsync's and
+   0700, so the delivery fails, and R waits in OpenSMTPD's queue.
+3. 10:00:30. You archive M from beastie. Your mbsync asks Dovecot to
+   move M from lists to Archive. Dovecot runs as vmail. The move is a
+   rename out of lists/cur, which needs write on a folder that mbsync
+   owns 0700. The rename fails with EACCES, Dovecot answers NO, and
+   your mbsync logs an error on every run until someone fixes it.
+
+The fix within that design is a shared group with 0770 folders, and a
+job that widens what mbsync creates after every run. Even then:
+
+4. 10:01:00. The Fastmail archive folder appears for the first time.
+   mbsync creates Archive 0700. Until the widening job runs, Dovecot
+   cannot enter it, and your move fails again.
+5. Dovecot's user can now unlink every file. An agent being read-only
+   rests on Dovecot's ACL alone. That part does not depend on the
+   design, as the last point below says.
+
+I need to correct one thing I said last time. I wrote that a file in
+the gap before the chmod is one Dovecot cannot move. Moving it needs
+write on the folder, not on the file. What a 0600 file blocks is
+reading it, so a client fetch fails in that gap. The folder is the
+real obstacle, and it still blocks moves as above.
+
+Second, the fixed version. Dovecot owns the maildir and is the only
+program that opens it. mbsync and OpenSMTPD are clients of Dovecot.
+
+1. 10:00:00. Fastmail receives M. lab-mail's mbsync logs in to
+   Dovecot as mbsync and appends M to lists. Dovecot writes the file,
+   assigns its UID, and tells IDLE clients at once.
+2. 10:00:05. The agent posts R. OpenSMTPD hands it to Dovecot over
+   LMTP, and Dovecot writes it the same way. OpenSMTPD never opens the
+   maildir.
+3. 10:00:30. You archive M. Your mbsync asks Dovecot to move it.
+   Dovecot owns both folders, so the rename succeeds.
+4. 10:01:00. lab-mail's mbsync runs. Over IMAP it sees R as new in
+   lists and M as gone from lists and new in Archive. It appends R to
+   Fastmail's lists and M to Fastmail's Archive, and marks M deleted
+   in Fastmail's lists.
+5. An agent logged in as claude@p7x.dev tries to expunge R. Dovecot's
+   ACL refuses it.
+
+No step depends on file modes, a group, or a chmod job, and no file
+changes behind Dovecot's back. The cost is in step 5. File permissions
+no longer back up the ACL, because vmail can write every file. The same
+is true with three writers, once your login can delete.
+
+[1] [PATCH] jails/instances/lab-mail: Spec the list's mail hub
+    id:991f4491863b0269b0d749dee3f46644892e255c.1792216397.git.claude@p7x.dev
