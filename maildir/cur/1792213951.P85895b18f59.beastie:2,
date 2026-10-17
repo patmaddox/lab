@@ -1,0 +1,70 @@
+From: Pat Maddox <pat@patmaddox.com>
+To: claude <claude@p7x.dev>, lab-devel@p7x.dev
+Subject: Re: [RFC] threading strategies for RFC and patch versions
+In-Reply-To: <1792195756.4ee05afd82df@p7x.dev>
+References: <m2a4odz1dp.fsf@beastie.p7x.dev> <1792195756.4ee05afd82df@p7x.dev>
+Date: Fri, 16 Oct 2026 22:12:31 -0700
+Message-ID: <m25wz0uczk.fsf@beastie.p7x.dev>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+claude <claude@p7x.dev> writes:
+
+> On Fri, 16 Oct 2026 16:12:02 -0700, Pat Maddox wrote:
+>> Several major open source projects use a mailing list to distribute
+>> patches. I know some of them have different policies regarding how to
+>> post new versions - some post new versions as a reply to the previous
+>> version, whereas other post new threads and link to the previous
+>> version.
+>>
+>> What are the specific policies of each project, and why? Also want
+>> documentation and examples.
+
+[...]
+
+> Reply in the old thread
+> -----------------------
+>
+> Git. Documentation/SubmittingPatches [i]:
+>
+> "All subsequent versions of a patch series and other related
+> patches should be grouped into their own e-mail thread to help
+> readers find all parts of the series. To that end, send them as
+> replies to either an additional 'cover letter' message..."
+>
+> MyFirstContribution says to pass --in-reply-to and "always use the
+> Message-ID from v1" [j], and builds v2 with format-patch -v2
+> --range-diff. git.git pins this in its .b4-config with
+> "send-same-thread = shallow" [k], overriding b4's default. The
+> rationale is that readers can find every version in one place.
+> Example: "[PATCH v2 0/4] object-file: fix '.keep' lockfile
+> ownership...", In-Reply-To the v1 cover [l]. In practice people
+> sometimes reply to the previous version instead of v1, so chains
+> still deepen.
+
+[...]
+
+> Where this lab stands: we already follow the kernel.
+> doc/mail-workflow.md says a revision is "a fresh thread subject
+> `[PATCH vN]`, with a `v(N-1): <message-id>` link in the cover", and
+> src/lab-process-mail/prompt.md requires the "Link to v(N-1):" line.
+> format-patch.sh refuses a reroll without --previous, which also makes
+> it attach an interdiff. The superseded tag in "[PATCH v3] notmuch:
+> Tag series a later version replaces" [1] reads those Link lines, so
+> we get patchwork-style supersession without the reply. That covers
+> the one advantage Buildroot cites for replying. Your later decision
+> to drop the Overcome-by reply, in "Re: [PATCH 0/3] notmuch: Tag
+> superseded series and hide them" [2], means we also skip GCC's
+> follow-up in the old thread.
+>
+> I see no reason to change. If you want shallow reply threading like
+> git.git instead, it is a small change to format-patch.sh
+> (--in-reply-to=<v1 cover>) plus the doc and prompt; say so and I will
+> send it. If you want this survey kept in the tree, I can post it as
+> a zib note.
+
+I'm convinced by the git approach. It will be a lot easier for me to
+track work going on in the list if it's all in a thread.
+
+Yep, get to work on whatever changes need to be made to support
+this.
