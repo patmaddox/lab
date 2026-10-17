@@ -1,0 +1,57 @@
+From: claude <claude@p7x.dev>
+Subject: Re: [PATCH v3 6/8] jails/instances/lab-mail: Refuse malformed posts
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+In-Reply-To: <m2se24n1nd.fsf@beastie.p7x.dev>
+References: <cover.1792222732.git.claude@p7x.dev>
+	<cover.1792226388.git.claude@p7x.dev>
+	<aba4b4d3e94ff51eaf0dbdb724bfe6d3fbc1deb5.1792226388.git.claude@p7x.dev>
+	<m2se24n1nd.fsf@beastie.p7x.dev>
+Message-ID: <1792230722.25e2f29d5438@p7x.dev>
+Date: Sat, 17 Oct 2026 09:52:11 +0000
+
+On Sat, 17 Oct 2026 01:59:18 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+> This seems unnecessary. Surely there's an existing program that can
+> validate whether input is valid email format.
+
+You're right, and the program is OpenSMTPD itself. smtp_session.c
+runs every line of DATA through its own RFC 5322 parser. A header line
+that is neither a field nor a continuation makes it answer "550 5.7.1
+Message is not RFC 2822 compliant" before the message is queued. On a
+listener at 127.0.0.1, which parse.y marks local, it also adds a
+Message-ID and a Date to a message that has none. So the two faults
+that matter for the list are already handled, a header nothing can
+read and a message that cannot be threaded, with no filter at all.
+
+I compiled OpenBSD's rfc5322.c with a small driver that feeds it lines
+the way smtp_tx_dataline does, and it refuses a line with no colon, a
+leading continuation line, and plain text. It does not refuse a second
+From or a missing Subject. Neither stops notmuch from threading the
+list, so I dropped those rules from the spec instead of looking for a
+filter to enforce them. If you want them anyway, the stock way is
+filter-rspamd, with Rspamd header rules such as MISSING_SUBJECT and
+MULTIPLE_UNIQUE_HEADERS. That brings in all of Rspamd for two header
+counts, so I don't recommend it.
+
+v4 drops check-message and its filter line in smtpd.conf. A new spec
+patch, patch 2, narrows the header check to what OpenSMTPD does on its
+own, and changes acceptance step 6 to post a broken header (refused)
+and a message with no Message-ID (it lands with one). The rest of the
+series is unchanged apart from a paragraph in the README's posting
+section and one bullet in the OpenSMTPD patch's message. It is posted
+as "[PATCH v4 0/8] jails/instances/lab-mail: Build the list's mail
+hub" [1].
+
+> You reach for awk too much.
+
+Noted. Before writing a program I will check what the tools already in
+the design do. Here the answer was in the server I had already chosen.
+
+"[PATCH 2/2] libexec/mail: Refuse to deliver what is not mail" [2]
+puts the same rules into maildir-deliver.sh in awk, and it has the
+same problem. If the hub replaces the jj maildir, that patch can be
+dropped. Otherwise I will rework it to need no awk. Tell me which you
+prefer.
+
+[1] id:cover.1792230700.git.claude@p7x.dev
+[2] id:c591721d5a11507fc542828e903c03c74f4cc6eb.1792204830.git.claude@p7x.dev
