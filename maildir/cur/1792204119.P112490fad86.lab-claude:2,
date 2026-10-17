@@ -1,0 +1,99 @@
+From: claude <claude@p7x.dev>
+Subject: Re: [RFC] processing the entire inbox at once
+To: Pat Maddox <pat@patmaddox.com>, lab-devel@p7x.dev
+In-Reply-To: <m2tsmlvzo7.fsf@beastie.p7x.dev>
+References: <m2tsmlvzo7.fsf@beastie.p7x.dev>
+Message-ID: <1792204115.7f80a58fe18f@p7x.dev>
+Date: Sat, 17 Oct 2026 02:28:39 +0000
+
+On Fri, 16 Oct 2026 19:17:12 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+> lab-process-mail works on a single thread at a time. I don't know if
+> that's necessary or useful.
+
+It is one message at a time, in fact, which is a step narrower than a
+thread. A thread with three unanswered messages costs three passes,
+even though the first pass already read the other two through its
+thread reader.
+
+It is not necessary. It came from your spec in "deterministic just
+process-email task for claude" [1], and the reasons recorded in "[PATCH
+v3 2/6] just: Add just process-email" [2] and "[PATCH 1/6]
+src/lab-process-mail: Answer the inbox from outside the tree" [3] were
+these three:
+
+1. The model never decides when to stop.
+2. Each pass starts with a fresh context, so one context does not grow
+   with every thread.
+3. The script can check that exactly the message it named left the
+   inbox.
+
+Only the third needs one message per pass, and only in its current
+form. The check works just as well over a list of ids.
+
+Per-message passes also cut against CLAUDE.md's "Read the whole batch
+before working". The thread reader catches corrections later in the
+same thread. It misses a message in another thread that supersedes
+this one, such as a new RFC that redefines an older ask. A pass that
+sees the whole inbox would catch that.
+
+> Would it be better for it to load all of the inbox threads at once, and
+> kick off subagents to parallelize them? It wouldn't necessarily
+> parallelize every one - but let the primary agent figure that out.
+
+Yes, I think so, as long as the script still owns the loop. This is
+what I would build:
+
+- The script brings everything up to date as it does now, then takes
+  the oldest N inbox messages, where N is ${LAB_PROCESS_MAIL_BATCH} and
+  defaults to 10. It names every id in the prompt.
+- The agent reads every message first and works out which ones
+  constrain the others. It then fans out read-only subagents, one per
+  thread, for research and drafting, and decides which threads can
+  share one. It applies the writes in order from the parent, meaning
+  the commits in work.jj, the mail commits, and the push. There is one
+  work workspace and one mail workspace, and parallel writes to them
+  corrupt state.
+- Afterwards the script checks each id against tag:inbox, exactly as
+  it checks the single id today, and sends one notification per
+  message, answered or stuck. If any id is still in the inbox it exits
+  1 and lists them. Control still rests only on the notmuch index,
+  never on what the model printed.
+- The loop runs until the inbox is empty, so mail that arrives during
+  a batch goes into the next one. lab-process-mail-loop does not
+  change, because it only looks at the exit status.
+
+What it costs:
+
+- Context. The parent holds a summary of every thread in the batch,
+  and the cap on N is what keeps that bounded. A batch of ten short
+  results should fit comfortably.
+- Blast radius. One crash or quota cutoff leaves the whole batch
+  unanswered, where today it costs one message. Because the check is
+  per id, the partial progress is still visible and exact.
+- A reply can no longer be pinned to one fresh pass. If something goes
+  wrong in a batch, it is harder to say which thread's work caused it.
+
+What it gains:
+
+- The whole batch is read before any work starts, as described above.
+- There is one fetch and rebase per batch instead of one per message.
+- Research runs in parallel, so wall-clock time drops. As I said in
+  "Re: [RFC] push vs pull for agents" [4], your review is the real
+  bottleneck, so this is mostly about coherence and latency, not
+  throughput.
+
+A smaller step is to pass every inbox message in the oldest message's
+thread to one pass. That fixes the repeated passes per thread but
+not the cross-thread case. I would go straight to the batch.
+
+If you agree, the patch would change lab-process-mail, its tests, and
+prompt.md (steps 2 and 6 through 8 become per-message within one
+pass). I left it unwritten because it replaces the contract the
+current prompt is built on, and I would rather you pick the shape
+first. Let me know whether you want N capped as above, or the whole
+inbox each time.
+
+[1] id:m28q40egzm.fsf@beastie.p7x.dev
+[2] id:f7d735ab3b2820af6e96323f4dde88441d992e28.1791997861.git.claude@p7x.dev
+[3] id:184a4923bebe34bd2b327f6e784a0383c36cae9e.1792003466.git.claude@p7x.dev
+[4] id:1792195928.35df953505df@p7x.dev
