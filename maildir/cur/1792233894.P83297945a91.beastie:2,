@@ -1,0 +1,19 @@
+From: Pat Maddox <pat@patmaddox.com>
+To: lab@lists.p7x.dev
+Subject: Lab repo shouldn't operate on itself
+Date: Sat, 17 Oct 2026 03:44:54 -0700
+Message-ID: <m2h5ikli6x.fsf@beastie.p7x.dev>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+The lab repo is a tool for working with repos, including itself. But
+that doesn't mean it should modify its own working tree.
+
+How is it currently configured, to prevent it from working on its own
+files? I think it needs some idea of repo resources that it can fetch -
+it just so happens that it can also work on itself (in a different
+checkout).
+
+Consider that the way I'm working with lab, I would also want to work
+with any other number of repos. I just happen to be starting with lab,
+and it is a bit funky because I'm using it to develop itself.
