@@ -1,0 +1,114 @@
+Message-ID: <27515d9a8c98ee583ce1952099f650696a34d626.1792274056.git.claude@p7x.dev>
+In-Reply-To: <cover.1792274056.git.claude@p7x.dev>
+References: <cover.1792274056.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Subject: [PATCH v13 5/8] jails/instances/lab-mail: Document importing the jj
+ maildir
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+Change-Id: spvkorvpwuxmnxzxxlkrmvnluplqqypu
+Date: Sat, 17 Oct 2026 21:55:06 +0000
+
+The list's history from before lab-mail lives only in the jj maildir
+on the mail bookmark, so Pat imports it once. mbsync renames each
+file it syncs, so the steps run on a copy and never touch the jj
+working copy.
+---
+change-id: spvkorvpwuxmnxzxxlkrmvnluplqqypu
+
+ jails/instances/lab-mail/README.org | 42 +++++++++++++++++++++++++++++
+ jails/instances/lab-mail/spec.org   | 11 ++++++--
+ 2 files changed, 51 insertions(+), 2 deletions(-)
+
+diff --git a/jails/instances/lab-mail/README.org b/jails/instances/lab-mail/README.org
+index 0fa84edc..8d3e9ffb 100644
+--- a/jails/instances/lab-mail/README.org
++++ b/jails/instances/lab-mail/README.org
+@@ -180,6 +180,48 @@ just start
+ The build starts the jail before it installs the config, so restart
+ the jail after a build that changes the config.
+ 
++** import the jj maildir
++The list's history is in the jj maildir on the =mail= bookmark. Once
++lab-mail's first sync has pulled the list from Fastmail, the operator
++imports that maildir into INBOX once, from beastie, as =pat@p7x.dev=.
++The next sync carries it to Fastmail. mbsync renames each file it
++syncs, so it reads a copy, never the jj working copy:
++#+BEGIN_EXAMPLE
++cp -R ~/lab/mail.jj/maildir /tmp/list-import
++mkdir /tmp/list-import-state
++cat > /tmp/list-import.rc <<'EOF'
++IMAPAccount lab-mail
++Host 127.0.0.1
++Port 2143
++TLSType None
++AuthMechs LOGIN
++User pat@p7x.dev
++PassCmd "pass show lab-mail/pat@p7x.dev"
++
++IMAPStore lab-mail
++Account lab-mail
++
++MaildirStore import
++Path /tmp/
++Inbox /tmp/list-import
++
++Channel import
++Far :lab-mail:INBOX
++Near :import:
++Sync Push New
++Create None
++Expunge None
++Remove None
++CopyArrivalDate yes
++SyncState /tmp/list-import-state/
++EOF
++mbsync -c /tmp/list-import.rc import
++#+END_EXAMPLE
++
++A message that is already on Fastmail and in the jj maildir lands
++twice. notmuch indexes both files under the one Message-ID, so a
++thread shows it once.
++
+ * check
+ =just check= checks that lab-mail is set up and running. It prints
+ one line per check, ok or FAIL, and exits non-zero if any check
+diff --git a/jails/instances/lab-mail/spec.org b/jails/instances/lab-mail/spec.org
+index bbedb716..7a8e4c61 100644
+--- a/jails/instances/lab-mail/spec.org
++++ b/jails/instances/lab-mail/spec.org
+@@ -28,6 +28,9 @@ the list: the folders INBOX and =Archive= of the Fastmail account.
+ - The folder a message is in is its state. That state lives in the
+   list data, not in any one client, so Fastmail and every client see
+   it, and a move on Fastmail's web interface counts like any other.
++- The list holds every message from the jj maildir that carried it
++  before, imported once by the operator, so old threads keep their
++  context and replies to them still thread.
+ - Pat removes a message he does not want on the list by deleting it,
+   which his login may do. There is no moderation queue.
+ - Any other folder of the account is not part of the list. Pat may
+@@ -244,8 +247,9 @@ beastie.
+     not in INBOX on Fastmail.
+ 
+ out of scope:
+-- The lab-devel list and the process-email workflow. They keep using
+-  the maildir in jj.
++- Moving the list's clients off the jj maildir. lab-process-mail, the
++  =mail= bookmark, and Pat's notmuch keep using it until a change of
++  their own moves them to lab-mail.
+ - An archive of the list in git. It is a separate artifact, and can
+   be fed from the list's folders like any other client.
+ - Restricting which jails or local users may use lab-mail.
+@@ -314,6 +318,9 @@ why.
+   list data, so a rebuild of the index loses it and no agent sees it.
+   Fastmail's own =Archive= folder is used, not a new one, so archiving
+   on Fastmail's web interface means the same.
++- Import the jj maildir once, not freeze it as an archive. A frozen
++  archive would split the list into two places to search, and a reply
++  to an old thread would arrive with no parent.
+ - Passwords only for the logins that may write, not for every login.
+   A read-only login can do nothing a password would guard against,
+   and agents need no secret.
+-- 
+2.56.0
+
