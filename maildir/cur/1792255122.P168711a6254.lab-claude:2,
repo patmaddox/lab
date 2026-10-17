@@ -1,0 +1,214 @@
+From: claude <claude@p7x.dev>
+Subject: Re: [RFC] commit style
+To: Pat Maddox <pat@patmaddox.com>, lab@lists.p7x.dev
+In-Reply-To: <m25wz0l23i.fsf@beastie.p7x.dev>
+References: <m2a4oclhvv.fsf@beastie.p7x.dev>
+	<1792235349.f7fc30029251@p7x.dev> <m25wz0l23i.fsf@beastie.p7x.dev>
+Message-ID: <1792255115.941a80fb30d2@p7x.dev>
+Date: Sat, 17 Oct 2026 16:38:42 +0000
+
+On Sat, 17 Oct 2026 09:32:33 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+> This is all quite good. Add git.git to the research list and update.
+
+Here is git.git, then the rules revised against it. git.git changes
+three of my six proposals, so read the revised list rather than the
+first one.
+
+git.git
+=======
+
+Guidance is Documentation/SubmittingPatches, MyFirstContribution, and
+howto/maintain-git, read from master as of 2026-10-16. I did not read
+the "What's cooking" mails.
+
+- Splitting: "Make separate commits for logically separate changes",
+  and "If your description starts to get too long, that's a sign that
+  you probably need to split up your commit". This is the same test
+  as Linux.
+- Subject: "area: " prefix, "50 characters is the soft limit", no
+  full stop, and the first word after the prefix "is not
+  capitalized".
+- Body order: the status quo first, in present tense, with no
+  "Currently"; then the problem; then the fix, "as if you are giving
+  orders to the codebase". The body also records alternatives
+  discarded and concerns resolved in review.
+- Stand-alone: "Instead of giving a URL to a mailing list archive,
+  summarize the relevant points". Version notes go below the --- or
+  in the cover letter. A reroll is a full replacement that should
+  read as "a logical progression made by a perfect developer".
+- Trailers: Signed-off-by (DCO) is required, and Junio adds his own.
+  Helped-by, Reported-by, Suggested-by and Assisted-by are common.
+  Fixes: and Link: "are not used in this project".
+- On AI: "we will reject anything that looks AI generated, that
+  sounds overly formal or bloated".
+
+Measured over 259 recent non-merge commits on master, leaving out
+release, batch and l10n commits:
+
+  diff        median 20 lines and 2 files; p75 62, p90 117
+  body        median 10 lines; only 1 of 259 has none
+  subject     median 53 characters, p90 64; none end in "."
+  prefix      258 of 259; lowercase after it in all but identifiers
+  tests       86 change code and t/ together; few trail separately
+
+Examples:
+
+  f7aeeae66 builtin/clone: move around `setup_reference()`
+
+    In a subsequent commit, `setup_reference()` will start to call
+    `copy_alternates()`. Prepare for this by moving the function
+    further down so that we can avoid adding a declaration.
+
+  Patrick Steinhardt, +10/-10. This is git's prep commit: one
+  sentence on what comes next, one on what this does.
+
+  Jeff King's merge-ll tempfile cleanup, 3ddcf99d0..5b0456361, nine
+  commits. It cleans up close() handling, then the tempfile API, then
+  four small xdiff cleanups, then switches to read_mmfile(), and ends
+  with the fix, which carries its own test. The fix's body follows the
+  order above: "So a driver which exits successfully can cause us to
+  return LL_MERGE_OK without a result", then "Let's return
+  LL_MERGE_ERROR when read_mmfile() fails".
+
+  25b334d8d xdiff: NUL-terminate buffers read by read_mmfile()
+
+  A one-line diff with four paragraphs. In git, a small diff that
+  needs judging gets a full body.
+
+Where git.git sits against the other four:
+
+- It agrees on one logical change per commit, prep first, the
+  imperative area-prefixed subject, why over what, and messages
+  that stand alone.
+- It writes a body for almost everything. Its median body equals
+  ours, about 10 lines. Only its diffs are smaller: 20 lines against
+  our 70.
+- It rarely says "No functional change" (68 of 2889 commits in a
+  year). Prep commits say "Prepare for ..." and name the commit that
+  needs it.
+- It refers forward freely, in about 10% of commits. Our CLAUDE.md
+  forbids that.
+- Tests go in the commit they test, not in a trailing commit.
+- It lowercases after the prefix. FreeBSD and Linux capitalize, and
+  so do we.
+
+> > If you want this turned into rules, I would propose these:
+> >
+> > 1. Body: say why in one short paragraph of 1-4 lines. No body at
+> >    all for mechanical changes such as renames, moves, style fixes
+> >    and typos. Any "what" goes in bullets, per [1].
+
+git.git's bodies are as long as ours, so length is not the fault.
+The fault is what our lines say: each decision in the diff, one by
+one. Revised:
+
+1. The body says why. Its length follows how much there is to judge,
+   not the size of the diff. Open with what the code does now, in
+   present tense; then the problem; then the fix in one imperative
+   sentence. Any "what" goes in bullets. A mechanical change gets one
+   sentence of why.
+
+> > 2. Write more than one paragraph only for a subtle change, such as a
+> >    race, a trade-off, or a rejected alternative a reviewer would
+> >    otherwise suggest.
+> > 3. If the message needs a second reason, split the commit.
+
+Unchanged. All five projects agree on both.
+
+> > 4. Land preparatory commits first, marked "No functional change"
+> >    where true. Move or extract code as it is, then fix it in its own
+> >    commit, per [3].
+
+Revised:
+
+4. Land preparatory commits first. Say "No functional change" where
+   true, and say what the prep makes possible. Move or extract code
+   as it is, then fix it in its own commit.
+
+"What the prep makes possible" is git's "Prepare for ...". It
+collides with CLAUDE.md, which says "Do not refer to work later in a
+series". A prep commit that cannot name its purpose either says
+nothing or hides it. I recommend allowing a forward reference within
+the same posted series, since the series lands whole; the ban on
+patches not yet sent stays.
+
+> > 5. Aim for diffs under about 50 changed lines. Treat 200 as a reason
+> >    to split, unless the change is mechanical.
+
+Unchanged. git.git's p75 is 62 lines, which supports it.
+
+> > 6. Keep explanations of how the code works in code comments, not in
+> >    the commit message.
+
+Unchanged. Two additions from git.git:
+
+7. Tests and docs go in the commit whose behavior they cover. Split
+   by step, not by kind of file. This corrects my earlier point that
+   a service's config, checks and docs should each be their own step.
+8. Summarize list discussion in the message; do not point at it.
+
+I would keep our capitalized subjects. They match FreeBSD and Linux
+and all of our history, and changing case gains nothing a reader
+would notice.
+
+> I'd like to see what git.git does first. In the mean time - I think
+> there may be more places than just CLAUDE.md that will need updating.
+
+You are right. The rules are stated in several places, and some of
+those places contradict the revised rules:
+
+- CLAUDE.md states them three times: "Commit messages", "Commit
+  messages describe the patch, not its history", and "Behave like an
+  effective contributor". The last says a message should be
+  "detailed enough to judge without reading the diff", which invites
+  the per-decision bodies. It also forbids forward references (see
+  rule 4).
+- src/lab-process-mail/prompt.md restates a summary ("one logical
+  change per commit, each message explaining why") instead of only
+  pointing at the rules.
+- src/jc/CLAUDE.md and src/diffwise/CLAUDE.md carry the same copied
+  section, which asks for each commit to be "a vertical slice of
+  behavior". That fits rule 7 but not prep-first; both copies need
+  the same edit.
+- dotfiles/emacs/CLAUDE.md (vendored re-apply messages list every
+  patch) and .claude/skills/freebsd-port/SKILL.md (ports-tree
+  templates) follow other conventions on purpose. They need an
+  explicit carve-out, not the new rules.
+- .claude/skills/spec-report/SKILL.md already does a prep commit
+  first; it only needs the wording.
+- plans/commit-prompt.md already proposes moving the rules out of
+  CLAUDE.md, and todo.org has "claude: Wrap commit messages at
+  correct number of spaces".
+- Nothing checks a message. format-patch.sh posts whatever it is
+  given.
+
+What I propose, as one series:
+
+1. doc/style/commit.md: the rules above, next to cli.md and sh.md,
+   with one or two examples each. This becomes the only full
+   statement.
+2. CLAUDE.md: replace the three passages with a short pointer, and
+   drop the contradicting sentence.
+3. prompt.md: point at doc/style/commit.md instead of restating it.
+4. src/jc and src/diffwise: point at it too, and keep only what is
+   specific to each tool.
+5. emacs and freebsd-port: state the carve-out.
+6. libexec/mail: a check that format-patch.sh runs before writing a
+   series. It fails on a missing prefix, a subject over 72
+   characters, a body line over 72, or a double space; it warns on a
+   diff over 200 lines. Rules 1-4 and 6-8 need judgement and stay
+   prose.
+
+Three things I need from you before I send it:
+
+a. Forward references in prep commits: allow them within a series,
+   as git does (my recommendation), or keep the ban?
+b. Should doc/style/commit.md be the single home, or do you want
+   the rules to stay in CLAUDE.md?
+c. Should the check refuse to post, or only warn? I recommend refuse
+   for the mechanical checks and warn on size.
+
+[1] "Re: [PATCH 0/2] jails/instances/lab-mail: Build the list's mail
+    hub", id:m2cxt8oine.fsf@beastie.p7x.dev
+[3] "Re: [PATCH v3 0/6] Add just process-email",
+    id:m2a4ogb0ju.fsf@beastie.p7x.dev
