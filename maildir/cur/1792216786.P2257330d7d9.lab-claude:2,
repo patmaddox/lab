@@ -1,0 +1,107 @@
+From: claude <claude@p7x.dev>
+Subject: Re: [PATCH v3 0/2] lab-process-mail: Add lab-process-maild
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+In-Reply-To: <m2tsmkri8b.fsf@beastie.p7x.dev>
+References: <cover.1792207350.git.claude@p7x.dev>
+	<m2ik31t2qs.fsf@beastie.p7x.dev> <1792209082.f4b879550474@p7x.dev>
+	<m21p9oucpe.fsf@beastie.p7x.dev> <m2tsmkri8b.fsf@beastie.p7x.dev>
+Message-ID: <1792216755.707bf1c4e7fc@p7x.dev>
+Date: Sat, 17 Oct 2026 05:59:46 +0000
+
+On Fri, 16 Oct 2026 22:47:32 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+> I like this a lot.
+
+Thanks. It is posted as "[PATCH v5 0/5] lab-process-mail: Add
+lab-process-maild" [1]. Patch 4 adds the exit status. Patch 5 runs
+"lab-process-maild drain" under daemon(8) -R, and drain runs
+lab-process-mail again at once while it exits 75. Under the real
+daemon(8) with a 60 second interval, the tests answer three messages
+back to back.
+
+> That sounds good to me. It's a clear contract.
+
+lab-process-mail documents it in its header comment, and
+lab-process-maild(8) documents drain.
+
+I was wrong that "just process-email" would need to accept 75. Its
+recipe, from "[PATCH v3 0/6] Add just process-email" [2], runs its own
+loop and calls claude directly, never lab-process-mail. Nothing but
+drain runs lab-process-mail, so no other caller changes.
+
+> The one thing I don't understand is "A run by hand that clears the inbox
+> still exits 0." By that I suppose you mean if I run lab-process-mail on
+> an inbox with size 0 or 1, then it exits 0? That's fine. But I assume
+> there's no special "being run in daemon" logic. If there's a message at
+> the end of the run, it exits 75.
+
+Yes, that is it exactly. There is no daemon mode. It exits 0 if the
+inbox is empty at the end of the run, so an inbox of 0 or 1 gives 0
+once that one message is answered. It exits 75 if a message is left
+after it answered one, and 1 on failure, however it was started. I
+meant only that a run by hand which empties the inbox looks the same
+as before.
+
+> Then it just gets into an infinite loop, right? Until we address the bug
+> report about stuck messages?
+
+Yes, but a slow and cheap one. A stuck message makes its run exit 1,
+which ends drain. daemon(8) starts drain again after the interval, and
+lab-process-mail fetches, sees the held message is still the oldest,
+and exits 1 before the agent starts. That repeats once per interval,
+with no agent pass, no notice, and one error line in the log, until
+the message is answered or archived or
+~/var/db/lab-process-mail/stuck is removed.
+
+The real cost is that the held message blocks the rest of the inbox.
+"[BUG] lab-process-mail gets stuck" [3] lists the fixes. Fix 3 tags
+the stuck message and skips it, so later mail keeps moving and the
+loop ends by itself. I recommend that as the next patch, after v5,
+since it changes which message is answered and deserves its own
+review. Say the word and I will send it.
+
+> Makes sense to me. Show me some examples of this convention being used
+> in FreeBSD.
+
+These are all on 15.1, from the man pages and /usr/sbin/periodic.
+
+Base callers branch on 75 itself. lockf(1) exits EX_TEMPFAIL when the
+lock is held by another process, and periodic(8) acts on that status
+to report a run still in progress rather than a failure:
+
+	lockf -s -t 0 "${lockfile}" /bin/sh $0 LOCKED "$arg"
+	case $? in
+	0) ;;
+	73) #EX_CANTCREATE
+	    ...
+	75) #EX_TEMPFAIL
+	    echo "$host ${arg##*/} prior run still in progress" | \
+	        output_pipe $arg "$PERIODIC"
+
+sendmail(8) lists EX_TEMPFAIL as "Message could not be sent
+immediately, but was queued", and sysexits(3) defines it as "not
+really an error", where "the request should be reattempted later".
+mail.local(8) returns that kind of temporary error for a mailbox over
+quota, unless -b asks for a permanent one, so sendmail keeps the
+message queued and retries it.
+
+The wider convention, a non-zero status that is not a failure and
+tells the caller what to do next, is everywhere in base:
+
+- make(1) -q: "exit 0 if the specified targets are up to date, and 1
+  otherwise", so a caller learns whether there is work left without
+  doing it.
+- grep(1): 0 for a match, 1 for none, >1 for an error. diff(1) and
+  cmp(1) use the same split.
+- periodic(8) scripts: 0 for nothing notable, 1 for notable output, 2
+  for bad configuration, and >2 for output that must not be masked.
+  periodic reads the status to decide what to show.
+
+One honest difference is that 75 conventionally means "try again
+later", and drain tries again at once. The sysexits(3) wording still
+fits, since the run did its job and a retry is expected, and the
+operator still controls the delay after the inbox empties.
+
+[1] id:cover.1792216718.git.claude@p7x.dev
+[2] id:cover.1791997861.git.claude@p7x.dev
+[3] id:1792206019.c7310968cbe0@p7x.dev
