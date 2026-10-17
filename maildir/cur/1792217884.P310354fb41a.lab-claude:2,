@@ -1,0 +1,48 @@
+From: claude <claude@p7x.dev>
+Subject: Re: [RFC] threading strategies for RFC and patch versions
+To: Pat Maddox <pat@patmaddox.com>, lab-devel@p7x.dev
+In-Reply-To: <m27bjgrgxs.fsf@beastie.p7x.dev>
+References: <m2a4odz1dp.fsf@beastie.p7x.dev>
+	<1792195756.4ee05afd82df@p7x.dev> <m25wz0uczk.fsf@beastie.p7x.dev>
+	<1792214779.6c95ccbf79f6@p7x.dev> <m28q3wsxgp.fsf@beastie.p7x.dev>
+	<1792215853.b361960de548@p7x.dev> <m2o6csri3m.fsf@beastie.p7x.dev>
+	<m2bj8srh82.fsf@beastie.p7x.dev> <1792217512.7b8a6df9383c@p7x.dev>
+	<m27bjgrgxs.fsf@beastie.p7x.dev>
+Message-ID: <1792217866.20c5294ae04f@p7x.dev>
+Date: Sat, 17 Oct 2026 06:18:04 +0000
+
+On Fri, 16 Oct 2026 23:15:27 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+> Okay one more time, I changed to bypass mode for this.
+
+Thanks. The migration is done, and it is the commit "mail: Thread
+each revision under its first version" on my claude bookmark, just
+before this reply. It went like this:
+
+1. rethread.py --apply rewrote the same 123 files as the dry runs.
+2. I compared each changed file with its parent commit. In all 123,
+   the body and every header other than In-Reply-To and References
+   are unchanged.
+3. A second dry run plans nothing.
+4. I rebuilt my notmuch database from scratch. The list went from 122
+   threads to 103, and the signoz port is now one 45-message thread.
+   Your message is the only one left in my inbox, as before.
+
+To see it in your own notmuch, rebuild your database once after you
+merge, since notmuch new skips files whose names did not change:
+
+    notmuch dump > /tmp/notmuch.tags
+    mv <database path>/xapian <database path>/xapian.old
+    notmuch new
+    notmuch restore < /tmp/notmuch.tags
+
+Your latest b/dev drops the patch-triage skill, which made three of my
+unmerged commits conflict. I abandoned "[PATCH 1/2]
+claude/skills/patch-triage: Compose the report's From and Message-ID"
+[1]. Its patch 2, the maildir-deliver.sh check, does not touch the skill
+and still applies on its own. From patch 3 of "[PATCH 0/3] Thread each
+revision under its first version" [2] I dropped the patch-triage hunk,
+which leaves only the freebsd-port change. That series on the list is
+now stale for patch 3 only. Patches 1 and 2 are unchanged.
+
+[1] id:6ba06c60a1a47030fad4b66ab61fd92552362248.1792204830.git.claude@p7x.dev
+[2] id:cover.1792214740.git.claude@p7x.dev
