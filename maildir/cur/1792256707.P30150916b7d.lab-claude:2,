@@ -1,0 +1,174 @@
+Message-ID: <a74f846ccd3e4d75831f2b5c1b311874387dcbc0.1792256671.git.claude@p7x.dev>
+In-Reply-To: <cover.1792256671.git.claude@p7x.dev>
+References: <cover.1792256671.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Subject: [PATCH v9 10/10] jails/instances/lab-mail: Spec the Next, Later, and
+ quarantine folders
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+Change-Id: xlunvnzsqsvlpvpmzoomywrowwpymvzx
+Date: Sat, 17 Oct 2026 17:05:07 +0000
+
+Pat triages the list in three steps, not two: a message is either
+done, needs work soon, or can wait. INBOX and Archive alone cannot hold
+that middle state anywhere every client and agent sees it, and a
+notmuch tag cannot either, since it is not in the list data and a
+rebuilt index loses it. Mail from a sender the agent must not act on
+needs a place of its own for the same reason.
+
+Next, Later, and quarantine are folders like Archive, so the state
+travels with the message through lab-mail and Fastmail. lab-mail
+carries every folder already, so only the clients name them. The spec
+makes the folder the only state: clients derive their tags from it,
+and a move is the one way to change it, from Emacs or Fastmail's web
+interface alike.
+
+The spec also turns flag sync on for Pat's notmuch, so read, flagged,
+and answered match Fastmail and notmuch serves as a full client of the
+account. It stays off for the agent, whose login cannot set flags.
+---
+change-id: xlunvnzsqsvlpvpmzoomywrowwpymvzx
+
+ jails/instances/lab-mail/spec.org | 78 ++++++++++++++++++++++++-------
+ 1 file changed, 60 insertions(+), 18 deletions(-)
+
+diff --git a/jails/instances/lab-mail/spec.org b/jails/instances/lab-mail/spec.org
+index 4b5e6201..26285c0d 100644
+--- a/jails/instances/lab-mail/spec.org
++++ b/jails/instances/lab-mail/spec.org
+@@ -23,12 +23,21 @@ provider: p7x.dev is hosted on Fastmail.
+   INBOX. No Fastmail rule files it elsewhere.
+ - Fastmail's folder =Archive= is the account's archive folder. Over
+   IMAP it carries the =\Archive= special-use flag.
++- The account's folders =Next=, =Later=, and =quarantine= are plain
++  folders. Pat makes them once on Fastmail.
+ 
+ the list: every folder of the Fastmail account.
+-- A message posted to the list lands in INBOX. Archiving a message
+-  moves it from INBOX to =Archive=. A message that needs no answer
+-  is archived, and its state lives in the list data, not in any one
+-  client.
++- A message posted to the list lands in INBOX. Pat moves a message
++  that needs work to =Next= when it comes up soon, or to =Later= when
++  it can wait. Archiving a message moves it to =Archive=. A message
++  that needs no answer is archived.
++- A message from a sender lab-process-mail does not act on is moved
++  to =quarantine=, where no agent takes it up.
++- The folder a message is in is its state. That state lives in the
++  list data, not in any one client, so Fastmail, every client, and
++  every agent see it. Moving the message is the only way to change
++  it, and any client with the right may move it, Fastmail's web
++  interface included.
+ - The list holds every message from the jj maildir that carried it
+   before, imported once by the operator, so old threads keep their
+   context and replies to them still thread.
+@@ -221,13 +230,13 @@ check:
+   mail, so it is safe to run at any time.
+ 
+ clients: beastie, for Pat, and lab-claude, for the agent. Both are set
+-up the same way and differ only in the login.
++up the same way and differ only in the login and in flag sync.
+ - Packages: mail/isync, mail/msmtp, and mail/notmuch on both hosts.
+ - Each user's mail root is =~/mail/<login>=, such as
+   =~/mail/pat@p7x.dev= and =~/mail/claude@p7x.dev=. The list's
+   folders sit in it as on lab-mail.
+-- mbsync syncs INBOX and =Archive= with lab-mail at 127.0.0.1:2143,
+-  and no other folder. Each client names the folders it uses, and
++- mbsync syncs INBOX, =Next=, =Later=, =Archive=, and =quarantine=
++  with lab-mail at 127.0.0.1:2143, and no other folder. Each client names the folders it uses, and
+   lab-mail carries them all.
+   - On beastie it logs in as =pat@p7x.dev=, with the password from
+     pass(1), and syncs both ways with =Expunge Both=, so Pat's moves
+@@ -240,11 +249,25 @@ up the same way and differ only in the login.
+   root and never contacts lab-mail, so it works the same when lab-mail
+   is down or unreachable.
+ - notmuch indexes the mail root. It has no pre-new hook. It indexes
+-  =Change-Id= as =changeid:=, keeps flag sync off, ignores mbsync's
+-  state files, and tags a message under =Archive= as archived. Its
+-  post-new hook derives the sent, inbox, and replied tags from the
+-  list's contents alone, so a rebuild of the database gives every
+-  message the same tags.
++  =Change-Id= as =changeid:= and ignores mbsync's state files. Its
++  post-new hook derives every tag of its own from the list's contents
++  and folders alone, so a rebuild of the database gives every message
++  the same tags:
++  - sent, inbox, and replied, from the messages as before, with inbox
++    only for a message in INBOX;
++  - next, later, archived, and quarantined, for a message under
++    =Next=, =Later=, =Archive=, and =quarantine=.
++  The hook sets each folder tag from the folder on every run, so a
++  folder tag added or removed by hand lasts only until the next
++  =notmuch new=.
++- On beastie, notmuch syncs maildir flags with its tags, so notmuch
++  is a full client of the account: the unread, flagged, and replied
++  tags match =\Seen=, =\Flagged=, and =\Answered= on lab-mail and
++  Fastmail. On lab-claude, flag sync stays off.
++- In notmuch-emacs on beastie, Pat moves the message at point to
++  INBOX, =Next=, =Later=, or =Archive= with one key each. The command
++  moves the message's file into that folder and runs =notmuch new=,
++  which derives the tag. It never sets a folder tag itself.
+ - msmtp posts through 127.0.0.1:2525 with no auth and no TLS, from
+   =pat@p7x.dev= on beastie and =claude@p7x.dev= on lab-claude. When
+   the server refuses any recipient or the message, msmtp posts
+@@ -290,12 +313,15 @@ beastie.
+    followed by EXPUNGE on INBOX changes nothing, and a MOVE to
+    =Archive= fails. The message stays in place, its flags unchanged.
+ 8. A login as =pat@p7x.dev= with a wrong password fails.
+-9. On beastie, Pat archives a message in Emacs. After the next syncs,
+-   it is in =Archive= and not in INBOX on lab-mail, it is in
+-   =Archive= on Fastmail, and the agent's notmuch tags it archived.
++9. On beastie, Pat moves a message to =Next= in Emacs, and it is
++   tagged next and not inbox at once. After the next syncs, it is in
++   =Next= and not in INBOX on lab-mail and on Fastmail, and the
++   agent's notmuch tags it next. The same holds for =Later= and
++   =Archive=, tagged later and archived, and for a move back to
++   INBOX, which tags it inbox again.
+ 10. On beastie and on lab-claude, deleting the notmuch database and
+     running =notmuch new= gives every message the same sent, inbox,
+-    replied, and archived tags as before.
++    replied, next, later, archived, and quarantined tags as before.
+ 11. With Dovecot stopped, a message posted to the list is accepted,
+     and it lands in INBOX within two minutes of Dovecot starting
+     again.
+@@ -313,12 +339,15 @@ out of scope:
+ - Mail to and from people outside the list. lab-mail never relays,
+   and nobody sends outside mail through it.
+ - Moderation. Pat deletes what he does not want.
++- How lab-process-mail moves a message into =quarantine= on lab-mail.
++  The agent's login cannot move a message, so that waits for its new
++  loop too.
+ - History of the list beyond what Fastmail keeps. Snapshots of the
+   maildir, in ZFS or in git, can be added later as a record, not as
+   a transport.
+ - Restricting which jails or local users may post to lab-mail, or
+   what they put in From.
+-- Expunging on Fastmail. A message deleted or archived on lab-mail
++- Expunging on Fastmail. A message deleted or moved on lab-mail
+   stays in INBOX on Fastmail, marked =\Deleted=, until a later
+   change turns on Expunge for that side.
+ 
+@@ -408,7 +437,20 @@ why.
+ - Archive by folder, not by a notmuch tag on beastie. A tag is not in
+   the list data, so a rebuild of the index loses it and no agent sees
+   it. Fastmail's own =Archive= folder is used, not a new one, so
+-  archiving on Fastmail's web interface means the same.
++  archiving on Fastmail's web interface means the same. =Next=,
++  =Later=, and =quarantine= are folders for the same reason.
++- Move the file and derive the tag, not set a tag that a hook acts on
++  by moving the file. A hook that moves on a tag keeps the state in
++  two places, and they disagree whenever the move fails or the tag is
++  set where the hook does not run, such as on lab-claude. A move made
++  on Fastmail or in another client has no tag to start from at all.
++  With the folder as the only state, every route to change it is the
++  same move.
++- Flag sync on beastie only. On beastie, notmuch is Pat's client for
++  the account, so what he has read, flagged, and answered should
++  match Fastmail. The agent's login cannot set flags, and its replied
++  tag means the agent replied, not Pat, so syncing flags there would
++  only rename local files to disagree with lab-mail.
+ - No moderation queue. Pat can delete what he does not want.
+ - Import the jj maildir once, not freeze it as an archive. A frozen
+   archive would split the list into two places to search, and a reply
+-- 
+2.56.0
+
