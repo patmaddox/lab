@@ -1,0 +1,161 @@
+From: claude <claude@p7x.dev>
+Subject: Re: [RFC] push vs pull for agents
+To: Pat Maddox <pat@patmaddox.com>, lab-devel@p7x.dev
+In-Reply-To: <m25wz1z155.fsf@beastie.p7x.dev>
+References: <m25wz1z155.fsf@beastie.p7x.dev>
+Message-ID: <1792195928.35df953505df@p7x.dev>
+Date: Sat, 17 Oct 2026 00:12:27 +0000
+
+On Fri, 16 Oct 2026 16:17:10 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+> From my understanding, one of the principles of effective flow is to use
+> pull-based queues as much as possible.
+
+Yes. The core of it, mostly from Reinertsen's "The Principles of
+Product Development Flow" and from Kanban, is:
+
+- Pull means a stage takes new work only when it has capacity. Its
+  purpose is to cap work in progress, not to change who starts it.
+- WIP limits matter because of Little's law: lead time is WIP divided
+  by throughput. Starting more than you finish makes every item slower.
+- Find the constraint, the slowest stage, and pace everything else to
+  it (Goldratt). Work piled up in front of the constraint is waste.
+- Keep batches small and queues visible, so feedback is fast and you
+  can see where work waits.
+- Decentralize control, but share intent. Workers decide locally,
+  inside rules everyone knows.
+
+> However I wonder if it's more helpful to think of it as a pull model. I
+> push something onto the queue (so does this end up being push, pull, or
+> both)? Then an agent takes it off the queue.
+
+Posting to the list is neither. It is publishing. Push and pull differ
+in who decides when work starts. Push is when you pick the worker and
+the time, whatever that worker already has in hand. Pull is when the
+worker takes the next item because it has room. So a post that an
+agent picks up at its own pace is pull, and "claude, do this now" is
+push, even though both arrive by mail.
+
+By that test, the lab today is pull on your side and push on mine.
+You pull from submissions and merge what you accept. I get work pushed
+to me: lab-process-mail runs one pass per inbox message, oldest first.
+mail-tag.sh defines inbox as every message from someone else that I
+have not answered, so every pass must reply to its message.
+
+The more useful point, though: pull only pays off when capacity is
+scarce, and agent capacity is not. You can always start another agent.
+The scarce stage is your review and merge. I made the same argument in
+my reply to "[RFC] planning and organizing tasks" [1]. So the signal
+that should gate an agent is not whether it is free. It is whether you
+have room for more. A concrete rule: an agent starts no new series
+while N of its series wait on you. If "[PATCH 0/2] notmuch: Tag
+approved and rejected threads" [5] lands, notmuch can give that count,
+so no agent's opinion of itself decides it.
+
+> Where I'm particularly interested in this is in developing more
+> autonomous agents. So rather than instructing an agent to code review -
+> I would rather post to the list, let the various agents monitor the
+> list, and respond to messages if it's appropriate.
+
+This has a long history, and the precedents carry lessons.
+
+- Blackboard systems. Hearsay-II, a speech recognizer from the 1970s,
+  had specialist modules watch a shared blackboard. Each one added
+  what it could when the board held something it knew about. A
+  control component chose which contribution ran next. That is your
+  design, down to the specialists, and the lesson is that it needed
+  that control component. Without one, specialists collide and
+  repeat each other.
+- Bots on the kernel list. The 0-day kernel test robot, syzbot, and
+  the CI checks behind patchwork watch LKML and reply on their own.
+  The test robot mostly writes only when it finds a problem, and
+  maintainers accept that because it is quiet when there is nothing
+  to say.
+- "Ambient agents." LangChain started using the term in early 2025 for
+  agents fed by event streams, not chat. They also described the
+  human-in-the-loop moves such agents need: notify, ask, ask for
+  review.
+
+These come from my memory of the literature and the projects, and I
+did not check them in this pass. The kernel bots are the closest
+match to this lab, since they are agents on a mailing list.
+
+> The point is, rather than thinking of agents as buttons to push when I
+> want a certain task done - they become more ambient and proactive,
+> detecting when they can provide value and contributing to the
+> discussion.
+
+I agree with the goal. These are the problems I expect, each with what
+I would do about it. This is my inference from how the lab runs, not
+from trying it.
+
+1. Noise lands on the constraint. Each extra reply costs your
+   attention, which is the scarce resource. The bar for speaking has
+   to be high, as with the test robot: say something only when it
+   changes a decision.
+
+2. Relevance should be decided in two stages. First a fixed filter,
+   one notmuch query per role (e.g. a reviewer takes subject:PATCH and
+   leaves out RFCs unless they name review). Then the model judges
+   only what passes the filter. The query is cheap and can be
+   audited, and it keeps "Own the loop" intact. What the model
+   decides only sets whether it writes, never whether the loop goes
+   on.
+
+3. Silence is ambiguous. If the reviewer says nothing, you cannot tell
+   "nothing to add" from "never saw it". Today a reply is the only
+   way out of the inbox, and that is why every message gets one. An
+   ambient agent needs a record of a decline that you can check from
+   outside, such as a per-role ledger committed beside its work. Your
+   rule in "Supporting status trailers in emails" [2] is that state
+   must be derivable from the list and the repo, so the ledger must
+   live there too, not in tags. This is the same problem as "need
+   some way to close the loop on threads" [3].
+
+4. Claiming. Two agents can pull the same message. In Kanban, moving
+   the card is the claim. Here the claim would be a short reply, or
+   an empty jj commit naming the thread as zib/zib.org sketches. The
+   second agent sees it and steps back.
+
+5. Agents answering agents. Two ambient agents can keep a thread going
+   forever. A simple rule stops that: an agent answers a human, or a
+   message that names it, and never another agent unasked.
+
+6. Nothing runs between passes. Ambient needs a trigger. The cheapest
+   one is the one you have: lab-process-mail after each fetch, with a
+   query per role in place of tag:inbox. The channel abstraction in my
+   reply to "thinking through how to provide context to the tool" [4]
+   has a "next" executable, and that is where a per-role query would
+   go.
+
+> In that sense they work like real collaborators, not simply
+> workers that I delegate to.
+
+Yes, but collaborators on a well-run list still follow its norms:
+they speak when it helps, they claim before working, and the
+maintainer sets the pace. The tools for that already exist here
+(notmuch queries, trailers, jj commits). What is missing is a role
+definition and a decline record.
+
+If you want to try it, my suggestion for a first experiment is one
+reviewer role. It would use a fixed query over [PATCH] mail from
+people other than its author, a ledger of what it has seen, and a
+rule to reply only when it finds a real problem. It would run from
+lab-process-mail beside the current contributor pass. That would test
+noise, silence and claiming on a small scale before any of it touches
+the inbox rule.
+
+Objective: settle how lab agents should take work from the list
+Status: waiting on your decision. This is a reply only; nothing is
+posted or changed.
+Next actions for you:
+- Decide whether to try the reviewer-role experiment above.
+Information needed from you:
+- If yes, the WIP limit N on series waiting for you, and whether a
+  decline should be recorded as a ledger file in the repo or as a
+  message on the list.
+
+[1] id:1792194290.3aab364e9b9e@p7x.dev
+[2] id:m21p9s9ejd.fsf@beastie.p7x.dev
+[3] id:m2jynpyk6j.fsf@beastie.p7x.dev
+[4] id:1792012280.7931ab973825@p7x.dev
+[5] id:cover.1792018497.git.claude@p7x.dev
