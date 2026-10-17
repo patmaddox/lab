@@ -1,0 +1,68 @@
+From: Pat Maddox <pat@patmaddox.com>
+To: claude <claude@p7x.dev>
+Cc: lab-devel@p7x.dev
+Subject: Re: [PATCH v10 00/10] jails/instances/lab-mail: Build the list's
+ mail hub
+In-Reply-To: <1792259842.2a798c0d8252@p7x.dev>
+References: <cover.1792258873.git.claude@p7x.dev>
+ <m2mrscjjsn.fsf@beastie.p7x.dev> <1792259842.2a798c0d8252@p7x.dev>
+Date: Sat, 17 Oct 2026 11:11:34 -0700
+Message-ID: <m24iekjiy1.fsf@beastie.p7x.dev>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+claude <claude@p7x.dev> writes:
+
+> On Sat, 17 Oct 2026 10:53:12 -0700, Pat Maddox wrote:
+>> Also doesn't OpenSMTPD have local delivery? Why can't it just deliver
+>> straight to maildir?
+>
+> It can, and having looked again, the reason we gave does not hold for
+> it. smtpd.conf would say
+>
+>     action "list" maildir "/data/mail/maildir/INBOX" virtual <to-vmail>
+>
+> The spec's case for "Dovecot as the only writer" is about three
+> writers running as three users. mbsync creates files 0600 and folders
+> 0700, renames and unlinks need write on each folder, and each writer
+> keeps its own record of the files. That holds for mbsync, and keeping
+> mbsync on IMAP is still right. It does not hold for OpenSMTPD:
+>
+> - Its delivery already runs as vmail, Dovecot's own user, so there is
+>   no permission problem.
+> - It only ever adds a file, through tmp/ into INBOX/new/, which is the
+>   case maildir was designed for. It never renames or removes.
+> - Dovecot treats a new file in new/ as new mail. It picks it up on
+>   its next look at the folder and gives it a UID.
+>
+> What we would gain:
+>
+> - One fewer protocol. Dovecot drops "lmtp" from protocols, the LMTP
+>   service and its socket go, and lmtp_add_received_header goes too.
+> - A post no longer depends on Dovecot running. Step 11 of the
+>   acceptance test, a post while Dovecot is stopped, becomes true at
+>   once instead of after a retry from the queue.
+>
+> What we would give up, all small:
+>
+> - The rule shrinks from "only Dovecot writes the list" to "only
+>   Dovecot changes or removes a message; OpenSMTPD only adds new ones
+>   to INBOX".
+> - Return-Path and Delivered-To would come from OpenSMTPD instead of
+>   Dovecot. I expect it to write both, but I have not checked that
+>   Delivered-To names the list address with the virtual mapping. That
+>   has to be verified on a jail.
+> - An IDLE client may see a new post a little later than it would with
+>   LMTP, since Dovecot learns of it from the filesystem rather than at
+>   delivery. Polling clients and the one-minute sync see no difference.
+>
+> My recommendation is to keep OpenSMTPD and switch its delivery from
+> LMTP to maildir. It is a small change on top of v10. "[PATCH v10 07/10]
+> jails/instances/lab-mail: Take posts with OpenSMTPD" [1] loses its
+> LMTP half, and the spec's "only writer" paragraph gets rewritten. If
+> you agree, I will send it as v11 with the spec change in the same
+> series.
+
+Actually I want to keep LMTP in. I like the model that dovecot is the
+only writer. Plus by going through LMTP, Dovecot learns of new messages
+immediately, instead of via a file system scan.
