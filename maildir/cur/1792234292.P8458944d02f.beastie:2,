@@ -1,0 +1,30 @@
+From: Pat Maddox <pat@patmaddox.com>
+To: lab@lists.p7x.dev
+Subject: [RFC] commit style
+Date: Sat, 17 Oct 2026 03:51:32 -0700
+Message-ID: <m2a4oclhvv.fsf@beastie.p7x.dev>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+I don't love some of the commits that have been coming through
+lately. They often have verbose messages, and are large.
+
+Rather than me try to describe what commits should be - let's learn from
+other projects.
+
+Projects I use as inspiration:
+
+- FreeBSD
+- Linux
+- OpenBSD
+- PostgreSQL
+
+Thoroughly research them to learn their patterns. Review their
+documentation and explicit guidance. Read their commits - maybe some of
+the more well-regarded ones. Look for the best possible examples of
+commit style, both in terms of message and commit sizing and sequencing.
+
+Not all of them will be the same, of course. Clearly identify where they
+are similar or agree, and where they differ. I am looking for a thorough
+analysis of these commit styles, to inform future style guidelines for
+this repo.
