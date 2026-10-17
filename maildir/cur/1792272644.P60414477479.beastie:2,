@@ -1,0 +1,74 @@
+From: Pat Maddox <pat@patmaddox.com>
+To: claude <claude@p7x.dev>, lab@lists.p7x.dev
+Subject: Re: [RFC] commit style
+In-Reply-To: <1792270050.4cef7df99d88@p7x.dev>
+References: <m2a4oclhvv.fsf@beastie.p7x.dev>
+ <1792235349.f7fc30029251@p7x.dev> <m25wz0l23i.fsf@beastie.p7x.dev>
+ <1792255115.941a80fb30d2@p7x.dev> <m2v770gjjb.fsf@beastie.p7x.dev>
+ <1792269002.16aa9dd13833@p7x.dev> <m28q3wgiv5.fsf@beastie.p7x.dev>
+ <1792270050.4cef7df99d88@p7x.dev>
+Date: Sat, 17 Oct 2026 14:30:44 -0700
+Message-ID: <m2wlrgf20r.fsf@beastie.p7x.dev>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+claude <claude@p7x.dev> writes:
+
+> On Sat, 17 Oct 2026 13:41:34 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+>> Now as for this - I do want to get patches onto the list that I can
+>> fetch, because I might want to rewrite the messages myself. How can do
+>> we do that?
+>
+> git format-patch already sends an empty commit as a patch with only
+> a message. The loss is on the applying side. am.sh runs git am with
+> --empty=drop, so it throws away every message without a diff. That is
+> how it skips cover letters and replies when you pipe in a whole
+> thread, but it also drops a plan commit.
+>
+> The fix is "[PATCH] libexec/mail: Apply message-only commits as
+> empty" [1]. It keeps a message that has no diff when that message has
+> a Change-Id header. format-patch.sh puts that header on every commit's
+> patch, and never on a cover letter or a reply, so piping in a whole
+> thread still works. It also drops git's "-- " signature from those
+> messages, since with no diff nothing else would keep it out of the
+> commit. I tested it on a thread with a cover letter, an empty commit,
+> a commit with a diff, and a reply. Only the two commits were applied,
+> and the empty one kept its full message. A plain patch with a diff
+> and no Change-Id still applies as before.
+>
+> I also need to correct my last message. just fetch only abandons
+> empty commits in ~/lab/mail.jj, and only ones you did not author. So
+> apply a plan in ~/lab/default.jj, not in the mail workspace.
+>
+> The plan itself is posted as "[RFC PATCH 0/7] Write the commit rules
+> down once" [2], as seven empty commits on b/dev. With [1] applied,
+> this gets it:
+>
+>     notmuch show --format=mbox --entire-thread=true \
+>         id:cover.1792269999.git.claude@p7x.dev |
+>         just am ~/lab/default.jj
+>
+> Rewrite whatever you like with jj describe, then send it back by
+> format-patch.sh or as a reply. One caveat: git am cannot carry the
+> Change-Id into the commit, so your copies get new change ids, and I
+> will match them to mine by subject. The cover letter has one open
+> question, on whether the 72-column check should skip indented lines.
+>
+> [1] id:c574fba0a4b2a19aa64952ea73d2418cb71c1fc6.1792269999.git.claude@p7x.dev
+> [2] id:cover.1792269999.git.claude@p7x.dev
+
+I want to think through some other options here... I think drop --empty
+is useful so that it doesn't include the replies etc. I don't want to
+hack around the tooling with more tooling.
+
+Two ideas come to mind for me:
+
+1. Don't post patches - just post the commit messages as an email. It's
+just text, nothing is getting applied. If I want to rewrite a commit
+message, I can just copy it and edit it.
+
+2. Marker files. Don't post empty commits. Just have a marker file for
+that specific commit. That might actually be useful for tooling to
+indicate where a particlar patch is in the process. Either it writes a
+specific filename that indicates the state, or it writes the state as
+the content of a fixed file name.
