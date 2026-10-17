@@ -1,0 +1,155 @@
+From: claude <claude@p7x.dev>
+Subject: Re: [RFC] how to organize experiments in claude?
+To: Pat Maddox <pat@patmaddox.com>, lab@lists.p7x.dev
+In-Reply-To: <m2ld7wgj77.fsf@beastie.p7x.dev>
+References: <m2ld7wgj77.fsf@beastie.p7x.dev>
+Message-ID: <1792269503.36e0b2321ada@p7x.dev>
+Date: Sat, 17 Oct 2026 20:38:29 +0000
+
+On Sat, 17 Oct 2026 13:34:20 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+> Consider the commit plan approach I've been mulling over. Sure, I could
+> commit that to CLAUDE.md - but why? I think that's more of a skill than
+> a global constraint, right?
+
+Yes. Anthropic's own guidance draws the line in the same place. The
+skills docs say to make a skill "when a section of CLAUDE.md has grown
+into a procedure rather than a fact". The best-practices page says to
+test each CLAUDE.md line with "Would removing this cause Claude to
+make mistakes?", and to put workflows that are "only relevant
+sometimes" in skills [a][b].
+
+So the split I would use here is:
+
+- CLAUDE.md holds what is true whichever approach is used: commit
+  style, patch scope, self-contained series, quoting, "Own the loop".
+  These are the interface's contract.
+- A skill holds a procedure for meeting that contract: commit-plan,
+  spec-first, or whatever comes next.
+
+The commit plan as you described it in "Re: [RFC] how to spec work in
+a way that's readable for humans" [1] is a procedure. Write the
+messages first, then fill in the code. My reply in the same thread
+[2] adds four rules to it, and those are procedure too. None of it
+belongs in CLAUDE.md.
+
+> Research what other people are doing in this area.
+
+Each item is marked [F] for something I read in the source, or [I]
+for my inference.
+
+- [F] Packaged workflows are the norm now, and they ship as skills or
+  plugins rather than as CLAUDE.md text. Superpowers (Jesse Vincent)
+  is a plugin of skills chained as brainstorm, worktree, write plan,
+  execute plan, TDD, review [c]. GitHub's Spec Kit is spec-first as a
+  set of commands: constitution, specify, plan, tasks, implement [d].
+  Both are whole "build" implementations you could swap in or out.
+
+- [F] Plugins can be loaded for one session without installing them,
+  with `claude --plugin-dir <dir>`. A --plugin-dir copy overrides an
+  installed plugin with the same name, and enabledPlugins can turn one
+  off per scope [e].
+
+- [F] One practitioner uses a "router" skill: one entry point takes
+  the variant as an argument and dispatches to it [f]. That is your
+  interface with swappable implementations, done inside one skill.
+
+- [F] For A/B on real work, the common practice is cheap. Run the
+  same ask from the same commit in two worktrees, one per approach,
+  and compare the diffs. Anthropic's best-practices page recommends
+  worktrees for "isolated experiments" [b]. The best public example
+  is Felipe Fontoura's comparison [g]. He gave one brief to Spec Kit,
+  Superpowers, BMAD and OpenSpec, with the same commit and model, and
+  scored each on a 13-item acceptance check plus time and cost. Spec
+  Kit took 473s, cost $2.84 and wrote 690 lines of spec. Superpowers
+  took 40s and cost $0.33. He calls the result anecdotal, since each
+  tool ran once.
+
+- [I] Nobody I found keeps a formal eval for this day to day. People
+  try a variant on a real task, look at the result, and keep or drop
+  it. That matches what you want.
+
+We have done this once already. src/katai/bowling runs the same kata
+as claude_elixir_bowling and claude_elixir_bowling_plan, with prompts
+bowling-001-big-steps.md and bowling-002-incremental.md. prompts/ and
+plans/ are an earlier plan-first implementation that was never named
+as one.
+
+> Thinking more like a programmer, it's designing an interface. We might
+> have a build function in the interface, which can be implemented either
+> commit-plan or spec-first. The general interface stays the same "build
+> this new feature" but the implementation of it is swappable.
+
+I would write the interface down. It should be one short file that
+says what any build must take and produce:
+
+- Input: an ask, usually a message on the list.
+- Output: a series posted to the list that meets CLAUDE.md, and a
+  reply citing it.
+- How it is judged: the list itself. We can count how many versions
+  a series needed, how many review points it drew, and whether it
+  landed as first posted. notmuch can count all of that without
+  asking the model. That fits "Own the loop", where the model's
+  account of how well it did never counts.
+
+Each implementation is then a skill that meets that contract:
+build-commit-plan, build-spec-first. Both set disable-model-
+invocation, so Claude never picks one for itself; you choose it.
+
+Where they live is the part that needs your decision. In b34672a7d9c5,
+"claude: Move skills out of the main dir", you took skills out of
+.claude/skills. The reason was the bootstrap problem: they shift the
+sand under Claude while it works. Every skill there loads in every
+session, so an experimental one is always live. I see three options:
+
+1. .claude/skills/build-<impl>/. This is the cheapest option, but it
+   brings the bootstrap problem back for experiments, which are the
+   skills most likely to change.
+
+2. One plugin per implementation, e.g. claude/build/commit-plan/ and
+   claude/build/spec-first/, loaded with --plugin-dir. A session sees
+   only the implementation you launched it with, and nothing is live
+   by default. lab-process-mail could take the choice as a flag, and
+   the A/B is then two passes with different --plugin-dir values.
+   [I] The cost is that plugin skills get a namespace prefix, so the
+   two must share a plugin name to share an invocation. I have not
+   checked how that behaves when both are loaded at once.
+
+3. A router skill /build <impl>. There is one entry point and the
+   implementations sit in files beside it. It has the same bootstrap
+   problem as 1, plus a dispatch table to maintain.
+
+I recommend 2. It is the only one that keeps experiments out of every
+session by default, which is the problem b34672a7d9c5 solved. It also
+makes the choice explicit at launch, where you can see it, and not
+something the model selects.
+
+This overlaps with "[RFC] documenting monorepos" [3]. The interface
+file is process documentation, so it should go wherever doc/process/
+ends up.
+
+If you pick a location, I will post a series. It will add the
+interface file, build-commit-plan from the rules in [2], and
+build-spec-first built from spec-report. Then we can run both on the
+next real ask.
+
+Objective: a way to try workflows like commit-plan and spec-first
+side by side, without committing them to CLAUDE.md
+Status: waiting on your choice of where experimental skills live
+Next actions for you:
+- none
+Information needed from you:
+- Option 1, 2 or 3 above for where the build implementations live
+- Whether the interface file waits for "[RFC] documenting monorepos"
+  [3] to settle doc/, or goes in now
+
+[1] id:m2pkx8hz8i.fsf@beastie.p7x.dev
+[2] id:1792268664.8a0da20e9047@p7x.dev
+[3] id:m2qzhogjen.fsf@beastie.p7x.dev
+
+[a] https://code.claude.com/docs/en/skills
+[b] https://code.claude.com/docs/en/best-practices
+[c] https://github.com/obra/superpowers
+[d] https://github.com/github/spec-kit
+[e] https://code.claude.com/docs/en/plugins/loading
+[f] https://gabegiro.com/blog/claude-code-router-pattern/
+[g] https://felipefontoura.com/articles/spec-driven-development-tools-compared/
