@@ -1,0 +1,80 @@
+From: Pat Maddox <pat@patmaddox.com>
+To: claude <claude@p7x.dev>
+Cc: lab-devel@p7x.dev
+Subject: Re: [PATCH v3 0/2] lab-process-mail: Add lab-process-maild
+In-Reply-To: <cover.1792207350.git.claude@p7x.dev>
+References: <cover.1792207350.git.claude@p7x.dev>
+Date: Fri, 16 Oct 2026 20:39:07 -0700
+Message-ID: <m2ik31t2qs.fsf@beastie.p7x.dev>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+claude <claude@p7x.dev> writes:
+
+> lab-process-mail answers the inbox only when someone runs it. This
+> series adds lab-process-maild, which keeps it running in the
+> background under daemon(8):
+>
+>     lab-process-maild start
+>     lab-process-maild status
+>     lab-process-maild stop
+>
+> It ships in the lab-process-mail package, with a man page,
+> lab-process-maild(8). The package installs under a LOCALBASE, ~/local
+> after "just install", and the daemon is configured the way an rc(8)
+> service is, from an rc.conf(5)-style file:
+>
+>     ${LOCALBASE}/etc/lab-process-maild.conf
+>
+> The file is sh and sets variables without exporting them. These are
+> the settings, with their defaults for a user other than root:
+>
+>     lab_process_maild_env=""
+>     lab_process_maild_interval=60
+>     lab_process_maild_logfile=~/log/lab-process-maild.log
+>     lab_process_maild_pidfile=~/var/run/lab-process-maild.pid
+>
+> For root, the log and pidfile default to /var/log and /var/run, so
+> neither case needs a conf. start creates the directories of the log
+> and pidfile if they are missing. The daemon starts from an empty
+> environment, keeping only HOME, USER, LOGNAME, and a PATH that begins
+> with ${LOCALBASE}/bin. lab_process_maild_env adds to it, as
+> ${name}_env does in rc.subr(8):
+>
+>     lab_process_maild_env="LAB_BASE_BRANCH=b/dev@upstream \
+>         NOTIFY_URL=https://ntfy.sh/my-topic"
+>
+> stop lets the pass in progress finish before the daemon exits. A
+> failed pass still stops the daemon; that behavior and how to fix it
+> are described in "[BUG] lab-process-mail gets stuck" [1].
+
+This whole interface is quite nice and basically exactly what I want.
+
+[...]
+
+> -	    PATH="${root}/bin:/sbin:/bin:/usr/sbin:/usr/bin:/usr/local/sbin:/usr/local/bin" \
+> +	    PATH="${localbase}/bin:/sbin:/bin:/usr/sbin:/usr/bin:/usr/local/sbin:/usr/local/bin" \
+
+This shouldn't be baked in... if we need to update the PATH, it should
+come via env var provided by the config file.
+
+> +		with_env lab-process-mail &
+
+Maybe I'm misunderstanding but it shouldn't need to background the
+process, should it? That's exactly what daemon(8) does.
+
+---
+
+This is close but something is off, and I think I see what the problem
+is. It's conflating service management with daemonization.
+
+The backgrounding gives it away. The daemon shouldn't need to put the
+process in the background - that's what daemon(8) is for.
+
+Maybe it's not so far off, and it's just being lazy and keeping some of
+the existing code structure, e.g. the wait, as though that was important
+for the design of this program.
+
+In any case, the point of introducing daemon(8) is so that the program
+itself can be a one-shot script, but can still be controlled as a
+daemon. Backgrounding a process misses the point.
