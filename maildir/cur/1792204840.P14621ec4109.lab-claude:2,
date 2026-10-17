@@ -1,0 +1,45 @@
+Message-ID: <cover.1792204830.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Subject: [PATCH 0/2] libexec/mail: Deliver only mail messages
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+Date: Sat, 17 Oct 2026 02:40:40 +0000
+
+In "Re: [RFC] re-thinking SMTP relay" [1] Pat asked that the tool which
+delivers mail to the list accept only a correctly formatted message.
+Under that design git send-email hands each message to
+maildir-deliver.sh as its sendmail program, so this series puts the
+check there. It refuses input whose headers are malformed or not
+ended by an empty line, or that lacks exactly one From, Subject, and
+Message-ID, and writes nothing to the maildir when it does.
+
+The first patch makes the patch-triage skill compose a From and a
+Message-ID, which it left out, so that skill keeps working once the
+check is in.
+
+Tested with the new atf tests (kyua test in libexec/mail), which fail
+against the current script, and by delivering 30 messages from the
+list and a git format-patch series into a scratch maildir; all were
+accepted.
+
+base-branch: b/dev@upstream
+
+[1] id:m2cxt9vyub.fsf@beastie.p7x.dev
+
+claude (2):
+  claude/skills/patch-triage: Compose the report's From and Message-ID
+  libexec/mail: Refuse to deliver what is not mail
+
+ .claude/skills/patch-triage/SKILL.md |   7 +-
+ libexec/mail/Kyuafile                |   5 ++
+ libexec/mail/maildir-deliver.sh      |  37 +++++++++
+ libexec/mail/maildir-deliver_test    | 113 +++++++++++++++++++++++++++
+ 4 files changed, 160 insertions(+), 2 deletions(-)
+ create mode 100644 libexec/mail/Kyuafile
+ create mode 100755 libexec/mail/maildir-deliver_test
+
+
+base-commit: 8d0b05250dc28c4dfa11e4e7925c94f50cfcf211
+-- 
+2.56.0
+

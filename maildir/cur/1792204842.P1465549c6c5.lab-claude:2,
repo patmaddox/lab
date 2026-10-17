@@ -1,0 +1,228 @@
+Message-ID: <c591721d5a11507fc542828e903c03c74f4cc6eb.1792204830.git.claude@p7x.dev>
+In-Reply-To: <cover.1792204830.git.claude@p7x.dev>
+References: <cover.1792204830.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Subject: [PATCH 2/2] libexec/mail: Refuse to deliver what is not mail
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+Change-Id: ssysnkqupvyyyutpqwnkmtprurvtlmtt
+Date: Sat, 17 Oct 2026 02:40:42 +0000
+
+maildir-deliver.sh filed whatever arrived on stdin into the list
+maildir. An empty file, command output, or a draft missing its
+headers became a list message, and the mistake surfaced only after it
+was posted. Once git send-email hands it messages as its sendmail
+program, it is the one gate every message passes, so it should accept
+only a well-formed message.
+
+From, Subject, and Message-ID are required because the list cannot
+use a message without them: it is unattributed, untitled, or
+unthreadable. The check runs before the message leaves tmp/, so a
+refused message never reaches the maildir.
+
+Add the first tests for libexec/mail.
+---
+change-id: ssysnkqupvyyyutpqwnkmtprurvtlmtt
+
+ libexec/mail/Kyuafile             |   5 ++
+ libexec/mail/maildir-deliver.sh   |  37 ++++++++++
+ libexec/mail/maildir-deliver_test | 113 ++++++++++++++++++++++++++++++
+ 3 files changed, 155 insertions(+)
+ create mode 100644 libexec/mail/Kyuafile
+ create mode 100755 libexec/mail/maildir-deliver_test
+
+diff --git a/libexec/mail/Kyuafile b/libexec/mail/Kyuafile
+new file mode 100644
+index 0000000..c5a79df
+--- /dev/null
++++ b/libexec/mail/Kyuafile
+@@ -0,0 +1,5 @@
++syntax(2)
++
++test_suite('libexec-mail')
++
++atf_test_program{name='maildir-deliver_test'}
+diff --git a/libexec/mail/maildir-deliver.sh b/libexec/mail/maildir-deliver.sh
+index adb2d4d..c1e52a3 100755
+--- a/libexec/mail/maildir-deliver.sh
++++ b/libexec/mail/maildir-deliver.sh
+@@ -20,6 +20,13 @@
+ # newest message already in the maildir, so a series delivered in one
+ # burst sorts in the order it was delivered.
+ #
++# Only a mail message is delivered. The header section must be well
++# formed, every line a header field or the continuation of one, and end
++# with an empty line before the body; From, Subject, and Message-ID
++# must each appear exactly once. Anything else is refused and nothing
++# reaches the maildir, so a stray file or command output piped in by
++# mistake can never show up on the list.
++#
+ # git is the transport: the message is only saved, not sent.  Commit it
+ # and push; notmuch new indexes it wherever the branch is checked out.
+ #
+@@ -59,6 +66,10 @@ main() {
+ 	stamp="$(delivery_time "${maildir}")"
+ 	name="$(unique_name "${stamp}")"
+ 	add_headers "${stamp}" >"${maildir}/tmp/${name}"
++	if ! check_message <"${maildir}/tmp/${name}"; then
++		rm -f "${maildir}/tmp/${name}"
++		die "refusing to deliver: not a mail message"
++	fi
+ 	mv "${maildir}/tmp/${name}" "${maildir}/cur/${name}:2,"
+ }
+ 
+@@ -121,6 +132,32 @@ add_headers() {
+ 	'
+ }
+ 
++# Succeed if stdin is a mail message, as the header comment defines it.
++# Each problem found is reported on stderr.
++check_message() {
++	awk -v prog="${PROGNAME}" '
++		function bad(msg) { print prog ": " msg >"/dev/stderr"; failed = 1 }
++		BEGIN { in_header = 1 }
++		!in_header { next }
++		/^$/ { in_header = 0; next }			# end of headers
++		/^[ \t]/ && NR > 1 { next }			# continuation
++		/^[!-9;-~]+:/ {					# field
++			seen[tolower(substr($0, 1, index($0, ":") - 1))]++
++			next
++		}
++		{ bad("line " NR " is not a header field"); exit }
++		END {
++			if (failed) exit 1
++			if (in_header) bad("no empty line ends the headers")
++			if (seen["from"] != 1) bad("need exactly one From")
++			if (seen["subject"] != 1) bad("need exactly one Subject")
++			if (seen["message-id"] != 1)
++				bad("need exactly one Message-ID")
++			exit failed
++		}
++	'
++}
++
+ # Generate a unique maildir filename: <time>.P<pid><rand>.<host>.
+ unique_name() {
+ 	printf '%s.P%s%s.%s' \
+diff --git a/libexec/mail/maildir-deliver_test b/libexec/mail/maildir-deliver_test
+new file mode 100755
+index 0000000..1c7cd9d
+--- /dev/null
++++ b/libexec/mail/maildir-deliver_test
+@@ -0,0 +1,113 @@
++#!/usr/bin/env atf-sh
++
++DELIVER="$(atf_get_srcdir)/maildir-deliver.sh"
++
++atf_init_test_cases() {
++	atf_add_test_case delivers_message
++	atf_add_test_case delivers_patch
++	atf_add_test_case refuses_empty
++	atf_add_test_case refuses_plain_text
++	atf_add_test_case refuses_headers_only
++	atf_add_test_case refuses_missing_message_id
++	atf_add_test_case refuses_two_froms
++}
++
++# A minimal message the list accepts.
++message() {
++	printf 'From: claude <claude@p7x.dev>\n'
++	printf 'To: lab-devel@p7x.dev\n'
++	printf 'Subject: Hello\n'
++	printf 'Message-ID: <1.abc@p7x.dev>\n'
++	printf '\n'
++	printf 'Body.\n'
++}
++
++# The maildir should hold exactly ${1} messages, and no leftovers.
++check_count() {
++	atf_check -o "inline:${1}\n" sh -c 'ls maildir/cur | wc -l | tr -d " "'
++	atf_check -o empty ls maildir/tmp
++}
++
++# Delivering file "in" should fail with a message matching ${1}.
++refuse() {
++	export MAILDIR="${PWD}/maildir"
++	atf_check -s exit:1 -e "match:${1}" "${DELIVER}" <in
++	check_count 0
++}
++
++atf_test_case delivers_message
++delivers_message_head() {
++	atf_set descr "A well-formed message is delivered and dated"
++}
++delivers_message_body() {
++	export MAILDIR="${PWD}/maildir"
++	message >in
++	atf_check "${DELIVER}" -i lab-devel@p7x.dev <in
++	check_count 1
++	atf_check -o match:'^Date: ' cat maildir/cur/*
++}
++
++atf_test_case delivers_patch
++delivers_patch_head() {
++	atf_set descr "git format-patch output is delivered without its mbox separator"
++}
++delivers_patch_body() {
++	export MAILDIR="${PWD}/maildir"
++	{
++		printf 'From 0123456789012345678901234567890123456789 Mon Sep 17 00:00:00 2001\n'
++		printf 'From: claude <claude@p7x.dev>\n'
++		printf 'Subject: [PATCH] a: Change b\n'
++		printf ' continued\n'
++		printf 'Message-ID: <1.abc@p7x.dev>\n'
++		printf '\n'
++		printf -- '---\n'
++	} >in
++	atf_check "${DELIVER}" <in
++	check_count 1
++	atf_check -o not-match:'^From [0-9a-f]' cat maildir/cur/*
++}
++
++atf_test_case refuses_empty
++refuses_empty_head() {
++	atf_set descr "Empty input is refused"
++}
++refuses_empty_body() {
++	: >in
++	refuse 'need exactly one From'
++}
++
++atf_test_case refuses_plain_text
++refuses_plain_text_head() {
++	atf_set descr "Text that is not a message is refused"
++}
++refuses_plain_text_body() {
++	printf 'hello world\n\nmore\n' >in
++	refuse 'line 1 is not a header field'
++}
++
++atf_test_case refuses_headers_only
++refuses_headers_only_head() {
++	atf_set descr "Headers with no empty line after them are refused"
++}
++refuses_headers_only_body() {
++	message | sed '/^$/,$d' >in
++	refuse 'no empty line ends the headers'
++}
++
++atf_test_case refuses_missing_message_id
++refuses_missing_message_id_head() {
++	atf_set descr "A message without a Message-ID is refused"
++}
++refuses_missing_message_id_body() {
++	message | grep -v '^Message-ID' >in
++	refuse 'need exactly one Message-ID'
++}
++
++atf_test_case refuses_two_froms
++refuses_two_froms_head() {
++	atf_set descr "A message with two From fields is refused"
++}
++refuses_two_froms_body() {
++	{ printf 'From: x@example.org\n'; message; } >in
++	refuse 'need exactly one From'
++}
+-- 
+2.56.0
+

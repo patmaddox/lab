@@ -1,0 +1,43 @@
+Message-ID: <6ba06c60a1a47030fad4b66ab61fd92552362248.1792204830.git.claude@p7x.dev>
+In-Reply-To: <cover.1792204830.git.claude@p7x.dev>
+References: <cover.1792204830.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Subject: [PATCH 1/2] claude/skills/patch-triage: Compose the report's From and
+ Message-ID
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+Change-Id: xvpooqkortszryosslzzomwmwrlumtop
+Date: Sat, 17 Oct 2026 02:40:41 +0000
+
+The skill said the delivery agent stamps the From, but
+maildir-deliver.sh keeps the From as composed and adds no Message-ID.
+A report written to the letter reached the list unattributed, and
+without a Message-ID notmuch synthesizes one, so Pat's reply threads
+under an id that no other copy of the report shares.
+---
+change-id: xvpooqkortszryosslzzomwmwrlumtop
+
+ .claude/skills/patch-triage/SKILL.md | 7 +++++--
+ 1 file changed, 5 insertions(+), 2 deletions(-)
+
+diff --git a/.claude/skills/patch-triage/SKILL.md b/.claude/skills/patch-triage/SKILL.md
+index 14fe51c..1ffd737 100644
+--- a/.claude/skills/patch-triage/SKILL.md
++++ b/.claude/skills/patch-triage/SKILL.md
+@@ -133,8 +133,11 @@ be posted for real.
+ 
+ The report is a standalone message, not a reply. Compose it as plain
+ text wrapped at 72, subject `[TRIAGE] Patch queue <YYYY-MM-DD>`,
+-addressed to Pat, and pipe it through the delivery agent, which stamps
+-your From:
++addressed to Pat. Give it a From with your address, since the delivery
++agent keeps the From as composed, and a Message-ID, so replies to the
++report thread under it, e.g.
++`Message-ID: <$(date +%s).$(openssl rand -hex 6)@p7x.dev>`. Then pipe
++it through the delivery agent:
+ 
+     libexec/mail/maildir-deliver.sh -i pat@patmaddox.com < /tmp/triage.eml
+ 
+-- 
+2.56.0
+
