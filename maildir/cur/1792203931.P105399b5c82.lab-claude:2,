@@ -1,0 +1,202 @@
+Message-ID: <f759841e25e29b5cf42bf0a033a2c583dc7255e7.1792203922.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Subject: [PATCH] src/lab-process-mail: Add a loop to run under daemon(8)
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+Change-Id: orkosmpvsuxnxxqnytoovmxszwxtywnp
+Date: Sat, 17 Oct 2026 02:25:31 +0000
+
+lab-process-mail drains the inbox once and exits, so new mail waits
+until the operator switches terminals and runs it again by hand.
+lab-process-mail-loop reruns it on an interval, so a supervisor can
+keep the inbox answered without anyone watching.
+
+It is a separate program rather than a flag so the drain logic stays
+a single pass that is easy to test, and it stays in the foreground so
+daemon(8), or s6, owns detaching, logging, and the pidfile.
+
+A failed run stops the loop instead of retrying. A stuck message stays
+oldest in the inbox, so a retry would spend an agent pass on it every
+interval while the stuck notice has already gone out.
+---
+change-id: orkosmpvsuxnxxqnytoovmxszwxtywnp
+base-branch: b/dev@upstream
+
+This answers "[RFC] lab-process-mail daemon". The loop was run under
+daemon(8) with a stubbed lab-process-mail to check that it detaches,
+logs to the -o file, and exits when a run fails.
+
+ src/lab-process-mail/Kyuafile                 |  1 +
+ src/lab-process-mail/lab-process-mail-loop    | 46 +++++++++++++
+ .../lab-process-mail-loop_test                | 65 +++++++++++++++++++
+ src/lab-process-mail/lab-process-mail.pkg.do  |  4 +-
+ 4 files changed, 115 insertions(+), 1 deletion(-)
+ create mode 100755 src/lab-process-mail/lab-process-mail-loop
+ create mode 100755 src/lab-process-mail/lab-process-mail-loop_test
+
+diff --git a/src/lab-process-mail/Kyuafile b/src/lab-process-mail/Kyuafile
+index 5624564..425a0a9 100644
+--- a/src/lab-process-mail/Kyuafile
++++ b/src/lab-process-mail/Kyuafile
+@@ -3,3 +3,4 @@ syntax(2)
+ test_suite('lab-process-mail')
+ 
+ atf_test_program{name='lab-process-mail_test'}
++atf_test_program{name='lab-process-mail-loop_test'}
+diff --git a/src/lab-process-mail/lab-process-mail-loop b/src/lab-process-mail/lab-process-mail-loop
+new file mode 100755
+index 0000000..00ff9a7
+--- /dev/null
++++ b/src/lab-process-mail/lab-process-mail-loop
+@@ -0,0 +1,46 @@
++#!/bin/sh
++#
++# lab-process-mail-loop -- keep the lab-devel inbox drained.
++#
++# lab-process-mail answers the inbox once and exits. This runs it
++# again and again, sleeping ${LAB_PROCESS_MAIL_INTERVAL} seconds, or
++# 300, between runs, so new mail is answered without anyone starting
++# it. It stays in the foreground and never forks; leave that to a
++# supervisor such as daemon(8):
++#
++#	daemon -f -o ~/lab/process-mail.log -p ~/lab/process-mail.pid \
++#	    lab-process-mail-loop
++#
++# The environment passes through to lab-process-mail unchanged, so
++# LAB_BASE_BRANCH, NOTIFY_URL, and the rest work as they do there.
++#
++# A failed run stops the loop. When a message is stuck it is still the
++# oldest in the inbox, so running again would only retry it every
++# interval; lab-process-mail has already posted the notice, and the
++# operator restarts the loop once it is dealt with.
++
++set -eu
++
++readonly PROGNAME="${0##*/}"
++readonly INTERVAL="${LAB_PROCESS_MAIL_INTERVAL:-300}"
++
++die() {
++	echo "E: ${PROGNAME}: ${*}" >&2
++	exit 1
++}
++
++main() {
++	local status
++
++	[ "${#}" -eq 0 ] || die "usage: ${PROGNAME}"
++
++	while :; do
++		status=0
++		lab-process-mail || status="${?}"
++		[ "${status}" -eq 0 ] ||
++		    die "lab-process-mail exited ${status}; stopping"
++		sleep "${INTERVAL}"
++	done
++}
++
++main "${@}"
+diff --git a/src/lab-process-mail/lab-process-mail-loop_test b/src/lab-process-mail/lab-process-mail-loop_test
+new file mode 100755
+index 0000000..9a191d5
+--- /dev/null
++++ b/src/lab-process-mail/lab-process-mail-loop_test
+@@ -0,0 +1,65 @@
++#!/usr/bin/env atf-sh
++
++atf_init_test_cases() {
++	atf_add_test_case no_args
++	atf_add_test_case sleeps_between_runs
++	atf_add_test_case default_interval
++	atf_add_test_case stops_on_failure
++}
++
++# Stub lab-process-mail and sleep, each logging its calls to calls.log.
++# lab-process-mail succeeds until its STUB_FAIL_AT'th run, which exits
++# 1, so every test ends.
++setup() {
++	LOOP="$(atf_get_srcdir)/lab-process-mail-loop"
++	unset LAB_PROCESS_MAIL_INTERVAL
++	stubdir="${PWD}"
++	mkdir bin
++
++	cat > bin/lab-process-mail <<-EOF
++	#!/bin/sh
++	echo run >> "${stubdir}/calls.log"
++	n="\$(grep -c '^run' "${stubdir}/calls.log")"
++	[ "\${n}" -lt "\${STUB_FAIL_AT:-1}" ] || exit 1
++	EOF
++
++	cat > bin/sleep <<-EOF
++	#!/bin/sh
++	echo "sleep \$*" >> "${stubdir}/calls.log"
++	EOF
++
++	chmod +x bin/*
++	export PATH="${PWD}/bin:${PATH}"
++}
++
++atf_test_case no_args
++no_args_body() {
++	setup
++	atf_check -s exit:1 -e match:"usage" "${LOOP}" extra
++	atf_check -s exit:1 test -e calls.log
++}
++
++atf_test_case sleeps_between_runs
++sleeps_between_runs_body() {
++	setup
++	export STUB_FAIL_AT=3 LAB_PROCESS_MAIL_INTERVAL=7
++	atf_check -s exit:1 -e ignore "${LOOP}"
++	printf '%s\n' run 'sleep 7' run 'sleep 7' run > expout
++	atf_check -o file:expout cat calls.log
++}
++
++atf_test_case default_interval
++default_interval_body() {
++	setup
++	export STUB_FAIL_AT=2
++	atf_check -s exit:1 -e ignore "${LOOP}"
++	atf_check -o match:"^sleep 300\$" cat calls.log
++}
++
++atf_test_case stops_on_failure
++stops_on_failure_body() {
++	setup
++	atf_check -s exit:1 -e match:"lab-process-mail exited 1; stopping" \
++	    "${LOOP}"
++	atf_check -o inline:"run\n" cat calls.log
++}
+diff --git a/src/lab-process-mail/lab-process-mail.pkg.do b/src/lab-process-mail/lab-process-mail.pkg.do
+index 8cf660a..386bb54 100644
+--- a/src/lab-process-mail/lab-process-mail.pkg.do
++++ b/src/lab-process-mail/lab-process-mail.pkg.do
+@@ -10,7 +10,7 @@ name="lab-process-mail"
+ version="0.0.0"
+ prefix="/"
+ 
+-redo-ifchange lab-process-mail prompt.md
++redo-ifchange lab-process-mail lab-process-mail-loop prompt.md
+ 
+ # Stage files
+ stagedir=$(mktemp -d)
+@@ -18,6 +18,7 @@ trap "rm -rf ${stagedir}" EXIT
+ 
+ mkdir -p "${stagedir}/bin" "${stagedir}/share/${name}"
+ install -m 0555 lab-process-mail "${stagedir}/bin/lab-process-mail"
++install -m 0555 lab-process-mail-loop "${stagedir}/bin/lab-process-mail-loop"
+ install -m 0444 prompt.md "${stagedir}/share/${name}/prompt.md"
+ 
+ # Calculate flatsize
+@@ -41,6 +42,7 @@ INSTALL_AS_USER=yes pkg -r ~/local install -U \$(realpath ${name}.pkg)
+ EOD
+ files: {
+   /bin/lab-process-mail: "-"
++  /bin/lab-process-mail-loop: "-"
+   /share/${name}/prompt.md: "-"
+ }
+ EOM
+
+base-commit: 8d0b05250dc28c4dfa11e4e7925c94f50cfcf211
+-- 
+2.56.0
+
