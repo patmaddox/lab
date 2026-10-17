@@ -1,0 +1,147 @@
+From: claude <claude@p7x.dev>
+Subject: Re: [RFC] agent-assisted research
+To: Pat Maddox <pat@patmaddox.com>, lab-devel@p7x.dev
+In-Reply-To: <m21p9pz0yt.fsf@beastie.p7x.dev>
+References: <m21p9pz0yt.fsf@beastie.p7x.dev>
+Message-ID: <1792196157.594d32c63315@p7x.dev>
+Date: Sat, 17 Oct 2026 00:16:00 +0000
+
+On Fri, 16 Oct 2026 16:20:58 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+> I want to think about a strategy and way of organizing this sort of
+> thing. I'm especially interested to get ideas from other people who are
+> doing something similar with this.
+
+Here is what I found others doing. I fetched each link marked checked;
+the rest came from search results only.
+
+- Karpathy's "LLM Wiki" gist [a] (checked) has three layers. Raw
+  sources the LLM never edits, a wiki/ the LLM owns, and a schema file
+  (CLAUDE.md or AGENTS.md) that governs it. Its operations are ingest
+  (one source updates many pages), query (answers cite pages and can
+  be filed back), and a periodic lint for contradictions, stale claims
+  and orphan pages. index.md catalogs it and log.md is an append-only
+  changelog.
+- Simon Willison's research repo [b][c] (checked) runs one folder per
+  question for async coding agents. He keeps the output quarantined
+  in its own repo, whose README says every line was written by an LLM,
+  so it never mixes with his own writing.
+- Elicit Routines [d] (checked) run daily or weekly, revise a standing
+  artifact such as an evidence summary, and report what changed with
+  source links. ChatGPT scheduled tasks [e] (not checked; the page
+  refused my fetch) do the recurring part without a standing artifact.
+- Stanford STORM and Co-STORM [f] (checked) research, outline, then
+  write a cited article. Co-STORM keeps a mind map as the shared
+  structure between the human and the system.
+- The living literature review work [g] (checked) is the warning. A
+  later paper, "Toward Living Narrative Reviews" (CHI '25, not
+  checked), reports that most living reviews are never updated. A
+  "living" document dies without a mechanism that forces the update.
+- Zettelkasten literature notes versus permanent notes [h], and
+  Matuschak's separate reading and writing inboxes [i] (both checked),
+  are the pre-LLM form of the same split you describe: material about
+  sources in one place, your own thinking in another.
+
+For software factories specifically, two trackers already exist that
+an agent could watch rather than rediscover. Addy Osmani's "Software
+Factories, Light and Dark" [j] (checked) frames the space as harnessed
+loops plus a review gate. The awesome-software-factories list [k]
+(checked) is a community tracker by category, with markers for
+unmaintained and discontinued projects.
+
+The patterns that recur across all of them:
+
+1. Sources are kept apart from synthesis, and agent text apart from
+   human text. One author per file.
+2. A schema file is the contract, so every run behaves the same way.
+3. Updates are deltas on a fixed cadence, "what changed since last
+   time", not a regenerated report.
+4. Every claim carries provenance.
+5. A maintenance pass hunts stale claims, or the document rots.
+
+> I'm not concerned with keeping any of the approaches that I've attempted
+> in this repo. I want to take a step back, and get a higher level look at
+> how to go about this.
+
+Agreed on not keeping the code, but the earlier attempts left lessons
+worth keeping. zib/research-with-llms/research.org already had the one
+author per file split (spec, research, notes, report). The freebsd-audio
+and llm-interaction-patterns runs then produced 392 and 586 line
+reports, which were too large to absorb in one sitting.
+zib/inline-llm-research.org drew the conclusion: exploration goes in
+throwaway messages, and only accepted conclusions go into the document,
+as small patches. zib/messages-vs-docs.org says the same from the other
+side. Those lessons line up with patterns 1 and 3 above.
+
+> Essentially I want a research assistant for various subjects. I still
+> want to produce my own notes material - that's a big part of how I
+> learn. But gathering the information, organizing it, presenting it in a
+> way that's useful for me to digest - I think that's a place where agents
+> can come in really useful.
+
+My proposal, built from the above and from what the lab already has:
+
+- One directory per subject, e.g. research/software-factories/, with
+  a file per author. sources.org is the watch list (feeds, repos,
+  people, trackers like [k]); you and I both add to it. brief.org is
+  the agent's state of the field, short, cited, and only the agent
+  writes it. log.org is the append-only changelog. Your notes stay in
+  your own files and only link in. One CLAUDE.md for the whole
+  research/ tree holds the standing rules once, not per subject.
+- A pass per subject on a weekly timer, driven like lab-process-mail.
+  It reads sources.org, finds what is new since the last log entry,
+  and produces two things: a digest to the list ("what changed this
+  week", each item cited, a page at most), and a patch to brief.org
+  and log.org. The digest is what you read; the patch is what you
+  accept or reject, the same way you review code.
+- Control keys on side effects, per "Own the loop": the pass succeeded
+  if the log commit landed and the digest was delivered.
+- A monthly lint pass flags stale or contradicted claims in brief.org
+  as its own patch, so the brief does not rot.
+
+Digests need no reply, which runs into the problem in "need some way
+to close the loop on threads" [1]. I would tag them so they bypass
+the inbox, e.g. a "digest" subject prefix that notmuch tags as
+archived on arrival, rather than adding replies just to clear them.
+That keeps the state derivable from the list, as you asked in
+"Supporting status trailers in emails" [2].
+
+This also fits "[RFC] push vs pull for agents" [3]: a research agent
+is an ambient role whose output is capped by your reading capacity.
+That argues for a weekly cadence and a one-page digest, not daily.
+
+I recommend starting with software factories alone, run by hand for
+two or three weeks before adding a timer, so we tune the digest shape
+before automating it. The first patch would be the research/ layout,
+its CLAUDE.md, and a seeded sources.org. I have not posted it yet,
+because three choices are yours and change its shape:
+
+- Cadence: weekly (my pick) or something else.
+- Location: research/ in this repo (my pick, so it rides the list
+  workflow), or a separate repo like Willison's.
+- Digests on lab-devel (my pick), or a separate list or maildir
+  folder so they do not crowd patch review.
+
+Objective: a working research assistant for software factories that
+keeps a cited brief current and sends you a weekly digest.
+Status: waiting on your choices above.
+Next actions for you:
+- Pick the cadence, location, and digest channel.
+Information needed from you:
+- Any sources you already follow on software factories, to seed
+  sources.org.
+
+[1] id:m2jynpyk6j.fsf@beastie.p7x.dev
+[2] id:m21p9s9ejd.fsf@beastie.p7x.dev
+[3] id:m25wz1z155.fsf@beastie.p7x.dev
+
+[a] https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f
+[b] https://simonwillison.net/2025/Nov/6/async-code-research/
+[c] https://github.com/simonw/research
+[d] https://elicit.com/blog/introducing-routines-research-that-keeps-working
+[e] https://help.openai.com/en/articles/10291617-scheduled-tasks-in-chatgpt
+[f] https://github.com/stanford-oval/storm
+[g] https://arxiv.org/abs/2111.00824
+[h] https://zettelkasten.de/posts/concepts-sohnke-ahrens-explained/
+[i] https://notes.andymatuschak.org/Evergreen_notes
+[j] https://addyosmani.com/blog/software-factories/
+[k] https://github.com/vitalik1921/awesome-software-factories
