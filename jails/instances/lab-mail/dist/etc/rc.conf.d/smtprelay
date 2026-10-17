@@ -1,4 +1,0 @@
-smtprelay_enable="YES"
-# daemon(8) options; they come before the smtprelay command line.
-smtprelay_flags="-u smtprelay -l mail -T smtprelay"
-smtprelay_env_file="/usr/local/etc/smtprelay/remotes.env"

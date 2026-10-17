@@ -1,24 +1,24 @@
-#+TITLE: lab-mail: a mail relay jail for p7x.dev
+#+TITLE: lab-mail: the mail hub for the lab-devel list
 
 artifact: a jail instance in this dir, built and operated like the
 other instances in =jails/instances=, plus the mail clients that
 lab-claude needs to use it.
 
-goal: agents send and read p7x.dev mail without holding the mail
-credentials. lab-mail holds them, and it is the only thing that talks
-to the mail provider. Agents reach lab-mail over the network (SMTP and
-IMAP), never through a shared filesystem, so they need not run on the
-same host as lab-mail.
+goal: the lab-devel list lives on lab-mail, synced both ways with
+Fastmail. Every host that uses the list treats lab-mail as its
+upstream server: it syncs the list over IMAP and posts to it over
+SMTP. Agents can read the list and add to it, and they can do nothing
+else to it. Only lab-mail holds the Fastmail credentials and talks to
+Fastmail. Clients reach lab-mail over the network, never through a
+shared filesystem, so they need not run on the same host as lab-mail.
 
-provider: p7x.dev and lists.p7x.dev are hosted on Fastmail.
-- IMAP: imap.fastmail.com, port 993, implicit TLS
-- SMTP submission: smtp.fastmail.com, port 465, implicit TLS
+provider: p7x.dev is hosted on Fastmail.
+- IMAP: imap.fastmail.com, port 993, implicit TLS.
 - lab-mail logs in with the Fastmail account's login and one app
-  password, with IMAP and SMTP access. smtprelay and mbsync both use
-  them.
-- claude@p7x.dev is a sending identity on the Fastmail account.
-- The account is the list's own, so mail to the list lands in INBOX.
-  No Fastmail rule files it elsewhere.
+  password with IMAP access. Only mbsync uses them.
+- The account is the list's own. The list's address is
+  =lab-devel@p7x.dev=, and mail to it lands in INBOX. No Fastmail rule
+  files it elsewhere.
 - Fastmail's folder =Archive= is the account's archive folder. Over
   IMAP it carries the =\Archive= special-use flag.
 
@@ -38,6 +38,9 @@ the list: the folders INBOX and =Archive= of the Fastmail account.
   lab-mail.
 
 rights: who may do what to the list.
+- Anyone who can reach lab-mail may post to the list over SMTP, with
+  no login. Posting only adds a message. It cannot change or remove
+  one already there.
 - Anyone may read the list over IMAP. Any user name logs in with any
   password, and that login may list, fetch, search, and IDLE, and
   nothing else. Dovecot's ACL opens every mailbox read-only for it:
@@ -61,24 +64,23 @@ access:
 - lab-mail uses =ip4 = inherit=, like the client jails. A jail with
   its own address has its own 127.0.0.1, which the other jails cannot
   reach.
-- smtprelay listens on 127.0.0.1:2525 for SMTP, and Dovecot listens
+- OpenSMTPD listens on 127.0.0.1:2525 for SMTP, and Dovecot listens
   on 127.0.0.1:2143 for IMAP. Neither listens on an external address
   or on a standard port (25, 587, 143, or 993), so no tool finds them
   there by default.
 - So beastie, and every jail on it that uses =ip4 = inherit=, can use
   lab-mail, and nothing off beastie can. That is the security
   boundary. No pf rules are needed.
-- Clients do not authenticate to send. What a client may do to the
-  list over IMAP depends on its login (see rights).
-- No TLS between clients and smtprelay or Dovecot. The traffic stays
+- Clients do not authenticate to post. What a client may do to the
+  list once it is there depends on its IMAP login (see rights).
+- No TLS between clients and OpenSMTPD or Dovecot. The traffic stays
   on loopback.
 
 credentials: the operator stores three files on the host, in
 =/jails/data/lab-mail/secrets/=. They never enter the repo.
 - =mail-creds= holds the Fastmail login on its first line and the app
   password on its second. Each line is taken whole, so nothing
-  depends on where a space falls in it. Only smtprelay and mbsync can
-  read it.
+  depends on where a space falls in it. Only mbsync can read it.
 - =imap-users= holds the logins that may write the list, each with a
   password hash: =pat@p7x.dev= and =mbsync=. Only Dovecot's auth
   process can read it.
@@ -88,49 +90,55 @@ credentials: the operator stores three files on the host, in
   lab-mail holds only its hash.
 - The directory is nullfs-mounted read-only into lab-mail, and into
   no other jail.
-- smtprelay refuses to start, and the sync job to run, unless both
-  lines of =mail-creds= are present and not empty.
+- mbsync refuses to start a sync unless both lines of =mail-creds=
+  are present and not empty.
 - The instance documents how the operator stores each file.
 
-sending:
-- Software: smtprelay (mail/smtprelay).
-- smtprelay does not queue. It relays each message to Fastmail SMTP
-  during the client's session, logging in with the stored
-  credentials, and answers the client's DATA with Fastmail's reply.
-  When Fastmail rejects a message, the client gets Fastmail's code
-  and text. When Fastmail cannot be reached, the client gets a 4xx
-  reply. smtprelay never accepts a message it has not handed to
-  Fastmail, and never sends a bounce.
-- smtprelay adds one Received header to each message, as every MTA
-  does. It does not rewrite the sender, any other header, or the
-  body.
-- smtprelay checks the envelope sender and each envelope recipient
-  against allowlists in its config, before it contacts Fastmail.
-  Adding an address is a one-line change to the instance's config.
-- Allowed envelope senders (MAIL FROM): =claude@p7x.dev=. Any other
-  sender is refused with a 4xx reply.
-- Allowed envelope recipients (RCPT TO):
-  - =pat@patmaddox.com=
-  - any address at =p7x.dev=
-  - any address at =lists.p7x.dev=
-- Domains match exactly and without regard to case. =p7x.dev= does
-  not match its subdomains. That is why =lists.p7x.dev= is listed on
-  its own.
-- Any other recipient is refused with a 4xx reply to its RCPT TO.
-- smtprelay refuses a sender or recipient with 451, and the code is
-  not configurable. 4xx means "try again later", which is wrong for
-  a refused address, but no client here queues or retries, so the
-  refusal still ends the send.
-- A message with any refused recipient is sent to no one. smtprelay
-  refuses the recipient; the client then abandons the message (see
-  clients).
+posting:
+- Software: OpenSMTPD (mail/opensmtpd).
+- OpenSMTPD never relays. It delivers to the list and nowhere else,
+  so nothing a client posts leaves lab-mail except as a message that
+  mbsync copies into a Fastmail folder.
+- It accepts any envelope sender.
+- It sorts each envelope recipient (RCPT TO) into one of three kinds:
+  - =lab-devel@p7x.dev= is delivered to the list.
+  - A known address is accepted and discarded: =pat@p7x.dev=,
+    =pat@patmaddox.com=, and =claude@p7x.dev=. The list is where
+    everyone reads mail for these addresses, so a reply to all lands
+    once, on the list. Adding an address is a one-line change to the
+    instance's config.
+  - Any other recipient is refused with a 5xx reply to its RCPT TO.
+- A message with any refused recipient is posted to no one. The
+  client abandons it on the refusal (see clients).
+- OpenSMTPD parses the header of each message before it answers the
+  client's DATA. It refuses with a 5xx reply a message whose header
+  holds a line that is neither a field nor the continuation of one.
+  So a client that sends something other than a mail message learns
+  it while it is still connected, and nothing reaches the list.
+- OpenSMTPD gives a Message-ID and a Date to a message that lacks
+  them, as it does for any post on a loopback listener. So every
+  message on the list can be threaded and sorted.
+- A message to the list lands on it once, whatever known addresses it
+  is also sent to, with its To and Cc unchanged. OpenSMTPD adds a
+  Received header and any missing Message-ID or Date, Dovecot adds
+  Return-Path and Delivered-To, and nothing else is changed. Who a
+  message was addressed to is read from its To and Cc. Delivered-To
+  names the list's address, and a Bcc leaves no trace.
+- OpenSMTPD hands each message for the list to Dovecot over LMTP, on
+  a unix socket inside the jail, and Dovecot delivers it to INBOX.
+  OpenSMTPD never opens the maildir.
+- OpenSMTPD answers the client's DATA once the message is in its
+  queue. A delivery that fails is retried from the queue, so a message
+  posted while Dovecot is stopped lands when Dovecot is back. A
+  delivery Dovecot refuses for good is logged, and its bounce is
+  discarded like any other mail to a known address.
 
 reading:
 - Software: isync (mail/isync) for mbsync, and Dovecot (mail/dovecot)
-  for IMAP.
+  for IMAP and LMTP.
 - Dovecot is the only program that writes the list. Every change to
-  it, such as a sync from Fastmail, goes through Dovecot, as
-  Dovecot's user.
+  it, a posted message, a sync from Fastmail, or a move or deletion by
+  Pat, goes through Dovecot, as Dovecot's user.
 - The maildir lives in =/jails/data/lab-mail/mail/=, mounted
   read-write into lab-mail only, so a rebuild of the jail keeps the
   list. Dovecot's user owns it.
@@ -141,9 +149,10 @@ reading:
   Fastmail. INBOX is a folder of the maildir like the other. Every
   login sees the same mailboxes, and Dovecot's ACL gives each login
   the rights in the rights section.
-- Dovecot serves IMAP only. It does not run POP3, LMTP, or
-  submission.
-- Reading keeps working from lab-mail's copy while Fastmail is down.
+- Dovecot serves IMAP and LMTP only. It does not run POP3 or
+  submission, and its LMTP listens only on its socket inside the
+  jail.
+- Reading and posting keep working while Fastmail is down.
 
 sync with Fastmail:
 - mbsync in lab-mail syncs INBOX and =Archive= both ways between
@@ -170,14 +179,14 @@ sync with Fastmail:
 
 logs:
 - Every service in lab-mail logs through syslogd(8) in the jail:
-  smtprelay, the sync job, and Dovecot. Each has a file of its own
-  under =/var/log/lab-mail/=: =smtprelay.log=, =sync.log=, and
+  OpenSMTPD, the sync job, and Dovecot. Each has a file of its own
+  under =/var/log/lab-mail/=: =smtpd.log=, =sync.log=, and
   =dovecot.log=. They also land together in =/var/log/maillog=, as
   all mail logs do by default.
-- smtprelay logs each session: the client, the envelope, and
-  Fastmail's reply. The sync job logs each run that moves mail,
-  with mbsync's counts, and every failure. Dovecot logs each
-  login and every error.
+- OpenSMTPD logs each session: the client, the envelope, each
+  recipient's fate, and each delivery to Dovecot. The sync job logs
+  each run that moves mail, with mbsync's counts, and every failure.
+  Dovecot logs each login, each LMTP delivery, and every error.
 - newsyslog(8) rotates the files daily and keeps a week, as it does
   =/var/log/maillog=.
 - syslogd in lab-mail opens no network socket. The jail shares
@@ -192,54 +201,62 @@ check:
   checked, so the operator sees what is wrong.
 - It checks that:
   - the jail is running;
-  - =mail-creds= is present, neither of its lines is empty, and
-    smtprelay and mbsync can read it while Dovecot's user cannot;
+  - =mail-creds= is present and neither of its lines is empty;
   - =imap-users= has entries for =pat@p7x.dev= and =mbsync=, and
     =mbsync-imap= is not empty;
-  - each of those two is readable by its reader and by no other
-    service user;
+  - each secret is readable by its reader and by no other service
+    user;
   - the mail state directories exist with the owners the README
     gives;
-  - syslogd, cron, smtprelay, and Dovecot are running;
-  - smtprelay accepts connections on 127.0.0.1:2525, and Dovecot on
+  - syslogd, cron, OpenSMTPD, and Dovecot are running;
+  - OpenSMTPD accepts connections on 127.0.0.1:2525, and Dovecot on
     127.0.0.1:2143;
+  - OpenSMTPD's queue holds no message older than five minutes;
   - the last successful sync was within the last five minutes;
   - each log file exists.
-- The check only reads. It changes nothing in the jail and sends no
+- The check only reads. It changes nothing in the jail and posts no
   mail, so it is safe to run at any time.
 
 clients: lab-claude.
 - Packages: mail/isync and mail/msmtp, added to the existing
   mail/notmuch.
-- msmtp sends through 127.0.0.1:2525 as claude@p7x.dev. When the
-  server refuses any recipient, msmtp sends no message and exits
-  non-zero with the server's reply, so the whole message is
+- msmtp posts through 127.0.0.1:2525 as claude@p7x.dev. When the
+  server refuses any recipient or the message, msmtp posts nothing
+  and exits non-zero with the server's reply, so the whole message is
   abandoned.
 - mbsync pulls INBOX from 127.0.0.1:2143 into a maildir in the
   agent's home, and =notmuch new= indexes it there. The agent searches
   and reads the local index, not IMAP.
-- lab-claude documents the commands to fetch and to send.
+- lab-claude documents the commands to fetch and to post.
 
 acceptance test: run from lab-claude, except where a step says
 beastie.
-1. pat@patmaddox.com sends a message to lab@lists.p7x.dev.
-2. Within two minutes, mbsync fetches the message from lab-mail and
-   =notmuch search= finds it.
-3. The agent replies with msmtp as claude@p7x.dev to pat@patmaddox.com
-   and lab@lists.p7x.dev. msmtp exits 0.
-4. pat@patmaddox.com receives the reply.
-5. A message to pat@patmaddox.com and someone@example.com is refused
-   at RCPT TO for someone@example.com. msmtp exits non-zero and
-   pat@patmaddox.com receives nothing.
-6. A message from someone@p7x.dev is refused. msmtp exits non-zero.
+1. The agent posts a message with msmtp to =lab-devel@p7x.dev= and
+   =pat@p7x.dev=, and msmtp exits 0. Exactly one file for its
+   Message-ID lands in lab-mail's INBOX, and its To and Cc are as
+   sent.
+2. Within two minutes, the message is in INBOX on Fastmail.
+3. A message sent to Fastmail from outside lab-mail, to
+   =lab-devel@p7x.dev=, reaches the agent's mbsync and
+   =notmuch search= within two minutes.
+4. A message to =lab-devel@p7x.dev= and =someone@example.com= is
+   refused at RCPT TO for =someone@example.com=. msmtp exits non-zero
+   and nothing lands on the list.
+5. A message with a header line that is not a field is refused at
+   the end of DATA. msmtp exits non-zero and nothing lands on the
+   list. A message with no Message-ID, posted with msmtp
+   =--set-msgid-header=off=, lands on the list with one.
+6. With Dovecot stopped, a message posted to the list is accepted,
+   and it lands in INBOX within two minutes of Dovecot starting
+   again.
 7. Logged in as =claude@p7x.dev=, an IMAP STORE of =\Deleted=
    followed by EXPUNGE on INBOX changes nothing, and an APPEND to
    INBOX fails. The message stays in place, its flags unchanged, in
    lab-mail's maildir and on Fastmail.
 8. A login as =pat@p7x.dev= or =mbsync= with a wrong password fails.
 9. On beastie, =just check= exits 0.
-10. On beastie, with smtprelay stopped, =just check= exits non-zero
-    and a FAIL line names smtprelay.
+10. On beastie, with OpenSMTPD stopped, =just check= exits non-zero
+    and a FAIL line names OpenSMTPD.
 11. On Fastmail, Pat moves a message from INBOX to =Archive=. Within
     two minutes, it is in =Archive= and not in INBOX on lab-mail.
 12. Logged in as =pat@p7x.dev=, Pat moves a message from INBOX to
@@ -252,41 +269,52 @@ out of scope:
   their own moves them to lab-mail.
 - An archive of the list in git. It is a separate artifact, and can
   be fed from the list's folders like any other client.
-- Restricting which jails or local users may use lab-mail.
+- Restricting which jails or local users may post to lab-mail, or
+  what they put in From.
 - Expunging on either side. A message deleted or moved on one side
   stays in its old folder on the other, marked =\Deleted=, until a
   later change turns on Expunge for that side.
-- Delivery failures that happen after Fastmail has accepted a
-  message, and where Fastmail delivers mail for claude@p7x.dev.
+- Mail to and from people outside the list. lab-mail never relays,
+  and nobody sends outside mail through it.
 
 alternatives considered: each decision above, what it rejects, and
 why.
-- Relay without a queue, not a queuing MTA (OpenSMTPD, Postfix). A
-  queue answers 250 before Fastmail sees the message, so a rejection
-  comes back later as a bounce the sender may never see. The relay
-  keeps every failure in the client's session. The cost is that
-  nothing holds mail while Fastmail is unreachable; the client gets a
-  4xx reply and must send again.
-- No queue in the client either (msmtpq). A client queue also answers
-  "sent" before Fastmail has the message, which moves the same problem
-  one hop closer to the sender instead of removing it. An agent can
-  act on msmtp's non-zero exit, but a message waiting in a queue is a
-  state nothing checks. Outages are rare and short, and a failed send
-  in Emacs keeps the compose buffer, so the message is not lost.
-- smtprelay, not other relays. Postfix's smtpd_proxy_filter hands mail
-  to a local filter, which cannot log in to Fastmail. Sendmail's m4
-  config costs effort for no gain. dma and msmtp do not listen on the
-  network, so each client jail would need the credentials. Dovecot
-  submission needs clients to log in, and has no recipient allowlist.
-- Refuse an address with smtprelay's 451, not a 5xx from a locally
-  patched smtprelay or from another relay. A local patch means
-  building smtprelay from ports and keeping the patch current, and no
-  other relay weighed here has both a recipient allowlist and
-  pass-through of Fastmail's reply. The client exits non-zero either
-  way.
-- Check the sender against an allowlist, and never rewrite it. An
-  unchecked sender fails only at Fastmail, if at all; rewriting would
-  send mail as someone the client did not ask for.
+- A local SMTP server, not a maildir mounted into each client jail. A
+  write mount would let an agent rename or delete any message on the
+  list. Over SMTP an agent can only add one, and mail protocols are
+  used as they are meant to be, not as a file transfer.
+- OpenSMTPD, not smtprelay, Postfix, or dma. smtprelay only relays,
+  and cannot deliver locally. Postfix can, but it is far larger than
+  this job. dma does not listen on the network. OpenSMTPD delivers
+  over LMTP natively and matches recipients in a few lines of config.
+- Post to lab-mail, not relay to Fastmail. A relay makes a post reach
+  the list only by a round trip through Fastmail, and posting fails
+  whenever Fastmail does.
+- A queuing server, which a relay without a queue was chosen to avoid.
+  A queue answers 250 before the next hop has seen the message, so a
+  rejection there turns into a bounce nobody sees. Here the only hop
+  after the queue is Dovecot in the same jail, which does not refuse
+  a well-formed message, and OpenSMTPD refuses a malformed one before
+  the queue.
+- Deliver only the list address and discard the other known
+  addresses, not one copy per recipient, and not refusing every
+  address but the list. OpenSMTPD expands each RCPT TO on its own and
+  writes one copy per recipient that reaches the maildir, so a reply
+  to all would land twice, on lab-mail and on Fastmail. Refusing the
+  other addresses would make msmtp abandon every reply to all.
+- OpenSMTPD's own header check, not a filter of our own. Its parser
+  already refuses a header it cannot read and supplies a missing
+  Message-ID. A filter could also refuse a second From or a missing
+  Subject, but it would be one more program in every session, and
+  neither fault stops the tools that read the list from threading it.
+- Check a message in OpenSMTPD's session, not at delivery. A check
+  at delivery runs after the client has its 250, so a refused message
+  becomes a bounce to an address that is discarded, and the sender
+  never learns of it.
+- No login to post, unlike IMAP. IMAP needs passwords because its
+  logins have different rights. Every poster has the same right, to
+  add one message, so a password would tell no two posters apart,
+  and every host would hold a secret that guards nothing.
 - Reject the whole message on any bad recipient, not deliver to the
   good ones. A bad recipient is most likely a typo, and the sender
   should fix it and send once to everyone.
@@ -329,7 +357,8 @@ why.
   else arriving in the account, there is nothing to sort, and
   lab-mail serves the folder Fastmail has.
 - Dovecot, not Cyrus or Courier. Each of those brings its own mail
-  store and admin model, where Dovecot serves a plain maildir.
+  store and admin model, where Dovecot serves a plain maildir and
+  takes LMTP.
 - IMAP over loopback, not a nullfs-mounted maildir. A mount ties
   every client to beastie's filesystem. A loopback bind is cheap to
   change into an external address later.
@@ -338,19 +367,12 @@ why.
   use lab-mail, and a jail with its own address cannot reach the
   loopback the other jails share.
 - Ports 2525 and 2143, not 25 and 143, so no tool finds lab-mail by
-  default and sends or reads mail by accident.
-- The login and app password in one =mail-creds= file, not the login in
-  the repo config and the password in a file of its own. The login is
-  not secret, but keeping both together gives the operator one file
-  to manage, which smtprelay and mbsync read the same way.
-- One app password, not one for SMTP and one for IMAP. Both live in
-  the same jail behind the same mount, so two add no protection.
-- Logs through syslogd, not each service's own log file (Dovecot's
-  log_path, smtprelay's log_file). syslogd gives one place to look,
-  as for every other FreeBSD service, and newsyslog rotates its files
-  by signalling syslogd alone. A service that writes its own file
-  must be told to reopen it after rotation, and each does that
-  differently.
+  default and posts or reads mail by accident.
+- Logs through syslogd, not each service's own log file. syslogd
+  gives one place to look, as for every other FreeBSD service, and
+  newsyslog rotates its files by signalling syslogd alone. A service
+  that writes its own file must be told to reopen it after rotation,
+  and each does that differently.
 - A file per service as well as =/var/log/maillog=, not maillog
   alone. maillog interleaves the three services, and the operator
   usually wants to follow one.
@@ -361,7 +383,3 @@ why.
   reads that file's age, not the sync log. A quiet list writes no log
   lines, so the log cannot tell a stopped sync from a quiet list, and
   a file's age needs no parsing.
-- Pat's own mail client is not part of this spec. With no queue,
-  there is nothing about it for lab-mail to provide. Sending as
-  pat@patmaddox.com takes one more allowed sender and an msmtp entry
-  in his client.

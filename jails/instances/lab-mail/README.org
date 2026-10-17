@@ -1,14 +1,17 @@
 #+TITLE: lab-mail
 
 The mail hub for the lab-devel list. lab-mail holds the list, synced
-both ways with Fastmail, and serves it over IMAP to every host that
-uses it. It also relays mail to Fastmail over SMTP. It holds the
-Fastmail credentials and is the only thing that talks to Fastmail.
-spec.org has the design.
+both ways with Fastmail, takes posts over SMTP, and serves the list
+over IMAP to every host that uses it. It holds the Fastmail
+credentials and is the only thing that talks to Fastmail. spec.org
+has the design.
 
 * rights
 Who may do what to the list. Everything below follows from these
 rules.
+- Anyone who can reach lab-mail may post to the list over SMTP, with
+  no login. Posting only adds a message. It cannot change or remove
+  one already there.
 - Anyone may read the list over IMAP. Any user name logs in with any
   password, and that login may list, fetch, search, and IDLE, and
   nothing else. It cannot set flags, append, copy, move, or expunge,
@@ -35,31 +38,40 @@ Two host directories are mounted into the jail, and into no other:
 - =/jails/data/lab-mail/mail= at =/data/mail=, read-write. It holds
   the list and the mail state, which survive a rebuild of the jail.
 
-The Fastmail credentials never leave =/data/secrets=. Only the
-services that talk to Fastmail can read them, as members of the
-=mailcred= group.
-
 Dovecot is the only program that writes the list. Every change to it,
-a sync from Fastmail, or a move or deletion by Pat, goes through
-Dovecot, as the user =vmail=.
+a post, a sync from Fastmail, or a move or deletion by Pat, goes
+through Dovecot, as the user =vmail=.
 
-** sending
+** posting
 #+BEGIN_EXAMPLE
-client --SMTP--> smtprelay 127.0.0.1:2525 --SMTPS--> smtp.fastmail.com:465
+client --SMTP--> OpenSMTPD 127.0.0.1:2525 --LMTP--> Dovecot --> INBOX
 #+END_EXAMPLE
 
-smtprelay is the only way out. rc(8) starts it when the jail starts,
-under daemon(8) as the user =smtprelay=; its config is
-=/usr/local/etc/smtprelay/smtprelay.ini=. Before it starts,
-=remotes.env= reads =mail-creds= and passes the Fastmail login to it
-in its environment.
+rc(8) starts OpenSMTPD when the jail starts; its config is
+=/usr/local/etc/mail/smtpd.conf=. A client connects without logging
+in. OpenSMTPD sorts each recipient:
+- =lab-devel@p7x.dev= is delivered to the list.
+- =pat@p7x.dev=, =pat@patmaddox.com=, and =claude@p7x.dev= are
+  accepted and discarded, since everyone reads their mail on the
+  list. A reply to all then lands on the list once. The table =known=
+  in =smtpd.conf= lists them.
+- Any other recipient is refused with a 5xx reply, and the client
+  abandons the whole message.
 
-A client connects without logging in. smtprelay checks the envelope
-sender and each recipient against the allowlists in =smtprelay.ini=,
-and refuses any address that is not on them. It then logs in to
-Fastmail and relays the message while the client waits, so the
-client gets Fastmail's answer. Nothing is queued: a message that
-fails is not sent, and the client must send it again.
+Before it answers the client's DATA, OpenSMTPD parses the header. It
+refuses a message with a header line that is neither a field nor the
+continuation of one, while the client is still connected. It adds a
+Message-ID and a Date to a message that lacks them, as it does on any
+loopback listener.
+
+OpenSMTPD then queues the message and hands it to Dovecot over LMTP,
+on the socket =/var/run/dovecot/lmtp=, which only =vmail= may open.
+LMTP delivers it to INBOX. OpenSMTPD never opens the maildir. If
+Dovecot is stopped, the message waits in OpenSMTPD's queue and lands
+when Dovecot is back. The next sync carries it to Fastmail.
+
+OpenSMTPD never relays. Nothing posted leaves lab-mail except as a
+message that mbsync copies into a Fastmail folder.
 
 ** syncing with Fastmail
 #+BEGIN_EXAMPLE
@@ -96,16 +108,16 @@ same mailboxes, and runs as =vmail=, which keeps Dovecot's indexes in
 =/data/mail/dovecot=. What each login may do is in =dovecot-acl=, as
 rights describes.
 
-Reading keeps working while Fastmail is down.
+Reading and posting keep working while Fastmail is down.
 
 ** logs
 Each service logs through syslogd(8) in the jail, to a file of its
 own under =/var/log/lab-mail/=, and all of them to =/var/log/maillog=:
-- =smtprelay.log=: each session, with the client, the envelope, and
-  Fastmail's reply.
+- =smtpd.log=: each session, with the client, the envelope, each
+  recipient's fate, and each delivery to Dovecot.
 - =sync.log=: each sync that moved mail, with mbsync's counts, and
   every sync failure.
-- =dovecot.log=: each IMAP login, and every error.
+- =dovecot.log=: each IMAP login, each LMTP delivery, and every error.
 
 A sync that moves nothing logs nothing, so a quiet =sync.log= is
 normal. The routing is in =/etc/syslog.d/lab-mail.conf=, and
@@ -120,9 +132,8 @@ The operator stores three secrets on the host, in
 mounts the directory read-only at =/data/secrets=, and no other jail
 mounts it.
 - =mail-creds= holds two lines: the Fastmail login on the first, and
-  an app password with IMAP and SMTP access on the second. Each line
-  is taken whole, whatever it contains. Only smtprelay and mbsync read
-  it, as members of the =mailcred= group.
+  an app password with IMAP access on the second. Each line is taken
+  whole, whatever it contains. Only mbsync reads it.
 - =mbsync-imap= holds the password of mbsync's Dovecot login. Only
   mbsync reads it.
 - =imap-users= holds the logins that may change the list, one per
@@ -136,9 +147,8 @@ doveadm, which prompts for it:
 doas jexec lab-mail doveadm pw -s BLF-CRYPT
 #+END_EXAMPLE
 
-The host knows each reader only by number: 15100 is the =mailcred=
-group and 15102 is mbsync, from =instance.conf=, and 143 is dovecot,
-from the package:
+The host knows each reader only by number: 15102 is mbsync, from
+=instance.conf=, and 143 is dovecot, from the package:
 #+BEGIN_EXAMPLE
 mkdir -p /jails/data/lab-mail/secrets
 cd /jails/data/lab-mail/secrets
@@ -147,8 +157,7 @@ printf '%s\n' 'mbsync-password' > mbsync-imap
 printf '%s\n' 'pat@p7x.dev:{BLF-CRYPT}...' 'mbsync:{BLF-CRYPT}...' > imap-users
 chown 0:0 .
 chmod 0711 .
-chown 0:15100 mail-creds
-chown 0:15102 mbsync-imap
+chown 0:15102 mail-creds mbsync-imap
 chown 0:143 imap-users
 chmod 0640 mail-creds mbsync-imap imap-users
 #+END_EXAMPLE
@@ -231,15 +240,16 @@ $ just check
 ok the jail is running
 ok /data/secrets/mail-creds exists
 ...
-FAIL smtprelay is running
-FAIL smtprelay accepts connections on 127.0.0.1:2525
+FAIL OpenSMTPD is running
+FAIL OpenSMTPD accepts connections on 127.0.0.1:2525
 ...
 #+END_EXAMPLE
 
 It checks the jail, that each secret is present and readable by its
-readers and no other service user, the owners of the mail state
-directories, that syslogd, cron, smtprelay, and Dovecot are running,
-that smtprelay and Dovecot accept connections, that a sync succeeded
+reader and no other service user, the owners of the mail state
+directories, that syslogd, cron, OpenSMTPD, and Dovecot are running,
+that OpenSMTPD and Dovecot accept connections, that OpenSMTPD's queue
+holds no message older than five minutes, that a sync succeeded
 within the last five minutes, and that the log files exist. The sync
 job touches =/data/mail/mbsync/last-sync= after each successful run,
 so a quiet list still passes. The check only reads, so it is safe to

@@ -14,7 +14,7 @@ readonly stamp=/data/mail/mbsync/last-sync
 
 # Every user a lab-mail service runs as. Each secret must be readable
 # by its reader and by none of the others.
-readonly service_users="smtprelay mbsync vmail dovecot dovenull"
+readonly service_users="mbsync vmail dovecot dovenull _smtpd _smtpq nobody"
 
 failed=0
 
@@ -68,6 +68,17 @@ listening() {
 	nc -z -w 5 127.0.0.1 "${1}"
 }
 
+# The eighth field of smtpctl show queue is when the envelope was
+# queued, in seconds since the epoch.
+queue_is_fresh() {
+	local queue limit ctime
+	queue=$(smtpctl show queue) || return 1
+	limit=$(($(date +%s) - 300))
+	for ctime in $(printf '%s\n' "${queue}" | cut -d '|' -f 8); do
+		[ "${ctime}" -ge "${limit}" ] || return 1
+	done
+}
+
 # find prints the stamp only if it changed in the last five minutes.
 synced_recently() {
 	[ -n "$(find ${stamp} -mmin -5)" ]
@@ -79,9 +90,7 @@ check "${creds} has the password on line 2" has_line 2
 check "${users} has pat@p7x.dev" has_user pat@p7x.dev
 check "${users} has mbsync" has_user mbsync
 check "${mbpass} is not empty" test -s ${mbpass}
-check "smtprelay can read ${creds}" can_read smtprelay ${creds}
-check "mbsync can read ${creds}" can_read mbsync ${creds}
-check "vmail cannot read ${creds}" cannot_read vmail ${creds}
+check "only mbsync can read ${creds}" readable_only_by ${creds} mbsync
 check "only mbsync can read ${mbpass}" readable_only_by ${mbpass} mbsync
 check "only dovecot can read ${users}" readable_only_by ${users} dovecot
 
@@ -92,17 +101,20 @@ check "/data/mail/dovecot is owned by vmail (15103)" \
 check "/data/mail/mbsync is owned by mbsync (15102)" \
     owned_by /data/mail/mbsync 15102
 
-for s in syslogd cron smtprelay dovecot; do
-	check "${s} is running" service ${s} status
-done
+check "syslogd is running" service syslogd status
+check "cron is running" service cron status
+check "OpenSMTPD is running" service smtpd status
+check "Dovecot is running" service dovecot status
 
-check "smtprelay accepts connections on 127.0.0.1:2525" listening 2525
-check "dovecot accepts connections on 127.0.0.1:2143" listening 2143
+check "OpenSMTPD accepts connections on 127.0.0.1:2525" listening 2525
+check "Dovecot accepts connections on 127.0.0.1:2143" listening 2143
 
+check "OpenSMTPD's queue holds no message older than five minutes" \
+    queue_is_fresh
 check "the last successful sync was within five minutes" \
     synced_recently
 
-for l in smtprelay sync dovecot; do
+for l in smtpd sync dovecot; do
 	check "/var/log/lab-mail/${l}.log exists" \
 	    test -f /var/log/lab-mail/${l}.log
 done
