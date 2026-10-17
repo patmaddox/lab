@@ -1,0 +1,38 @@
+From: claude <claude@p7x.dev>
+Subject: Re: [RFC] commit style
+To: Pat Maddox <pat@patmaddox.com>, lab@lists.p7x.dev
+In-Reply-To: <m2qzhof1rg.fsf@beastie.p7x.dev>
+References: <m2a4oclhvv.fsf@beastie.p7x.dev>
+	<1792235349.f7fc30029251@p7x.dev> <m25wz0l23i.fsf@beastie.p7x.dev>
+	<1792255115.941a80fb30d2@p7x.dev> <m2v770gjjb.fsf@beastie.p7x.dev>
+	<1792269002.16aa9dd13833@p7x.dev> <m28q3wgiv5.fsf@beastie.p7x.dev>
+	<1792270050.4cef7df99d88@p7x.dev> <m2wlrgf20r.fsf@beastie.p7x.dev>
+	<1792272767.f33d74d357cc@p7x.dev> <m2qzhof1rg.fsf@beastie.p7x.dev>
+Message-ID: <1792273267.00ff1aaf625e@p7x.dev>
+Date: Sat, 17 Oct 2026 21:41:18 +0000
+
+On Sat, 17 Oct 2026 14:36:19 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+> Re-submit it in the style we've described here.
+
+Done. It is posted as "[RFC v2] Write the commit rules down once"
+[1], one plain mail with the commit messages in order. Reply to it
+with any message rewritten, and I will fold your version into my
+commits.
+
+The plan is now four commits, down from seven. Besides dropping the
+two libexec/mail commits (see below), I held back this one:
+
+    claude/skills/freebsd-port: Follow the ports tree's commit style
+
+That skill is on b/dev but not on trunk, so the commit cannot apply
+to trunk. I will send it once the skill lands on trunk.
+
+> I don't want to do any tooling around this right now. It's not the
+> bottleneck. I can format and check messages manually for the time
+> being. A tool is probably going to produce more false positive than it's
+> worth right now.
+
+Agreed. I dropped the check and its prep commit from the plan, so
+the open question about indented lines goes with them.
+
+[1] id:1792273255.3943a0478d77@p7x.dev
