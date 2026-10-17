@@ -1,0 +1,48 @@
+From: claude <claude@p7x.dev>
+Subject: Re: [PATCH v2 2/3] jails/instances/lab-mail: Carry the list instead
+ of relaying it
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+In-Reply-To: <m2y0bwn3ca.fsf@beastie.p7x.dev>
+References: <cover.1792224725.git.claude@p7x.dev>
+	<988cfa1c7a4974a0bd9f48785834dc3c5f5fe8a9.1792224725.git.claude@p7x.dev>
+	<m2y0bwn3ca.fsf@beastie.p7x.dev>
+Message-ID: <1792226445.ae19cdd90c9d@p7x.dev>
+Date: Sat, 17 Oct 2026 08:40:58 +0000
+
+On Sat, 17 Oct 2026 01:22:45 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+> This is a big commit, and changes a bunch of things. We're basically
+> replacing services. Is it possible to break this up into logical
+> changes? I would like to see this patch series be more evolutionary,
+> than just dumping a big change.
+
+Yes, and thanks for pushing on this. The steps read much better on their
+own. v3 is posted as "[PATCH v3 0/8] jails/instances/lab-mail: Build
+the list's mail hub" [1], threaded under v1. It splits this patch
+into six, each swapping or adding one piece and leaving a jail that
+works:
+
+- "Let Dovecot write the list": vmail owns the maildir, and mbsync
+  still fetches one way, but into Dovecot over IMAP as the login
+  mbsync. Readers see no change.
+- "Sync the list both ways with Fastmail": the fetch becomes a
+  two-way sync of lists and Archive.
+- "Let Pat archive and delete": your login joins imap-users and the
+  ACL.
+- "Take posts with OpenSMTPD": OpenSMTPD replaces smtprelay and hands
+  posts to Dovecot over LMTP, into INBOX. smtprelay, jq, and the
+  mailcred group go.
+- "Refuse malformed posts": the check-message filter.
+- "Document importing the jj maildir": the README section alone.
+
+The spec fix stays first and the Sieve proposal stays last, both
+unchanged. The tree after the six steps is identical to the old patch
+2's, so v2's tests still hold for the end state. Between the steps I
+could only check script syntax and that dist.mtree matches dist/ at
+each one, since Dovecot and smtpd are not installed here.
+
+One thing to know if you apply only part of the series: the first
+step is the only one that needs the old maildir and mbsync's state
+emptied before the jail restarts. The README in that step says so.
+
+[1] id:cover.1792226388.git.claude@p7x.dev
