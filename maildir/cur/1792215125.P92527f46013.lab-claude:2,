@@ -1,0 +1,129 @@
+From: claude <claude@p7x.dev>
+Subject: Re: [RFC] re-thinking SMTP relay
+To: Pat Maddox <pat@patmaddox.com>, lab-devel@p7x.dev
+In-Reply-To: <m2o6cssxre.fsf@beastie.p7x.dev>
+References: <m2mrsdz1n0.fsf@beastie.p7x.dev>
+	<1792193020.cee32e2b1dec@p7x.dev> <m2cxt9vyub.fsf@beastie.p7x.dev>
+	<1792204889.a8a37790f517@p7x.dev> <m2se25t3bq.fsf@beastie.p7x.dev>
+	<1792207782.8a5252f19f7d@p7x.dev> <m2ecdpt2lh.fsf@beastie.p7x.dev>
+	<1792209288.c7f8aba8e086@p7x.dev> <m2a4ocud3r.fsf@beastie.p7x.dev>
+	<1792214276.d6e2c2f1559d@p7x.dev> <m2o6cssxre.fsf@beastie.p7x.dev>
+Message-ID: <1792215117.b4f999cfa341@p7x.dev>
+Date: Sat, 17 Oct 2026 05:32:05 +0000
+
+On Fri, 16 Oct 2026 22:26:45 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+>> - Dovecot alone writes the mailbox. OpenSMTPD hands list mail to
+>>   Dovecot over LMTP, and mbsync syncs Fastmail with Dovecot over IMAP.
+>
+> Explain this more, I don't understand it.
+
+Under the hub, three programs change the list on lab-mail:
+
+- OpenSMTPD adds every message someone posts.
+- mbsync adds mail that arrives at Fastmail, and copies your moves and
+  flag changes both ways.
+- Dovecot moves or deletes a message when your read-write login does.
+
+The question is whether all three write the maildir files themselves,
+or whether two of them ask Dovecot to do it.
+
+In the second way, Dovecot is the only program that opens the files.
+OpenSMTPD does not write the maildir. It hands each message to Dovecot
+over LMTP, a cut-down SMTP made for the last hop into a mailbox, and
+Dovecot files it. [inference, from my reading of smtpd.conf(5)] That
+is one "action ... lmtp" line in place of "action ... maildir". mbsync
+does not write the maildir either. Today its two ends are Fastmail over
+IMAP and a local maildir. They would become Fastmail over IMAP and
+Dovecot over IMAP on 127.0.0.1, with a login of its own. Your moves
+already go through Dovecot, since you reach lab-mail over IMAP.
+
+So every change to the list goes through one server, as one user, and
+Dovecot's ACL decides who may do what: your login and mbsync's may
+write, and agent logins may only read.
+
+>>   [inference] Today mbsync writes the maildir and Dovecot only reads
+>>   it. With three writers, the chmod after each pull and the separate
+>>   owners stop working.
+>
+> Explain.
+
+Today the files keep agents read-only, not just Dovecot's config.
+mbsync runs as its own user and creates each file 0600. After each
+pull, the fetch job adds read for group and other, so Dovecot's user
+can read every message and write none. Even a mistake in Dovecot's
+ACL could not let an agent delete list mail, because Dovecot itself
+cannot. The spec chose this on purpose, and rejected running Dovecot
+as mbsync's user for that reason.
+
+That works because only one user ever writes. Under the hub, Dovecot
+must move and delete files for you, mbsync must rename files when a
+flag or folder changes on Fastmail, and OpenSMTPD must create files.
+If each runs as its own user and writes directly:
+
+- [fact] Moving or deleting a message in a maildir is a rename or an
+  unlink, which needs write on the folder. Every writer then needs
+  write on every folder, so a shared group with 0770 folders and 0660
+  files. mbsync creates 0700 and 0600 whatever the umask, so the job
+  would have to chmod after every pull, now to add write, and any
+  file in the gap before that chmod is one Dovecot cannot move.
+- [fact] Dovecot's user can then write the files. Read-only for
+  agents rests on Dovecot's ACL alone, which is what the spec tried
+  to avoid.
+- [inference] Each IMAP server or sync tool keeps its own record of
+  the files: Dovecot its dovecot-uidlist, mbsync its sync state and
+  the ",U=" in each file name. Both cope with a file that appears from
+  outside. Two of them renaming the same files at the same time, each
+  with its own UID scheme, is where maildir sharing is known to go
+  wrong, as duplicated or lost flags and messages fetched twice.
+
+With Dovecot as the only writer, the chmod goes away and so do the
+separate owners. Dovecot's user owns the maildir, and nothing races
+it. The one cost is the one in the first point. Agents being
+read-only rests on Dovecot's ACL, not on file permissions. Whichever
+way we pick, that is true once your login can delete. I think one
+writer is the better of the two, and the spec's alternatives section
+would say why.
+
+>>   ~/mail/<user>_at_p7x.dev for both. Agents send with git send-email
+>
+> We can just call this <user>@p7x.dev, I know that's a valid dir
+> name. Nothing wrong with that, right?
+
+Nothing wrong with it. [fact] A FreeBSD file name may hold any byte
+except "/" and NUL, and "@" is not special to sh(1), mbsync, or
+notmuch. It only means something to scp or rsync, in a
+"user@host:path" argument, and that needs a colon that a local path
+never has.
+I picked _at_ from your earlier "~/mail/pat_at_p7x.dev" in "Re: How
+to configure beastie to use lab-mail" [1]. The spec will use
+~/mail/<user>@p7x.dev.
+
+> I will import the maildir the first time.
+>
+> Yes, retire the old mechanism.
+
+Understood. The spec will name the import as your one step before the
+switch. Its end state will have no mail bookmark, no submissions
+remote, and no ~/lab/mail.jj for mail.
+
+>> - Point 2: archive to an IMAP folder (a) or a beastie-only tag (b)?
+>
+> Archive by dir, not tag.
+>
+> Also we will probably know what Fastmail calls the dir once the first
+> sync takes place. It has an Archive dir already.
+
+Good. [inference] Fastmail marks that folder with the \Archive
+special-use flag over IMAP, so the spec can refer to it as Fastmail's
+archive folder and leave the exact name to the first sync.
+
+Status: no patch. All my questions are answered, except whether
+Dovecot is the only writer, which you asked me to explain above.
+
+Asks: does the explanation above settle it, so that Dovecot alone
+writes the list? Once you say yes, I will send the revision of
+jails/instances/lab-mail/spec.org. If you say no, the spec will
+have all three write the maildir with a shared group.
+
+[1] Re: How to configure beastie to use lab-mail
+    id:1791972996.459b93eb1b3f@p7x.dev
