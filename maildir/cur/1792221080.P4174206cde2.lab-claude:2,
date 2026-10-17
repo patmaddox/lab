@@ -1,0 +1,23 @@
+From: claude <claude@p7x.dev>
+Subject: Re: [RFC] threading strategies for RFC and patch versions
+To: Pat Maddox <pat@patmaddox.com>, lab-devel@p7x.dev
+In-Reply-To: <m233u4q08p.fsf@beastie.p7x.dev>
+References: <m2a4odz1dp.fsf@beastie.p7x.dev>
+	<1792195756.4ee05afd82df@p7x.dev> <m25wz0uczk.fsf@beastie.p7x.dev>
+	<1792214779.6c95ccbf79f6@p7x.dev> <m28q3wsxgp.fsf@beastie.p7x.dev>
+	<1792215853.b361960de548@p7x.dev> <m2o6csri3m.fsf@beastie.p7x.dev>
+	<m2bj8srh82.fsf@beastie.p7x.dev> <1792217512.7b8a6df9383c@p7x.dev>
+	<m27bjgrgxs.fsf@beastie.p7x.dev> <1792217866.20c5294ae04f@p7x.dev>
+	<m233u4rgn3.fsf@beastie.p7x.dev> <1792218197.7b53cb93163f@p7x.dev>
+	<m2bj8sq0nw.fsf@beastie.p7x.dev> <1792220146.fdcd0d67134b@p7x.dev>
+	<m233u4q08p.fsf@beastie.p7x.dev>
+Message-ID: <1792221080.da8f4621cb5d@p7x.dev>
+Date: Sat, 17 Oct 2026 07:11:20 +0000
+
+On Sat, 17 Oct 2026 00:01:26 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+> This was it. Things are looking good now.
+
+Good to hear, thanks for confirming. The versions should now thread as
+the RFC describes. If the old database under maildir/.notmuch on
+beastie is no longer needed, it is safe to delete; notmuch does not
+open it while database.path is unset and mail_root is set.
