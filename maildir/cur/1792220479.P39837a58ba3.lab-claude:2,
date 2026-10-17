@@ -1,0 +1,102 @@
+From: claude <claude@p7x.dev>
+Subject: Re: [PATCH 1/3] libexec/mail: Thread each revision under its first
+ version
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+In-Reply-To: <m27bjgq0ei.fsf@beastie.p7x.dev>
+References: <cover.1792214740.git.claude@p7x.dev>
+	<61fcb03c0fcf8e5772a7c3eafbfa9022b57db11f.1792214740.git.claude@p7x.dev>
+	<m27bjgq0ei.fsf@beastie.p7x.dev>
+Message-ID: <1792220434.5646098e8874@p7x.dev>
+Date: Sat, 17 Oct 2026 07:01:19 +0000
+
+On Fri, 16 Oct 2026 23:57:57 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+> I don't think it's true that all replies go to the first version? They
+> go to the previous version or its cover letter, right?
+
+git.git's documentation says the first version. I fetched it again
+today. MyFirstContribution, in its overview of a thread:
+
+  "Each iteration is sent with a new cover letter (like "[PATCH v2
+  0/3]" above), itself a reply to the cover letter of the first
+  iteration (more on that below)."
+
+and in "Sending v2" with git send-email:
+
+  "make sure to replace it with the correct Message-ID for your
+  **first cover letter** - that is, for any subsequent version that
+  you send, always use the Message-ID from v1."
+
+git.git's .b4-config sets "send-same-thread = shallow". b4's config
+documentation defines the values:
+
+  yes: "B4 sends the first message of the new series as a reply to
+  the previous version's cover letter."
+  shallow: "B4 sends the first message of the new series as a reply
+  to the first version's cover letter."
+
+So git.git chose shallow over yes. SubmittingPatches itself only
+says to send the versions "as replies to either an additional 'cover
+letter' message (see below), the first patch, or the respective
+preceding patch", and points to MyFirstContribution for the steps.
+
+What you describe is real practice, though. My survey noted that
+git contributors sometimes reply to the previous version instead, so
+the chains deepen. It is b4's "yes", not git.git's rule.
+
+> That way it produces a tree with a spine.
+
+That is where I went wrong. The two rules give different shapes:
+
+- First version (the patch, and git.git's rule): v2 to vN are all
+  children of v1's cover, each with its patches and review below it.
+  It is a fan, one level deep, not a spine.
+- Previous version (b4's "yes"): v1, then v2 under it, v3 under v2,
+  and so on. The versions form the spine, and each version's patches
+  and review branch off it.
+
+When you asked for the migration, you wrote that it should make
+"trees with spines". I built and ran it as a fan, and did not point
+out the difference. The migration now on mail@upstream, from
+"[PATCH v2] libexec/mail: Add rethread.py" [1] and "[PATCH] mail:
+Thread each revision under its first version" [2], has the same
+fan shape, so it does not give you the spine either.
+
+> Review the discussion on the list, and the git.git threading policy. I
+> think you go this one wrong.
+
+On the list, you chose "the git approach" in "Re: [RFC] threading
+strategies for RFC and patch versions" [3], after my survey quoted
+"always use the Message-ID from v1". The patch follows that quote. It
+does not follow the spine you meant. There are two ways forward:
+
+1. Keep the fan. It is git.git's documented rule, and nothing
+   changes. The cost is that the versions of a series are siblings,
+   not a chain. A reader sees them in date order under v1, but the
+   thread does not show which version answered which review.
+2. Switch to the spine. In format-patch.sh the walk up to v1 goes
+   away, and --in-reply-to is simply v(N-1) from --previous, so patch
+   1 gets smaller. rethread.py links each revision to v(N-1) instead
+   of v1, and I run it on the list again, which touches about the
+   same 123 files and needs one more notmuch rebuild on each host.
+   The docs in patches 2 and 3 change to match. The cost is depth: a
+   series with ten versions, like signoz, nests ten levels deep, which
+   is what the kernel's rule and b4's "shallow" exist to avoid.
+
+I recommend the spine, since it is the shape you asked for twice and
+it records which version answers which review. Say which you want,
+and the next pass sends v2 of "[PATCH 0/3] Thread each revision under
+its first version" [4] and, for the spine, the second migration.
+
+Separately, b/dev now carries "[PATCH] jails/instances/lab-mail: Spec
+the list's mail hub" [5], so "[PATCH v2] jails/instances/lab-mail:
+Spec the list's mail hub" [6] conflicted in my tree after the update.
+I resolved it so that v2 sits on b/dev as a delta over v1. Its content
+is unchanged; to take it, replace v1 with v2 in b/dev.
+
+[1] id:2da03c7ec55d578a5c45008694ebc958583ecdf0.1792217092.git.claude@p7x.dev
+[2] id:465dabf35323addc51630cdb15c24799978359fa.1792218164.git.claude@p7x.dev
+[3] id:m25wz0uczk.fsf@beastie.p7x.dev
+[4] id:cover.1792214740.git.claude@p7x.dev
+[5] id:991f4491863b0269b0d749dee3f46644892e255c.1792216397.git.claude@p7x.dev
+[6] id:5639615da525ce2f1e7711da05d3de5ad63511a2.1792219807.git.claude@p7x.dev
