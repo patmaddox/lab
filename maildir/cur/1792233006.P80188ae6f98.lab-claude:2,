@@ -1,0 +1,129 @@
+Message-ID: <eab486d114c6a74e673730fc96d18e93dec719d8.1792232981.git.claude@p7x.dev>
+In-Reply-To: <cover.1792232981.git.claude@p7x.dev>
+References: <cover.1792232981.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Subject: [PATCH v7 5/9] jails/instances/lab-mail: Let Pat archive and delete
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+Change-Id: vtzlyukynrpptqylrlsqzvwwoxvssqty
+Date: Sat, 17 Oct 2026 10:30:06 +0000
+
+With the list held on lab-mail, Pat archives and deletes there, and
+the sync carries his changes to Fastmail. His login needs a password,
+or any client could log in as him and change the list.
+
+- pat@p7x.dev joins imap-users, the ACL, and the static passdb's
+  filter.
+- check covers his entry in imap-users.
+- README.org says where his password lives.
+---
+change-id: vtzlyukynrpptqylrlsqzvwwoxvssqty
+
+ jails/instances/lab-mail/README.org           | 24 ++++++++++---------
+ .../dist/usr/local/etc/dovecot/dovecot-acl    |  6 +++--
+ .../dist/usr/local/etc/dovecot/dovecot.conf   |  2 +-
+ .../dist/usr/local/libexec/lab-mail/check     |  1 +
+ 4 files changed, 19 insertions(+), 14 deletions(-)
+
+diff --git a/jails/instances/lab-mail/README.org b/jails/instances/lab-mail/README.org
+index c069588e..d5133cbc 100644
+--- a/jails/instances/lab-mail/README.org
++++ b/jails/instances/lab-mail/README.org
+@@ -15,8 +15,9 @@ rules.
+   so it cannot archive or delete a message, or mark one read for
+   anyone else. An agent logs in as its own address, such as
+   =claude@p7x.dev=.
+-- One login may change the list: =mbsync=. It must give the password
+-  in =imap-users=, and a wrong one fails. mbsync syncs with Fastmail.
++- Two logins may change the list: =pat@p7x.dev= and =mbsync=. Each
++  must give the password in =imap-users=, and a wrong one fails. Pat
++  archives and deletes, and mbsync syncs with Fastmail.
+ - Dovecot's ACL enforces these rights, not file permissions. Dovecot's
+   user can write the whole maildir, so a fault in =dovecot-acl= or in
+   the passdbs of =dovecot.conf= would let every login change the list.
+@@ -37,9 +38,9 @@ The Fastmail credentials never leave =/data/secrets=. Only the
+ services that talk to Fastmail can read them, as members of the
+ =mailcred= group.
+ 
+-Dovecot is the only program that writes the list. Every change to it
+-is a sync from Fastmail, and goes through Dovecot, as the user
+-=vmail=.
++Dovecot is the only program that writes the list. Every change to it,
++a sync from Fastmail, or a move or deletion by Pat, goes through
++Dovecot, as the user =vmail=.
+ 
+ ** sending
+ #+BEGIN_EXAMPLE
+@@ -121,12 +122,13 @@ mounts it.
+   it, as members of the =mailcred= group.
+ - =mbsync-imap= holds the password of mbsync's Dovecot login. Only
+   mbsync reads it.
+-- =imap-users= holds the login that may change the list, =mbsync=,
+-  as =login:hash=. Only Dovecot's auth process, as the user
+-  =dovecot=, reads it.
++- =imap-users= holds the logins that may change the list, one per
++  line as =login:hash=: =pat@p7x.dev= and =mbsync=. Only Dovecot's
++  auth process, as the user =dovecot=, reads it.
+ 
+-lab-mail holds only the hash of each password in =imap-users=. Hash
+-a password with Dovecot's doveadm, which prompts for it:
++Pat keeps the password for =pat@p7x.dev= on beastie, in pass(1).
++lab-mail holds only its hash. Hash each password with Dovecot's
++doveadm, which prompts for it:
+ #+BEGIN_EXAMPLE
+ doas jexec lab-mail doveadm pw -s BLF-CRYPT
+ #+END_EXAMPLE
+@@ -139,7 +141,7 @@ mkdir -p /jails/data/lab-mail/secrets
+ cd /jails/data/lab-mail/secrets
+ printf '%s\n' 'login@example.com' 'app-password' > mail-creds
+ printf '%s\n' 'mbsync-password' > mbsync-imap
+-printf '%s\n' 'mbsync:{BLF-CRYPT}...' > imap-users
++printf '%s\n' 'pat@p7x.dev:{BLF-CRYPT}...' 'mbsync:{BLF-CRYPT}...' > imap-users
+ chown 0:0 .
+ chmod 0711 .
+ chown 0:15100 mail-creds
+diff --git a/jails/instances/lab-mail/dist/usr/local/etc/dovecot/dovecot-acl b/jails/instances/lab-mail/dist/usr/local/etc/dovecot/dovecot-acl
+index 84e287c2..e922add1 100644
+--- a/jails/instances/lab-mail/dist/usr/local/etc/dovecot/dovecot-acl
++++ b/jails/instances/lab-mail/dist/usr/local/etc/dovecot/dovecot-acl
+@@ -1,8 +1,10 @@
+ # Who may do what to the list; see the rights section of spec.org.
+ #
+ # Every login shares one mail store, so each is its owner, and an owner
+-# would otherwise have every right. Anyone may list and read. The login
+-# in imap-users may also set flags, append, copy, move, and expunge.
++# would otherwise have every right. Anyone may list and read. The two
++# logins in imap-users may also set flags, append, copy, move, and
++# expunge.
+ * owner lr
+ * anyone lr
++* user=pat@p7x.dev lrwstie
+ * user=mbsync lrwstie
+diff --git a/jails/instances/lab-mail/dist/usr/local/etc/dovecot/dovecot.conf b/jails/instances/lab-mail/dist/usr/local/etc/dovecot/dovecot.conf
+index 1bd41a16..ea622dc8 100644
+--- a/jails/instances/lab-mail/dist/usr/local/etc/dovecot/dovecot.conf
++++ b/jails/instances/lab-mail/dist/usr/local/etc/dovecot/dovecot.conf
+@@ -34,7 +34,7 @@ passdb {
+ passdb {
+   driver = static
+   args = nopassword=y
+-  username_filter = !mbsync
++  username_filter = !pat@p7x.dev !mbsync
+ }
+ 
+ # Every login is the same user, vmail, which owns the maildir. The
+diff --git a/jails/instances/lab-mail/dist/usr/local/libexec/lab-mail/check b/jails/instances/lab-mail/dist/usr/local/libexec/lab-mail/check
+index 9659c967..663cbe02 100755
+--- a/jails/instances/lab-mail/dist/usr/local/libexec/lab-mail/check
++++ b/jails/instances/lab-mail/dist/usr/local/libexec/lab-mail/check
+@@ -76,6 +76,7 @@ synced_recently() {
+ check "${creds} exists" test -f ${creds}
+ check "${creds} has the login on line 1" has_line 1
+ check "${creds} has the password on line 2" has_line 2
++check "${users} has pat@p7x.dev" has_user pat@p7x.dev
+ check "${users} has mbsync" has_user mbsync
+ check "${mbpass} is not empty" test -s ${mbpass}
+ check "smtprelay can read ${creds}" can_read smtprelay ${creds}
+-- 
+2.56.0
+

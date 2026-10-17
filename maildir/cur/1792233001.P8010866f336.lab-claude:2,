@@ -1,0 +1,592 @@
+Message-ID: <cover.1792232981.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Subject: [PATCH v7 0/9] jails/instances/lab-mail: Build the list's mail hub
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+Date: Sat, 17 Oct 2026 10:30:01 +0000
+
+This builds the hub that "[PATCH v2] jails/instances/lab-mail: Spec
+the list's mail hub" [1] describes, on b/dev. It turns the relay jail
+into the list's home in steps, one service at a time. Each step
+leaves a jail that works and does what its README.org says.
+
+How mail moves, end to end, once the series is applied:
+
+  client --SMTP--> OpenSMTPD --LMTP--> Dovecot --> INBOX
+  Dovecot, every folder <--IMAP--> mbsync <--IMAPS--> Fastmail
+
+The list is the whole Fastmail account. New mail lands in INBOX,
+whether it is posted to lab-mail or arrives at Fastmail. mbsync syncs
+every folder both ways. There is no Sieve, no Fastmail rule, and no
+lists folder to sort mail into. Dovecot is the only program that
+writes the maildir. Every reader may read every folder, and only Pat
+and mbsync may change anything.
+
+- Patch 1 corrects the spec on what Dovecot does to a reader's write.
+  A STORE or EXPUNGE answers OK and changes nothing; only append,
+  copy, and move are refused. Acceptance step 7 now expects that.
+- Patch 2 narrows the spec's header check to what OpenSMTPD does on
+  its own: it refuses a header line that is neither a field nor a
+  continuation, and on loopback adds a missing Message-ID and Date.
+- Patch 3 makes Dovecot the only writer of the list. mbsync still
+  fetches one way, but into Dovecot over IMAP as the login mbsync,
+  not into the maildir. This is the one step that needs the maildir
+  and mbsync's state emptied first.
+- Patch 4 turns the fetch into a two-way sync of lists and Archive.
+- Patch 5 adds Pat's login, so he can archive and delete on lab-mail.
+- Patch 6 swaps smtprelay for OpenSMTPD, which hands posts to Dovecot
+  over LMTP, into INBOX. smtprelay, jq, and the mailcred group go
+  with it.
+- Patch 7 documents the one-time import of the jj maildir.
+- Patch 8 adds lab@lists.p7x.dev and freebsd-ports@lists.p7x.dev to
+  the addresses OpenSMTPD delivers to the list.
+- Patch 9 syncs the whole account and puts INBOX in the maildir, so a
+  post reaches Fastmail and every reader on the next sync. It drops
+  the lists folder, the Fastmail rule that filed into it, and the
+  spec's moderation queue, and the import lands in INBOX.
+
+Once patch 9 is on the jail, the Fastmail rule that files list mail
+into lists can go. The first sync after it also copies the rest of
+the account down from Fastmail, so it takes longer than usual.
+
+For every step I checked that each libexec script passes sh -n.
+mbsync 1.5.1 parses the mbsyncrc of patch 9. Dovecot, smtpd, and the
+jail build are not installed here, so no step was run on a jail.
+
+Changes in v7:
+- Drop "jails/instances/lab-mail: File posts into lists with Sieve".
+  Posts stay in INBOX (Pat).
+- Patch 9, formerly patch 10, delivers to INBOX and syncs it instead
+  of filing into lists. Readers may read every folder again, rather
+  than only lists and Archive, since the account holds only the list
+  (Pat).
+- Link to v6: id:cover.1792231971.git.claude@p7x.dev
+
+[1] id:5639615da525ce2f1e7711da05d3de5ad63511a2.1792219807.git.claude@p7x.dev
+
+base-branch: b/dev@upstream
+
+claude (9):
+  jails/instances/lab-mail: Say what Dovecot does to a reader's write
+  jails/instances/lab-mail: Leave the header check to OpenSMTPD
+  jails/instances/lab-mail: Let Dovecot write the list
+  jails/instances/lab-mail: Sync the list both ways with Fastmail
+  jails/instances/lab-mail: Let Pat archive and delete
+  jails/instances/lab-mail: Take posts with OpenSMTPD
+  jails/instances/lab-mail: Document importing the jj maildir
+  jails/instances/lab-mail: Take posts for the lists.p7x.dev lists
+  jails/instances/lab-mail: Sync the whole account into INBOX
+
+ jails/instances/lab-mail/README.org           | 264 ++++++++++++------
+ jails/instances/lab-mail/dist.mtree           |   9 +-
+ .../lab-mail/dist/etc/cron.d/lab-mail         |   6 +-
+ .../dist/etc/newsyslog.conf.d/lab-mail.conf   |   4 +-
+ .../lab-mail/dist/etc/rc.conf.d/smtpd         |   1 +
+ .../lab-mail/dist/etc/rc.conf.d/smtprelay     |   4 -
+ .../lab-mail/dist/etc/syslog.d/lab-mail.conf  |   8 +-
+ .../dist/usr/local/etc/dovecot/dovecot-acl    |   9 +
+ .../dist/usr/local/etc/dovecot/dovecot.conf   |  58 +++-
+ .../dist/usr/local/etc/mail/smtpd.conf        |  28 ++
+ .../lab-mail/dist/usr/local/etc/mbsyncrc      |  35 ++-
+ .../dist/usr/local/etc/smtprelay/remotes.env  |  19 --
+ .../usr/local/etc/smtprelay/smtprelay.ini     |  20 --
+ .../dist/usr/local/libexec/lab-mail/check     |  82 ++++--
+ .../dist/usr/local/libexec/lab-mail/fetch     |  39 ---
+ .../dist/usr/local/libexec/lab-mail/sync      |  35 +++
+ jails/instances/lab-mail/instance.conf        |  16 +-
+ jails/instances/lab-mail/jail.conf            |   7 +-
+ jails/instances/lab-mail/spec.org             | 122 ++++----
+ 19 files changed, 480 insertions(+), 286 deletions(-)
+ create mode 100644 jails/instances/lab-mail/dist/etc/rc.conf.d/smtpd
+ delete mode 100644 jails/instances/lab-mail/dist/etc/rc.conf.d/smtprelay
+ create mode 100644 jails/instances/lab-mail/dist/usr/local/etc/mail/smtpd.conf
+ delete mode 100644 jails/instances/lab-mail/dist/usr/local/etc/smtprelay/remotes.env
+ delete mode 100644 jails/instances/lab-mail/dist/usr/local/etc/smtprelay/smtprelay.ini
+ delete mode 100755 jails/instances/lab-mail/dist/usr/local/libexec/lab-mail/fetch
+ create mode 100755 jails/instances/lab-mail/dist/usr/local/libexec/lab-mail/sync
+
+Interdiff against v6:
+diff --git a/jails/instances/lab-mail/README.org b/jails/instances/lab-mail/README.org
+index 6e2c66b5..bbfa8885 100644
+--- a/jails/instances/lab-mail/README.org
++++ b/jails/instances/lab-mail/README.org
+@@ -1,10 +1,11 @@
+ #+TITLE: lab-mail
+ 
+-The mail hub for the lab-devel list. lab-mail holds a copy of the
+-whole Fastmail account, synced both ways, takes posts to the list over
+-SMTP, and serves the list over IMAP to every host that uses it. It
+-holds the Fastmail credentials and is the only thing that talks to
+-Fastmail. spec.org has the design.
++The mail hub for the lab-devel list. The list is a whole Fastmail
++account, which holds nothing else. lab-mail holds the list, synced
++both ways with Fastmail, takes posts over SMTP, and serves the list
++over IMAP to every host that uses it. It holds the Fastmail
++credentials and is the only thing that talks to Fastmail. spec.org
++has the design.
+ 
+ * rights
+ Who may do what to the list. Everything below follows from these
+@@ -13,16 +14,14 @@ rules.
+   no login. Posting only adds a message. It cannot change or remove
+   one already there.
+ - Anyone may read the list over IMAP. Any user name logs in with any
+-  password, and that login may list, fetch, search, and IDLE in
+-  =lists= and =Archive=, and nothing else. It cannot see the rest of
+-  the account. It cannot set flags, append, copy, move, or expunge,
++  password, and that login may list, fetch, search, and IDLE, and
++  nothing else. It cannot set flags, append, copy, move, or expunge,
+   so it cannot archive or delete a message, or mark one read for
+   anyone else. An agent logs in as its own address, such as
+   =claude@p7x.dev=.
+ - Two logins may change the list: =pat@p7x.dev= and =mbsync=. Each
+   must give the password in =imap-users=, and a wrong one fails. Pat
+-  archives and deletes, and mbsync syncs with Fastmail. Each may read
+-  and change every folder of the account.
++  archives and deletes, and mbsync syncs with Fastmail.
+ - Dovecot's ACL enforces these rights, not file permissions. Dovecot's
+   user can write the whole maildir, so a fault in =dovecot-acl= or in
+   the passdbs of =dovecot.conf= would let every login change the list.
+@@ -45,7 +44,7 @@ through Dovecot, as the user =vmail=.
+ 
+ ** posting
+ #+BEGIN_EXAMPLE
+-client --SMTP--> OpenSMTPD 127.0.0.1:2525 --LMTP--> Dovecot --> lists
++client --SMTP--> OpenSMTPD 127.0.0.1:2525 --LMTP--> Dovecot --> INBOX
+ #+END_EXAMPLE
+ 
+ rc(8) starts OpenSMTPD when the jail starts; its config is
+@@ -70,10 +69,9 @@ loopback listener.
+ 
+ OpenSMTPD then queues the message and hands it to Dovecot over LMTP,
+ on the socket =/var/run/dovecot/lmtp=, which only =vmail= may open.
+-A Sieve script, =/usr/local/etc/dovecot/lists.sieve=, files it into
+-=lists=. OpenSMTPD never opens the maildir. If Dovecot is stopped,
+-the message waits in OpenSMTPD's queue and lands when Dovecot is
+-back.
++LMTP delivers it to INBOX. OpenSMTPD never opens the maildir. If
++Dovecot is stopped, the message waits in OpenSMTPD's queue and lands
++when Dovecot is back.
+ 
+ OpenSMTPD never relays. Nothing posted leaves lab-mail except as a
+ message that mbsync copies into a Fastmail folder.
+@@ -85,8 +83,8 @@ message that mbsync copies into a Fastmail folder.
+ 
+ rc(8) starts Dovecot when the jail starts; its config is
+ =/usr/local/etc/dovecot/dovecot.conf=. It serves the maildir with the
+-same folders as the Fastmail account: INBOX, the list's =lists= and
+-=Archive=, and the rest. Every login runs as =vmail=, which keeps
++same folders as the Fastmail account, among them INBOX and =Archive=.
++Every login sees the same folders, and runs as =vmail=, which keeps
+ Dovecot's indexes in =/data/mail/dovecot=. What each login may do is
+ in =dovecot-acl=, as rights describes.
+ 
+@@ -97,13 +95,12 @@ Reading and posting keep working while Fastmail is down.
+ imap.fastmail.com:993 <--IMAPS--> mbsync <--IMAP--> Dovecot 127.0.0.1:2143
+ #+END_EXAMPLE
+ 
+-mbsync syncs every folder of the account. A Fastmail rule files mail
+-to the list's addresses into the folder =lists=, and =Archive= is
+-Fastmail's own archive folder. Once a minute, the jail's cron(8) runs
+-the sync job, =/usr/local/libexec/lab-mail/sync=, as the user
+-=mbsync=. The job is in =/etc/cron.d/lab-mail=, not in a crontab, so
+-=crontab -l= does not show it. lockf(1) skips a run while the previous
+-one is still going.
++Mail to the list's addresses lands in INBOX on Fastmail too, and
++=Archive= is Fastmail's own archive folder. Once a minute, the jail's
++cron(8) runs the sync job, =/usr/local/libexec/lab-mail/sync=, as the
++user =mbsync=. The job is in =/etc/cron.d/lab-mail=, not in a crontab,
++so =crontab -l= does not show it. lockf(1) skips a run while the
++previous one is still going.
+ 
+ The sync job runs mbsync with =/usr/local/etc/mbsyncrc=. It logs in to
+ Fastmail with =mail-creds=, and to Dovecot as =mbsync= with
+@@ -196,8 +193,8 @@ the jail after a build that changes the config.
+ 
+ ** import the jj maildir
+ The list before lab-mail lived in the jj maildir on the =mail=
+-bookmark. Once lab-mail's first sync has pulled =lists= and =Archive=
+-from Fastmail, the operator imports that maildir into =lists= once,
++bookmark. Once lab-mail's first sync has pulled the account from
++Fastmail, the operator imports that maildir into INBOX once,
+ from beastie, as =pat@p7x.dev=. The next sync carries it to Fastmail.
+ mbsync renames each file it syncs, so it reads a copy, never the jj
+ working copy:
+@@ -221,7 +218,7 @@ Path /tmp/
+ Inbox /tmp/list-import
+ 
+ Channel import
+-Far :lab-mail:lists
++Far :lab-mail:INBOX
+ Near :import:
+ Sync Push New
+ Create None
+diff --git a/jails/instances/lab-mail/dist.mtree b/jails/instances/lab-mail/dist.mtree
+index ffba43c0..a76b279f 100644
+--- a/jails/instances/lab-mail/dist.mtree
++++ b/jails/instances/lab-mail/dist.mtree
+@@ -13,7 +13,6 @@
+ ./usr/local/etc/dovecot type=dir mode=0755
+ ./usr/local/etc/dovecot/dovecot-acl
+ ./usr/local/etc/dovecot/dovecot.conf
+-./usr/local/etc/dovecot/lists.sieve
+ ./usr/local/etc/mail type=dir mode=0755
+ ./usr/local/etc/mail/smtpd.conf
+ ./usr/local/etc/mbsyncrc
+diff --git a/jails/instances/lab-mail/dist/usr/local/etc/dovecot/dovecot-acl b/jails/instances/lab-mail/dist/usr/local/etc/dovecot/dovecot-acl
+index d391ba3b..b4ea79ba 100644
+--- a/jails/instances/lab-mail/dist/usr/local/etc/dovecot/dovecot-acl
++++ b/jails/instances/lab-mail/dist/usr/local/etc/dovecot/dovecot-acl
+@@ -1,15 +1,11 @@
+ # Who may do what to the list; see the rights section of spec.org.
+ #
+-# Every login shares one mail store, so each is its owner, and owner
+-# gets only what anyone gets. The store is the whole Fastmail account,
+-# but readers get only the list: anyone may list and read lists and
+-# Archive, and no other mailbox. The two logins in imap-users may also
+-# set flags, append, copy, move, and expunge in every mailbox, and
+-# mbsync may create one, so that a folder made on Fastmail reaches
+-# lab-mail.
+-lists owner lr
+-lists anyone lr
+-Archive owner lr
+-Archive anyone lr
++# Every login shares one mail store, so each is its owner, and an owner
++# would otherwise have every right. Anyone may list and read every
++# mailbox. The two logins in imap-users may also set flags, append,
++# copy, move, and expunge, and mbsync may create a mailbox, so that a
++# folder made on Fastmail reaches lab-mail.
++* owner lr
++* anyone lr
+ * user=pat@p7x.dev lrwstie
+ * user=mbsync lrwstiek
+diff --git a/jails/instances/lab-mail/dist/usr/local/etc/dovecot/dovecot.conf b/jails/instances/lab-mail/dist/usr/local/etc/dovecot/dovecot.conf
+index ca7e4016..3f7b73a7 100644
+--- a/jails/instances/lab-mail/dist/usr/local/etc/dovecot/dovecot.conf
++++ b/jails/instances/lab-mail/dist/usr/local/etc/dovecot/dovecot.conf
+@@ -1,10 +1,9 @@
+ # Dovecot for lab-mail; see spec.org.
+ #
+-# Dovecot holds a copy of the whole Fastmail account, of which the
+-# list is the mailboxes lists and Archive, and is the only program
+-# that writes it. It serves it over IMAP on loopback, and takes posted
+-# mail from OpenSMTPD over LMTP on a socket inside the jail. Nothing
+-# else: no POP3 or submission.
++# Dovecot holds the list, a copy of the whole Fastmail account, and is
++# the only program that writes it. It serves the list over IMAP on
++# loopback, and takes posted mail from OpenSMTPD over LMTP on a socket
++# inside the jail. Nothing else: no POP3 or submission.
+ 
+ protocols = imap lmtp
+ listen = 127.0.0.1
+@@ -49,9 +48,9 @@ passdb {
+ }
+ 
+ # Every login, and every LMTP delivery, is the same user, vmail, which
+-# owns the maildir. INBOX is a folder in the maildir like any other,
+-# since mbsync syncs it with Fastmail's. The indexes and the UID lists
+-# live in a directory of vmail's own.
++# owns the maildir. INBOX, where LMTP delivers each post, is a folder
++# of the maildir like the others, so mbsync syncs it with Fastmail's.
++# The indexes and the UID lists live in a directory of vmail's own.
+ userdb {
+   driver = static
+   args = uid=vmail gid=vmail home=/data/mail/dovecot allow_all_users=yes
+@@ -61,9 +60,6 @@ namespace inbox {
+   inbox = yes
+   separator = /
+ 
+-  mailbox lists {
+-    auto = create
+-  }
+   mailbox Archive {
+     auto = create
+     special_use = \Archive
+@@ -85,16 +81,8 @@ plugin {
+   acl_globals_only = yes
+ }
+ 
+-# A posted message is filed into lists by a Sieve script, since LMTP
+-# alone delivers only to INBOX. The ACL governs IMAP logins, not
+-# delivery: only vmail can reach the LMTP socket. Dovecot adds
+-# Return-Path and Delivered-To, and no Received header of its own;
+-# OpenSMTPD's is enough.
+-protocol lmtp {
+-  mail_plugins = sieve
+-}
++# LMTP delivers each posted message to INBOX. The ACL governs IMAP
++# logins, not delivery: only vmail can reach the LMTP socket. Dovecot
++# adds Return-Path and Delivered-To, and no Received header of its
++# own; OpenSMTPD's is enough.
+ lmtp_add_received_header = no
+-
+-plugin {
+-  sieve_before = file:/usr/local/etc/dovecot/lists.sieve;bindir=/data/mail/dovecot/sieve-bin
+-}
+diff --git a/jails/instances/lab-mail/dist/usr/local/etc/dovecot/lists.sieve b/jails/instances/lab-mail/dist/usr/local/etc/dovecot/lists.sieve
+deleted file mode 100644
+index 193e794f..00000000
+--- a/jails/instances/lab-mail/dist/usr/local/etc/dovecot/lists.sieve
++++ /dev/null
+@@ -1,4 +0,0 @@
+-# File each posted message into the list. LMTP alone would deliver it
+-# to INBOX.
+-require "fileinto";
+-fileinto "lists";
+diff --git a/jails/instances/lab-mail/dist/usr/local/etc/mail/smtpd.conf b/jails/instances/lab-mail/dist/usr/local/etc/mail/smtpd.conf
+index 5b7d40bd..80b39f59 100644
+--- a/jails/instances/lab-mail/dist/usr/local/etc/mail/smtpd.conf
++++ b/jails/instances/lab-mail/dist/usr/local/etc/mail/smtpd.conf
+@@ -6,8 +6,7 @@
+ 
+ # The list's addresses, and the known addresses: everyone reads mail
+ # for the known ones on the list, so a reply to all lands once, there.
+-# To add an address, add it here. A list address needs the Fastmail
+-# rule extended too.
++# To add an address, add it here.
+ table list { "lab-devel@p7x.dev", "lab@lists.p7x.dev", "freebsd-ports@lists.p7x.dev" }
+ table known { "pat@p7x.dev", "pat@patmaddox.com", "claude@p7x.dev" }
+ 
+diff --git a/jails/instances/lab-mail/instance.conf b/jails/instances/lab-mail/instance.conf
+index 1a702499..93de96bd 100644
+--- a/jails/instances/lab-mail/instance.conf
++++ b/jails/instances/lab-mail/instance.conf
+@@ -8,7 +8,6 @@ vmail:15103:15103
+ 
+ readonly packages="
+ mail/dovecot
+-mail/dovecot-pigeonhole
+ mail/isync
+ mail/opensmtpd
+ "
+diff --git a/jails/instances/lab-mail/spec.org b/jails/instances/lab-mail/spec.org
+index 35d1b55f..589122a8 100644
+--- a/jails/instances/lab-mail/spec.org
++++ b/jails/instances/lab-mail/spec.org
+@@ -4,30 +4,28 @@ artifact: a jail instance in this dir, built and operated like the
+ other instances in =jails/instances=, plus the mail clients on beastie
+ and lab-claude that use it.
+ 
+-goal: the lab-devel list lives on lab-mail, in a copy of the whole
+-Fastmail account synced both ways. Every host that uses the list
+-treats lab-mail as its upstream server: it syncs the list over IMAP
+-and posts to it over SMTP. Agents can read the list and add to it,
+-and they can do nothing else to it. Only lab-mail holds the Fastmail
+-credentials and talks to Fastmail. Clients reach lab-mail over the
+-network, never through a shared filesystem, so they need not run on
+-the same host as lab-mail.
++goal: the lab-devel list lives on lab-mail, synced both ways with
++Fastmail. Every host that uses the list treats lab-mail as its
++upstream server: it syncs the list over IMAP and posts to it over
++SMTP. Agents can read the list and add to it, and they can do nothing
++else to it. Only lab-mail holds the Fastmail credentials and talks to
++Fastmail. Clients reach lab-mail over the network, never through a
++shared filesystem, so they need not run on the same host as lab-mail.
+ 
+ provider: p7x.dev is hosted on Fastmail.
+ - IMAP: imap.fastmail.com, port 993, implicit TLS.
+ - lab-mail logs in with the Fastmail account's login and one app
+   password with IMAP access. Only mbsync uses them.
++- The account is the list's own and holds no other mail.
+ - The list's addresses are =lab-devel@p7x.dev=, =lab@lists.p7x.dev=,
+-  and =freebsd-ports@lists.p7x.dev=. A Fastmail rule marks mail to any
+-  of them as read and files it into the folder =lists=. Over IMAP,
+-  =lists= is at the top level, a sibling of INBOX, and it has no
+-  subfolders.
++  and =freebsd-ports@lists.p7x.dev=. Mail to any of them lands in
++  INBOX. No Fastmail rule files it elsewhere.
+ - Fastmail's folder =Archive= is the account's archive folder. Over
+   IMAP it carries the =\Archive= special-use flag.
+ 
+-the list: the folders =lists= and =Archive=.
+-- A message posted to the list lands in =lists=. Archiving a message
+-  moves it from =lists= to =Archive=. A message that needs no answer
++the list: every folder of the Fastmail account.
++- A message posted to the list lands in INBOX. Archiving a message
++  moves it from INBOX to =Archive=. A message that needs no answer
+   is archived, and its state lives in the list data, not in any one
+   client.
+ - The list holds every message from the jj maildir that carried it
+@@ -44,20 +42,19 @@ follows from these rules, and the README states them first.
+   no login. Posting only adds a message. It cannot change or remove
+   one already there.
+ - Anyone may read the list over IMAP. Any user name logs in with any
+-  password, and that login may list, fetch, search, and IDLE in
+-  =lists= and =Archive=, and nothing else. Dovecot's ACL opens those
+-  two mailboxes read-only for it and hides every other folder of the
+-  account: its attempts to set flags or expunge change nothing, and
+-  its attempts to append, copy into a mailbox, or move fail. So it
+-  cannot archive or delete a message, it cannot mark one read for
+-  anyone else, and it cannot read the account's other mail.
++  password, and that login may list, fetch, search, and IDLE, and
++  nothing else. Dovecot's ACL opens every mailbox read-only for it:
++  its attempts to set flags or expunge change nothing, and its
++  attempts to append, copy into a mailbox, or move fail. So it cannot
++  archive or delete a message, and it cannot mark one read for anyone
++  else.
+ - IMAP has no anonymous mode, so an agent logs in as its own address,
+   such as =claude@p7x.dev=, with any password.
+ - Two logins may change the list: =pat@p7x.dev= and =mbsync=. Each
+   must give the password in =imap-users=, and a wrong one fails. They
+-  may set flags, append, copy, move, and expunge in every folder of
+-  the account, so Pat archives and deletes, and mbsync syncs with
+-  Fastmail. mbsync may also create a folder.
++  may set flags, append, copy, move, and expunge, so Pat archives and
++  deletes, and mbsync syncs with Fastmail. mbsync may also create a
++  folder.
+ - These rights are enforced by Dovecot's ACL, not by file
+   permissions. Dovecot's user can write the whole maildir, so a fault
+   in the ACL config would let every login change the list. Steps 7
+@@ -133,9 +130,8 @@ posting:
+   from its To and Cc. Delivered-To names the list address each copy
+   was delivered for, and a Bcc leaves no trace.
+ - OpenSMTPD hands each message for the list to Dovecot over LMTP, on
+-  a unix socket inside the jail. A Sieve script files it into =lists=,
+-  since LMTP alone delivers only to INBOX. OpenSMTPD never opens the
+-  maildir.
++  a unix socket inside the jail, and Dovecot delivers it to INBOX.
++  OpenSMTPD never opens the maildir.
+ - OpenSMTPD answers the client's DATA once the message is in its
+   queue. A delivery that fails is retried from the queue, so a message
+   posted while Dovecot is stopped lands when Dovecot is back. A
+@@ -143,9 +139,8 @@ posting:
+   discarded like any other mail to a known address.
+ 
+ reading:
+-- Software: Dovecot (mail/dovecot) for IMAP and LMTP, Pigeonhole
+-  (mail/dovecot-pigeonhole) for Sieve, and isync (mail/isync) for
+-  mbsync.
++- Software: Dovecot (mail/dovecot) for IMAP and LMTP, and isync
++  (mail/isync) for mbsync.
+ - Dovecot is the only program that writes the list. Every change to
+   it, a posted message, a sync from Fastmail, or a move or deletion by
+   Pat, goes through Dovecot, as Dovecot's user.
+@@ -155,9 +150,9 @@ reading:
+ - The operator creates that directory and its subdirectories on the
+   host before the jail starts, as with the credentials. The jail does
+   not create anything on the host.
+-- Dovecot serves the account with the same folders as on Fastmail:
+-  INBOX, the list's =lists= and =Archive=, and the rest. INBOX is a
+-  folder of the maildir like the others.
++- Dovecot serves the list with the same folders as on Fastmail,
++  among them INBOX and =Archive=. INBOX is a folder of the maildir
++  like the others. Every login sees the same folders.
+ - Dovecot's ACL gives each login the rights in the rights section.
+ - Dovecot serves IMAP and LMTP only. It does not run POP3 or
+   submission, and its LMTP listens only on its socket inside the
+@@ -231,8 +226,8 @@ up the same way and differ only in the login.
+ - Packages: mail/isync, mail/msmtp, and mail/notmuch on both hosts.
+ - Each user's mail root is =~/mail/<login>=, such as
+   =~/mail/pat@p7x.dev= and =~/mail/claude@p7x.dev=. The list's
+-  folders sit in it as =lists= and =Archive=.
+-- mbsync syncs =lists= and =Archive= with lab-mail at 127.0.0.1:2143.
++  folders sit in it as on lab-mail.
++- mbsync syncs every folder with lab-mail at 127.0.0.1:2143.
+   - On beastie it logs in as =pat@p7x.dev=, with the password from
+     pass(1), and syncs both ways with =Expunge Both=, so Pat's moves
+     and deletions take effect on lab-mail. Fastmail still keeps every
+@@ -272,9 +267,9 @@ acceptance test: run from lab-claude, except where a step says
+ beastie.
+ 1. The agent posts a message with git send-email to
+    =lab-devel@p7x.dev= and =pat@p7x.dev=, and it exits 0. Exactly one
+-   file for its Message-ID lands in lab-mail's =lists=, and its To and
++   file for its Message-ID lands in lab-mail's INBOX, and its To and
+    Cc are as sent.
+-2. Within two minutes, the message is in =lists= on Fastmail.
++2. Within two minutes, the message is in INBOX on Fastmail.
+ 3. On beastie, a sync and =notmuch new= find it. Pat replies to all
+    from Emacs, and the reply shows at once in the thread, tagged
+    sent. Within two minutes, a sync and =notmuch new= on lab-claude
+@@ -291,19 +286,17 @@ beastie.
+    list. A message with no Message-ID, posted with msmtp
+    =--set-msgid-header=off=, lands on the list with one.
+ 7. Logged in as =claude@p7x.dev=, an IMAP STORE of =\Deleted=
+-   followed by EXPUNGE on =lists= changes nothing, and a MOVE to
++   followed by EXPUNGE on INBOX changes nothing, and a MOVE to
+    =Archive= fails. The message stays in place, its flags unchanged.
+-   Its LIST shows only =lists= and =Archive=, and a SELECT of INBOX
+-   fails.
+ 8. A login as =pat@p7x.dev= with a wrong password fails.
+ 9. On beastie, Pat archives a message in Emacs. After the next syncs,
+-   it is in =Archive= and not in =lists= on lab-mail, it is in
++   it is in =Archive= and not in INBOX on lab-mail, it is in
+    =Archive= on Fastmail, and the agent's notmuch tags it archived.
+ 10. On beastie and on lab-claude, deleting the notmuch database and
+     running =notmuch new= gives every message the same sent, inbox,
+     replied, and archived tags as before.
+ 11. With Dovecot stopped, a message posted to the list is accepted,
+-    and it lands in =lists= within two minutes of Dovecot starting
++    and it lands in INBOX within two minutes of Dovecot starting
+     again.
+ 12. On beastie, =just check= exits 0.
+ 13. On beastie, with OpenSMTPD stopped, =just check= exits non-zero
+@@ -318,16 +311,14 @@ out of scope:
+   =src/lab-process-mail=, and the end state here assumes it.
+ - Mail to and from people outside the list. lab-mail never relays,
+   and nobody sends outside mail through it.
+-- Moderation. Pat deletes what he does not want. A moderation queue
+-  can be added later, with delivery into INBOX and acceptance by a
+-  move into =lists=.
++- Moderation. Pat deletes what he does not want.
+ - History of the list beyond what Fastmail keeps. Snapshots of the
+   maildir, in ZFS or in git, can be added later as a record, not as
+   a transport.
+ - Restricting which jails or local users may post to lab-mail, or
+   what they put in From.
+ - Expunging on Fastmail. A message deleted or archived on lab-mail
+-  stays in =lists= on Fastmail, marked =\Deleted=, until a later
++  stays in INBOX on Fastmail, marked =\Deleted=, until a later
+   change turns on Expunge for that side.
+ 
+ alternatives considered: each decision above, what it rejects, and
+@@ -411,14 +402,13 @@ why.
+   itself.
+ - =Expunge Both= on Pat's channel, not =Expunge None=. With
+   =Expunge None=, a move to =Archive= would leave a copy marked
+-  =\Deleted= in =lists= on lab-mail and on every client, so an
+-  archived message would still be in the list's folder everywhere.
++  =\Deleted= in INBOX on lab-mail and on every client, so an
++  archived message would still be in INBOX everywhere.
+ - Archive by folder, not by a notmuch tag on beastie. A tag is not in
+   the list data, so a rebuild of the index loses it and no agent sees
+   it. Fastmail's own =Archive= folder is used, not a new one, so
+   archiving on Fastmail's web interface means the same.
+-- No moderation queue to start. Pat can delete what he does not want,
+-  and a queue is one delivery folder and one move away.
++- No moderation queue. Pat can delete what he does not want.
+ - Import the jj maildir once, not freeze it as an archive. A frozen
+   archive would split the list into two places to search, and a reply
+   to an old thread would arrive with no parent.
+@@ -437,20 +427,16 @@ why.
+   series, and it posts over SMTP like any other client.
+ - msmtp for both notmuch-emacs and git send-email, not git send-email's
+   own SMTP client. Both then post through one account in one config.
+-- Serve the list as =lists=, not as INBOX. The name says what the
+-  mailbox holds, and it matches Fastmail, where INBOX holds the
+-  account's other mail.
+-- Sync the whole account, not only =lists= and =Archive=. Mail that
+-  lands in any folder, on either side, reaches the other, and
+-  lab-mail is a full copy of the account. The ACL, not the sync,
+-  keeps readers to the list.
++- A dedicated account, with every post delivered to INBOX, not a
++  folder for the list that a Fastmail rule or a Sieve script files
++  into. With nothing else in the account, the whole account is the
++  list, and there is nothing to sort.
++- Sync the whole account, not chosen folders. Mail that lands in any
++  folder, on either side, reaches the other, and lab-mail is a full
++  copy of the account.
+ - Dovecot, not Cyrus or Courier. Each of those brings its own mail
+   store and admin model, where Dovecot serves a plain maildir and
+   takes LMTP.
+-- A Sieve script files a posted message into =lists=, not LMTP's
+-  detail mailbox. With =lmtp_save_to_detail_mailbox=, OpenSMTPD would
+-  have to rewrite the recipient to =lab-devel+lists@p7x.dev=, and
+-  Delivered-To would name that address, not the list's.
+ - IMAP over loopback, not a nullfs-mounted maildir. A mount ties
+   every client to beastie's filesystem. A loopback bind is cheap to
+   change into an external address later.
+
+base-commit: f6ba757868b6e16efee8bfb3882dc3339ef9fb69
+-- 
+2.56.0
+
