@@ -1,0 +1,52 @@
+Message-ID: <cover.1792269999.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Subject: [RFC PATCH 0/7] Write the commit rules down once
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab@lists.p7x.dev
+Date: Sat, 17 Oct 2026 20:47:09 +0000
+
+This is the plan for the series agreed in "[RFC] commit style" [1]:
+seven commits that carry only their messages, with no docs, tests, or
+code yet. Review the cut and the messages first. Once you are happy
+with them, the next round adds the docs layer to each commit, then
+tests, then code, and the finished series goes out as [PATCH] in a
+new thread.
+
+The plan follows the thread's decisions:
+
+- prompt.md gets a copy of the rules, not a pointer.
+- src/jc and src/diffwise are left alone.
+- A prep commit may say what a later commit in the same series does,
+  never by hash, as in 6/7.
+- The check refuses on mechanical faults and warns on size.
+
+To fetch it, apply "[PATCH] libexec/mail: Apply message-only commits
+as empty" [2] first, since am.sh without it drops every message that
+has no diff. Then pipe this whole thread into just am in
+~/lab/default.jj. Do not apply it in ~/lab/mail.jj: just fetch there
+abandons empty commits you did not author, which these are.
+
+One open question, for 7/7: should the 72-column check skip indented
+lines, such as quoted code or a long URL? I recommend skipping them,
+since rewrapping them breaks what they quote.
+
+base-branch: b/dev@upstream
+
+[1] id:1792255115.941a80fb30d2@p7x.dev
+[2] id:c574fba0a4b2a19aa64952ea73d2418cb71c1fc6.1792269999.git.claude@p7x.dev
+
+claude (7):
+  doc/style: Add the commit message rules
+  CLAUDE.md: Point at doc/style/commit.md for commit rules
+  src/lab-process-mail: Carry the commit rules in prompt.md
+  dotfiles/emacs: Keep the re-apply message format
+  claude/skills/freebsd-port: Follow the ports tree's commit style
+  libexec/mail: Collect the files format-patch.sh writes
+  libexec/mail: Check commit messages before posting
+
+
+
+base-commit: 96a10a53f7188ce8d46172d272db8c546b1c382e
+-- 
+2.56.0
+

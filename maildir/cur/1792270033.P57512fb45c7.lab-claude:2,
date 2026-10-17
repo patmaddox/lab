@@ -1,0 +1,17 @@
+Message-ID: <bf263ea683e9f0334c2ee77f5b4803189a01b404.1792269999.git.claude@p7x.dev>
+In-Reply-To: <cover.1792269999.git.claude@p7x.dev>
+References: <cover.1792269999.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Subject: [RFC PATCH 4/7] dotfiles/emacs: Keep the re-apply message format
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab@lists.p7x.dev
+Change-Id: qmxyzpwxznxkzxrrntvytputvvvxqruu
+Date: Sat, 17 Oct 2026 20:47:13 +0000
+
+The commit that re-applies local patches after a vendor update lists
+each patch kept or dropped, with its hash. Under doc/style/commit.md
+that list reads as "what" to be cut. Say that the list is the point
+of that commit, so it is kept.
+-- 
+2.56.0
+

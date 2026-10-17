@@ -1,0 +1,18 @@
+Message-ID: <22f8c03e7f0566d06d34be185bed7dc0262cdc73.1792269999.git.claude@p7x.dev>
+In-Reply-To: <cover.1792269999.git.claude@p7x.dev>
+References: <cover.1792269999.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Subject: [RFC PATCH 5/7] claude/skills/freebsd-port: Follow the ports tree's
+ commit style
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab@lists.p7x.dev
+Change-Id: kntklzpquplpsmpznrvsylyyqtnrrumz
+Date: Sat, 17 Oct 2026 20:47:14 +0000
+
+A ports commit lands in the FreeBSD ports tree, not in lab, so it
+follows the ports tree's conventions, such as the category/port
+prefix. Say that doc/style/commit.md does not apply to it, so the two
+are not mixed.
+-- 
+2.56.0
+

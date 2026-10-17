@@ -1,0 +1,19 @@
+Message-ID: <40bfd84000fb5906f12d3191fe67a4742d9ffd1d.1792269999.git.claude@p7x.dev>
+In-Reply-To: <cover.1792269999.git.claude@p7x.dev>
+References: <cover.1792269999.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Subject: [RFC PATCH 6/7] libexec/mail: Collect the files format-patch.sh
+ writes
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab@lists.p7x.dev
+Change-Id: qqlqlwmvsysylmpozwxknmtvpoyrqqop
+Date: Sat, 17 Oct 2026 20:47:15 +0000
+
+format-patch.sh adds the change id to each file as git writes it, and
+keeps no list of the files. A later commit in this series checks
+every message before any of them is posted, so it needs the whole
+list first. Collect the file names, then add the change ids in a
+second loop. No functional change.
+-- 
+2.56.0
+

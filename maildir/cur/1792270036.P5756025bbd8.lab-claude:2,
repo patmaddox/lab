@@ -1,0 +1,20 @@
+Message-ID: <ca9f1af5e0e76e0e7f7ad8cedfdf67d8456ddd17.1792269999.git.claude@p7x.dev>
+In-Reply-To: <cover.1792269999.git.claude@p7x.dev>
+References: <cover.1792269999.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Subject: [RFC PATCH 7/7] libexec/mail: Check commit messages before posting
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab@lists.p7x.dev
+Change-Id: vpwxpkwtylukwwrnmnsorwnynzzvztps
+Date: Sat, 17 Oct 2026 20:47:16 +0000
+
+Nothing checks a commit message before it reaches the list, so a
+missing prefix or an overlong line costs a review round to catch.
+Make format-patch.sh refuse a series, writing nothing, when a subject
+lacks an "area: " prefix or runs over 72 characters, or a body line
+runs over 72 or has a double space between words. Warn, without
+refusing, on a diff over 200 lines. The rules that need judgement stay
+prose in doc/style/commit.md.
+-- 
+2.56.0
+

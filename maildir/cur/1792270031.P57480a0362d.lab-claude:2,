@@ -1,0 +1,20 @@
+Message-ID: <1311eac39ce28f01d2db83624ac41beb243eeece.1792269999.git.claude@p7x.dev>
+In-Reply-To: <cover.1792269999.git.claude@p7x.dev>
+References: <cover.1792269999.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Subject: [RFC PATCH 2/7] CLAUDE.md: Point at doc/style/commit.md for commit
+ rules
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab@lists.p7x.dev
+Change-Id: ktyoxrozvsyqnypvowkwvpwtnunsqunt
+Date: Sat, 17 Oct 2026 20:47:11 +0000
+
+CLAUDE.md states the commit rules in three sections, and two of them
+contradict doc/style/commit.md: "detailed enough to judge without
+reading the diff" asks for the per-decision bodies the rules
+discourage, and "Do not refer to work later in a series" bans the
+prep commit's "Prepare for ...". Replace the three with a pointer, so
+there is one statement to keep current.
+-- 
+2.56.0
+

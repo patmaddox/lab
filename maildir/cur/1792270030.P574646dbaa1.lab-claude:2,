@@ -1,0 +1,36 @@
+Message-ID: <8cd7c48b189c4d313d6666a1521d5733e9c275d0.1792269999.git.claude@p7x.dev>
+In-Reply-To: <cover.1792269999.git.claude@p7x.dev>
+References: <cover.1792269999.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Subject: [RFC PATCH 1/7] doc/style: Add the commit message rules
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab@lists.p7x.dev
+Change-Id: yvzsywkxqxnxkuuqxtspzmtsxkvtoxrz
+Date: Sat, 17 Oct 2026 20:47:10 +0000
+
+The commit rules are stated in several places, and the copies
+disagree. One asks for a body detailed enough to judge without the
+diff, which invites walking through each decision in it; another
+forbids the "Prepare for ..." line a prep commit needs. Give the rules
+one full statement, next to cli.md and sh.md, drawn from what FreeBSD,
+Linux, OpenBSD, PostgreSQL and git.git agree on.
+
+The rules, each with an example from one of those projects:
+
+- One logical change per commit. If the message needs a second
+  reason, split the commit.
+- The body says why. Its length follows how much there is to judge,
+  not the size of the diff. Open with what the code does now, then
+  the problem, then the fix in one imperative sentence. A mechanical
+  change gets one sentence.
+- Land prep commits first, saying what they prepare for. Within a
+  posted series a prep commit may refer to a later commit by what it
+  does, never by its hash, and never to work outside the series.
+- Aim for diffs under about 50 lines; treat 200 as a reason to split
+  unless the change is mechanical.
+- Tests and docs go in the commit whose behavior they cover.
+- How the code works belongs in code comments.
+- Summarize list discussion in the message; do not point at it.
+-- 
+2.56.0
+
