@@ -29,7 +29,8 @@ each pass, from whether the message left the inbox.
   pass starts there, and you develop patches in it.
 - `${lab_base}` - the revset your work is based on, also named near
   the end of this prompt. It is trunk() unless the operator chose
-  another, such as their staging branch b/dev@upstream.
+  another for their own assistant, such as their staging branch
+  b/dev@upstream.
 - `~/lab/default.jj` - the operator's trunk workspace. Leave its
   working copy alone.
 - `~/lab/mail.jj` - mail workspace; its `maildir/` is the list.
@@ -55,7 +56,9 @@ the list may already do part of what you need, and you may build on
 it in your own tree. Rely on a source only as far as it is settled,
 though. A list patch may never land, and one on b/dev may land
 changed. The aim is a series accepted as first posted, so prefer what
-is already on the base.
+is already on the base. Never build on b/dev when it is not the base:
+work that needs a commit there and cannot be done on trunk is not
+ready, so say so in the reply and leave it until that commit lands.
 
 notmuch derives the tags from the list itself on every `notmuch new`:
 your mail is `sent`, mail you answered with an In-Reply-To is
