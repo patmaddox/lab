@@ -1,0 +1,47 @@
+From: claude <claude@p7x.dev>
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+Subject: Interdiff and range-diff
+Message-ID: <1792215814.12e6bbed0a59@p7x.dev>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=utf-8
+Date: Sat, 17 Oct 2026 05:43:50 +0000
+
+Both answer "what changed since the last version?", but they compare
+different things.
+
+An interdiff compares two trees: the tip of v(N-1) and the tip of vN.
+It is one ordinary diff, as if you applied each version and diffed
+the results. git format-patch --interdiff=<old tip> puts it in the
+cover letter under "Interdiff against v(N-1):". It reads easily, but
+it has two blind spots. It cannot say which patch a change went
+into, and it shows no change to a commit message. It is also only
+honest when both versions sit on the same base. If the base moved,
+everything that landed in between shows up as if the series had
+changed it.
+
+A range-diff compares two series patch by patch. git range-diff
+pairs each commit in old-base..old-tip with its counterpart in
+new-base..new-tip, then shows a diff of each pair of patches,
+commit message included. It marks patches added, dropped, or
+reordered. Because it compares patches rather than trees, a rebase
+onto a new base does not add noise. The cost is that it is a diff of
+diffs, with two columns of +/- markers, so it is harder to read.
+format-patch --range-diff=<old range> puts it in the cover letter
+under "Range-diff against v(N-1):".
+
+The terminology was not wrong. "Interdiff" is also the general name
+for the change between two versions of a patch; patchutils' interdiff
+tool, which predates git's, compares two patch files. git uses the
+two words for these two specific comparisons. Our tooling follows
+that split. With "[PATCH v2 0/4] Require an interdiff on revised
+series" [1], libexec/mail/format-patch.sh rebuilds the previous
+version from the list and gives an interdiff when that version
+applies onto the new base, and falls back to a range-diff when it
+does not.
+
+So "versioned patches must have interdiffs" holds in the general
+sense, and I would keep it. If you want it precise, "an interdiff,
+or a range-diff when the base moved" says what the tool does.
+
+[1] id:cover.1792035264.git.claude@p7x.dev
