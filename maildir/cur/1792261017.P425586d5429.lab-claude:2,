@@ -1,0 +1,243 @@
+From: claude <claude@p7x.dev>
+Subject: Re: [RFC] how to spec work in a way that's readable for humans
+To: Pat Maddox <pat@patmaddox.com>, lab@lists.p7x.dev
+In-Reply-To: <m2ecdojje6.fsf@beastie.p7x.dev>
+References: <m2ecdojje6.fsf@beastie.p7x.dev>
+Message-ID: <1792261013.247738d4dc2e@p7x.dev>
+Date: Sat, 17 Oct 2026 18:16:57 +0000
+
+On Sat, 17 Oct 2026 11:01:53 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+> These long specs are killing me.
+
+They grew from rules we set on the list, each reasonable on its own:
+
+- "A spec is fully declarative of the end result." [1]
+- "Do not put open questions in the spec." [2]
+- "specs should have alternatives considered as well." [3]
+- "I want the spec to be self-contained, not have some of the
+  information be in the spec and on the list." [4]
+- "You should not submit patches that disagree with the spec... you
+  need to update the spec." [5]
+
+Together they make the spec the one place everything lives, and every
+review round adds to it. jails/instances/lab-mail/spec.org is now 501
+lines; 150 of them are "alternatives considered", and behaviour,
+constraints, and decisions are interleaved in one flat list.
+The proposal at the end says which of these rules I would keep.
+
+> It doesn't work for complex systems. See some of Kent Beck's recent
+> talks.
+
+Beck's recent writing says this directly:
+
+- His B+ tree repo is named BPlusTree3 because the first two attempts
+  "accumulated so much complexity that the genie completely stalled."
+  What worked was a plan.md of tests, one test per "go", red, green,
+  refactor, and him stepping in on design. [6]
+- "Spec-driven or not spec-driven is not the question. The first
+  question is, 'What game are we playing?'" In the Finish Line Game
+  you build X and you are done. In the Compounding Game each thing
+  you build pays for the next, and "the genie is no good at managing
+  futures." [7]
+- Fowler quotes him: spec-driven development "encodes the (to me
+  bizarre) assumption that you aren't going to learn anything during
+  implementation." [8]
+
+> We need to find a better way of working. I suspect it's something along
+> the lines of user stories, ADRs, and technical specs.
+>
+> - user stories provide the behavior
+> - ADRs provide a record of tech decisions we made along the way
+> - technical specs define high level constraints
+
+The research supports this split. Each part answers a different
+reader's question, so each can stay short:
+
+- Stories answer "what should it do next?" Jeffries' Card,
+  Conversation, Confirmation [9] is the right model for us: the card
+  is a placeholder, the conversation is the list thread, and the
+  confirmation is an acceptance check. He says the confirmation is
+  what makes the short card enough. For an agent, that check is the
+  spec it can actually run. Write the rule with an example or two,
+  since examples alone leave the agent to guess the rest.
+- ADRs answer "why is it like this?" Nygard's format [10] is Title,
+  Status, Context, Decision, Consequences, a page or less, numbered,
+  never edited once accepted, superseded by a new one. His argument
+  is ours: "Small, modular documents have at least a chance at being
+  updated." We already do this informally in src/diffwise/decisions.org
+  and src/jc/decisions.org.
+- The technical spec answers "what must always be true?" It holds
+  the constraints that cut across stories (provider, rights,
+  platform). It stays short because the decisions behind it live in
+  ADRs and the behaviour lives in stories.
+
+Here is a slice of lab-mail split this way.
+
+Constraints (spec.org):
+
+    - The list lives on Fastmail. Only lab-mail holds its
+      credentials and talks to it.
+    - Agents can add to the list and do nothing else to it.
+    - Clients reach lab-mail over the network, never through a
+      shared filesystem.
+
+A story (stories.org):
+
+    * Post a reply to the list
+    As an agent on lab-claude, I post a reply to all, so that it
+    lands on the list exactly once.
+    - Given a reply to lab@lists.p7x.dev and pat@p7x.dev, when I
+      send it to lab-mail, then it lands once in the list's INBOX.
+    - Given a message to an address lab-mail does not know, when I
+      send it, then lab-mail refuses it while I am connected and
+      nothing reaches the list.
+
+An ADR (decisions/0003-post-over-smtp.org):
+
+    * 3. Clients post over SMTP, not a shared maildir
+    Status: accepted
+    Context: agents must add to the list and do nothing else. A
+    writable maildir mount would let an agent rename or delete any
+    message.
+    Decision: lab-mail runs a local SMTP server and clients post to
+    it.
+    Consequences: an agent can only add a message, and every host
+    posts the same way. We run an MTA (OpenSMTPD, see ADR 4).
+
+The current spec's "posting:" section is 30 lines of OpenSMTPD
+detail. Most of it is how, which belongs in the config and its
+README. The rest is either the story above or an ADR.
+
+> Thoroughly research ways of describing work with LLMs, that's effective
+> for LLMs to consume, but optimizes for human understanding. Prefer
+> experience reports and guidance that is focused on iterative development
+> instead of one-shotting. Provide examples.
+
+The reports that actually tried it agree with you:
+
+- Boeckeler tried Kiro, spec-kit, and Tessl. Kiro turned a small bug
+  into 4 stories with 16 acceptance criteria, "like using a
+  sledgehammer to crack a nut." spec-kit's markdown "was repetitive,
+  both with each other, and with the code that already existed", and
+  the agent ignored parts of it anyway. "I'd rather review code than
+  all these markdown files." Her conclusion is that "small, iterative
+  steps" keep us in control. [11]
+- Zaninotto used spec-kit to display the current date and got 8
+  files and 1,300 lines of text. Spec-driven work did well on a new
+  app and got worse as the app grew. [12]
+- The Thoughtworks Radar keeps spec-driven development in Assess and
+  warns of "lengthy spec files that are hard to review" and "a bias
+  toward heavy up-front specification and big-bang releases." [13]
+- Harper Reed writes a spec only for greenfield work, then breaks it
+  into "small, iterative chunks that build on each other." For
+  existing code he skips the spec and goes task by task. [14]
+- Anthropic's Claude Code guidance: explore, plan, implement,
+  commit; skip the plan "if you could describe the diff in one
+  sentence"; always give the agent a check it can run; keep standing
+  context "short and human-readable", and cut any line whose removal
+  would not cause a mistake. [15]
+- Osmani names the "curse of instructions": compliance drops as
+  requirements pile up, so give the agent only the slice it needs.
+  [16] This is the LLM-side argument for short documents; the
+  human-side one is Boeckeler's.
+
+Our own doc/llm-research/llm-coding-requirements-specs-plans-tasks.org
+reached the same place: "Use specs for significant work, skip them
+for small tasks", and "Treat specs as disposable... The code and its
+tests are the source of truth."
+
+> Also I want to think about scope... because my sense is that
+> one-shotting is great for something like unix utilities, which are small
+> and focused and can be done. For complex systems that are never done - I
+> doubt that works.
+
+That is Beck's Finish Line versus Compounding distinction [7], and it
+is old:
+
+- McIlroy's 1978 rules say "Make each program do one thing well",
+  and also to build software "to be tried early" and throw away the
+  clumsy parts. [17] A utility's whole behaviour fits in one page,
+  so a one-page spec can drive it in one shot.
+- Gall's law: "A complex system that works is invariably found to
+  have evolved from a simple system that worked." [18]
+- Brooks' remedy in "No Silver Bullet" is to grow software, "adding
+  more and more function to systems as they are run, used, and
+  tested." [19]
+- Naur: the program is a by-product of a theory in its builders'
+  heads, and the theory cannot all be written down. [20] An agent
+  rebuilds that theory each session, so the human has to hold the
+  durable part. Stories and ADRs carry it better than a spec, because
+  they record what was decided and why, in the order it was learned.
+
+Our tree shows the same split. src/sclr/spec.org (12 lines) and
+src/hello-model/spec.org (11 lines) are utility specs, and they
+work. lab-mail is a system: every review round taught us something,
+and the one-document form forced each lesson back into the whole.
+
+A rule of thumb: if the whole behaviour fits on a page and it will
+be done, write one spec and one-shot it. Otherwise the spec holds
+only constraints, and work proceeds one story at a time, each its own
+thread and its own small series, with an ADR whenever we choose
+between alternatives.
+
+Proposal, for you to decide:
+
+1. Keep "declarative" and "no open questions" for all three kinds.
+2. Move "alternatives considered" out of specs into ADRs, one
+   decision per record.
+3. Keep "self-contained", but for the directory, not one file: the
+   repo, not the list, carries spec.org, stories.org, and
+   decisions/.
+4. Replace "update the spec" with "add or change a story, or
+   supersede an ADR". The spec changes only when a constraint does.
+
+I recommend trying it on the next new piece of work rather than
+converting lab-mail now, since lab-mail v10 is in review and a
+rewrite would churn it. If you agree, I will post a short convention
+doc (zib/specs.org) with the three templates above, and convert
+lab-mail once its series lands.
+
+[1] id:m2pkxcd1zo.fsf@beastie.p7x.dev
+    "Re: [PATCH] dotfiles/notmuch: Spec reading and sending through
+    lab-mail"
+[2] id:m21p9tm4ev.fsf@beastie.p7x.dev "Re: p7x mail relay jail"
+[3] id:m2pkxcj17u.fsf@beastie.p7x.dev
+    "Re: [PATCH v3] jails/instances/lab-mail: Initial spec"
+[4] id:m21p9vq31u.fsf@beastie.p7x.dev
+    "Re: New claude skill freebsd-port"
+[5] id:m25wz4ixvt.fsf@beastie.p7x.dev
+    "Re: [PATCH 0/6] jails/instances/lab-mail: Build the mail relay
+    jail"
+[6] Kent Beck, "Augmented Coding: Beyond the Vibes", 2025-06-25.
+    https://newsletter.kentbeck.com/p/augmented-coding-beyond-the-vibes
+[7] Kent Beck, "Earn And Learn", 2026-02-18.
+    https://newsletter.kentbeck.com/p/earn-and-learn
+[8] Martin Fowler, "Fragments: January 8", 2026-01-08.
+    https://martinfowler.com/fragments/2026-01-08.html
+[9] Ron Jeffries, "Essential XP: Card, Conversation, Confirmation",
+    2001. https://ronjeffries.com/xprog/articles/expcardconversationconfirmation/
+[10] Michael Nygard, "Documenting Architecture Decisions", 2011.
+    https://cognitect.com/blog/2011/11/15/documenting-architecture-decisions
+[11] Birgitta Boeckeler, "Understanding Spec-Driven-Development:
+    Kiro, spec-kit, and Tessl", 2025-10-15.
+    https://martinfowler.com/articles/exploring-gen-ai/sdd-3-tools.html
+[12] Francois Zaninotto, "Spec-Driven Development: The Waterfall
+    Strikes Back", 2025-11-12.
+    https://marmelab.com/blog/2025/11/12/spec-driven-development-waterfall-strikes-back.html
+[13] Thoughtworks Technology Radar, "Spec-driven development".
+    https://www.thoughtworks.com/radar/techniques/spec-driven-development
+[14] Harper Reed, "My LLM codegen workflow atm", 2025-02-16.
+    https://harper.blog/2025/02/16/my-llm-codegen-workflow-atm/
+[15] Anthropic, "Best practices for Claude Code".
+    https://code.claude.com/docs/en/best-practices
+[16] Addy Osmani, "How to write a good spec for AI agents",
+    2026-01-19.
+    https://addyo.substack.com/p/how-to-write-a-good-spec-for-ai-agents
+[17] McIlroy, Pinson, and Tague, "Foreword", Bell System Technical
+    Journal 57(6), 1978. https://en.wikipedia.org/wiki/Unix_philosophy
+[18] John Gall, "General Systemantics", 1975.
+    https://en.wikiquote.org/wiki/John_Gall
+[19] Fred Brooks, "No Silver Bullet", 1986.
+    https://worrydream.com/refs/Brooks_1986_-_No_Silver_Bullet.pdf
+[20] Peter Naur, "Programming as Theory Building", 1985.
+    https://gwern.net/doc/cs/algorithm/1985-naur.pdf
