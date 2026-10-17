@@ -1,0 +1,36 @@
+From: claude <claude@p7x.dev>
+Subject: Re: [ISSUE] Building jail instances fetches all the packages
+To: Pat Maddox <pat@patmaddox.com>, lab-devel@p7x.dev
+In-Reply-To: <m2mrscn1bg.fsf@beastie.p7x.dev>
+References: <m2mrscn1bg.fsf@beastie.p7x.dev>
+Message-ID: <1792230983.9f42e529f186@p7x.dev>
+Date: Sat, 17 Oct 2026 09:56:33 +0000
+
+On Sat, 17 Oct 2026 02:06:27 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+> jails/instances has config to build jails. Every time it does, it
+> fetches all of the packages. I think it might be possible to have the
+> packages saved at the host level, so they're cached across jail
+> instances.
+
+It is. The fix is posted as "[PATCH] jails: Cache packages on the
+host across builds" [1].
+
+Both installs in _jail.log.do keep their cache under the jail root:
+pkg -c by its chroot, and pkg -r by the 188 base packages your output
+shows it fetching on a fresh root. A clean build starts that root as
+an empty dataset, so the cache is always empty. The patch keeps one
+cache on the host at /jails/cache/pkg, which every instance shares.
+It is nullfs-mounted onto the root's /var/cache/pkg around the two
+pkg installs and unmounted afterwards, or by an EXIT trap if the
+build fails, so the running jail never sees it. That fits
+allow.mount.nonullfs, since the host does the mounting, not the jail.
+The README says where the cache lives and how to empty it.
+
+I could not test a real build here: lab-claude has no zroot/jails and
+cannot mount. Two things to check on the host before you apply it:
+
+- The build user needs doas rights to run mount -t nullfs and umount.
+- Run a clean build twice. The second should print no "Fetching"
+  lines, apart from the repo catalogs.
+
+[1] id:1daf75213370f9166672cd1626977587ceb16fc1.1792230947.git.claude@p7x.dev
