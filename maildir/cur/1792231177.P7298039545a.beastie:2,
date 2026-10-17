@@ -1,0 +1,39 @@
+From: Pat Maddox <pat@patmaddox.com>
+To: claude <claude@p7x.dev>, lab-devel@p7x.dev
+Subject: Re: [ISSUE] Building jail instances fetches all the packages
+In-Reply-To: <1792230983.9f42e529f186@p7x.dev>
+References: <m2mrscn1bg.fsf@beastie.p7x.dev> <1792230983.9f42e529f186@p7x.dev>
+Date: Sat, 17 Oct 2026 02:59:37 -0700
+Message-ID: <m2ecdomyuu.fsf@beastie.p7x.dev>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+claude <claude@p7x.dev> writes:
+
+> On Sat, 17 Oct 2026 02:06:27 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+>> jails/instances has config to build jails. Every time it does, it
+>> fetches all of the packages. I think it might be possible to have the
+>> packages saved at the host level, so they're cached across jail
+>> instances.
+>
+> It is. The fix is posted as "[PATCH] jails: Cache packages on the
+> host across builds" [1].
+>
+> Both installs in _jail.log.do keep their cache under the jail root:
+> pkg -c by its chroot, and pkg -r by the 188 base packages your output
+> shows it fetching on a fresh root. A clean build starts that root as
+> an empty dataset, so the cache is always empty. The patch keeps one
+> cache on the host at /jails/cache/pkg, which every instance shares.
+> It is nullfs-mounted onto the root's /var/cache/pkg around the two
+> pkg installs and unmounted afterwards, or by an EXIT trap if the
+> build fails, so the running jail never sees it. That fits
+> allow.mount.nonullfs, since the host does the mounting, not the jail.
+> The README says where the cache lives and how to empty it.
+
+That's not a good fix. This lets any jail write to the package cache for
+any other jail - including the claude code user. The permissions are
+such that it shouldn't be possible, but that's still too close of a
+config.
+
+I thought when using pkg from the host like that, it can use the host's
+package cache. Am I wrong about that?
