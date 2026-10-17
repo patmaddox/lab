@@ -1,0 +1,155 @@
+Message-ID: <b0182e3a0e79692a15eaf8bb24988051f04810e0.1792216718.git.claude@p7x.dev>
+In-Reply-To: <cover.1792216718.git.claude@p7x.dev>
+References: <cover.1792216718.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Subject: [PATCH v5 2/5] lab-process-mail: Hold a stuck message instead of
+ retrying it
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+Change-Id: msplvuwwmrytnonlzkpoqsxxyqrsxmkz
+Date: Sat, 17 Oct 2026 05:58:56 +0000
+
+A message still in the inbox after its pass is one the agent could not
+answer, and another pass on it will most likely fail the same way.
+lab-process-mail cannot stop whatever runs it again, so if it is rerun
+on a timer each run spends an agent pass and posts a new stuck notice
+for the same message.
+
+Recording the stuck message lets later runs fail before the agent
+starts while that message is still the oldest in the inbox. A run then
+costs a fetch, so other failures, such as a network outage, can be
+retried freely. The hold lifts by itself once the message leaves the
+inbox, and removing the file asks for another try.
+---
+change-id: msplvuwwmrytnonlzkpoqsxxyqrsxmkz
+
+ src/lab-process-mail/lab-process-mail      | 14 ++++++-
+ src/lab-process-mail/lab-process-mail_test | 45 ++++++++++++++++++++++
+ 2 files changed, 58 insertions(+), 1 deletion(-)
+
+diff --git a/src/lab-process-mail/lab-process-mail b/src/lab-process-mail/lab-process-mail
+index bc8c43d..43b9810 100755
+--- a/src/lab-process-mail/lab-process-mail
++++ b/src/lab-process-mail/lab-process-mail
+@@ -12,6 +12,12 @@
+ # inbox is an error. With an empty inbox it does nothing. Whatever
+ # runs it decides when to run it again.
+ #
++# A stuck message, one still in the inbox after its pass, is written to
++# ~/var/db/lab-process-mail/stuck. While it is still the oldest in the
++# inbox, later runs fail at once instead of spending another pass on
++# it, so running this again on a timer costs a fetch, not an agent
++# pass. Removing the file tries the message again.
++#
+ # The trunk workspace is ${TRUNK_WORKSPACE}, or ~/lab/default.jj. Each
+ # pass runs in its own workspace, ${WORK_WORKSPACE}, or ~/lab/work.jj,
+ # created on first use. The mail workspace is ${MAIL_WORKSPACE}, or
+@@ -109,7 +115,7 @@ notify() {
+ }
+ 
+ main() {
+-	local bindir prompt id subject
++	local bindir prompt id subject stuck
+ 
+ 	[ "${#}" -eq 0 ] || die "usage: ${PROGNAME}"
+ 
+@@ -119,6 +125,7 @@ main() {
+ 	me="$(whoami)"
+ 	bindir="$(CDPATH= cd -- "$(dirname -- "${0}")" && pwd)"
+ 	prompt="${LAB_PROCESS_MAIL_PROMPT:-${bindir}/../share/lab-process-mail/prompt.md}"
++	stuck="${HOME}/var/db/${PROGNAME}/stuck"
+ 
+ 	[ -d "${trunk}" ] || die "${trunk}: no trunk workspace"
+ 	[ -d "${mail}" ] || die "${mail}: no mail workspace"
+@@ -128,6 +135,9 @@ main() {
+ 	prepare_workspace
+ 	id="$(oldest_inbox_message)"
+ 	[ -n "${id}" ] || exit 0
++	[ "$(cat "${stuck}" 2>/dev/null)" != "${id}" ] ||
++	    die "${id} is stuck; remove ${stuck} to try it again"
++	rm -f "${stuck}"
+ 	subject="$(notmuch search "${id}" |
+ 	    sed -e 's/^[^;]*; //' -e 's/ ([^()]*)$//')"
+ 	echo "${PROGNAME}: ${id} (${subject})"
+@@ -140,6 +150,8 @@ The message to answer is ${id}." </dev/null >/dev/null)
+ 	notmuch new --quiet
+ 	if [ "$(notmuch count "${id} and tag:inbox")" -ne 0 ]; then
+ 		err "${id} is still in the inbox"
++		mkdir -p "$(dirname -- "${stuck}")"
++		echo "${id}" > "${stuck}"
+ 		notify "stuck: ${subject} (inbox $(inbox_count))"
+ 		exit 1
+ 	fi
+diff --git a/src/lab-process-mail/lab-process-mail_test b/src/lab-process-mail/lab-process-mail_test
+index dbbb0cc..ab09b58 100755
+--- a/src/lab-process-mail/lab-process-mail_test
++++ b/src/lab-process-mail/lab-process-mail_test
+@@ -8,6 +8,9 @@ atf_init_test_cases() {
+ 	atf_add_test_case passes_prompt_and_id
+ 	atf_add_test_case answers_oldest_only
+ 	atf_add_test_case stuck_message
++	atf_add_test_case holds_stuck_message
++	atf_add_test_case retries_stuck_message
++	atf_add_test_case passes_answered_stuck_message
+ 	atf_add_test_case creates_workspace
+ 	atf_add_test_case leaves_trunk_working_copy
+ 	atf_add_test_case silent_without_notify_url
+@@ -28,6 +31,8 @@ setup() {
+ 	export TRUNK_WORKSPACE="${PWD}/default.jj"
+ 	export MAIL_WORKSPACE="${PWD}/mail.jj"
+ 	export WORK_WORKSPACE="${PWD}/work.jj"
++	export HOME="${PWD}"
++	STUCK="${HOME}/var/db/lab-process-mail/stuck"
+ 	unset NOTIFY_URL LAB_BASE_BRANCH
+ 
+ 	export JJ_CONFIG="${PWD}/jj.toml"
+@@ -246,6 +251,46 @@ stuck_message_body() {
+ 	atf_check -o match:"stuck: First \\(inbox 2\\)" cat curl.log
+ }
+ 
++# A stuck message that is still the oldest fails the run before the
++# agent starts, and says nothing more to ntfy.
++atf_test_case holds_stuck_message
++holds_stuck_message_body() {
++	setup
++	printf 'id:a@x First\nid:b@x Second\n' > inbox
++	export NOTIFY_URL=https://ntfy.example/topic
++	atf_check -s exit:1 -o ignore -e ignore "${PROCESS_MAIL}"
++	atf_check -o inline:"id:a@x\n" cat "${STUCK}"
++	atf_check -s exit:1 -e match:"id:a@x is stuck" "${PROCESS_MAIL}"
++	atf_check -o inline:"1\n" grep -c '^cwd ' claude.log
++	atf_check -o inline:"1\n" grep -c . curl.log
++}
++
++atf_test_case retries_stuck_message
++retries_stuck_message_body() {
++	setup
++	printf 'id:a@x First\n' > inbox
++	atf_check -s exit:1 -o ignore -e ignore "${PROCESS_MAIL}"
++	rm "${STUCK}"
++	export STUB_ANSWER=1
++	atf_check -o inline:"lab-process-mail: id:a@x (First)\n" \
++	    -e ignore "${PROCESS_MAIL}"
++	atf_check -o inline:"2\n" grep -c '^cwd ' claude.log
++}
++
++# Once the stuck message leaves the inbox, the next one is answered and
++# the record of the stuck one goes.
++atf_test_case passes_answered_stuck_message
++passes_answered_stuck_message_body() {
++	setup
++	printf 'id:a@x First\nid:b@x Second\n' > inbox
++	atf_check -s exit:1 -o ignore -e ignore "${PROCESS_MAIL}"
++	printf 'id:b@x Second\n' > inbox
++	export STUB_ANSWER=1
++	atf_check -o inline:"lab-process-mail: id:b@x (Second)\n" \
++	    -e ignore "${PROCESS_MAIL}"
++	atf_check -s exit:1 test -e "${STUCK}"
++}
++
+ atf_test_case silent_without_notify_url
+ silent_without_notify_url_body() {
+ 	setup
+-- 
+2.56.0
+

@@ -1,0 +1,90 @@
+Message-ID: <cover.1792216718.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Subject: [PATCH v5 0/5] lab-process-mail: Add lab-process-maild
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+Date: Sat, 17 Oct 2026 05:58:54 +0000
+
+lab-process-mail answers the inbox only when someone runs it. This
+series makes it a one-shot program and adds lab-process-maild, which
+manages it as a service under daemon(8):
+
+    lab-process-maild start
+    lab-process-maild status
+    lab-process-maild stop
+
+lab-process-mail answers the oldest inbox message and says by its exit
+status whether to run it again: 0 once the inbox is empty, 75
+(EX_TEMPFAIL in sysexits(3)) when it answered a message and more are
+waiting, and 1 on failure. There is no daemon mode; a run by hand
+gets the same statuses.
+
+daemon(8) cannot act on its child's status, so start hands it
+"lab-process-maild drain" with -R. drain runs lab-process-mail again
+at once while it exits 75 and exits with any other status, so a batch
+of mail is answered back to back and daemon(8) waits
+lab_process_maild_interval seconds only once the inbox is empty or a
+run fails. drain runs lab-process-mail in the foreground; stop sends
+SIGTERM to drain, sh holds the trapped signal until the run in
+progress ends, and drain then exits instead of starting another.
+
+The rest is as in v4. The package ships lab-process-maild(8) and reads
+${LOCALBASE}/etc/lab-process-maild.conf, an rc.conf(5)-style file with
+four settings. daemon(8) starts from an empty environment, keeping
+only HOME, USER, LOGNAME, and PATH as the operator has it, plus
+lab_process_maild_env.
+
+A stuck message is held rather than retried. lab-process-mail records
+it in ~/var/db/lab-process-mail/stuck, and while it is still the
+oldest in the inbox, later runs fail before the agent starts. Under
+the daemon that is one failed run per interval, each costing a fetch
+and no agent pass or notice, until the message is answered or
+archived or the file is removed. The held message also blocks the
+rest of the inbox; skipping it is fix 3 in "[BUG] lab-process-mail
+gets stuck" [1], and is not part of this series.
+
+Patch 1 makes lab-process-mail answer one message and exit. Patches 2
+and 3 add the hold and the SIGTERM handling. Patch 4 adds the exit
+status, and patch 5 adds the daemon with drain.
+
+kyua test passes at every patch: 15/15, 18/18, 20/20, 20/20, and
+33/33. The daemon tests run the real daemon(8) to answer three
+messages back to back with a 60 second interval, to restart after a
+failed run, and for status and stop; drain's loop and its SIGTERM
+handling are tested on their own. mandoc -Tlint is clean.
+
+Changes in v5:
+- Add patch 4, which exits 75 while mail is waiting. Pat found one
+  message per interval too slow and agreed to this contract.
+- Run "lab-process-maild drain" under daemon(8) instead of
+  lab-process-mail itself, and document drain in lab-process-maild(8).
+- SIGTERM now reaches drain rather than lab-process-mail, so stop also
+  lets a run finish that has not yet reached its pass.
+- Link to v4: id:cover.1792209039.git.claude@p7x.dev
+
+[1] id:1792206019.c7310968cbe0@p7x.dev
+
+claude (5):
+  lab-process-mail: Answer one message per run
+  lab-process-mail: Hold a stuck message instead of retrying it
+  lab-process-mail: Finish the pass in progress on SIGTERM
+  lab-process-mail: Exit 75 while mail is waiting
+  lab-process-mail: Add lab-process-maild
+
+ src/lab-process-mail/Kyuafile                |   1 +
+ src/lab-process-mail/lab-process-mail        |  87 ++++---
+ src/lab-process-mail/lab-process-mail.pkg.do |  13 +-
+ src/lab-process-mail/lab-process-mail_test   | 120 +++++++++-
+ src/lab-process-mail/lab-process-maild       | 130 +++++++++++
+ src/lab-process-mail/lab-process-maild.8     | 187 +++++++++++++++
+ src/lab-process-mail/lab-process-maild_test  | 234 +++++++++++++++++++
+ 7 files changed, 731 insertions(+), 41 deletions(-)
+ create mode 100755 src/lab-process-mail/lab-process-maild
+ create mode 100644 src/lab-process-mail/lab-process-maild.8
+ create mode 100755 src/lab-process-mail/lab-process-maild_test
+
+
+base-commit: 8d0b05250dc28c4dfa11e4e7925c94f50cfcf211
+-- 
+2.56.0
+

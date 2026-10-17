@@ -1,0 +1,97 @@
+Message-ID: <55a26e8c10d0525f3e083f9518b560735f13346d.1792216718.git.claude@p7x.dev>
+In-Reply-To: <cover.1792216718.git.claude@p7x.dev>
+References: <cover.1792216718.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Subject: [PATCH v5 4/5] lab-process-mail: Exit 75 while mail is waiting
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+Change-Id: vykokzrnloovxkuwxpkunsrypkrrunny
+Date: Sat, 17 Oct 2026 05:58:58 +0000
+
+lab-process-mail answers one message per run and leaves the timing of
+the next run to its caller. Without a way to tell the caller whether
+the inbox is empty, a caller on a timer waits the full interval after
+every message, so a batch of ten takes nine extra intervals.
+
+The exit status is the channel. 75 is EX_TEMPFAIL in sysexits(3),
+"not really an error" that should be retried; lockf(1) uses it for a
+lock held elsewhere and periodic(8) acts on it. It is set only by the
+program and read only by the process that ran it, so there is nothing
+to store, parse, or clean up. A run that empties the inbox still exits
+0, so running it by hand looks the same as before unless more mail is
+waiting.
+---
+change-id: vykokzrnloovxkuwxpkunsrypkrrunny
+
+ src/lab-process-mail/lab-process-mail      | 13 +++++++++++--
+ src/lab-process-mail/lab-process-mail_test |  4 +++-
+ 2 files changed, 14 insertions(+), 3 deletions(-)
+
+diff --git a/src/lab-process-mail/lab-process-mail b/src/lab-process-mail/lab-process-mail
+index c7727d0..0c650da 100755
+--- a/src/lab-process-mail/lab-process-mail
++++ b/src/lab-process-mail/lab-process-mail
+@@ -12,6 +12,12 @@
+ # inbox is an error. With an empty inbox it does nothing. Whatever
+ # runs it decides when to run it again.
+ #
++# The exit status says whether to: 0 when the inbox is empty at the
++# end of the run, 75 (EX_TEMPFAIL in sysexits(3)) when it answered a
++# message and more are waiting, and 1 on failure. A caller that drains
++# the inbox runs it again at once on 75, and a caller that runs it once
++# treats 75 as success.
++#
+ # A stuck message, one still in the inbox after its pass, is written to
+ # ~/var/db/lab-process-mail/stuck. While it is still the oldest in the
+ # inbox, later runs fail at once instead of spending another pass on
+@@ -39,6 +45,7 @@ set -o pipefail
+ 
+ readonly PROGNAME="${0##*/}"
+ readonly BASE="${LAB_BASE_BRANCH:-trunk()}"
++readonly EX_TEMPFAIL=75
+ 
+ # Your commits off the base, less everything descended from the list.
+ # The base and the list share no commit but root(), so the outbox is
+@@ -118,7 +125,7 @@ notify() {
+ }
+ 
+ main() {
+-	local bindir prompt id subject stuck stopping
++	local bindir prompt id subject stuck stopping left
+ 
+ 	[ "${#}" -eq 0 ] || die "usage: ${PROGNAME}"
+ 
+@@ -162,7 +169,9 @@ The message to answer is ${id}." </dev/null >/dev/null)
+ 		notify "stuck: ${subject} (inbox $(inbox_count))"
+ 		exit 1
+ 	fi
+-	notify "answered: ${subject} (inbox $(inbox_count))"
++	left="$(inbox_count)"
++	notify "answered: ${subject} (inbox ${left})"
++	[ "${left}" -eq 0 ] || exit "${EX_TEMPFAIL}"
+ }
+ 
+ main "${@}"
+diff --git a/src/lab-process-mail/lab-process-mail_test b/src/lab-process-mail/lab-process-mail_test
+index 126978c..aa7d1f2 100755
+--- a/src/lab-process-mail/lab-process-mail_test
++++ b/src/lab-process-mail/lab-process-mail_test
+@@ -242,12 +242,14 @@ passes_prompt_and_id_body() {
+ 	    tail -n 1 claude.log
+ }
+ 
++# Answering a message while more are waiting exits 75, so a caller
++# knows to run it again.
+ atf_test_case answers_oldest_only
+ answers_oldest_only_body() {
+ 	setup
+ 	printf 'id:a@x First\nid:b@x Second\n' > inbox
+ 	export STUB_ANSWER=1
+-	atf_check -s exit:0 -o inline:"lab-process-mail: id:a@x (First)\n" \
++	atf_check -s exit:75 -o inline:"lab-process-mail: id:a@x (First)\n" \
+ 	    -e ignore "${PROCESS_MAIL}"
+ 	atf_check -o inline:"1\n" grep -c '^cwd ' claude.log
+ 	atf_check -o inline:"id:b@x Second\n" cat inbox
+-- 
+2.56.0
+

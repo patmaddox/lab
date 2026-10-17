@@ -1,0 +1,169 @@
+Message-ID: <3a227073ba2fad41f0c166e7b2b810a3a5e021df.1792216718.git.claude@p7x.dev>
+In-Reply-To: <cover.1792216718.git.claude@p7x.dev>
+References: <cover.1792216718.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Subject: [PATCH v5 3/5] lab-process-mail: Finish the pass in progress on
+ SIGTERM
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+Change-Id: yvzwmopqronzzutssrknovmlvxuppzrq
+Date: Sat, 17 Oct 2026 05:58:57 +0000
+
+A supervisor such as daemon(8) stops its child with SIGTERM. Without a
+trap, sh exits at once, while claude carries on in the background with
+nobody left to check its result or post the notice; the supervisor then
+reports itself stopped while a pass is still running, and a fresh start
+could run a second pass beside it.
+
+Deferring the signal until the pass ends keeps a stop clean. A run
+that has not reached its pass yet exits before starting one, so a stop
+never waits on a pass that had not begun.
+---
+change-id: yvzwmopqronzzutssrknovmlvxuppzrq
+
+ src/lab-process-mail/lab-process-mail      |  9 +++-
+ src/lab-process-mail/lab-process-mail_test | 59 ++++++++++++++++++++++
+ 2 files changed, 67 insertions(+), 1 deletion(-)
+
+diff --git a/src/lab-process-mail/lab-process-mail b/src/lab-process-mail/lab-process-mail
+index 43b9810..c7727d0 100755
+--- a/src/lab-process-mail/lab-process-mail
++++ b/src/lab-process-mail/lab-process-mail
+@@ -18,6 +18,9 @@
+ # it, so running this again on a timer costs a fetch, not an agent
+ # pass. Removing the file tries the message again.
+ #
++# SIGTERM lets the pass in progress finish, so a reply is never left
++# half sent, and stops a run that has not started its pass yet.
++#
+ # The trunk workspace is ${TRUNK_WORKSPACE}, or ~/lab/default.jj. Each
+ # pass runs in its own workspace, ${WORK_WORKSPACE}, or ~/lab/work.jj,
+ # created on first use. The mail workspace is ${MAIL_WORKSPACE}, or
+@@ -115,10 +118,13 @@ notify() {
+ }
+ 
+ main() {
+-	local bindir prompt id subject stuck
++	local bindir prompt id subject stuck stopping
+ 
+ 	[ "${#}" -eq 0 ] || die "usage: ${PROGNAME}"
+ 
++	stopping=
++	trap 'stopping=1' TERM
++
+ 	trunk="${TRUNK_WORKSPACE:-${HOME}/lab/default.jj}"
+ 	mail="${MAIL_WORKSPACE:-${HOME}/lab/mail.jj}"
+ 	ws="${WORK_WORKSPACE:-${HOME}/lab/work.jj}"
+@@ -138,6 +144,7 @@ main() {
+ 	[ "$(cat "${stuck}" 2>/dev/null)" != "${id}" ] ||
+ 	    die "${id} is stuck; remove ${stuck} to try it again"
+ 	rm -f "${stuck}"
++	[ -z "${stopping}" ] || exit 0
+ 	subject="$(notmuch search "${id}" |
+ 	    sed -e 's/^[^;]*; //' -e 's/ ([^()]*)$//')"
+ 	echo "${PROGNAME}: ${id} (${subject})"
+diff --git a/src/lab-process-mail/lab-process-mail_test b/src/lab-process-mail/lab-process-mail_test
+index ab09b58..126978c 100755
+--- a/src/lab-process-mail/lab-process-mail_test
++++ b/src/lab-process-mail/lab-process-mail_test
+@@ -11,6 +11,8 @@ atf_init_test_cases() {
+ 	atf_add_test_case holds_stuck_message
+ 	atf_add_test_case retries_stuck_message
+ 	atf_add_test_case passes_answered_stuck_message
++	atf_add_test_case finishes_pass_on_term
++	atf_add_test_case term_before_pass
+ 	atf_add_test_case creates_workspace
+ 	atf_add_test_case leaves_trunk_working_copy
+ 	atf_add_test_case silent_without_notify_url
+@@ -81,10 +83,13 @@ setup() {
+ # pass per line group. With STUB_ANSWER=1 it answers the message: it
+ # takes the id from the last line of the prompt and removes it from
+ # the inbox. With STUB_MOVE=1 it moves its working copy to root().
++# With STUB_WAIT=1 it creates claude.started and waits for the file go.
+ #
+ # notmuch reads the inbox from the file inbox, one "id subject" per
+ # line, oldest first. It answers only the queries lab-process-mail
+ # makes.
++# With STUB_WAIT_NEW=1, new creates new.started and waits for the file
++# go.
+ #
+ # curl appends its argv to curl.log.
+ mk_stubs() {
+@@ -97,6 +102,10 @@ mk_stubs() {
+ 	echo "cwd \${PWD}" >> "${stubdir}/claude.log"
+ 	for a in "\$@"; do printf 'arg %s\n' "\$a" >> "${stubdir}/claude.log"; done
+ 	[ "\${STUB_MOVE:-0}" = 1 ] && jj new 'root()' >/dev/null 2>&1
++	if [ "\${STUB_WAIT:-0}" = 1 ]; then
++		touch "${stubdir}/claude.started"
++		while [ ! -e "${stubdir}/go" ]; do sleep 0.1; done
++	fi
+ 	if [ "\${STUB_ANSWER:-0}" = 1 ]; then
+ 		for a in "\$@"; do last="\$a"; done
+ 		id="\$(printf '%s\n' "\${last}" | tail -n 1 |
+@@ -111,6 +120,10 @@ mk_stubs() {
+ 	inbox="${stubdir}/inbox"
+ 	case "\$1" in
+ 	new)
++		[ "\${STUB_WAIT_NEW:-0}" != 1 ] || {
++			touch "${stubdir}/new.started"
++			while [ ! -e "${stubdir}/go" ]; do sleep 0.1; done
++		}
+ 		;;
+ 	search)
+ 		for a in "\$@"; do last="\$a"; done
+@@ -291,6 +304,52 @@ passes_answered_stuck_message_body() {
+ 	atf_check -s exit:1 test -e "${STUCK}"
+ }
+ 
++# SIGTERM during the pass lets it finish and report.
++atf_test_case finishes_pass_on_term
++finishes_pass_on_term_body() {
++	setup
++	printf 'id:a@x First\n' > inbox
++	export NOTIFY_URL=https://ntfy.example/topic
++	export STUB_ANSWER=1 STUB_WAIT=1
++	"${PROCESS_MAIL}" > out 2> err &
++	pid="${!}"
++	wait_for test -e claude.started
++	kill -TERM "${pid}"
++	touch go
++	status=0
++	wait "${pid}" || status="${?}"
++	atf_check_equal 0 "${status}"
++	atf_check -o match:"answered: First" cat curl.log
++}
++
++# SIGTERM before the pass starts stops the run without one.
++atf_test_case term_before_pass
++term_before_pass_body() {
++	setup
++	printf 'id:a@x First\n' > inbox
++	export STUB_WAIT_NEW=1
++	"${PROCESS_MAIL}" > out 2> err &
++	pid="${!}"
++	wait_for test -e new.started
++	kill -TERM "${pid}"
++	touch go
++	status=0
++	wait "${pid}" || status="${?}"
++	atf_check_equal 0 "${status}"
++	atf_check -s exit:1 test -e claude.log
++}
++
++wait_for() {
++	local i
++
++	i=0
++	until "${@}"; do
++		i=$((i + 1))
++		[ "${i}" -lt 50 ] || atf_fail "timed out waiting for: ${*}"
++		sleep 0.2
++	done
++}
++
+ atf_test_case silent_without_notify_url
+ silent_without_notify_url_body() {
+ 	setup
+-- 
+2.56.0
+
