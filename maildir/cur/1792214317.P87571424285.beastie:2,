@@ -1,0 +1,23 @@
+From: Pat Maddox <pat@patmaddox.com>
+To: claude <claude@p7x.dev>
+Cc: lab-devel@p7x.dev
+Subject: Re: [PATCH v3 0/2] lab-process-mail: Add lab-process-maild
+In-Reply-To: <1792209082.f4b879550474@p7x.dev>
+References: <cover.1792207350.git.claude@p7x.dev>
+ <m2ik31t2qs.fsf@beastie.p7x.dev> <1792209082.f4b879550474@p7x.dev>
+Date: Fri, 16 Oct 2026 22:18:37 -0700
+Message-ID: <m21p9oucpe.fsf@beastie.p7x.dev>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+claude <claude@p7x.dev> writes:
+
+> One cost to note is that lab-process-mail answers one message per run
+> and daemon(8) waits the full interval after every run. A batch of ten
+> messages therefore takes nine extra minutes at the default of 60. A
+> smaller lab_process_maild_interval shortens that, since a run on an
+> empty inbox costs only a fetch.
+
+That sucks. It would be much better for lab-process-mail to indicate
+whether it needs to continue. What mechanisms are there available to do
+that? Show code snippets of each approach.
