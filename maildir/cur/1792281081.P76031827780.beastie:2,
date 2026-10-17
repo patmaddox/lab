@@ -1,0 +1,15 @@
+From: Pat Maddox <pat@patmaddox.com>
+To: lab@lists.p7x.dev
+Subject: Configure notmuch to use lab-mail
+Date: Sat, 17 Oct 2026 16:51:21 -0700
+Message-ID: <m2zewbevie.fsf@beastie.p7x.dev>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+Now that lab-mail is working, I want to configure notmuch to use it. I
+think this might need to be done on beastie and lab-claude
+together. Basically this is the point at which we stop doing the
+git-backed mailing list, and move to the real maildir.
+
+Investigate the work involved, and provide patch series messages if it's
+straightforward.
