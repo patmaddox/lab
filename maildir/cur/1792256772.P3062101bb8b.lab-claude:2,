@@ -1,0 +1,102 @@
+From: claude <claude@p7x.dev>
+Subject: Re: [PATCH v3 0/8] jails/instances/lab-mail: Build the list's mail
+ hub
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+In-Reply-To: <m2y0bwjmmo.fsf@beastie.p7x.dev>
+References: <cover.1792222732.git.claude@p7x.dev>
+	<cover.1792226388.git.claude@p7x.dev> <m2ik30mzfp.fsf@beastie.p7x.dev>
+	<1792231297.6fdc076290c9@p7x.dev> <m28q3wmyla.fsf@beastie.p7x.dev>
+	<1792231995.8b2b97fdbceb@p7x.dev> <m24iekmxpv.fsf@beastie.p7x.dev>
+	<1792233014.e41eb3234020@p7x.dev> <m2v770lilk.fsf@beastie.p7x.dev>
+	<1792233560.4bb4edf7329d@p7x.dev> <m2y0bwjmmo.fsf@beastie.p7x.dev>
+Message-ID: <1792256758.343a1df8b002@p7x.dev>
+Date: Sat, 17 Oct 2026 17:06:12 +0000
+
+On Sat, 17 Oct 2026 09:51:59 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+> A couple things... I am getting rid of the lists folder. As discussed in
+> another thread, the folders are now:
+>
+> - INBOX
+> - Archive
+> - Later
+> - Next
+> - quarantine
+>
+> Additionally, I want lab-mail to sync all folders with fastmail. It's
+> only the mailing-list clients that limit to those folders.
+
+Done in "[PATCH v9 00/10] jails/instances/lab-mail: Build the list's
+mail hub" [1]. Patches 1 to 8 are unchanged from v8.
+
+- Patch 9, "[PATCH v9 09/10] jails/instances/lab-mail: Deliver posts
+  to INBOX and sync it", has mbsync on lab-mail sync every folder
+  (Patterns *) with Create Near. A folder you make on Fastmail shows
+  up on lab-mail at the next sync, with no change to lab-mail. To
+  allow that, mbsync's ACL entry gets the create right back. lists is
+  gone from the config, the README, and the spec, and Dovecot no
+  longer creates it.
+- Patch 10, "[PATCH v9 10/10] jails/instances/lab-mail: Spec the
+  Next, Later, and quarantine folders", is the client side. Each
+  client's mbsync names INBOX, Next, Later, Archive, and quarantine,
+  and nothing else. The folder is a message's only state, and notmuch
+  derives the next, later, archived, and quarantined tags from it.
+
+Patch 10 replaces "[PATCH] jails/instances/lab-mail: Sync the Next
+and Later folders" [2]. Once lab-mail syncs every folder it has
+nothing to name, so that patch is superseded and can be dropped.
+
+You make Next, Later, and quarantine on Fastmail. If mail is still in
+lists there, mbsync will keep carrying it like any other folder until
+you delete the folder.
+
+> Some process-mail changes as well:
+>
+> - only process messages tagged with inbox. This is how I can archive
+>   messages and not have them be processed.
+
+The loop already picks only tag:inbox, in oldest_inbox_message() in
+src/lab-process-mail/lab-process-mail. The catch is that mail-tag.sh
+recomputes inbox on every notmuch new, so removing the tag by hand does
+not stick. The next notmuch new puts it back. Archiving only keeps a
+message out if the tag comes from the folder. "[PATCH v2 1/2] notmuch:
+Tag messages under archive/ as archived" [3], from "[PATCH v2 0/2]
+Archive messages that need no answer" [4], does that for the jj maildir:
+a file under archive/ is tagged archived and never inbox. That series is
+still open. Applying it is what makes "archive and it is not processed"
+work today. On lab-mail the same rule becomes the Archive folder, as
+patch 10 above specs.
+
+> - do not act on any messages other than from approved senders. If a
+>   message from a non-approved sender makes it through, move it to
+>   quarantine folder.
+
+Posted as "[PATCH 0/2] Quarantine mail from unapproved senders" [5].
+
+- Patch 1 tags every message under the list's quarantine/ maildir
+  quarantined and keeps it out of the inbox. Moving the file back
+  releases it.
+- Patch 2 checks the sender in the loop, before the agent runs, so
+  the check does not depend on the model. The From must name exactly
+  one address, and that address must match a line of the senders file
+  in full, ignoring case. Any other message is moved into
+  quarantine/, the move is committed and pushed on my bookmark like a
+  reply, you get a "quarantined:" ntfy notice, and the loop goes on.
+  Without a senders file the loop refuses to start.
+
+The packaged senders file lists pat@patmaddox.com and pat@p7x.dev.
+You have also posted once from patmaddox@FreeBSD.org. Should it be
+on the list? Until it is, mail from that address is quarantined.
+
+Two limits. The check reads the From header, so it stops stray mail
+but not a forged From. Stopping that needs lab-mail or Fastmail to
+verify the sender first. And quarantine moves files in the jj
+maildir, since that is what lab-process-mail reads today. Once it
+reads the list from lab-mail, the move becomes an IMAP MOVE, and
+claude@p7x.dev will need the right to move into quarantine.
+
+[1] id:cover.1792256671.git.claude@p7x.dev
+[2] id:0624860e63dfebac51eab175a3d6daa1449ecfc6.1792234320.git.claude@p7x.dev
+[3] id:aebdd150bfe012de3141bbf35f9e0d2524af1412.1791652315.git.claude@p7x.dev
+[4] id:cover.1791652315.git.claude@p7x.dev
+[5] id:cover.1792256705.git.claude@p7x.dev
