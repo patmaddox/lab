@@ -1,0 +1,97 @@
+Message-ID: <4a1fb7614bd1f6be0c296b9ba5078f5ba380b068.1792222732.git.claude@p7x.dev>
+In-Reply-To: <cover.1792222732.git.claude@p7x.dev>
+References: <cover.1792222732.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Subject: [PATCH 1/2] jails/instances/lab-mail: File posts with Sieve, and
+ refuse as Dovecot does
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+Change-Id: pvpzrzlpmwqlqmxquqwmtoqxmsknovso
+Date: Sat, 17 Oct 2026 07:39:12 +0000
+
+Dovecot's LMTP delivers only to INBOX, so the hub needs something to
+put a post into lists. Pigeonhole's Sieve does that and keeps the
+list's address in Delivered-To, where LMTP's detail mailbox would put
+lab-devel+lists@p7x.dev there instead. The spec now names the extra
+package, so the implementation adds no software the spec does not
+mention.
+
+Dovecot opens a mailbox read-only for a login without write rights. A
+STORE or EXPUNGE there answers OK and changes nothing. Only append,
+copy, and move answer NO. The rights section and acceptance step 7
+said all of them fail, which Dovecot does not do, so a correct build
+would fail its own acceptance test.
+---
+change-id: pvpzrzlpmwqlqmxquqwmtoqxmsknovso
+
+ jails/instances/lab-mail/spec.org | 26 +++++++++++++++++---------
+ 1 file changed, 17 insertions(+), 9 deletions(-)
+
+diff --git a/jails/instances/lab-mail/spec.org b/jails/instances/lab-mail/spec.org
+index f6b66b50..e36e074e 100644
+--- a/jails/instances/lab-mail/spec.org
++++ b/jails/instances/lab-mail/spec.org
+@@ -43,9 +43,11 @@ follows from these rules, and the README states them first.
+   one already there.
+ - Anyone may read the list over IMAP. Any user name logs in with any
+   password, and that login may list, fetch, search, and IDLE, and
+-  nothing else. Dovecot's ACL rejects its attempts to set flags,
+-  append, copy into a mailbox, move, or expunge, so it cannot archive
+-  or delete a message, and it cannot mark one read for anyone else.
++  nothing else. Dovecot's ACL opens every mailbox read-only for it:
++  its attempts to set flags or expunge change nothing, and its
++  attempts to append, copy into a mailbox, or move fail. So it cannot
++  archive or delete a message, and it cannot mark one read for anyone
++  else.
+ - IMAP has no anonymous mode, so an agent logs in as its own address,
+   such as =claude@p7x.dev=, with any password.
+ - Two logins may change the list: =pat@p7x.dev= and =mbsync=. Each
+@@ -123,8 +125,9 @@ posting:
+   names =lab-devel@p7x.dev= on every message, and a Bcc leaves no
+   trace.
+ - OpenSMTPD hands each message for the list to Dovecot over LMTP, on
+-  a unix socket inside the jail, and Dovecot files it into =lists=.
+-  OpenSMTPD never opens the maildir.
++  a unix socket inside the jail. A Sieve script files it into =lists=,
++  since LMTP alone delivers only to INBOX. OpenSMTPD never opens the
++  maildir.
+ - OpenSMTPD answers the client's DATA once the message is in its
+   queue. A delivery that fails is retried from the queue, so a message
+   posted while Dovecot is stopped lands when Dovecot is back. A
+@@ -132,8 +135,9 @@ posting:
+   discarded like any other mail to a known address.
+ 
+ reading:
+-- Software: Dovecot (mail/dovecot) for IMAP and LMTP, and isync
+-  (mail/isync) for mbsync.
++- Software: Dovecot (mail/dovecot) for IMAP and LMTP, Pigeonhole
++  (mail/dovecot-pigeonhole) for Sieve, and isync (mail/isync) for
++  mbsync.
+ - Dovecot is the only program that writes the list. Every change to
+   it, a posted message, a sync from Fastmail, or a move or deletion by
+   Pat, goes through Dovecot, as Dovecot's user.
+@@ -276,8 +280,8 @@ beastie.
+ 6. A message with no Message-ID is refused at the end of DATA. msmtp
+    exits non-zero and nothing lands on the list.
+ 7. Logged in as =claude@p7x.dev=, an IMAP STORE of =\Deleted=
+-   followed by EXPUNGE on =lists= fails, and so does a MOVE to
+-   =Archive=. The message stays in place.
++   followed by EXPUNGE on =lists= changes nothing, and a MOVE to
++   =Archive= fails. The message stays in place, its flags unchanged.
+ 8. A login as =pat@p7x.dev= with a wrong password fails.
+ 9. On beastie, Pat archives a message in Emacs. After the next syncs,
+    it is in =Archive= and not in =lists= on lab-mail, it is in
+@@ -421,6 +425,10 @@ why.
+ - Dovecot, not Cyrus or Courier. Each of those brings its own mail
+   store and admin model, where Dovecot serves a plain maildir and
+   takes LMTP.
++- A Sieve script files a posted message into =lists=, not LMTP's
++  detail mailbox. With =lmtp_save_to_detail_mailbox=, OpenSMTPD would
++  have to rewrite the recipient to =lab-devel+lists@p7x.dev=, and
++  Delivered-To would name that address, not the list's.
+ - IMAP over loopback, not a nullfs-mounted maildir. A mount ties
+   every client to beastie's filesystem. A loopback bind is cheap to
+   change into an external address later.
+-- 
+2.56.0
+

@@ -1,0 +1,97 @@
+Message-ID: <cover.1792222732.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Subject: [PATCH 0/2] jails/instances/lab-mail: Build the list's mail hub
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+Date: Sat, 17 Oct 2026 07:39:11 +0000
+
+This builds the hub that "[PATCH v2] jails/instances/lab-mail: Spec
+the list's mail hub" [1] describes, now on b/dev. It turns the relay
+jail into the list's home: OpenSMTPD takes posts, Dovecot holds and
+serves the list, and mbsync keeps it in sync with Fastmail.
+
+Patch 1 revises the spec on two points that turned up while building
+it. LMTP alone files only into INBOX, so a Sieve script from Pigeonhole
+puts each post into lists. And Dovecot answers OK to a reader's STORE
+and EXPUNGE without changing anything, rather than refusing them, so
+the rights section and acceptance step 7 now say so.
+
+Patch 2 is the implementation.
+
+What I tested, in a rootless Dovecot 2.3.21 run from the FreeBSD
+packages the jail installs, with ports and paths moved under /tmp:
+- OpenSMTPD's own mail.lmtp delivers a post into lists, with
+  Return-Path and Delivered-To: lab-devel@p7x.dev added and nothing
+  else changed.
+- A reader login with any password gets rights "lr". SELECT opens
+  lists read-only, STORE and EXPUNGE change nothing, and MOVE and
+  APPEND answer NO.
+- pat@p7x.dev and mbsync log in only with their imap-users password,
+  in any case. Each gets "lrwstie", and Pat's MOVE to Archive works.
+- The sync config against a maildir standing in for Fastmail: posts
+  and Fastmail mail cross both ways, an archived message reaches
+  Archive on the far side and is only marked \Deleted in its lists,
+  and a quiet run logs nothing.
+- The import of a jj maildir copy as Pat, as README.org gives it.
+- check-message against fake filter sessions: a good message, no
+  Message-ID, two From fields, a header with no empty line after it,
+  an mbox "From " line, and a leading continuation line. Only the good
+  message and a folded Subject pass.
+- smtpd -n accepts smtpd.conf, and doveconf -n accepts dovecot.conf.
+
+What I could not test: smtpd itself needs root, so the recipient
+sorting, the discard action, and the filter wiring are checked only
+for syntax. The same goes for the check script and the jail build.
+Steps 1 to 6 and 11 to 13 of the acceptance test cover them.
+
+The clients on beastie and lab-claude are not in this series. Moving
+them to the hub retires the jj maildir that lab-process-mail runs on,
+and the spec leaves its new loop to a spec of its own. So the hub can
+be built and checked now while nothing else changes.
+
+[1] id:5639615da525ce2f1e7711da05d3de5ad63511a2.1792219807.git.claude@p7x.dev
+
+base-branch: b/dev@upstream
+
+claude (2):
+  jails/instances/lab-mail: File posts with Sieve, and refuse as Dovecot
+    does
+  jails/instances/lab-mail: Carry the list instead of relaying it
+
+ jails/instances/lab-mail/README.org           | 260 ++++++++++++------
+ jails/instances/lab-mail/dist.mtree           |  11 +-
+ .../lab-mail/dist/etc/cron.d/lab-mail         |   6 +-
+ .../dist/etc/newsyslog.conf.d/lab-mail.conf   |   4 +-
+ .../lab-mail/dist/etc/rc.conf.d/smtpd         |   1 +
+ .../lab-mail/dist/etc/rc.conf.d/smtprelay     |   4 -
+ .../lab-mail/dist/etc/syslog.d/lab-mail.conf  |   8 +-
+ .../dist/usr/local/etc/dovecot/dovecot-acl    |   8 +
+ .../dist/usr/local/etc/dovecot/dovecot.conf   |  66 ++++-
+ .../dist/usr/local/etc/dovecot/lists.sieve    |   4 +
+ .../dist/usr/local/etc/mail/smtpd.conf        |  33 +++
+ .../lab-mail/dist/usr/local/etc/mbsyncrc      |  36 ++-
+ .../dist/usr/local/etc/smtprelay/remotes.env  |  19 --
+ .../usr/local/etc/smtprelay/smtprelay.ini     |  20 --
+ .../dist/usr/local/libexec/lab-mail/check     |  82 ++++--
+ .../usr/local/libexec/lab-mail/check-message  | 127 +++++++++
+ .../dist/usr/local/libexec/lab-mail/fetch     |  39 ---
+ .../dist/usr/local/libexec/lab-mail/sync      |  35 +++
+ jails/instances/lab-mail/instance.conf        |  17 +-
+ jails/instances/lab-mail/jail.conf            |   7 +-
+ jails/instances/lab-mail/spec.org             |  26 +-
+ 21 files changed, 571 insertions(+), 242 deletions(-)
+ create mode 100644 jails/instances/lab-mail/dist/etc/rc.conf.d/smtpd
+ delete mode 100644 jails/instances/lab-mail/dist/etc/rc.conf.d/smtprelay
+ create mode 100644 jails/instances/lab-mail/dist/usr/local/etc/dovecot/lists.sieve
+ create mode 100644 jails/instances/lab-mail/dist/usr/local/etc/mail/smtpd.conf
+ delete mode 100644 jails/instances/lab-mail/dist/usr/local/etc/smtprelay/remotes.env
+ delete mode 100644 jails/instances/lab-mail/dist/usr/local/etc/smtprelay/smtprelay.ini
+ create mode 100755 jails/instances/lab-mail/dist/usr/local/libexec/lab-mail/check-message
+ delete mode 100755 jails/instances/lab-mail/dist/usr/local/libexec/lab-mail/fetch
+ create mode 100755 jails/instances/lab-mail/dist/usr/local/libexec/lab-mail/sync
+
+
+base-commit: f6ba757868b6e16efee8bfb3882dc3339ef9fb69
+-- 
+2.56.0
+
