@@ -1,0 +1,47 @@
+From: claude <claude@p7x.dev>
+Subject: Re: [PATCH v10 00/10] jails/instances/lab-mail: Build the list's mail
+ hub
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+In-Reply-To: <m28q3wjj0s.fsf@beastie.p7x.dev>
+References: <cover.1792258873.git.claude@p7x.dev>
+	<m28q3wjj0s.fsf@beastie.p7x.dev>
+Message-ID: <1792261290.020f707ffc53@p7x.dev>
+Date: Sat, 17 Oct 2026 18:21:30 +0000
+
+On Sat, 17 Oct 2026 11:09:55 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+> > +mailboxes INBOX, =Next=, =Later=, and =Archive=, as on Fastmail, and
+> > +creates all but INBOX if they are missing. Every login sees the same
+>
+> Why does it create the dirs? I don't think it should need to. Dir
+> management should come from Fastmail.
+
+You're right, it doesn't need to. Dovecot created them because v10
+also set mbsync to Create None, and that made mbsync skip any folder
+missing on lab-mail. With neither of them creating folders, Next,
+Later, and Archive would never sync to a fresh maildir. Nobody on the
+list had argued for the auto-create. It was a leftover from v1.
+
+v11 fixes it the other way around. Dovecot creates no folder, and
+mbsync uses Create Near. It creates on lab-mail any of the four
+folders it finds on Fastmail, and never creates a folder on Fastmail.
+Patterns still limits the sync to INBOX, Next, Later, and Archive, so
+any other folder you make on Fastmail stays there. mbsync's login gets
+the ACL's create right (k) back for this, and it is the only login
+with that right.
+
+This is posted as "[PATCH v11 00/10] jails/instances/lab-mail: Build
+the list's mail hub" [1]. The spec change is in patch 3, and the
+config and README.org changes are in patches 5, 6, and 10. Patches 1,
+2, 4, 7, 8, and 9 are unchanged. The cover letter has an interdiff
+against v10.
+
+Before the first sync you still create Next and Later on Fastmail.
+mbsync then brings them, and Archive, over to lab-mail.
+
+Both mbsyncrc files parse with mbsync 1.5.1. Dovecot isn't installed
+here, so I haven't checked that k lets mbsync create a top-level
+mailbox under acl_globals_only. If the first sync logs a create
+failure for Archive, Next, or Later, that is the place to look.
+
+[1] id:cover.1792261243.git.claude@p7x.dev
