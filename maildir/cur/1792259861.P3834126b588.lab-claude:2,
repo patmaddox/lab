@@ -1,0 +1,135 @@
+From: claude <claude@p7x.dev>
+Subject: Re: [PATCH v10 00/10] jails/instances/lab-mail: Build the list's mail
+ hub
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+In-Reply-To: <m2mrscjjsn.fsf@beastie.p7x.dev>
+References: <cover.1792258873.git.claude@p7x.dev>
+	<m2mrscjjsn.fsf@beastie.p7x.dev>
+Message-ID: <1792259842.2a798c0d8252@p7x.dev>
+Date: Sat, 17 Oct 2026 17:57:41 +0000
+
+On Sat, 17 Oct 2026 10:53:12 -0700, Pat Maddox wrote:
+
+> I want to take a step back. No new patches this round. Just rethinking
+> the design.
+
+Understood. No patches with this reply. The short answer: Dovecot and
+OpenSMTPD each earn their place, and LMTP is the one we could drop.
+OpenSMTPD's maildir delivery would replace it at little cost.
+
+> Basically I want to know what value each component brings.
+
+Dovecot is the store and the IMAP server. It is the only part that
+enforces the rights: any login may read, only pat@p7x.dev and mbsync
+may change anything. Every host syncs from it, and mbsync syncs it
+with Fastmail. Nothing else in the design can do that, so it stays
+whatever we decide below.
+
+OpenSMTPD is the front door. It is where the posting rules live, in
+the SMTP session, while the client is still connected:
+
+- It sorts each RCPT TO. The list's addresses are delivered, the known
+  addresses (pat@p7x.dev, pat@patmaddox.com, claude@p7x.dev) are
+  accepted and discarded, and anything else gets a 5xx. That is what
+  makes a reply to all land once, with To and Cc intact, and makes a
+  typo fail at the client instead of vanishing.
+- It refuses a header it cannot parse before it answers DATA, and
+  adds a missing Message-ID and Date.
+- It speaks plain SMTP on 2525, which is what msmtp, git send-email,
+  and any mail client speak by default.
+- It logs each session in smtpd.log, so a refused post can be traced.
+
+mbsync is the only part that talks to Fastmail and the only holder of
+the Fastmail credentials.
+
+LMTP is not a component of its own. It is how OpenSMTPD hands a
+message to Dovecot. All it buys us is the rule that Dovecot is the
+only program that writes the maildir.
+
+> Do we need OpenSMTPD here? If LMTP can deliver messages directly - can
+> we call it directly, and take OpenSMTPD out of the mix?
+
+We could. msmtp supports "protocol lmtp", and Dovecot can listen for
+LMTP on 127.0.0.1 as well as on its socket. But what we would lose is
+the posting rules above, and putting them back costs more than
+OpenSMTPD does:
+
+- Dovecot's LMTP delivers to whatever user its userdb names, and ours
+  accepts every user. To refuse unknown addresses we would need a
+  userdb that lists each address. To discard the known addresses we
+  would need Sieve (mail/dovecot-pigeonhole), a new dependency, and
+  you said Sieve is outside this spec.
+- Dovecot does not refuse a malformed header. It stores whatever it
+  is given. msmtp adds a missing Date and Message-ID, but other
+  clients may not.
+- git send-email speaks SMTP only, so it would have to go through
+  msmtp. It does today, but that becomes a requirement rather than a
+  choice.
+- LMTP is meant for an MTA talking to the store it trusts. Opening it
+  on loopback lets every jail on beastie talk straight to the store
+  with no policy in between.
+
+We would also lose the queue, but that one does not matter much.
+With LMTP called directly, a post while Dovecot is down fails at the
+client, which arguably beats a 250 followed by a delayed delivery.
+
+> Or should we treat LMTP as basically an optimization, but the initial
+> SMTP server should be full featured.
+
+That is close to the current design, with one change of words. The
+SMTP server is where all the policy lives, and LMTP is only the last
+hop into the store. "Full featured" should mean the policy above,
+though, not a full MTA. Relaying, outside mail, auth, and TLS are all
+out of scope, which is why the spec chose OpenSMTPD over Postfix.
+
+> Also doesn't OpenSMTPD have local delivery? Why can't it just deliver
+> straight to maildir?
+
+It can, and having looked again, the reason we gave does not hold for
+it. smtpd.conf would say
+
+    action "list" maildir "/data/mail/maildir/INBOX" virtual <to-vmail>
+
+The spec's case for "Dovecot as the only writer" is about three
+writers running as three users. mbsync creates files 0600 and folders
+0700, renames and unlinks need write on each folder, and each writer
+keeps its own record of the files. That holds for mbsync, and keeping
+mbsync on IMAP is still right. It does not hold for OpenSMTPD:
+
+- Its delivery already runs as vmail, Dovecot's own user, so there is
+  no permission problem.
+- It only ever adds a file, through tmp/ into INBOX/new/, which is the
+  case maildir was designed for. It never renames or removes.
+- Dovecot treats a new file in new/ as new mail. It picks it up on
+  its next look at the folder and gives it a UID.
+
+What we would gain:
+
+- One fewer protocol. Dovecot drops "lmtp" from protocols, the LMTP
+  service and its socket go, and lmtp_add_received_header goes too.
+- A post no longer depends on Dovecot running. Step 11 of the
+  acceptance test, a post while Dovecot is stopped, becomes true at
+  once instead of after a retry from the queue.
+
+What we would give up, all small:
+
+- The rule shrinks from "only Dovecot writes the list" to "only
+  Dovecot changes or removes a message; OpenSMTPD only adds new ones
+  to INBOX".
+- Return-Path and Delivered-To would come from OpenSMTPD instead of
+  Dovecot. I expect it to write both, but I have not checked that
+  Delivered-To names the list address with the virtual mapping. That
+  has to be verified on a jail.
+- An IDLE client may see a new post a little later than it would with
+  LMTP, since Dovecot learns of it from the filesystem rather than at
+  delivery. Polling clients and the one-minute sync see no difference.
+
+My recommendation is to keep OpenSMTPD and switch its delivery from
+LMTP to maildir. It is a small change on top of v10. "[PATCH v10 07/10]
+jails/instances/lab-mail: Take posts with OpenSMTPD" [1] loses its
+LMTP half, and the spec's "only writer" paragraph gets rewritten. If
+you agree, I will send it as v11 with the spec change in the same
+series.
+
+[1] id:51a8cc9219c37519a47ac37deeb75b96c59045b0.1792258873.git.claude@p7x.dev
