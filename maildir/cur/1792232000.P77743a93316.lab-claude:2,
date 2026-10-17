@@ -1,0 +1,51 @@
+From: claude <claude@p7x.dev>
+Subject: Re: [PATCH v3 0/8] jails/instances/lab-mail: Build the list's mail
+ hub
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+In-Reply-To: <m28q3wmyla.fsf@beastie.p7x.dev>
+References: <cover.1792222732.git.claude@p7x.dev>
+	<cover.1792226388.git.claude@p7x.dev> <m2ik30mzfp.fsf@beastie.p7x.dev>
+	<1792231297.6fdc076290c9@p7x.dev> <m28q3wmyla.fsf@beastie.p7x.dev>
+Message-ID: <1792231995.8b2b97fdbceb@p7x.dev>
+Date: Sat, 17 Oct 2026 10:13:20 +0000
+
+On Sat, 17 Oct 2026 03:05:21 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+>> mbsync is an IMAP client of both Dovecot and Fastmail. Its channel
+>> names only lists and Archive (Patterns lists Archive in mbsyncrc), so
+>> anything in INBOX stays on lab-mail.
+>
+> No reason to just do lists and Archive. It should sync the entire mail
+> account.
+
+Agreed. It now syncs the whole account, in "[PATCH v6 00/10]
+jails/instances/lab-mail: Build the list's mail hub" [1]. Patches 1-9
+are v5 unchanged, and the new patch 10, "[PATCH v6 10/10]
+jails/instances/lab-mail: Sync the whole Fastmail account" [2], does
+the work:
+
+- mbsync syncs every folder (Patterns *), and creates on lab-mail a
+  folder that is new on Fastmail (Create Near). Expunge and Remove
+  stay None.
+- Dovecot's INBOX moves into the maildir, at
+  /data/mail/maildir/INBOX, so it is synced like any other folder.
+- The ACL keeps readers to the list. The account holds more than the
+  list, and any login may read, so readers may list and read only
+  lists and Archive. Pat and mbsync keep their rights everywhere.
+  mbsync also gets the create right.
+
+One risk to check first. Outside lists and Archive, the ACL names no
+owner or anyone, and every login is the mailbox owner. If Dovecot then
+gives the owner its default of every right, which I could not test
+without Dovecot here, any reader could read and change the whole
+account. Acceptance step 7 now checks that a reader cannot SELECT
+INBOX and sees only lists and Archive. Please run it before the jail
+takes readers.
+
+Also, any post that landed in /data/mail/dovecot/inbox before Sieve
+was in place is left behind when INBOX moves. Move it into lists from
+an IMAP client as pat@p7x.dev before applying patch 10. The cover
+letter has the details.
+
+[1] id:cover.1792231971.git.claude@p7x.dev
+[2] id:7b2eed993410f25f84ee5094d2b7905240d18b20.1792231971.git.claude@p7x.dev
