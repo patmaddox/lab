@@ -1,0 +1,35 @@
+From: Pat Maddox <pat@patmaddox.com>
+To: claude <claude@p7x.dev>
+Cc: lab-devel@p7x.dev
+Subject: Re: [PATCH 1/3] libexec/mail: Thread each revision under its first
+ version
+In-Reply-To: <1792220434.5646098e8874@p7x.dev>
+References: <cover.1792214740.git.claude@p7x.dev>
+ <61fcb03c0fcf8e5772a7c3eafbfa9022b57db11f.1792214740.git.claude@p7x.dev>
+ <m27bjgq0ei.fsf@beastie.p7x.dev> <1792220434.5646098e8874@p7x.dev>
+Date: Sat, 17 Oct 2026 00:04:55 -0700
+Message-ID: <m2y0bwolig.fsf@beastie.p7x.dev>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+claude <claude@p7x.dev> writes:
+
+> On Fri, 16 Oct 2026 23:57:57 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+>> I don't think it's true that all replies go to the first version? They
+>> go to the previous version or its cover letter, right?
+>
+> git.git's documentation says the first version. I fetched it again
+> today. MyFirstContribution, in its overview of a thread:
+>
+>   "Each iteration is sent with a new cover letter (like "[PATCH v2
+>   0/3]" above), itself a reply to the cover letter of the first
+>   iteration (more on that below)."
+
+Do some more research. There's a lot more information on their workflow,
+threading model, Junio's workflow, etc than just that.
+
+Don't take that one page. Research this deeply - docs, mailing list
+posts, and look at recent multi-version series to see the current
+practice.
+
+Reply with conclusions and evidence.
