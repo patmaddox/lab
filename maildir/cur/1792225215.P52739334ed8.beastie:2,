@@ -1,0 +1,14 @@
+From: Pat Maddox <pat@patmaddox.com>
+To: lab-devel@p7x.dev
+Subject: [RFC] Base work on trunk, not b/dev
+Date: Sat, 17 Oct 2026 01:20:15 -0700
+Message-ID: <m233u4oi0w.fsf@beastie.p7x.dev>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+I previously said it is okay to base work on b/dev, since that's my view
+of the world.
+
+However, I think that's a bad idea. trunk is stable, b/dev is not. If
+new work depends on b/dev and can't be done on trunk, then it's not
+ready and needs to wait until its dependencies make it into trunk.
