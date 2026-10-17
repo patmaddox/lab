@@ -1,0 +1,132 @@
+From: claude <claude@p7x.dev>
+Subject: Re: [RFC] re-thinking SMTP relay
+To: Pat Maddox <pat@patmaddox.com>, lab-devel@p7x.dev
+In-Reply-To: <m2cxt9vyub.fsf@beastie.p7x.dev>
+References: <m2mrsdz1n0.fsf@beastie.p7x.dev>
+	<1792193020.cee32e2b1dec@p7x.dev> <m2cxt9vyub.fsf@beastie.p7x.dev>
+Message-ID: <1792204889.a8a37790f517@p7x.dev>
+Date: Sat, 17 Oct 2026 02:41:34 +0000
+
+On Fri, 16 Oct 2026 19:35:08 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+> Which makes me wonder - is it possible to simplify even the patch
+> creation, by using git-format-patch(1) and then writing additional
+> information into it? Maybe that's what it already does, I'm not sure.
+
+That is what it already does. format-patch.sh runs git format-patch
+with every argument you give it, then makes one awk pass over each file
+it wrote. That pass adds the commit's change id twice: as a Change-Id
+header, and as a "change-id:" line under the "---". Everything else
+comes from git itself: base-commit, the cover letter, -v N, threading,
+and the interdiff.
+
+I need to correct my last message there. I said the wrapper adds the
+interdiff and that plain git format-patch cannot. That is wrong. git
+format-patch --interdiff=<rev> writes it. The wrapper's only part in
+it, in my unmerged "libexec/mail: Refuse a reroll without an
+interdiff", is to rebuild the previous version from the list so git
+has a <rev> to compare against.
+
+The change id is the one thing git cannot add on its own.
+--add-header puts the same header on every patch, and git does not
+copy jj's change-id commit header into the patch. So the wrapper is
+already as small as it can be. I recommend keeping it as is.
+
+> Also the tool should enforce that the input is a correctly formatted
+> email, i.e. not try to inject something other than email messages.
+
+Done in "[PATCH 0/2] libexec/mail: Deliver only mail messages" [1].
+maildir-deliver.sh is the program git send-email would call, and it
+now refuses input that is not a message. That means malformed headers,
+no empty line after them, or anything other than exactly one From,
+Subject, and Message-ID. A refused message never reaches the maildir.
+All 30 recent list messages I tried still pass, and so does a git
+format-patch series. The first patch fixes the patch-triage skill,
+which composed its report without a From or a Message-ID.
+
+Under your lab-mail design below, agents would hand mail to lab-mail
+over SMTP, so they could not get around a check in their own jail.
+[inference, from smtpd.conf(5)] OpenSMTPD can run the same script as
+its delivery agent ("action ... mda"), so the check and the
+delivery-time Date stamp both move to lab-mail unchanged.
+
+> Frankly though I don't think I need moderation to begin with. I can
+> always delete messages from the maildir manually, and change to a
+> moderation approach if need be.
+
+Agreed. Moderation through INBOX is cheap to add later. The delivery
+action would name a different folder, and accepting a message would
+mean moving it.
+
+One thing to know before relying on deletion: with Expunge None, which
+you accepted for mbsync, deleting a message on your side leaves
+Fastmail's copy in place. [inference] mbsync keeps track of what it
+has already synced, so it will not copy the message back to you. But
+the list on Fastmail and the list on lab-mail will differ until
+Expunge is turned on.
+
+> I think lab-mail is still a necessary part of this infrastructure, but
+> maybe there's something I'm overlooking. Something still needs to sync
+> mail with fastmail, and serve mail to local hosts.
+
+You are right, and I was the one overlooking something. I had
+pictured mbsync running on beastie alone, but the agent hosts need a
+server to sync with too. Making lab-mail the hub means every host
+works the same way and only permissions differ. That is better than
+what I proposed.
+
+Three things change as a result.
+
+1. The lab-mail spec on trunk says the opposite in three places. It
+   rejects queuing MTAs and names OpenSMTPD. It makes mbsync pull-only
+   and the local maildir append-only. And it makes Dovecot read-only
+   for every login. Your design needs a two-way sync with Fastmail, a
+   server that delivers into the synced maildir, and Dovecot logins
+   with different rights: agents read-only, so they still cannot
+   delete list mail, and you read-write, so you can moderate by
+   deleting. I would revise spec.org in place, alternatives included,
+   instead of writing a second spec next to it.
+
+2. Mail you send to people outside the list. Today smtprelay relays it
+   to Fastmail. Under the hub, OpenSMTPD would deliver list mail
+   locally. Your outside mail still has to go out through Fastmail,
+   and there are two ways to do that:
+
+   a. OpenSMTPD relays it too, through Fastmail with the stored
+      login, and only for your authenticated login. Agents can send
+      only to the list. That is one server instead of two. The cost is
+      the queue the spec rejected: a rejection by Fastmail arrives
+      later as a bounce instead of an error at send time.
+   b. Keep smtprelay for outside mail beside OpenSMTPD for the list.
+      Failures stay in your session, but there are two servers and
+      two ports to configure.
+
+   I recommend (a). Outside mail is only yours, and a bounce goes to
+   you, so you would see it.
+
+3. Agent replies go to you and the list, since every pass replies to
+   all. If OpenSMTPD writes one copy per recipient into the same
+   maildir, each reply lands twice. If it rejects your address
+   instead, git send-email fails the whole message. Two fixes:
+
+   a. Accept every recipient from agents and map them all to the one
+      list mailbox. [inference] OpenSMTPD should then write a single
+      copy, but I have not checked that yet. The spec's acceptance
+      tests would.
+   b. Agents address only the list. You read the list anyway, so you
+      lose nothing, but prompt.md's reply-to-all goes.
+
+   I recommend (a) if the test confirms one copy, and (b) if not.
+
+Status: posted "[PATCH 0/2] libexec/mail: Deliver only mail messages"
+[1]. No spec yet, because the two questions below change what it says.
+
+Asks:
+- Point 2: should OpenSMTPD relay your outside mail (a), or should
+  smtprelay keep doing it (b)?
+- Point 3: may agents keep replying to all, with lab-mail delivering
+  one copy (a), or should they address only the list (b)?
+Once you answer, I will revise jails/instances/lab-mail/spec.org for
+the hub, covering OpenSMTPD, two-way mbsync, the Dovecot rights, and
+the git send-email change.
+
+[1] id:cover.1792204830.git.claude@p7x.dev
