@@ -1,0 +1,110 @@
+From: claude <claude@p7x.dev>
+Subject: Re: [RFC] lab-process-mail daemon
+To: Pat Maddox <pat@patmaddox.com>, lab-devel@p7x.dev
+In-Reply-To: <m2qzhpujjd.fsf@beastie.p7x.dev>
+References: <m2y0bxvzry.fsf@beastie.p7x.dev>
+	<1792203947.8749806b660e@p7x.dev> <m2qzhpujjd.fsf@beastie.p7x.dev>
+Message-ID: <1792206085.948ac615b248@p7x.dev>
+Date: Sat, 17 Oct 2026 03:01:32 +0000
+
+On Fri, 16 Oct 2026 19:51:02 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+> lab-process-maild - the convention for a tool like this is a d suffix.
+>
+> and drop the src/ prefix for stuff like this, it's dir organization, not
+> useful information in the subject prefix.
+
+Done in "[PATCH v2 0/2] lab-process-mail: Add lab-process-maild" [1].
+Both patches use "lab-process-mail: " as the prefix.
+
+CLAUDE.md still says the area matches the subdirectory, which is how
+src/ got there. I would change it to say the area names the component,
+less organizing directories such as src/. Say so and I will send it.
+
+>> lab-process-mail, sleeps LAB_PROCESS_MAIL_INTERVAL seconds (300 by
+>> default), and runs it again.
+>
+> 60 second default
+
+Done. The variable is now LAB_PROCESS_MAILD_INTERVAL, to match the
+daemon's name.
+
+> I think this needs to change. That's the tool trying to be a daemon. Now
+> that we have a daemon in place, it doesn't need an internal loop. It
+> looks for new input, processes it, and exits.
+
+Patch 2 does this. lab-process-mail fetches, answers the oldest
+message, and exits; with an empty inbox it exits 0 having done
+nothing. The daemon runs it again at once while the inbox still has
+mail, by asking notmuch, and sleeps only once it is empty, so a batch
+is still answered back to back.
+
+This fits the batch idea in "[RFC] processing the entire inbox at
+once" [2] too: if one run takes a batch instead of one message, the
+daemon does not change.
+
+> This gets installed as a package, right? So I should be able to:
+>
+>     lab-process-maild start
+>
+> or stop of course.
+
+Yes. It ships in the lab-process-mail package beside lab-process-mail,
+so just install puts it in ~/local/bin. It takes start, stop, and
+status. start runs it under daemon(8) for you. stop lets the pass in
+progress finish and then exits, so a reply is never left half sent.
+The tests drive the real daemon(8) through start, status, and stop.
+
+> Also I'm inclined to have it clear the env. So there should be a
+> ~etc/lab-process-maild.conf that lets me set up the env... hopefully it
+> can do that.
+
+It can. start keeps only HOME, USER, LOGNAME, and a PATH that begins
+with the package's bin/. The conf is sh, and every variable it sets is
+exported to lab-process-mail, so yours would be something like:
+
+    LAB_BASE_BRANCH='b/dev@upstream'
+    NOTIFY_URL='https://ntfy.sh/your-topic'
+
+If claude needs anything else from your environment to log in, such as
+ANTHROPIC_API_KEY, it goes in the conf too.
+
+> I want to make the files to go ~/log/ and ~/var/run/ - not sure if
+> that's possible. That might need to be part of config. I think package
+> manifests have LOCALBASE or root base... though it would be cool if it
+> worked in both root and user cases without a config file.
+
+It works for both without a config file. The package keeps its prefix
+of /, so pkg -r decides the root, and the daemon finds that root as the
+parent of its own bin/, the same way lab-process-mail finds its prompt.
+Under that root it uses:
+
+    etc/lab-process-maild.conf
+    var/log/lab-process-maild.log
+    var/run/lab-process-maild.pid
+
+With just install the root is ~/local, so the files are
+~/local/etc/lab-process-maild.conf, ~/local/var/log/, and
+~/local/var/run/. A system install puts them in /etc, /var/log, and
+/var/run. That is not quite ~/log and ~/var/run. Getting those exactly
+would mean installing with pkg -r ~ instead of ~/local, or a setting
+in the conf for the two paths. I kept it to the root so there is
+nothing to configure; tell me if you want ~/log as written.
+
+The log is opened with daemon -H, so newsyslog can rotate it.
+
+> File a bug report to the list e.g. [BUG] lab-process-mail gets stuck
+>
+> Describe the condition, diagnosis, and possible fixes.
+
+Filed as "[BUG] lab-process-mail gets stuck" [3]. While writing it I
+found a second silent failure. When claude itself exits non-zero, for
+example on a usage limit, set -e ends lab-process-mail before the
+inbox check, so no stuck notice goes out either. The report weighs
+four fixes. I recommend distinct exit statuses, so the daemon retries
+a transient failure and still stops on a stuck message, together with
+a notice on every failure. Until one of those lands, the daemon stops
+on any failure, as v1 did.
+
+[1] id:cover.1792205997.git.claude@p7x.dev
+[2] id:m2tsmlvzo7.fsf@beastie.p7x.dev
+[3] id:1792206019.c7310968cbe0@p7x.dev
