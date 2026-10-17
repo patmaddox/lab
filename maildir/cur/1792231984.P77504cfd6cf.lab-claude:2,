@@ -1,0 +1,58 @@
+Message-ID: <1126d2a747e4f54d197896c16876c415e4bbb089.1792231971.git.claude@p7x.dev>
+In-Reply-To: <cover.1792231971.git.claude@p7x.dev>
+References: <cover.1792231971.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Subject: [PATCH v6 01/10] jails/instances/lab-mail: Say what Dovecot does to a
+ reader's write
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab-devel@p7x.dev
+Change-Id: pvpzrzlpmwqlqmxquqwmtoqxmsknovso
+Date: Sat, 17 Oct 2026 10:13:04 +0000
+
+Dovecot opens a mailbox read-only for a login without write rights,
+and answers OK to a STORE or EXPUNGE there without changing anything.
+The spec said those fail, so a correct build would fail its own
+acceptance test.
+
+- The rights section says flags and expunges change nothing, and
+  append, copy, and move fail.
+- Acceptance step 7 expects the same.
+---
+change-id: pvpzrzlpmwqlqmxquqwmtoqxmsknovso
+
+ jails/instances/lab-mail/spec.org | 12 +++++++-----
+ 1 file changed, 7 insertions(+), 5 deletions(-)
+
+diff --git a/jails/instances/lab-mail/spec.org b/jails/instances/lab-mail/spec.org
+index f6b66b50..4ae772d0 100644
+--- a/jails/instances/lab-mail/spec.org
++++ b/jails/instances/lab-mail/spec.org
+@@ -43,9 +43,11 @@ follows from these rules, and the README states them first.
+   one already there.
+ - Anyone may read the list over IMAP. Any user name logs in with any
+   password, and that login may list, fetch, search, and IDLE, and
+-  nothing else. Dovecot's ACL rejects its attempts to set flags,
+-  append, copy into a mailbox, move, or expunge, so it cannot archive
+-  or delete a message, and it cannot mark one read for anyone else.
++  nothing else. Dovecot's ACL opens every mailbox read-only for it:
++  its attempts to set flags or expunge change nothing, and its
++  attempts to append, copy into a mailbox, or move fail. So it cannot
++  archive or delete a message, and it cannot mark one read for anyone
++  else.
+ - IMAP has no anonymous mode, so an agent logs in as its own address,
+   such as =claude@p7x.dev=, with any password.
+ - Two logins may change the list: =pat@p7x.dev= and =mbsync=. Each
+@@ -276,8 +278,8 @@ beastie.
+ 6. A message with no Message-ID is refused at the end of DATA. msmtp
+    exits non-zero and nothing lands on the list.
+ 7. Logged in as =claude@p7x.dev=, an IMAP STORE of =\Deleted=
+-   followed by EXPUNGE on =lists= fails, and so does a MOVE to
+-   =Archive=. The message stays in place.
++   followed by EXPUNGE on =lists= changes nothing, and a MOVE to
++   =Archive= fails. The message stays in place, its flags unchanged.
+ 8. A login as =pat@p7x.dev= with a wrong password fails.
+ 9. On beastie, Pat archives a message in Emacs. After the next syncs,
+    it is in =Archive= and not in =lists= on lab-mail, it is in
+-- 
+2.56.0
+
