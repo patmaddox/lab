@@ -1,0 +1,70 @@
+From: claude <claude@p7x.dev>
+Subject: Re: [RFC] threading strategies for RFC and patch versions
+To: Pat Maddox <pat@patmaddox.com>, lab-devel@p7x.dev
+In-Reply-To: <m2bj8sq0nw.fsf@beastie.p7x.dev>
+References: <m2a4odz1dp.fsf@beastie.p7x.dev>
+	<1792195756.4ee05afd82df@p7x.dev> <m25wz0uczk.fsf@beastie.p7x.dev>
+	<1792214779.6c95ccbf79f6@p7x.dev> <m28q3wsxgp.fsf@beastie.p7x.dev>
+	<1792215853.b361960de548@p7x.dev> <m2o6csri3m.fsf@beastie.p7x.dev>
+	<m2bj8srh82.fsf@beastie.p7x.dev> <1792217512.7b8a6df9383c@p7x.dev>
+	<m27bjgrgxs.fsf@beastie.p7x.dev> <1792217866.20c5294ae04f@p7x.dev>
+	<m233u4rgn3.fsf@beastie.p7x.dev> <1792218197.7b53cb93163f@p7x.dev>
+	<m2bj8sq0nw.fsf@beastie.p7x.dev>
+Message-ID: <1792220146.fdcd0d67134b@p7x.dev>
+Date: Sat, 17 Oct 2026 06:55:51 +0000
+
+On Fri, 16 Oct 2026 23:52:19 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+> However it doesn't seem to be working. I moved the entire .notmuch dir
+> out of the way, and the versions don't seem to be threaded. Here's my
+> "all mail" view:
+
+The rewrite is on the list as it should be. I think your notmuch is
+still reading its old database, and that the directory you moved was
+not the one it uses.
+
+With the config from dotfiles/notmuch, mail_root is set and
+database.path is not. notmuch-config(1), under "DATABASE LOCATION",
+then puts the database in $XDG_DATA_HOME/notmuch/default, which is
+~/.local/share/notmuch/default. It does not use a .notmuch directory
+in the maildir. Here notmuch config get database.path prints
+/home/claude/.local/share/notmuch/default, and that directory holds
+only xapian/. mail.jj's .gitignore still lists maildir/.notmuch, so
+an older database may be left over there on beastie. Moving it does
+not affect the database notmuch actually opens.
+
+Two things point to this. First, your view still shows flagged,
+archive, and draft. Those are tags you set by hand, so a database
+rebuilt without notmuch restore would have lost them. Second, I can
+reproduce your view exactly. I checked out mail@upstream (677f5d133ca3)
+and the commit before the migration into two scratch maildirs:
+
+- A database built fresh from mail@upstream has 105 threads. The
+  signoz port is one 42-message thread, from v1 down to v10.
+- A database built before the migration, then updated with notmuch
+  new after the files changed, has 149 threads. signoz is 11
+  threads, sized 12, 4, 2, 2, 4, 4, 3, 5, 1 and 5 for v1 to v10, the
+  same counts as in your view. You have 148 because your copy
+  predates my reply.
+
+notmuch new skips a file whose name it has already seen, so
+rewriting headers in place never changes threading in an existing
+database. That is why it has to be rebuilt.
+
+To rebuild the one notmuch actually uses, keeping your tags:
+
+    db="$(notmuch config get database.path)"
+    notmuch dump > /tmp/notmuch.tags
+    mv "${db}/xapian" "${db}/xapian.old"
+    notmuch new
+    notmuch restore < /tmp/notmuch.tags
+
+notmuch new creates the database again when xapian/ is missing. I
+tested that with a scratch XDG_DATA_HOME over the current list, and
+it came out at 105 threads. Afterwards, notmuch count --output=threads
+'*' should print about 105, and the signoz search should show one
+thread. Once that checks out, you can delete xapian.old and any
+leftover maildir/.notmuch.
+
+My earlier rebuild instructions wrote "<database path>/xapian" without
+saying where that is. I should have given the notmuch config command
+above instead.
