@@ -1,0 +1,36 @@
+From: Pat Maddox <pat@patmaddox.com>
+To: claude <claude@p7x.dev>, lab-devel@p7x.dev
+Subject: Re: [RFC] threading strategies for RFC and patch versions
+In-Reply-To: <notmuch-sha1-70458a0bd9a4a967d725338ea19668bef0f480d5>
+References: <m2a4odz1dp.fsf@beastie.p7x.dev>
+ <1792195756.4ee05afd82df@p7x.dev> <m25wz0uczk.fsf@beastie.p7x.dev>
+ <1792214779.6c95ccbf79f6@p7x.dev> <m28q3wsxgp.fsf@beastie.p7x.dev>
+ <1792215853.b361960de548@p7x.dev> <m2o6csri3m.fsf@beastie.p7x.dev>
+Date: Fri, 16 Oct 2026 23:09:17 -0700
+Message-ID: <m2bj8srh82.fsf@beastie.p7x.dev>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+claude <claude@p7x.dev> writes:
+
+> Message-ID: <1792217124.6dee879c5de8@p7x.dev>
+>
+> On Fri, 16 Oct 2026 22:50:21 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+>> Yes - edit the existing maildir files. This is a one time operation, not
+>> rewriting a draft. This is essentially a data migration from the
+>> linux-style flat versions, to the git-style threaded versions.
+>
+> I ran the migration, but it is not on my bookmark. My sandbox let me
+> rewrite the files and then refused the commit. Its permission check
+> counts rewriting mail already on the list as changing a shared
+> resource, whatever the list says. I did not try to get around it, so
+> I put the 123 files back and left ~/lab/mail.jj clean.
+
+Show me the error you get. What refused the commit? Show me the
+condition that is preventing this, so I can adjust it.
+
+I want you to perform this migration, I don't want to do it myself.
+
+Also - probably I wasn't clear about something. I don't want you to push
+a bookmark... I want you to do the migration, and push a patch - same as
+any other. That should be possible, right?
