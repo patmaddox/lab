@@ -1,0 +1,14 @@
+From: Pat Maddox <pat@patmaddox.com>
+To: lab-devel@p7x.dev
+Subject: [RFC] processing the entire inbox at once
+Date: Fri, 16 Oct 2026 19:17:12 -0700
+Message-ID: <m2tsmlvzo7.fsf@beastie.p7x.dev>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+lab-process-mail works on a single thread at a time. I don't know if
+that's necessary or useful.
+
+Would it be better for it to load all of the inbox threads at once, and
+kick off subagents to parallelize them? It wouldn't necessarily
+parallelize every one - but let the primary agent figure that out.
