@@ -565,16 +565,18 @@ and prefixes every line with \"> \"."
 (global-set-key (kbd "C-c l o") 'claude-code-oneshot)
 
 ;;; notmuch
+;; Read the list as synced from lab-mail; see dotfiles/notmuch.
+(setenv "NOTMUCH_PROFILE" "lab-mail")
 (require 'notmuch)
-;(setenv "NOTMUCH_CONFIG" "/home/patmaddox/lab/default.jj/.notmuch-config")
 (setq notmuch-show-logo nil)
 (add-hook 'notmuch-hello-mode-hook (lambda () (display-line-numbers-mode -1)))
-;; I only save drafts, no need to save the file locally
-(setq notmuch-fcc-dirs nil)
-;; Sending delivers into the list maildir; committing it is the transport.
+;; Keep a copy of sent mail in the local sent folder, so it shows as
+;; sent before the next sync brings back the list's copy.
+(setq notmuch-fcc-dirs "sent +sent -unread")
+;; Post through lab-mail. msmtp takes the recipients from the header.
 (setq message-send-mail-function #'message-send-mail-with-sendmail)
-(setq sendmail-program
-      (expand-file-name "libexec/maildir-deliver.sh" user-emacs-directory))
+(setq sendmail-program "msmtp")
+(setq message-sendmail-envelope-from 'header)
 (setq notmuch-draft-tags '("+draft"))
 (setq notmuch-search-oldest-first nil)
 (setq notmuch-show-only-matching-messages t)
@@ -585,7 +587,10 @@ and prefixes every line with \"> \"."
         ("flagged" (propertize tag 'face 'notmuch-tag-flagged)
          (notmuch-tag-format-image-data tag (notmuch-tag-star-icon)))))
 (setq notmuch-saved-searches
-      '((:name "unread" :query "tag:unread not tag:draft" :key "u" :sort-order newest-first)
+      '((:name "inbox" :query "tag:inbox" :key "i" :sort-order newest-first)
+        (:name "next" :query "tag:next" :key "n" :sort-order newest-first)
+        (:name "later" :query "tag:later" :key "l" :sort-order newest-first)
+        (:name "unread" :query "tag:unread not tag:draft" :key "u" :sort-order newest-first)
         ;;(:name "my inbox" :query "tag:new not tag:patch not tag:flagged not to:claude" :key "i")
         (:name "claude inbox" :query "tag:new and to:claude not tag:draft" :key "c")
         (:name "flagged" :query "tag:flagged" :key "f" :sort-order newest-first)

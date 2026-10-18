@@ -126,6 +126,97 @@ EVENT is the process status string."
     (message "claude-handle-message %s"
              (if success "finished" "failed"))))
 
+;;; Filing mail in the list's folders
+
+;; On the list synced from lab-mail, the folder a message is in is its
+;; state, and the post-new hook derives the inbox, next, later, and
+;; archived tags from it. Filing a message moves its file; a tag
+;; alone would be undone by the next notmuch new.
+
+(defvar pm-notmuch-list-folders '("INBOX" "Next" "Later" "Archive")
+  "The folders of the list, which mbsync syncs with lab-mail.")
+
+(defun pm-notmuch--list-files (query)
+  "Return the files of the messages matching QUERY in the list's folders."
+  (let ((root (file-name-as-directory
+               (notmuch-config-get "database.mail_root"))))
+    (seq-filter
+     (lambda (file)
+       (let ((rel (file-relative-name file root)))
+         (seq-some (lambda (folder)
+                     (string-prefix-p (concat folder "/") rel))
+                   pm-notmuch-list-folders)))
+     (process-lines notmuch-command "search" "--output=files" query))))
+
+(defun pm-notmuch--file-name-in (file folder)
+  "Return the name FILE takes in FOLDER's cur/.
+mbsync's ,U= part is dropped, so mbsync takes the file for a new
+message in FOLDER and moves it on lab-mail."
+  (let ((name (replace-regexp-in-string
+               ",U=[0-9]+" "" (file-name-nondirectory file))))
+    (expand-file-name
+     (if (string-match-p ":2," name) name (concat name ":2,"))
+     (expand-file-name
+      "cur" (expand-file-name
+             folder (notmuch-config-get "database.mail_root"))))))
+
+(defun pm-notmuch-move-to-folder (query folder)
+  "Move the messages matching QUERY to the list folder FOLDER.
+Then run notmuch new, so the tags follow at once."
+  (dolist (file (pm-notmuch--list-files query))
+    (let ((dest (pm-notmuch--file-name-in file folder)))
+      (unless (string= file dest)
+        (make-directory (file-name-directory dest) t)
+        (rename-file file dest))))
+  (call-process notmuch-command nil nil nil "new" "--quiet"))
+
+(defun pm-notmuch--move-at-point (folder)
+  "Move the message or thread at point to FOLDER, and refresh the view."
+  (pcase major-mode
+    ('notmuch-show-mode
+     (pm-notmuch-move-to-folder (notmuch-show-get-message-id) folder)
+     (notmuch-show-refresh-view))
+    ('notmuch-search-mode
+     (pm-notmuch-move-to-folder (notmuch-search-find-thread-id) folder)
+     (notmuch-search-refresh-view))
+    ('notmuch-tree-mode
+     (pm-notmuch-move-to-folder (notmuch-tree-get-message-id) folder)
+     (notmuch-tree-refresh-view)))
+  (message "Moved to %s" folder))
+
+(defun pm-notmuch-move-to-inbox ()
+  "Move the message or thread at point to INBOX."
+  (interactive)
+  (pm-notmuch--move-at-point "INBOX"))
+
+(defun pm-notmuch-move-to-next ()
+  "Move the message or thread at point to Next."
+  (interactive)
+  (pm-notmuch--move-at-point "Next"))
+
+(defun pm-notmuch-move-to-later ()
+  "Move the message or thread at point to Later."
+  (interactive)
+  (pm-notmuch--move-at-point "Later"))
+
+(defun pm-notmuch-move-to-archive ()
+  "Move the message or thread at point to Archive."
+  (interactive)
+  (pm-notmuch--move-at-point "Archive"))
+
+(defvar pm-notmuch-move-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map "i" #'pm-notmuch-move-to-inbox)
+    (define-key map "n" #'pm-notmuch-move-to-next)
+    (define-key map "l" #'pm-notmuch-move-to-later)
+    (define-key map "a" #'pm-notmuch-move-to-archive)
+    map)
+  "Keys that move mail between the list's folders, under M.")
+
+(dolist (map (list notmuch-show-mode-map notmuch-search-mode-map
+                   notmuch-tree-mode-map))
+  (define-key map "M" pm-notmuch-move-map))
+
 ;;; Leaf message search
 
 (defvar pm-notmuch-leaves-program "notmuch-leaves"
