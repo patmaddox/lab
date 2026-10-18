@@ -190,7 +190,7 @@ answers_message_body() {
 	echo 'id:a@x Hello there' > inbox
 	export STUB_ANSWER=1 NOTIFY_URL=https://ntfy.example/topic
 	atf_check -s exit:0 \
-	    -o inline:"lab-process-mail: id:a@x (Hello there)\n" \
+	    -o inline:"lab-process-mail: inbox 1: id:a@x (Hello there)\n" \
 	    -e ignore "${PROCESS_MAIL}"
 	atf_check -o match:"answered: Hello there \\(inbox 0\\)" cat curl.log
 	atf_check -o match:"https://ntfy.example/topic" cat curl.log
@@ -206,7 +206,8 @@ quiet_update_body() {
 	export STUB_ANSWER=1
 	atf_check -s exit:0 -o ignore -e ignore "${PROCESS_MAIL}"
 	echo 'id:b@x Again' > inbox
-	atf_check -s exit:0 -o inline:"lab-process-mail: id:b@x (Again)\n" \
+	atf_check -s exit:0 \
+	    -o inline:"lab-process-mail: inbox 1: id:b@x (Again)\n" \
 	    -e empty "${PROCESS_MAIL}"
 }
 
@@ -229,8 +230,8 @@ drains_oldest_first_body() {
 	setup
 	printf 'id:a@x First\nid:b@x Second\n' > inbox
 	export STUB_ANSWER=1
-	printf '%s\n' 'lab-process-mail: id:a@x (First)' \
-	    'lab-process-mail: id:b@x (Second)' > expout
+	printf '%s\n' 'lab-process-mail: inbox 2: id:a@x (First)' \
+	    'lab-process-mail: inbox 1: id:b@x (Second)' > expout
 	atf_check -s exit:0 -o file:expout -e ignore "${PROCESS_MAIL}"
 	atf_check -o inline:"2\n" grep -c '^cwd ' claude.log
 }
@@ -240,7 +241,8 @@ stuck_message_body() {
 	setup
 	printf 'id:a@x First\nid:b@x Second\n' > inbox
 	export NOTIFY_URL=https://ntfy.example/topic
-	atf_check -s exit:1 -o inline:"lab-process-mail: id:a@x (First)\n" \
+	atf_check -s exit:1 \
+	    -o inline:"lab-process-mail: inbox 2: id:a@x (First)\n" \
 	    -e match:"id:a@x is still in the inbox" "${PROCESS_MAIL}"
 	atf_check -o inline:"1\n" grep -c '^cwd ' claude.log
 	atf_check -o match:"stuck: First \\(inbox 2\\)" cat curl.log

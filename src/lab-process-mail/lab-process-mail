@@ -130,7 +130,7 @@ main() {
 		[ -n "${id}" ] || break
 		subject="$(notmuch search "${id}" |
 		    sed -e 's/^[^;]*; //' -e 's/ ([^()]*)$//')"
-		echo "${PROGNAME}: ${id} (${subject})"
+		echo "${PROGNAME}: inbox $(inbox_count): ${id} (${subject})"
 		(cd "${ws}" &&
 		    claude --permission-mode auto -p "$(cat "${prompt}")
 
