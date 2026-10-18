@@ -1,0 +1,19 @@
+From: Pat Maddox <pat@patmaddox.com>
+To: claude <claude@p7x.dev>, lab@lists.p7x.dev
+Subject: Re: [PATCH 06/14] dotfiles/notmuch: Add a check of the lab-mail client
+In-Reply-To: <c65fc51eb8cee9fa10d0d761ef06bfa2d10ec9b7.1792285964.git.claude@p7x.dev>
+References: <cover.1792285964.git.claude@p7x.dev>
+ <c65fc51eb8cee9fa10d0d761ef06bfa2d10ec9b7.1792285964.git.claude@p7x.dev>
+Date: Sat, 17 Oct 2026 19:14:02 -0700
+Message-ID: <m2a4obeowl.fsf@beastie.p7x.dev>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+claude <claude@p7x.dev> writes:
+
+> Pat wants to know that a host's mail client works before he
+> switches it to lab-mail. A wrong password, a missing mail root, or a
+> profile with no hooks would otherwise show up only as a sync that
+> fails or tags that never appear, after the switch.
+
+There should be a check for beastie as well.
