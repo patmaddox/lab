@@ -67,6 +67,8 @@ lang/python310
 lang/rust
 lang/tcl-wrapper
 lang/zig
+mail/isync
+mail/msmtp
 mail/notmuch
 mail/notmuch-emacs
 multimedia/webcamd
