@@ -39,12 +39,12 @@ readonly BASE="${LAB_BASE_BRANCH:-trunk()}"
 readonly SENDERS="${LAB_PROCESS_MAIL_SENDERS:-pat@patmaddox.com pat@p7x.dev}"
 export NOTMUCH_PROFILE="${NOTMUCH_PROFILE:-lab-mail}"
 
-# Your commits off the base, less everything descended from the list.
-# The base and the list share no commit but root(), so the outbox is
-# left out however far the list has moved since it was built on.
+# Your commits off the base, in the base's own line of history. A
+# commit that shares no history with the base but root(), such as one
+# from the jj maildir that once carried the list, is left out.
 # Anything built on a published head other than the base is left where
 # it is; that covers your own patches once Pat publishes them.
-readonly WORK="mine() ~ ::(${BASE}) ~ (::mail@upstream ~ root())::
+readonly WORK="roots(::(${BASE}) ~ root()):: & mine() ~ ::(${BASE})
     ~ (immutable() ~ ::(${BASE}))::"
 
 err() {

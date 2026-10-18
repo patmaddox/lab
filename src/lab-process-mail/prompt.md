@@ -80,7 +80,7 @@ every remote, rebased your unmerged work (`${work}`) onto
 already answered count as replied:
 
     lab_base='<revset>'    # from "Your base is" near the end
-    work="mine() ~ ::(${lab_base}) ~ (::mail@upstream ~ root())::
+    work="roots(::(${lab_base}) ~ root()):: & mine() ~ ::(${lab_base})
         ~ (immutable() ~ ::(${lab_base}))::"
 
 That update makes no judgements, so settle what its rebase left:

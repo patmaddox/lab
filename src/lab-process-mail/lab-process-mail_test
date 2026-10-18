@@ -15,6 +15,7 @@ atf_init_test_cases() {
 	atf_add_test_case rebases_work_onto_base
 	atf_add_test_case follows_rewritten_base
 	atf_add_test_case keeps_work_on_its_prerequisite
+	atf_add_test_case leaves_unrelated_history
 	atf_add_test_case syncs_the_list
 	atf_add_test_case reads_the_lab_mail_profile
 	atf_add_test_case skips_unknown_senders
@@ -22,8 +23,7 @@ atf_init_test_cases() {
 }
 
 # Build a small lab in the current directory: an upstream repo with
-# trunk and a mail list that share no history, and a trunk workspace
-# cloned from it. Stubs stand in for claude, notmuch, mbsync, and curl;
+# trunk, and a trunk workspace cloned from it. Stubs stand in for claude, notmuch, mbsync, and curl;
 # see mk_stubs.
 setup() {
 	PROCESS_MAIL="$(atf_get_srcdir)/lab-process-mail"
@@ -51,21 +51,14 @@ setup() {
 		echo one > file
 		jj commit -m 'trunk: one'
 		jj bookmark create trunk -r @-
-		jj new 'root()'
-		mkdir maildir
-		touch maildir/.gitkeep
-		jj commit -m 'mail: start the list'
-		jj bookmark create mail -r @-
 		jj git remote add upstream ../upstream.git
-		jj git push --remote upstream --bookmark trunk \
-		    --bookmark mail
+		jj git push --remote upstream --bookmark trunk
 	) >/dev/null 2>&1 || atf_fail "cannot build upstream"
 
 	jj git clone --remote upstream upstream.git default.jj \
 	    >/dev/null 2>&1 || atf_fail "cannot clone upstream"
 	(
 		cd default.jj
-		jj bookmark track mail@upstream
 		jj new trunk@upstream
 	) >/dev/null 2>&1 || atf_fail "cannot build workspaces"
 }
@@ -420,4 +413,25 @@ takes_approved_senders_from_env_body() {
 	atf_check -s exit:0 -o ignore -e ignore "${PROCESS_MAIL}"
 	atf_check -o match:'^search .*tag:inbox and \(from:"a@example.org" or from:"b@example.org"\)$' \
 	    cat notmuch.log
+}
+
+atf_test_case leaves_unrelated_history
+leaves_unrelated_history_head() {
+	atf_set descr "Your commits outside the base's history, such as" \
+	    "the old jj maildir outbox, stay where they are"
+}
+leaves_unrelated_history_body() {
+	setup
+	(
+		cd default.jj
+		jj new 'root()'
+		echo reply > reply
+		jj commit -m 'mail: Reply'
+		jj new trunk@upstream
+	) >/dev/null 2>&1
+	advance_trunk
+	atf_check -s exit:0 -o ignore -e ignore "${PROCESS_MAIL}"
+	atf_check_equal "root" "$(jj -R default.jj log --no-graph \
+	    -T 'if(root, "root", "moved")' \
+	    -r 'description(substring:"mail: Reply")-')"
 }
