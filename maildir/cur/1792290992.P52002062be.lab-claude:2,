@@ -1,0 +1,82 @@
+From: claude <claude@p7x.dev>
+Subject: Re: [PATCH 00/14] Move beastie and lab-claude onto lab-mail
+To: Pat Maddox <pat@patmaddox.com>, lab@lists.p7x.dev
+In-Reply-To: <m233u3eoh2.fsf@beastie.p7x.dev>
+References: <cover.1792285964.git.claude@p7x.dev>
+	<m233u3eoh2.fsf@beastie.p7x.dev>
+Message-ID: <1792290979.07344a753be0@p7x.dev>
+Date: Sun, 18 Oct 2026 02:36:32 +0000
+
+On Sat, 17 Oct 2026 19:23:21 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+> - I would like the beastie config to be more explicit in the
+>   commits. Right now it just seems like there changes to notmuch that
+>   are specific to my usage, and then adapted for lab-mail. The notmuch
+>   config should be more generic - the sample files should use actual
+>   sample values, not have my values in there.
+
+Done in "[PATCH v2 00/16] Move beastie and lab-claude onto lab-mail"
+[1]. The samples in dotfiles/notmuch now use you@p7x.dev and Your
+Name, and the package installs no config of its own; it ships only
+the profile's hooks and the samples. That is "[PATCH v2 03/16]
+dotfiles/notmuch: Add sample mbsync and msmtp configs for lab-mail"
+[2].
+
+Your values live with beastie, in its own commit: "[PATCH v2 07/16]
+infra/hosts/beastie: Configure Pat's mail client for lab-mail" [3]
+adds infra/hosts/beastie/mail, with your notmuch config, .mbsyncrc,
+and .msmtprc, and "just install-mail" to put them in place.
+
+> - I'd like to see docs for beastie specifically. If the idea is that I
+>   install packages common to beastie and other hosts, and then config
+>   them - that's how the code should be organized and documented.
+
+Yes, that is the idea, and the series is now organized that way.
+Patch 7 also adds infra/hosts/beastie/README.org, with a mail section
+in three layers: the ports, then the shared notmuch package, then
+beastie's own config. It covers the password, the check, and how to
+sync and read.
+
+> - I don't use pass. Not sure where you got that from. What are the
+>   options for reading the password? Though I suspect for the time being
+>   putting the password in the file is fine - this is a low security
+>   thing.
+
+It came from lab-mail's spec and README, which said you keep the
+password in pass(1), and from sysutils/password-store in beastie's
+ports list. I took those as your setup without asking. Patch 3
+corrects both documents.
+
+mbsync has four options:
+
+- Pass <password> in ~/.mbsyncrc, the password in the config itself;
+- PassCmd <command>, any command that prints it, such as cat of a
+  file or a password manager;
+- neither, and mbsync asks for it on each run;
+- a SASL or keychain helper, which is overkill for this.
+
+v2 uses PassCmd "cat ~/.config/lab-mail/password". "just install-mail"
+makes that file empty and readable only by you, and you write the
+password into it once. It is a file, as you suggested, but kept out
+of ~/.mbsyncrc so that the config in the repo stays whole and holds
+no secret. If you would rather have Pass in ~/.mbsyncrc, it is a
+one-line change. msmtp needs no password, since lab-mail takes posts
+with no login.
+
+> I commented on some commits inline as well.
+
+I answered both inline comments in their threads. The check for
+beastie is "[PATCH v2 08/16] infra/hosts/beastie: Add a check of
+Pat's mail client" [4], run as "just check-mail" in
+infra/hosts/beastie. maildir-deliver.sh is deleted outright in patch
+15, after the switch patches, so posting keeps working throughout the
+series.
+
+The cover letter gives the steps to try it on beastie after patches
+1-8. I tested it in a scratch home here with a wrong password, and
+only the mbsync login and the dry run failed, as they should. A run
+with your real password needs beastie.
+
+[1] id:cover.1792290760.git.claude@p7x.dev
+[2] id:31ea74be47dab0564c40bd585e37548ccfa0faff.1792290760.git.claude@p7x.dev
+[3] id:edbdb7c685a7996063da5d14e8457b02ed56dc08.1792290760.git.claude@p7x.dev
+[4] id:81dec7d08951f14649290f05731e5324a1e70054.1792290760.git.claude@p7x.dev
