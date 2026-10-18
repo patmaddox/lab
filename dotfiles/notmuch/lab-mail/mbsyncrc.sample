@@ -1,0 +1,40 @@
+# ~/.mbsyncrc: sync the list with lab-mail into ~/mail/you@p7x.dev;
+# see mbsync(1). Each host that reads the list installs its own copy,
+# with its login in place of you@p7x.dev.
+#
+# This is for a login that may change the list, so the sync runs both
+# ways and expunges on both sides: a move or deletion here takes effect
+# on lab-mail at the next run. Fastmail still keeps every message. A
+# read-only login syncs with Sync Pull and Expunge Near instead. Only
+# the list's folders are synced, and the folders come from lab-mail.
+#
+# lab-mail listens only on loopback, so there is no TLS. The password
+# is the one whose hash lab-mail keeps in imap-users. PassCmd reads it
+# from a file of its own, readable only by you, so this config holds
+# no secret. Pass <password> would put it here instead, and with
+# neither, mbsync asks for it on each run.
+
+IMAPAccount lab-mail
+Host 127.0.0.1
+Port 2143
+TLSType None
+AuthMechs LOGIN
+User you@p7x.dev
+PassCmd "cat ~/.config/lab-mail/password"
+
+IMAPStore lab-mail
+Account lab-mail
+
+MaildirStore local
+Path ~/mail/you@p7x.dev/
+Inbox ~/mail/you@p7x.dev/INBOX
+
+Channel lab-mail
+Far :lab-mail:
+Near :local:
+Patterns INBOX Next Later Archive
+Create Near
+Sync All
+Expunge Both
+Remove None
+CopyArrivalDate yes

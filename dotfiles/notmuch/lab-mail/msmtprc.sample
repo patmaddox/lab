@@ -1,0 +1,18 @@
+# ~/.msmtprc: post to the list through lab-mail; see msmtp(1). Each
+# host that reads the list installs its own copy, with its login in
+# place of you@p7x.dev.
+#
+# lab-mail listens only on loopback and takes posts with no login, so
+# there is no auth and no TLS. msmtp exits non-zero if any recipient
+# is refused, and the message then goes to no one.
+
+defaults
+auth off
+tls off
+
+account lab-mail
+host 127.0.0.1
+port 2525
+from you@p7x.dev
+
+account default : lab-mail

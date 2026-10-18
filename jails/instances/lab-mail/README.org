@@ -145,9 +145,10 @@ mounts it.
   line as =login:hash=: =pat@p7x.dev= and =mbsync=. Only Dovecot's
   auth process, as the user =dovecot=, reads it.
 
-Pat keeps the password for =pat@p7x.dev= on beastie, in pass(1).
-lab-mail holds only its hash. Hash each password with Dovecot's
-doveadm, which prompts for it:
+Pat keeps the password for =pat@p7x.dev= on beastie, in
+=~/.config/lab-mail/password=, which only he can read. lab-mail holds
+only its hash. Hash each password with Dovecot's doveadm, which
+prompts for it:
 #+BEGIN_EXAMPLE
 doas jexec lab-mail doveadm pw -s BLF-CRYPT
 #+END_EXAMPLE
@@ -214,7 +215,7 @@ Port 2143
 TLSType None
 AuthMechs LOGIN
 User pat@p7x.dev
-PassCmd "pass show lab-mail/pat@p7x.dev"
+PassCmd "cat ~/.config/lab-mail/password"
 
 IMAPStore lab-mail
 Account lab-mail

@@ -1,0 +1,59 @@
+#+TITLE: dotfiles/notmuch
+
+notmuch hooks and configs for the lab-devel list. =just install=
+installs them as a package under =~=.
+
+* lab-mail
+The =lab-mail= profile reads the list as synced from lab-mail, whose
+spec is =../../jails/instances/lab-mail/spec.org=. The package
+installs its hooks, and samples of its config and of the mbsync and
+msmtp configs, in =~/.config/notmuch/lab-mail/=. It installs no
+config of its own, since each host has its own login: the host
+installs its configs, and its README says how.
+
+** set up
+Each sample uses =you@p7x.dev= for the login. To set up a login by
+hand, install the package, then copy each sample into place and put
+the login in place of =you@p7x.dev=:
+#+BEGIN_EXAMPLE
+just install
+cd ~/.config/notmuch/lab-mail
+cp config.sample config
+cp mbsyncrc.sample ~/.mbsyncrc
+cp msmtprc.sample ~/.msmtprc
+#+END_EXAMPLE
+
+Store the login's password for lab-mail where =~/.mbsyncrc= reads
+it, readable only by you, and make the mail root with its =sent=
+folder, which is never synced. mbsync creates the list's folders:
+#+BEGIN_EXAMPLE
+mkdir -p ~/.config/lab-mail
+install -m 0600 /dev/null ~/.config/lab-mail/password
+$EDITOR ~/.config/lab-mail/password
+mkdir -p ~/mail/you@p7x.dev/sent/cur ~/mail/you@p7x.dev/sent/new \
+    ~/mail/you@p7x.dev/sent/tmp
+#+END_EXAMPLE
+
+** sync and read
+Syncing and indexing are separate commands. mbsync syncs INBOX,
+=Next=, =Later=, and =Archive= with lab-mail, and notmuch indexes
+what it brought:
+#+BEGIN_EXAMPLE
+mbsync lab-mail && NOTMUCH_PROFILE=lab-mail notmuch new
+NOTMUCH_PROFILE=lab-mail notmuch search tag:inbox
+#+END_EXAMPLE
+
+To file a message, move its file to another folder's =cur/=, and
+drop the =,U== part of its name, so mbsync takes it for a new message
+there. The next sync moves it on lab-mail.
+
+** post
+msmtp posts from the login's address. With =-t= it takes the
+recipients from the To, Cc, and Bcc headers:
+#+BEGIN_EXAMPLE
+msmtp -t < message.eml
+#+END_EXAMPLE
+
+lab-mail delivers mail for the list's addresses to the list, and
+accepts and discards mail for the people who read it. It refuses any
+other recipient, and msmtp then posts nothing and exits non-zero.

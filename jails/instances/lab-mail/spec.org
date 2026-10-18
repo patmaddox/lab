@@ -92,8 +92,9 @@ credentials: the operator stores three files on the host, in
   process can read it.
 - =mbsync-imap= holds the password of mbsync's own Dovecot login.
   Only mbsync can read it.
-- Pat keeps the password for =pat@p7x.dev= on beastie, in pass(1).
-  lab-mail holds only its hash.
+- Pat keeps the password for =pat@p7x.dev= on beastie, in
+  =~/.config/lab-mail/password=, which only he can read. lab-mail
+  holds only its hash.
 - The directory is nullfs-mounted read-only into lab-mail, and into
   no other jail.
 - mbsync refuses to start a sync unless both lines of =mail-creds=
@@ -228,9 +229,9 @@ check:
 - The check only reads. It changes nothing in the jail and posts no
   mail, so it is safe to run at any time.
 
-clients: lab-claude.
-- Packages: mail/isync and mail/msmtp, added to the existing
-  mail/notmuch.
+clients: beastie, for Pat, and lab-claude, for the agent. Both are set
+up the same way and differ only in the login.
+- Packages: mail/isync, mail/msmtp, and mail/notmuch on both hosts.
 - Each user's mail root is =~/mail/<login>=, such as
   =~/mail/pat@p7x.dev=. It holds the list's folders, INBOX, =Next=,
   =Later=, and =Archive=, and the user's own =sent=, which is never
@@ -250,10 +251,21 @@ clients: lab-claude.
 - Flag sync is on for a login that may write the list, so unread,
   flagged, and replied follow the list's flags. It is off for a
   read-only login, whose flags would never reach lab-mail.
-- msmtp posts through 127.0.0.1:2525 as claude@p7x.dev. When the
-  server refuses any recipient or the message, msmtp posts nothing
-  and exits non-zero with the server's reply, so the whole message is
-  abandoned.
+- mbsync syncs the list's folders with lab-mail at 127.0.0.1:2143,
+  only when the user runs it, and no other folder.
+  - On beastie it logs in as =pat@p7x.dev=, with the password from
+    =~/.config/lab-mail/password=, and syncs both ways with =Expunge
+    Both=, so Pat's moves and deletions take effect on lab-mail.
+    Fastmail still keeps every message.
+- msmtp posts through 127.0.0.1:2525 with no login and no TLS, as
+  =pat@p7x.dev= on beastie and =claude@p7x.dev= on lab-claude. When
+  the server refuses any recipient or the message, msmtp posts
+  nothing and exits non-zero with the server's reply, so the whole
+  message is abandoned.
+- =dotfiles/notmuch= ships samples of the profile's config and of
+  the mbsync and msmtp configs, with =you@p7x.dev= for the login, and
+  documents the commands to sync and to post. It installs no config
+  itself; each host installs its own, with its login.
 - mbsync pulls INBOX from 127.0.0.1:2143 into a maildir in the
   agent's home, and =notmuch new= indexes it there. The agent searches
   and reads the local index, not IMAP.

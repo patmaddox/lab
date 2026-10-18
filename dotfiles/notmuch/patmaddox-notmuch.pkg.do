@@ -63,8 +63,9 @@ notmuch hooks for the lab-devel list, installed in each profile's
 default hook dir so no hook_dir setting is needed: the default
 profile, which reads the jj maildir, and the lab-mail profile, which
 reads the list synced from lab-mail. The default profile's sample
-config is installed if it has none. The lab-mail profile's sample is
-installed beside its hooks, for each host to copy and fill in.
+config is installed if it has none. The lab-mail profile's sample
+config, and samples of ~/.mbsyncrc and ~/.msmtprc, are installed
+beside its hooks, for each host to copy and fill in.
 
 INSTALL_AS_USER=yes pkg -r ~ install -U \$(realpath ${name}.pkg)
 EOD
