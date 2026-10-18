@@ -1,0 +1,99 @@
+From: claude <claude@p7x.dev>
+Subject: Re: How to interdiff versions?
+To: Pat Maddox <pat@p7x.dev>, lab@lists.p7x.dev
+In-Reply-To: <m2fqy3eht1.fsf@beastie.p7x.dev>
+References: <m2fqy3eht1.fsf@beastie.p7x.dev>
+Message-ID: <1792299413.b5d656410075@p7x.dev>
+Date: Sun, 18 Oct 2026 04:57:04 +0000
+
+On Sat, 17 Oct 2026 21:47:22 -0700, Pat Maddox <pat@p7x.dev> wrote:
+> I need a way to interdiff versions of patch series that are on the
+> list. What are some potential ways to go about this?
+
+The hard part is getting each version back as commits. Once both
+versions are commits, git range-diff and git diff do the rest. Every
+series I post carries a base-commit line, so a version can be
+rebuilt from the mail alone. That works even after its commits have
+been rewritten in my tree. Here are the options I found, best first.
+
+1. Rebuild both versions from the list, then range-diff them. This
+   is what I recommend. Patch 1 of "[PATCH v2 0/4] Require an
+   interdiff on revised series" [1], "libexec/mail: Rebuild a posted
+   series from the list" [2], adds series-rebuild.sh. It takes a
+   cover letter's Message-ID, applies the posted patches onto the
+   base-commit (or onto another commit with -o), and prints
+   <base>..<head>. It writes objects only, so no working copy
+   changes. That series is not applied yet, but patch 1 applies
+   cleanly to trunk on its own. I tested it on "[PATCH v2 0/2]
+   lab-process-mail: Add lab-process-maild" [3] and its v3 [4]:
+
+       old=$(series-rebuild.sh cover.1792205997.git.claude@p7x.dev)
+       new=$(series-rebuild.sh cover.1792207350.git.claude@p7x.dev)
+       git range-diff "${old}" "${new}"     # per patch, with messages
+       git diff "${old#*..}" "${new#*..}"   # one interdiff of the tree
+
+   Both versions rebuilt and the range-diff paired the patches
+   correctly. When the base moved between versions, rebuild the old
+   version onto the new base first, so the interdiff shows only the
+   revision:
+
+       old=$(series-rebuild.sh -o "${new%%..*}" <old cover id>)
+
+   If the old version no longer applies there, use range-diff on
+   each version's own base; it ignores what the base changed. There
+   are two limits. A series with prerequisite-patch-id lines needs
+   -o, because the patches it depends on are not named. And it
+   needs the base-commit in your repo; fetching upstream covers
+   every series I have posted. "[PATCH 0/3] notmuch: Tag superseded
+   series and hide them" [5] hit both limits: its v1 had a
+   prerequisite and does not apply to v2's base.
+
+   Finding the previous version is a notmuch query. Every patch
+   carries a Change-Id header that stays the same across versions,
+   so "notmuch search changeid:<id>" lists every version of a patch,
+   and each cover letter's "Link to v(N-1)" line names the one
+   before it.
+
+2. b4 diff, the kernel's tool for exactly this. "b4 diff -m old.mbx
+   new.mbx" applies two mboxes and prints a range-diff; we can
+   export the mboxes with "notmuch show --format=mbox". The cost is
+   a new dependency (devel/py-b4, not installed). Its automatic
+   lookup of earlier versions also assumes a public-inbox archive
+   such as lore, which we do not have, so we would still find the
+   versions ourselves. It does the same job as option 1 with more
+   moving parts.
+
+3. interdiff(1) from patchutils, run on two patch files. It needs no
+   tree, but it works one patch at a time, gets confused when the
+   base or context moved, and cannot pair patches across a series
+   that was split or reordered. It is also not installed
+   (devel/patchutils). It is fine for a quick look at a single-patch
+   revision.
+
+4. jj interdiff. If you apply both versions into a jj workspace
+   (libexec/mail/am.sh does that), "jj interdiff --from <old> --to
+   <new>" compares two commits' diffs and drops what changed in
+   their bases. It works one commit at a time, so you match the
+   pairs by Change-Id yourself. It is handy for one patch, but for
+   a whole series range-diff does the pairing for you.
+
+So my recommendation is option 1 with no new dependencies. The
+smallest step is to apply "libexec/mail: Rebuild a posted series
+from the list" [2] by itself, since it applies to trunk as it is.
+After that, either:
+
+- you run the recipe above when you review, or
+- we also take the rest of [1], which makes format-patch.sh refuse
+  a reroll without --previous=<message-id> and builds the interdiff
+  from the rebuilt previous version, so every new revision carries
+  one.
+
+If a single "series-diff.sh <old-id> <new-id>" wrapper around the
+two-step recipe would help, I will post it as a one-patch series on
+top of [2]. Tell me which of these you want.
+
+[1] id:cover.1792035264.git.claude@p7x.dev
+[2] id:0485d977972ea53f818272b85b0dcf569abb8508.1792035264.git.claude@p7x.dev
+[3] id:cover.1792205997.git.claude@p7x.dev
+[4] id:cover.1792207350.git.claude@p7x.dev
+[5] id:cover.1792016109.git.claude@p7x.dev
