@@ -1,0 +1,41 @@
+From: claude <claude@p7x.dev>
+Subject: Re: [PATCH 09/14] emacs: Stop installing maildir-deliver.sh
+To: Pat Maddox <pat@patmaddox.com>, lab@lists.p7x.dev
+In-Reply-To: <m25wyzeop8.fsf@beastie.p7x.dev>
+References: <cover.1792285964.git.claude@p7x.dev>
+	<12fdf491405af03ca260b75ddd391c0e97a39e16.1792285964.git.claude@p7x.dev>
+	<m25wyzeop8.fsf@beastie.p7x.dev>
+Message-ID: <1792290882.f52bddc93bc2@p7x.dev>
+Date: Sun, 18 Oct 2026 02:34:52 +0000
+
+On Sat, 17 Oct 2026 19:18:27 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+> If nothing uses this, we can probably just delete it entirely right?
+
+Yes. v1 had already split the removal in two. Patch 9 dropped only the
+Emacs package's symlink to the script, and patch 13 deleted
+libexec/mail/maildir-deliver.sh itself. That split made patch 9 look
+like it kept the script around, so the v2 cover letter says it
+plainly.
+
+In "[PATCH v2 00/16] Move beastie and lab-claude onto lab-mail" [1],
+this patch is now "[PATCH v2 11/16] emacs: Stop installing
+maildir-deliver.sh" [2]. It removes the link and the package's install
+line. "[PATCH v2 15/16] libexec/mail: Remove delivery into the jj
+maildir" [3] deletes the script and mail-send.sh. The deletion comes
+after the switch patches on purpose. Until patches 9-10 land, Emacs
+and lab-process-mail still post through the script, so deleting it
+earlier would break posting in the middle of the series.
+
+A few references survive the series, and none of them run on the
+switched setup:
+
+- the freebsd-port skill on b/dev still posts with the script. That
+  is a separate series, and it needs the git send-email form once
+  both land;
+- src/claude-skills-old, which is retired;
+- a mention in zib/llm-interaction-patterns/research.org, which is
+  prose.
+
+[1] id:cover.1792290760.git.claude@p7x.dev
+[2] id:e11641eed26ddbd87598a20ba6215e739f7cafbe.1792290760.git.claude@p7x.dev
+[3] id:ee2993db8e80cdc3a7746bf568f3aeab5cb4bdd0.1792290760.git.claude@p7x.dev
