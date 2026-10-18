@@ -1,0 +1,257 @@
+Message-ID: <edbdb7c685a7996063da5d14e8457b02ed56dc08.1792290760.git.claude@p7x.dev>
+In-Reply-To: <cover.1792290760.git.claude@p7x.dev>
+References: <cover.1792290760.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Subject: [PATCH v2 07/16] infra/hosts/beastie: Configure Pat's mail client for
+ lab-mail
+To: lab@lists.p7x.dev
+Cc: Pat Maddox <pat@patmaddox.com>
+Change-Id: qsqsyktyullnursytlvvxknsxuyrxpro
+Date: Sun, 18 Oct 2026 02:33:32 +0000
+
+Pat reads and posts to the list from beastie, and his login differs
+from every other host's. Keeping his configs with the host, rather
+than as the shared samples' values, makes beastie's setup explicit:
+the ports come from the host's ports list, the hooks from the notmuch
+package, and the configs from here.
+
+just install-mail installs them and makes the mail root. The
+password goes in a file of its own, readable only by Pat, so the
+configs hold no secret and the repo can carry them whole. README.org
+documents the setup and the other ways mbsync can take the password.
+---
+change-id: qsqsyktyullnursytlvvxknsxuyrxpro
+
+ infra/hosts/beastie/Justfile                |  4 ++
+ infra/hosts/beastie/README.org              | 51 +++++++++++++++++++++
+ infra/hosts/beastie/libexec/install-mail.sh | 29 ++++++++++++
+ infra/hosts/beastie/mail/mbsyncrc           | 34 ++++++++++++++
+ infra/hosts/beastie/mail/msmtprc            | 15 ++++++
+ infra/hosts/beastie/mail/notmuch-config     | 30 ++++++++++++
+ jails/instances/lab-mail/spec.org           |  4 ++
+ 7 files changed, 167 insertions(+)
+ create mode 100644 infra/hosts/beastie/README.org
+ create mode 100755 infra/hosts/beastie/libexec/install-mail.sh
+ create mode 100644 infra/hosts/beastie/mail/mbsyncrc
+ create mode 100644 infra/hosts/beastie/mail/msmtprc
+ create mode 100644 infra/hosts/beastie/mail/notmuch-config
+
+diff --git a/infra/hosts/beastie/Justfile b/infra/hosts/beastie/Justfile
+index f649fe31..082d2b01 100644
+--- a/infra/hosts/beastie/Justfile
++++ b/infra/hosts/beastie/Justfile
+@@ -3,3 +3,7 @@ import "../../common/host.just"
+ # Verify backup snapshots are in sync
+ verify-backups:
+   ./libexec/verify-backups.sh
++
++# Install Pat's mail client config for lab-mail
++install-mail:
++  ./libexec/install-mail.sh
+diff --git a/infra/hosts/beastie/README.org b/infra/hosts/beastie/README.org
+new file mode 100644
+index 00000000..3f6b430d
+--- /dev/null
++++ b/infra/hosts/beastie/README.org
+@@ -0,0 +1,51 @@
++#+TITLE: infra/hosts/beastie
++
++beastie is Pat's FreeBSD workstation. Its system config is under
++=dist/=, and the ports it installs are listed in =ports=.
++
++* mail
++Pat reads and posts to the lab-devel list through lab-mail, whose
++spec is =../../../jails/instances/lab-mail/spec.org=. It is set up in
++three layers, from most shared to most specific:
++
++1. Ports. mail/isync, mail/msmtp, and mail/notmuch are in =ports=,
++   like any other package beastie needs.
++2. The notmuch package. =dotfiles/notmuch= installs the lab-mail
++   profile's hooks, which every host that reads the list shares, and
++   samples of each config:
++   #+BEGIN_EXAMPLE
++   cd ~/lab/default.jj/dotfiles/notmuch && just install
++   #+END_EXAMPLE
++3. beastie's config. =mail/= holds Pat's copy of each sample, for
++   =pat@p7x.dev=:
++   - =notmuch-config= becomes =~/.config/notmuch/lab-mail/config=;
++   - =mbsyncrc= becomes =~/.mbsyncrc=, and syncs both ways, since
++     =pat@p7x.dev= may change the list;
++   - =msmtprc= becomes =~/.msmtprc=, and posts from =pat@p7x.dev=.
++
++   =just install-mail= installs them, and keeps any installed file
++   that differs as =<file>.old=. It also makes the mail root,
++   =~/mail/pat@p7x.dev=, with the =sent= folder that mbsync never
++   syncs.
++
++** password
++mbsync reads the password of =pat@p7x.dev= on lab-mail from
++=~/.config/lab-mail/password=, which =just install-mail= makes empty,
++readable only by Pat. Write the password into it once:
++#+BEGIN_EXAMPLE
++just install-mail
++$EDITOR ~/.config/lab-mail/password
++#+END_EXAMPLE
++
++The password guards only the list, on a server that listens on
++beastie's loopback, so a file only Pat can read is enough. mbsync can
++take it in other ways too: =Pass= in =~/.mbsyncrc= puts it in the
++config, =PassCmd= can run any command that prints it, such as a
++password manager, and with neither mbsync asks for it on each run.
++msmtp needs no password, since lab-mail takes posts with no login.
++
++** sync and read
++#+BEGIN_EXAMPLE
++mbsync lab-mail && NOTMUCH_PROFILE=lab-mail notmuch new
++NOTMUCH_PROFILE=lab-mail notmuch search tag:inbox
++#+END_EXAMPLE
+diff --git a/infra/hosts/beastie/libexec/install-mail.sh b/infra/hosts/beastie/libexec/install-mail.sh
+new file mode 100755
+index 00000000..ce1f4568
+--- /dev/null
++++ b/infra/hosts/beastie/libexec/install-mail.sh
+@@ -0,0 +1,29 @@
++#!/bin/sh
++# Install Pat's mail client config for lab-mail from ../mail: the
++# lab-mail notmuch profile's config, ~/.mbsyncrc, and ~/.msmtprc. Run
++# it as Pat, as just install-mail. The repo holds the config, so an
++# installed file that differs is replaced and kept as <file>.old.
++#
++# It also makes the mail root's sent folder, which mbsync never syncs,
++# and an empty password file for Pat to fill in. It never changes a
++# password file that exists.
++set -eu
++
++src="$(dirname "$(realpath "$0")")/../mail"
++root="${HOME}/mail/pat@p7x.dev"
++pwdir="${HOME}/.config/lab-mail"
++pwfile="${pwdir}/password"
++
++install -d "${HOME}/.config/notmuch/lab-mail"
++install -b -C -m 0644 "${src}/notmuch-config" \
++    "${HOME}/.config/notmuch/lab-mail/config"
++install -b -C -m 0600 "${src}/mbsyncrc" "${HOME}/.mbsyncrc"
++install -b -C -m 0600 "${src}/msmtprc" "${HOME}/.msmtprc"
++
++install -d "${root}/sent/cur" "${root}/sent/new" "${root}/sent/tmp"
++
++install -d -m 0700 "${pwdir}"
++if [ ! -e "${pwfile}" ]; then
++	install -m 0600 /dev/null "${pwfile}"
++	echo "Write the password of pat@p7x.dev on lab-mail into ${pwfile}"
++fi
+diff --git a/infra/hosts/beastie/mail/mbsyncrc b/infra/hosts/beastie/mail/mbsyncrc
+new file mode 100644
+index 00000000..af37f078
+--- /dev/null
++++ b/infra/hosts/beastie/mail/mbsyncrc
+@@ -0,0 +1,34 @@
++# Pat's ~/.mbsyncrc on beastie, installed by just install-mail: sync
++# the list with lab-mail into ~/mail/pat@p7x.dev. It is
++# dotfiles/notmuch/lab-mail/mbsyncrc.sample with Pat's login; see
++# there for what each setting does.
++#
++# pat@p7x.dev may change the list, so the sync runs both ways and
++# expunges on both sides, and Pat's moves and deletions reach
++# lab-mail. The password is in ~/.config/lab-mail/password, which only
++# Pat can read.
++
++IMAPAccount lab-mail
++Host 127.0.0.1
++Port 2143
++TLSType None
++AuthMechs LOGIN
++User pat@p7x.dev
++PassCmd "cat ~/.config/lab-mail/password"
++
++IMAPStore lab-mail
++Account lab-mail
++
++MaildirStore local
++Path ~/mail/pat@p7x.dev/
++Inbox ~/mail/pat@p7x.dev/INBOX
++
++Channel lab-mail
++Far :lab-mail:
++Near :local:
++Patterns INBOX Next Later Archive
++Create Near
++Sync All
++Expunge Both
++Remove None
++CopyArrivalDate yes
+diff --git a/infra/hosts/beastie/mail/msmtprc b/infra/hosts/beastie/mail/msmtprc
+new file mode 100644
+index 00000000..c75db910
+--- /dev/null
++++ b/infra/hosts/beastie/mail/msmtprc
+@@ -0,0 +1,15 @@
++# Pat's ~/.msmtprc on beastie, installed by just install-mail: post to
++# the list through lab-mail as pat@p7x.dev. It is
++# dotfiles/notmuch/lab-mail/msmtprc.sample with Pat's login; see there
++# for what each setting does.
++
++defaults
++auth off
++tls off
++
++account lab-mail
++host 127.0.0.1
++port 2525
++from pat@p7x.dev
++
++account default : lab-mail
+diff --git a/infra/hosts/beastie/mail/notmuch-config b/infra/hosts/beastie/mail/notmuch-config
+new file mode 100644
+index 00000000..b5d2c7a5
+--- /dev/null
++++ b/infra/hosts/beastie/mail/notmuch-config
+@@ -0,0 +1,30 @@
++# Pat's notmuch profile for the lab-devel list on beastie, installed as
++# ~/.config/notmuch/lab-mail/config by just install-mail. It is
++# dotfiles/notmuch/lab-mail/config.sample with Pat's login; see there
++# for what each setting does. Use it with NOTMUCH_PROFILE=lab-mail.
++#
++# pat@p7x.dev may write the list, so flag sync is on, and unread,
++# flagged, and replied follow the list's flags.
++
++[database]
++mail_root=mail/pat@p7x.dev
++
++# Pat posts as pat@p7x.dev. His mail from pat@patmaddox.com, from
++# before the list moved to lab-mail, is his too.
++[user]
++name=Pat Maddox
++primary_email=pat@p7x.dev
++other_email=pat@patmaddox.com
++
++[new]
++tags=
++ignore=.uidvalidity;.mbsyncstate;.mbsyncstate.journal;.mbsyncstate.new;.mbsyncstate.lock
++
++[search]
++exclude_tags=deleted
++
++[index]
++header.changeid=Change-Id
++
++[maildir]
++synchronize_flags=true
+diff --git a/jails/instances/lab-mail/spec.org b/jails/instances/lab-mail/spec.org
+index 3497363f..2f05794b 100644
+--- a/jails/instances/lab-mail/spec.org
++++ b/jails/instances/lab-mail/spec.org
+@@ -269,6 +269,10 @@ up the same way and differ only in the login.
+   documents the commands to sync and to post. It installs no config
+   itself; each host installs its own, with its login. lab-claude
+   ships its own and documents them in its README.
++- On beastie, =infra/hosts/beastie/mail= holds Pat's configs, and
++  =just install-mail= there installs them, makes the mail root, and
++  makes an empty password file for Pat to fill in. beastie's README
++  documents the setup, from the ports to the password.
+ - The agent searches and reads the local index, not IMAP.
+ - =just check= in =dotfiles/notmuch=, run as the user on any
+   host, checks that login's client before it is used: mbsync logs in
+-- 
+2.56.0
+

@@ -1,0 +1,217 @@
+Message-ID: <cover.1792290760.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Subject: [PATCH v2 00/16] Move beastie and lab-claude onto lab-mail
+To: lab@lists.p7x.dev
+Cc: Pat Maddox <pat@patmaddox.com>
+Date: Sun, 18 Oct 2026 02:33:25 +0000
+
+This moves the list's two clients off the jj maildir and onto
+lab-mail: beastie, for Pat, and lab-claude, for the agent. It is the
+work planned in "Configure notmuch to use lab-mail" [1], and it
+follows the client design approved in "[PATCH v2]
+jails/instances/lab-mail: Spec the list's mail hub" [2]. The spec
+text is in jails/instances/lab-mail/spec.org, in the same commits as
+the code.
+
+The setup is now in layers, and each host's config is its own:
+
+- Ports. mail/isync, mail/msmtp, and mail/notmuch, from each host's
+  ports list.
+- Shared config. The notmuch package in dotfiles/notmuch ships the
+  lab-mail profile's hooks, and samples of the profile's config,
+  ~/.mbsyncrc, and ~/.msmtprc, with you@p7x.dev for the login. It
+  installs no config of its own.
+- Host config. beastie's lives in infra/hosts/beastie/mail, with
+  your values, and "just install-mail" installs it. lab-claude's is
+  in its jail's dist, as before. infra/hosts/beastie/README.org
+  documents beastie's setup, from the ports to the password.
+
+The patches come in phases, so you can stop after any of them:
+
+- Support, patches 1-5. Nothing changes until a client uses it.
+  beastie gets isync and msmtp. The notmuch package adds the lab-mail
+  profile beside the default one, with the samples. lab-claude pulls
+  all four folders into the profile, and can post with git
+  send-email.
+- Check and beastie, patches 6-8. "just check" in dotfiles/notmuch
+  checks any host's client: it logs in to lab-mail, makes a dry run
+  of the sync, checks the profile, and talks to msmtp without
+  posting. Patch 7 adds beastie's configs. Patch 8 adds "just
+  check-mail" in infra/hosts/beastie, which checks what is beastie's
+  own and then runs the client check.
+- Switch, patches 9-10. Emacs reads the profile and posts through
+  msmtp, with an Fcc into sent. M i, M n, M l, and M a move the
+  message or thread at point to INBOX, Next, Later, or Archive.
+  lab-process-mail syncs before each pass and answers only approved
+  senders.
+- Cleanup, patches 11-16. The jj maildir pieces go, maildir-deliver.sh
+  among them, deleted in patch 15.
+
+Trying it on beastie before the switch, after patches 1-8, as Pat:
+
+    cd ~/lab/default.jj/dotfiles/notmuch && just install
+    cd ~/lab/default.jj/infra/hosts/beastie && just install-mail
+    $EDITOR ~/.config/lab-mail/password
+    mbsync lab-mail && NOTMUCH_PROFILE=lab-mail notmuch new
+    just check-mail
+
+The password goes in ~/.config/lab-mail/password, readable only by
+you, and ~/.mbsyncrc reads it with PassCmd "cat ...". That keeps your
+configs in the repo whole, with no secret in them. The other options
+are Pass in ~/.mbsyncrc itself, a PassCmd that runs a password
+manager, or neither, and mbsync asks on each run. The README lists
+them. msmtp needs none, since lab-mail takes posts with no login.
+
+The switch, in order:
+
+1. Import the jj maildir as the README from v13 describes. That
+   recipe files every old message in INBOX, so your inbox tag would
+   then show every message from others that you have not answered.
+   You may prefer to change the recipe's "Far :lab-mail:INBOX" to
+   Archive.
+2. Apply patches 9-10. Run just install in dotfiles/emacs on beastie,
+   and in src/lab-process-mail on lab-claude.
+3. Apply patches 11-16 whenever you like. After that, the mail
+   bookmark on upstream and ~/lab/mail.jj on lab-claude can go.
+
+Notes:
+
+- The series is based on b/dev, but it needs nothing there except
+  "[PATCH v13 0/8] jails/instances/lab-mail: Build the list's mail
+  hub" [3].
+- Tested: the notmuch package builds and installs into a scratch
+  home. just install-mail installs each config, keeps a changed one
+  as .old, and leaves the password file alone on a second run. With
+  the package and beastie's configs installed in a scratch home here,
+  and a wrong password, just check-mail fails only on the mbsync
+  login and the dry run, which is what spec step 14 asks. Not tested:
+  a run with your real password, which needs beastie.
+
+Changes in v2:
+- Your configs are explicit and live with beastie: patch 7 adds them
+  in infra/hosts/beastie/mail, with just install-mail. The samples in
+  dotfiles/notmuch use you@p7x.dev and Your Name, not your values,
+  and the package no longer copies any of them into place. Patch 3
+  now only adds the samples. (Pat, in [4])
+- beastie has its own docs, infra/hosts/beastie/README.org, laid out
+  as ports, then the shared package, then beastie's config. (Pat, in
+  [4])
+- No pass(1). The password is in a file only you can read, and the
+  README gives the other options. pass came from lab-mail's spec and
+  README, which said you keep the password in pass(1), and from
+  sysutils/password-store in beastie's ports list. Patch 3 corrects
+  both documents. (Pat, in [4])
+- There is a check for beastie, patch 8, "just check-mail". The
+  client check in patch 6 is for any host, and its spec step now runs
+  on lab-claude only. (Pat, in [5])
+- maildir-deliver.sh is deleted, not just no longer installed: patch
+  11 drops the Emacs package's link to it, and patch 15 deletes the
+  script, once nothing calls it. (Pat, in [6])
+- The note in dotfiles/notmuch's README about trying the profile in
+  Emacs beside the default one is gone, since patch 14 drops the
+  default profile.
+- Link to v1: id:cover.1792285964.git.claude@p7x.dev
+
+[1] id:m2ik2zet2i.fsf@beastie.p7x.dev
+[2] id:5639615da525ce2f1e7711da05d3de5ad63511a2.1792219807.git.claude@p7x.dev
+[3] id:cover.1792274056.git.claude@p7x.dev
+[4] id:m233u3eoh2.fsf@beastie.p7x.dev
+[5] id:m2a4obeowl.fsf@beastie.p7x.dev
+[6] id:m25wyzeop8.fsf@beastie.p7x.dev
+
+base-branch: b/dev@upstream
+
+claude (16):
+  infra/hosts/beastie: Install isync and msmtp
+  dotfiles/notmuch: Add a lab-mail profile
+  dotfiles/notmuch: Add sample mbsync and msmtp configs for lab-mail
+  jails/instances/lab-claude: Pull the whole list into the lab-mail
+    profile
+  jails/instances/lab-claude: Post patch series with git send-email
+  dotfiles/notmuch: Add a check of the lab-mail client
+  infra/hosts/beastie: Configure Pat's mail client for lab-mail
+  infra/hosts/beastie: Add a check of Pat's mail client
+  emacs: Read and post the list through lab-mail
+  src/lab-process-mail: Answer the list on lab-mail
+  emacs: Stop installing maildir-deliver.sh
+  jails/instances/lab-claude: Drop the jj mail workspace
+  src/lab-process-mail: Find work without the mail bookmark
+  dotfiles/notmuch: Drop the jj maildir profile
+  libexec/mail: Remove delivery into the jj maildir
+  doc: Remove the jj maildir mail workflow
+
+ CLAUDE.md                                     |  36 ++---
+ doc/mail-workflow.md                          | 107 ------------
+ dotfiles/emacs/init.el                        |  19 ++-
+ dotfiles/emacs/libexec/maildir-deliver.sh     |   1 -
+ dotfiles/emacs/lisp/pm-notmuch.el             |  91 +++++++++++
+ dotfiles/emacs/patmaddox-emacs.pkg.do         |   2 +-
+ dotfiles/notmuch/Justfile                     |   4 +
+ dotfiles/notmuch/README.org                   |  67 ++++++++
+ dotfiles/notmuch/check                        |  71 ++++++++
+ dotfiles/notmuch/hooks/mail-tag.sh            |  76 ---------
+ dotfiles/notmuch/hooks/post-new               |   3 -
+ dotfiles/notmuch/hooks/pre-new                |   7 -
+ dotfiles/notmuch/lab-mail/config.sample       |  40 +++++
+ dotfiles/notmuch/lab-mail/hooks/mail-tag.sh   | 113 +++++++++++++
+ dotfiles/notmuch/lab-mail/hooks/post-new      |   3 +
+ dotfiles/notmuch/lab-mail/hooks/pre-new       |   8 +
+ dotfiles/notmuch/lab-mail/mbsyncrc.sample     |  40 +++++
+ dotfiles/notmuch/lab-mail/msmtprc.sample      |  18 +++
+ dotfiles/notmuch/notmuch-config.sample        |  33 ----
+ dotfiles/notmuch/patmaddox-notmuch.pkg.do     |  60 +++----
+ infra/hosts/beastie/Justfile                  |   8 +
+ infra/hosts/beastie/README.org                |  61 +++++++
+ infra/hosts/beastie/libexec/check-mail.sh     |  53 ++++++
+ infra/hosts/beastie/libexec/install-mail.sh   |  29 ++++
+ infra/hosts/beastie/mail/mbsyncrc             |  34 ++++
+ infra/hosts/beastie/mail/msmtprc              |  15 ++
+ infra/hosts/beastie/mail/notmuch-config       |  30 ++++
+ infra/hosts/beastie/ports                     |   2 +
+ jails/instances/lab-claude/README.org         |  28 +++-
+ jails/instances/lab-claude/dist.mtree         |   4 +-
+ .../claude/.config/notmuch/lab-mail/config    |  27 ++++
+ .../home/claude/.config/notmuch/lists/config  |  18 ---
+ .../lab-claude/dist/home/claude/.gitconfig    |  12 +-
+ .../lab-claude/dist/home/claude/.mbsyncrc     |  23 +--
+ .../lab-claude/dist/home/claude/bootstrap.sh  |  27 +---
+ jails/instances/lab-claude/jail.conf          |   3 -
+ jails/instances/lab-mail/README.org           |   9 +-
+ jails/instances/lab-mail/spec.org             | 110 +++++++++++--
+ libexec/mail/am.sh                            |   2 +-
+ libexec/mail/mail-send.sh                     |  53 ------
+ libexec/mail/maildir-deliver.sh               | 136 ----------------
+ src/lab-process-mail/lab-process-mail         |  98 ++++++-----
+ src/lab-process-mail/lab-process-mail_test    | 152 +++++++++++++-----
+ src/lab-process-mail/prompt.md                | 114 +++++++------
+ 44 files changed, 1146 insertions(+), 701 deletions(-)
+ delete mode 100644 doc/mail-workflow.md
+ delete mode 120000 dotfiles/emacs/libexec/maildir-deliver.sh
+ create mode 100644 dotfiles/notmuch/README.org
+ create mode 100755 dotfiles/notmuch/check
+ delete mode 100755 dotfiles/notmuch/hooks/mail-tag.sh
+ delete mode 100755 dotfiles/notmuch/hooks/post-new
+ delete mode 100755 dotfiles/notmuch/hooks/pre-new
+ create mode 100644 dotfiles/notmuch/lab-mail/config.sample
+ create mode 100755 dotfiles/notmuch/lab-mail/hooks/mail-tag.sh
+ create mode 100755 dotfiles/notmuch/lab-mail/hooks/post-new
+ create mode 100755 dotfiles/notmuch/lab-mail/hooks/pre-new
+ create mode 100644 dotfiles/notmuch/lab-mail/mbsyncrc.sample
+ create mode 100644 dotfiles/notmuch/lab-mail/msmtprc.sample
+ delete mode 100644 dotfiles/notmuch/notmuch-config.sample
+ create mode 100644 infra/hosts/beastie/README.org
+ create mode 100755 infra/hosts/beastie/libexec/check-mail.sh
+ create mode 100755 infra/hosts/beastie/libexec/install-mail.sh
+ create mode 100644 infra/hosts/beastie/mail/mbsyncrc
+ create mode 100644 infra/hosts/beastie/mail/msmtprc
+ create mode 100644 infra/hosts/beastie/mail/notmuch-config
+ create mode 100644 jails/instances/lab-claude/dist/home/claude/.config/notmuch/lab-mail/config
+ delete mode 100644 jails/instances/lab-claude/dist/home/claude/.config/notmuch/lists/config
+ delete mode 100755 libexec/mail/mail-send.sh
+ delete mode 100755 libexec/mail/maildir-deliver.sh
+
+
+base-commit: c8ec0ed42d9c2790c56e86242d6affc7a5b531de
+-- 
+2.56.0
+

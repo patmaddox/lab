@@ -1,0 +1,154 @@
+Message-ID: <81dec7d08951f14649290f05731e5324a1e70054.1792290760.git.claude@p7x.dev>
+In-Reply-To: <cover.1792290760.git.claude@p7x.dev>
+References: <cover.1792290760.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Subject: [PATCH v2 08/16] infra/hosts/beastie: Add a check of Pat's mail
+ client
+To: lab@lists.p7x.dev
+Cc: Pat Maddox <pat@patmaddox.com>
+Change-Id: wltpzpuxowsslpnskkwtyxulnwwmqpuk
+Date: Sun, 18 Oct 2026 02:33:33 +0000
+
+Pat wants to know that beastie's mail client works before he switches
+Emacs to lab-mail. The client check in dotfiles/notmuch covers what
+every host shares, but not what is beastie's own: its configs could
+be missing or edited since just install-mail, the password file
+empty or readable by others, or a port not installed. Any of these
+would show up only as a failed sync after the switch.
+
+just check-mail checks those, then runs the client check, so one
+command answers whether beastie is ready. Like the client check, it
+prints one ok or FAIL line per check and changes nothing.
+---
+change-id: wltpzpuxowsslpnskkwtyxulnwwmqpuk
+
+ infra/hosts/beastie/Justfile              |  4 ++
+ infra/hosts/beastie/README.org            | 10 +++++
+ infra/hosts/beastie/libexec/check-mail.sh | 53 +++++++++++++++++++++++
+ jails/instances/lab-mail/spec.org         | 10 +++++
+ 4 files changed, 77 insertions(+)
+ create mode 100755 infra/hosts/beastie/libexec/check-mail.sh
+
+diff --git a/infra/hosts/beastie/Justfile b/infra/hosts/beastie/Justfile
+index 082d2b01..e8b2c641 100644
+--- a/infra/hosts/beastie/Justfile
++++ b/infra/hosts/beastie/Justfile
+@@ -7,3 +7,7 @@ verify-backups:
+ # Install Pat's mail client config for lab-mail
+ install-mail:
+   ./libexec/install-mail.sh
++
++# Check Pat's mail client for lab-mail; it only reads
++check-mail:
++  ./libexec/check-mail.sh
+diff --git a/infra/hosts/beastie/README.org b/infra/hosts/beastie/README.org
+index 3f6b430d..d2bd8e4e 100644
+--- a/infra/hosts/beastie/README.org
++++ b/infra/hosts/beastie/README.org
+@@ -44,6 +44,16 @@ config, =PassCmd= can run any command that prints it, such as a
+ password manager, and with neither mbsync asks for it on each run.
+ msmtp needs no password, since lab-mail takes posts with no login.
+ 
++** check
++=just check-mail= checks the setup before Pat switches to it, and
++at any time after. It checks that the ports are installed, that each
++installed config is the one in =mail/=, that the password file is
++filled in and only Pat can read it, and that the =sent= folder
++exists. Then it runs =just check= of =dotfiles/notmuch=, which logs
++in to lab-mail, makes a dry run of the sync, checks the profile's
++hooks and database, and reaches msmtp. It prints one line per check,
++ok or FAIL, exits non-zero if any fails, and changes nothing.
++
+ ** sync and read
+ #+BEGIN_EXAMPLE
+ mbsync lab-mail && NOTMUCH_PROFILE=lab-mail notmuch new
+diff --git a/infra/hosts/beastie/libexec/check-mail.sh b/infra/hosts/beastie/libexec/check-mail.sh
+new file mode 100755
+index 00000000..3eff4457
+--- /dev/null
++++ b/infra/hosts/beastie/libexec/check-mail.sh
+@@ -0,0 +1,53 @@
++#!/bin/sh
++# Check Pat's mail client for lab-mail on beastie, before he switches
++# to it: the ports it needs, the configs from ../mail, the password
++# file, and the mail root. Then run the check of dotfiles/notmuch,
++# which logs in to lab-mail, makes a dry run of the sync, and reaches
++# msmtp. Run it as Pat, as just check-mail. Prints one line per check
++# and exits 1 if any fails. It only reads, and posts no mail.
++set -u
++
++here="$(dirname "$(realpath "$0")")"
++src="${here}/../mail"
++client_check="${here}/../../../../dotfiles/notmuch/check"
++pwfile="${HOME}/.config/lab-mail/password"
++
++failed=0
++
++# check <what> <command> [args]: run the command, and report what was
++# checked by its exit status.
++check() {
++	local what="${1}"; shift
++	if "${@}" >/dev/null 2>&1; then
++		echo "ok ${what}"
++	else
++		echo "FAIL ${what}"
++		failed=1
++	fi
++}
++
++# same_as <file in ../mail> <installed file>
++same_as() {
++	cmp -s "${src}/${1}" "${2}"
++}
++
++only_pat_reads() {
++	[ "$(stat -f %Lp "${1}")" = 600 ]
++}
++
++main() {
++	check "isync is installed" pkg info -e isync
++	check "msmtp is installed" pkg info -e msmtp
++	check "notmuch is installed" pkg info -e notmuch
++	check "the lab-mail profile's config is beastie's" \
++	    same_as notmuch-config "${HOME}/.config/notmuch/lab-mail/config"
++	check "~/.mbsyncrc is beastie's" same_as mbsyncrc "${HOME}/.mbsyncrc"
++	check "~/.msmtprc is beastie's" same_as msmtprc "${HOME}/.msmtprc"
++	check "the password file is not empty" test -s "${pwfile}"
++	check "only Pat can read the password file" only_pat_reads "${pwfile}"
++	check "the sent folder exists" test -d "${HOME}/mail/pat@p7x.dev/sent/cur"
++	"${client_check}" || failed=1
++	exit "${failed}"
++}
++
++main "${@}"
+diff --git a/jails/instances/lab-mail/spec.org b/jails/instances/lab-mail/spec.org
+index 2f05794b..4c2a03a1 100644
+--- a/jails/instances/lab-mail/spec.org
++++ b/jails/instances/lab-mail/spec.org
+@@ -281,6 +281,12 @@ up the same way and differ only in the login.
+   lab-mail from the profile's address. It prints one line per check,
+   ok or FAIL, and exits 0 only if every check passes. It changes
+   nothing and posts no mail.
++- =just check-mail= in =infra/hosts/beastie=, run as Pat, checks
++  beastie's setup the same way before he switches to it: the ports are
++  installed, each config is the one in =infra/hosts/beastie/mail=,
++  the password file is not empty and only Pat can read it, and the
++  =sent= folder exists. It then runs =just check= of
++  =dotfiles/notmuch= and fails if that fails.
+ 
+ acceptance test: run from lab-claude, except where a step says
+ beastie.
+@@ -320,6 +326,10 @@ beastie.
+     exits 0. With =Port= in =~/.mbsyncrc= changed to one lab-mail
+     does not listen on, it exits non-zero and a FAIL line names the
+     mbsync login.
++14. On beastie as Pat, =just check-mail= in =infra/hosts/beastie=
++    exits 0. With a wrong password in =~/.config/lab-mail/password=,
++    it exits non-zero and a FAIL line names the mbsync login. With
++    =~/.mbsyncrc= edited, a FAIL line names =~/.mbsyncrc=.
+ 
+ out of scope:
+ - Moving the list's clients off the jj maildir. lab-process-mail, the
+-- 
+2.56.0
+

@@ -1,0 +1,122 @@
+Message-ID: <1e0b8b48f0713da155edaa4a899b82d5863ea8cf.1792290760.git.claude@p7x.dev>
+In-Reply-To: <cover.1792290760.git.claude@p7x.dev>
+References: <cover.1792290760.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Subject: [PATCH v2 12/16] jails/instances/lab-claude: Drop the jj mail
+ workspace
+To: lab@lists.p7x.dev
+Cc: Pat Maddox <pat@patmaddox.com>
+Change-Id: snltmolrklnkmnlomylzxzxnuxnxtnwk
+Date: Sun, 18 Oct 2026 02:33:37 +0000
+
+lab-claude reads the list from lab-mail and posts to it there, so
+the mail workspace, the submissions remote and its mount, and the
+default notmuch profile that indexed the jj maildir only add setup
+that nothing uses. A rebuilt jail now gets just the trunk workspace
+and its copy of the list.
+---
+change-id: snltmolrklnkmnlomylzxzxnuxnxtnwk
+
+ .../lab-claude/dist/home/claude/.gitconfig    |  5 ++--
+ .../lab-claude/dist/home/claude/bootstrap.sh  | 26 +++++--------------
+ jails/instances/lab-claude/jail.conf          |  3 ---
+ jails/instances/lab-mail/spec.org             |  2 ++
+ 4 files changed, 10 insertions(+), 26 deletions(-)
+
+diff --git a/jails/instances/lab-claude/dist/home/claude/.gitconfig b/jails/instances/lab-claude/dist/home/claude/.gitconfig
+index 93c9f8b6..7749cc47 100644
+--- a/jails/instances/lab-claude/dist/home/claude/.gitconfig
++++ b/jails/instances/lab-claude/dist/home/claude/.gitconfig
+@@ -2,10 +2,9 @@
+ 	name = claude
+ 	email = claude@p7x.dev
+ [safe]
+-	# The shared repos are owned by the host user, so git refuses them
+-	# as dubious ownership unless they are marked safe.
++	# The shared repo is owned by the host user, so git refuses it as
++	# dubious ownership unless it is marked safe.
+ 	directory = /data/lab.git
+-	directory = /data/lab-submissions.git
+ [sendemail]
+ 	# Post patch series to the list through lab-mail, from the
+ 	# address in each patch's From, without asking.
+diff --git a/jails/instances/lab-claude/dist/home/claude/bootstrap.sh b/jails/instances/lab-claude/dist/home/claude/bootstrap.sh
+index f56492d0..7528eb67 100755
+--- a/jails/instances/lab-claude/dist/home/claude/bootstrap.sh
++++ b/jails/instances/lab-claude/dist/home/claude/bootstrap.sh
+@@ -1,39 +1,25 @@
+ #!/bin/sh
+-# Set up the claude user's lab workspaces: lab/default.jj for trunk
+-# and lab/mail.jj for the mail list.  Run once after the jail is
+-# built; safe to run again.
++# Set up the claude user's lab workspace, lab/default.jj for trunk, and
++# its copy of the list. Run once after the jail is built; safe to run
++# again.
+ set -eu
+ 
+ readonly upstream=/data/lab.git
+-readonly submissions=/data/lab-submissions.git
+ readonly repo=${HOME}/lab/default.jj
+-readonly mailws=${HOME}/lab/mail.jj
+ 
+ if [ ! -d ${repo} ]; then
+ 	mkdir -p $(dirname ${repo})
+ 	jj git clone --remote upstream ${upstream} ${repo}
+-	jj -R ${repo} git remote add submissions ${submissions}
+ fi
+ 
+ cd ${repo}
+ jj config set --repo 'revset-aliases."trunk()"' trunk@upstream
+-jj config set --repo git.push submissions
+ jj git fetch --all-remotes
+-jj bookmark track trunk@upstream mail@upstream
++jj bookmark track trunk@upstream
+ 
+-if [ ! -d ${mailws} ]; then
+-	jj workspace add --name mail -r mail ${mailws}
+-fi
+-
+-# notmuch hooks and config come from the same package as on any
+-# developer machine; only the identity is claude's, taken from the
+-# .gitconfig installed with the jail.  Set it before the first notmuch
+-# new so the first tags are derived for claude.
++# notmuch hooks come from the same package as on any developer
++# machine; the lab-mail profile's config is installed with the jail.
+ (cd ${repo}/dotfiles/notmuch && just install)
+-notmuch config set user.name "$(git config user.name)"
+-notmuch config set user.primary_email "$(git config user.email)"
+-
+-notmuch new
+ 
+ # mbsync syncs the list into this mail root, which it does not create.
+ mkdir -p ${HOME}/mail/claude@p7x.dev
+diff --git a/jails/instances/lab-claude/jail.conf b/jails/instances/lab-claude/jail.conf
+index 564d94d4..695e861a 100644
+--- a/jails/instances/lab-claude/jail.conf
++++ b/jails/instances/lab-claude/jail.conf
+@@ -7,9 +7,6 @@ lab-claude {
+   exec.prepare += "mkdir -p ${path}/data/lab.git";
+   mount += "/jails/share/lab.git ${path}/data/lab.git nullfs ro 0 0";
+ 
+-  exec.prepare += "mkdir -p ${path}/data/lab-submissions.git";
+-  mount += "/jails/share/lab-submissions.git ${path}/data/lab-submissions.git nullfs rw 0 0";
+-
+   allow.mount;
+   allow.mount.devfs;
+   allow.mount.fdescfs;
+diff --git a/jails/instances/lab-mail/spec.org b/jails/instances/lab-mail/spec.org
+index d2deeaad..8325776e 100644
+--- a/jails/instances/lab-mail/spec.org
++++ b/jails/instances/lab-mail/spec.org
+@@ -287,6 +287,8 @@ up the same way and differ only in the login.
+   send-email through msmtp, to the list, and saves its reply by Fcc
+   into =sent=, so the message it answered is tagged replied as soon
+   as the pass ends.
++- No client reads or writes the jj maildir. The =mail= bookmark, the
++  =submissions= remote, and =~/lab/mail.jj= are retired.
+ - =just check= in =dotfiles/notmuch=, run as the user on any
+   host, checks that login's client before it is used: mbsync logs in
+   and lists the list's folders, a dry run of the sync succeeds, the
+-- 
+2.56.0
+

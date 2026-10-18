@@ -1,0 +1,367 @@
+Message-ID: <fa81da841ecd856f9cece158dd664b94aca1cd8b.1792290760.git.claude@p7x.dev>
+In-Reply-To: <cover.1792290760.git.claude@p7x.dev>
+References: <cover.1792290760.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Subject: [PATCH v2 02/16] dotfiles/notmuch: Add a lab-mail profile
+To: lab@lists.p7x.dev
+Cc: Pat Maddox <pat@patmaddox.com>
+Change-Id: xqrvvltxukvrylytnssxookxyornsvmy
+Date: Sun, 18 Oct 2026 02:33:27 +0000
+
+A client that syncs the list from lab-mail needs a notmuch setup of
+its own. The tags must come from the folders, since the folder a
+message is in is its state on the list, and replied must not flap,
+since flag sync mirrors it to a file name that mbsync pushes back.
+
+A separate profile lets that setup be tried beside the default one,
+which still reads the jj maildir, so nothing changes until a client
+is pointed at it.
+
+- lab-mail/config.sample is the profile's config with sample values
+  for the login. The package installs it beside the hooks, and each
+  host installs its own copy with its login.
+- Its post-new hook derives sent, replied, inbox, next, later, and
+  archived, and changes replied only where it is wrong.
+- Its pre-new hook removes deleted drafts and never fetches.
+---
+change-id: xqrvvltxukvrylytnssxookxyornsvmy
+
+ dotfiles/notmuch/lab-mail/config.sample     |  40 +++++++
+ dotfiles/notmuch/lab-mail/hooks/mail-tag.sh | 113 ++++++++++++++++++++
+ dotfiles/notmuch/lab-mail/hooks/post-new    |   3 +
+ dotfiles/notmuch/lab-mail/hooks/pre-new     |   8 ++
+ dotfiles/notmuch/patmaddox-notmuch.pkg.do   |  54 ++++++----
+ jails/instances/lab-mail/spec.org           |  23 ++++
+ 6 files changed, 221 insertions(+), 20 deletions(-)
+ create mode 100644 dotfiles/notmuch/lab-mail/config.sample
+ create mode 100755 dotfiles/notmuch/lab-mail/hooks/mail-tag.sh
+ create mode 100755 dotfiles/notmuch/lab-mail/hooks/post-new
+ create mode 100755 dotfiles/notmuch/lab-mail/hooks/pre-new
+
+diff --git a/dotfiles/notmuch/lab-mail/config.sample b/dotfiles/notmuch/lab-mail/config.sample
+new file mode 100644
+index 00000000..41230fc5
+--- /dev/null
++++ b/dotfiles/notmuch/lab-mail/config.sample
+@@ -0,0 +1,40 @@
++# notmuch profile for the lab-devel list as synced from lab-mail; see
++# notmuch-config(1). Use it with NOTMUCH_PROFILE=lab-mail. Each host
++# that reads the list installs its own copy as
++# ~/.config/notmuch/lab-mail/config, with its login's name, address,
++# and mail root in place of the sample values below.
++#
++# mbsync fills the mail root with the list's folders, INBOX, Next,
++# Later, and Archive; notmuch new only indexes them. mail_root is
++# relative to $HOME. The database and the hooks take notmuch's
++# defaults for the profile, ~/.local/share/notmuch/lab-mail and
++# ~/.config/notmuch/lab-mail/hooks.
++
++[database]
++mail_root=mail/you@p7x.dev
++
++# The address you post to the list from. Mail from it, or from any
++# other_email (separated by ;), is tagged sent.
++[user]
++name=Your Name
++primary_email=you@p7x.dev
++
++# Tags are derived by the post-new hook, so notmuch new adds none of
++# its own. Left unset, it would add inbox and unread.
++[new]
++tags=
++ignore=.uidvalidity;.mbsyncstate;.mbsyncstate.journal;.mbsyncstate.new;.mbsyncstate.lock
++
++[search]
++exclude_tags=deleted
++
++# Patches carry their commit's jj change id in a Change-Id header, the
++# same across every version of a patch. changeid:<id> finds them all.
++[index]
++header.changeid=Change-Id
++
++# unread, flagged, and replied follow \Seen, \Flagged, and \Answered
++# on lab-mail and Fastmail. A read-only login, which cannot set
++# flags, turns this off.
++[maildir]
++synchronize_flags=true
+diff --git a/dotfiles/notmuch/lab-mail/hooks/mail-tag.sh b/dotfiles/notmuch/lab-mail/hooks/mail-tag.sh
+new file mode 100755
+index 00000000..b8e201d0
+--- /dev/null
++++ b/dotfiles/notmuch/lab-mail/hooks/mail-tag.sh
+@@ -0,0 +1,113 @@
++#!/bin/sh
++#
++# mail-tag.sh -- derive notmuch tags from the list synced from lab-mail.
++#
++# Every tag here is recomputed from the mail root on every run, so the
++# database holds no state of its own: rebuild it from the mail root and
++# the same tags come back.
++#
++#   sent: from the user (notmuch user.primary_email or other_email)
++#   replied: from someone else, and the user has replied to it
++#   inbox: from someone else, in INBOX, and not replied to
++#   next: in Next
++#   later: in Later
++#   archived: in Archive
++#
++# "Replied to" means a message from the user names it in In-Reply-To.
++# Drafts get none of these tags.
++#
++# replied is mirrored to the maildir R flag when synchronize_flags is
++# on, so a change to it renames the message's file. It is therefore
++# changed only where it is wrong, never cleared and set again.
++#
++# Runs from the notmuch post-new hook, so notmuch new applies it.
++
++set -eu
++set -o pipefail
++
++readonly drafts='path:drafts/**'
++
++tmp=""
++
++main() {
++	local me
++	me="$(me_query)"
++	tmp="$(mktemp -d)"
++	trap 'rm -rf "${tmp}"' EXIT
++
++	replied_changes "${me}" | notmuch tag --batch
++
++	{
++		echo "-sent -inbox -next -later -archived -- ${drafts}"
++		echo "+sent -inbox -- (${me}) and not ${drafts}"
++		echo "-sent -- not (${me}) and not ${drafts}"
++		echo "+inbox -- folder:INBOX and not tag:replied" \
++		    "and not (${me}) and not ${drafts}"
++		echo "-inbox -- not folder:INBOX or tag:replied"
++		echo "+next -- folder:Next and not ${drafts}"
++		echo "-next -- not folder:Next"
++		echo "+later -- folder:Later and not ${drafts}"
++		echo "-later -- not folder:Later"
++		echo "+archived -- folder:Archive and not ${drafts}"
++		echo "-archived -- not folder:Archive"
++	} | notmuch tag --batch
++}
++
++# A query matching mail from any of the user's addresses.
++me_query() {
++	local addrs
++	addrs="$(notmuch config get user.primary_email)
++$(notmuch config get user.other_email 2>/dev/null | tr ';' '\n')"
++	printf '%s\n' "${addrs}" | awk '
++		NF { q = q (q == "" ? "" : " or ") "from:\"" $0 "\"" }
++		END {
++			if (q == "") exit 1
++			print q
++		}
++	' || die "no user address: set notmuch user.primary_email"
++}
++
++# Tag batch lines that add replied where the user has replied and
++# remove it where they have not, touching no message already right.
++replied_changes() {
++	local me id
++	me="${1}"
++
++	notmuch search --output=messages "tag:replied" |
++	    sed -e 's/^id://' | sort -u > "${tmp}/have"
++	replied_ids "${me}" > "${tmp}/want"
++
++	comm -13 "${tmp}/have" "${tmp}/want" | while read -r id; do
++		echo "+replied -- id:\"${id}\" and not (${me}) and not ${drafts}"
++	done
++	comm -23 "${tmp}/have" "${tmp}/want" | while read -r id; do
++		echo "-replied -- id:\"${id}\""
++	done
++}
++
++# Message-IDs the user has replied to, from In-Reply-To of their mail.
++replied_ids() {
++	notmuch search --output=files --format=text0 \
++	    "(${1}) and not ${drafts}" |
++	    xargs -0 -r awk '
++		FNR == 1 { in_header = 1; irt = 0 }
++		!in_header { next }
++		/^$/ { in_header = 0; next }
++		tolower($0) ~ /^in-reply-to:/ { irt = 1; grab($0); next }
++		irt && /^[ \t]/ { grab($0); next }
++		{ irt = 0 }
++		function grab(s) {
++			if (match(s, /<[^>]+>/)) {
++				print substr(s, RSTART + 1, RLENGTH - 2)
++				irt = 0
++			}
++		}
++	' | sort -u
++}
++
++die() {
++	echo "${0##*/}: ${*}" >&2
++	exit 1
++}
++
++main "${@}"
+diff --git a/dotfiles/notmuch/lab-mail/hooks/post-new b/dotfiles/notmuch/lab-mail/hooks/post-new
+new file mode 100755
+index 00000000..5f205dfa
+--- /dev/null
++++ b/dotfiles/notmuch/lab-mail/hooks/post-new
+@@ -0,0 +1,3 @@
++#!/bin/sh
++# Derive the tags from the folders and contents of the list.
++"$(dirname "$0")/mail-tag.sh"
+diff --git a/dotfiles/notmuch/lab-mail/hooks/pre-new b/dotfiles/notmuch/lab-mail/hooks/pre-new
+new file mode 100755
+index 00000000..5bb82dc0
+--- /dev/null
++++ b/dotfiles/notmuch/lab-mail/hooks/pre-new
+@@ -0,0 +1,8 @@
++#!/bin/sh
++# Remove drafts notmuch-emacs has marked deleted, i.e. superseded by a
++# newer save or sent. Only drafts: the rest of the mail root is synced
++# with the list, which a stray deleted tag must never change. This
++# runs before notmuch new scans, so the same run drops them from the
++# database. It never fetches mail; mbsync does that.
++notmuch search --format=text0 --output=files 'tag:deleted and path:drafts/**' \
++  | xargs -0 rm -f
+diff --git a/dotfiles/notmuch/patmaddox-notmuch.pkg.do b/dotfiles/notmuch/patmaddox-notmuch.pkg.do
+index 81a939b3..deb5d10f 100755
+--- a/dotfiles/notmuch/patmaddox-notmuch.pkg.do
++++ b/dotfiles/notmuch/patmaddox-notmuch.pkg.do
+@@ -1,56 +1,70 @@
+ #!/bin/sh
+ set -eu
+ 
+-# Build a FreeBSD package of the notmuch hooks and sample config
++# Build a FreeBSD package of the notmuch hooks and sample configs
+ # Install with: INSTALL_AS_USER=yes pkg -r ~ add patmaddox-notmuch.pkg
+-# Files go to: ~/.config/notmuch/default/, notmuch's default hook dir
++# Files go to: ~/.config/notmuch/default/, notmuch's default hook dir,
++# and ~/.config/notmuch/lab-mail/, the lab-mail profile's
+ 
+ name="patmaddox-notmuch"
+ version="0.0.0"
+-prefix="/.config/notmuch/default"
+-sample="${prefix}/notmuch-config.sample"
++prefix="/.config/notmuch"
++sample="${prefix}/default/notmuch-config.sample"
+ config="/.notmuch-config"
+ 
+-files="$(jj file list hooks) notmuch-config.sample"
+-redo-ifchange ${files}
++default_files="$(jj file list hooks) notmuch-config.sample"
++labmail_files="$(jj file list lab-mail)"
++redo-ifchange ${default_files} ${labmail_files}
+ 
+ # Stage files
+ stagedir=$(mktemp -d)
+ trap "rm -rf ${stagedir}" EXIT
+ 
+ fileslist=""
+-for f in ${files}; do
+-    mkdir -p "${stagedir}${prefix}/$(dirname "$f")"
+-    cp "$f" "${stagedir}${prefix}/$f"
+-    # The sample stays writable, since the config copied from it keeps
++
++# stage <source> <path under the prefix>
++stage() {
++    mkdir -p "${stagedir}${prefix}/$(dirname "$2")"
++    cp "$1" "${stagedir}${prefix}/$2"
++    # A sample stays writable, since the config copied from it keeps
+     # its mode.
+-    case "$f" in
++    case "$1" in
+     *.sample) ;;
+-    *) chmod a-w "${stagedir}${prefix}/$f" ;;
++    *) chmod a-w "${stagedir}${prefix}/$2" ;;
+     esac
+-    fileslist="${fileslist}  ${prefix}/${f}: \"-\"
++    fileslist="${fileslist}  ${prefix}/$2: \"-\"
+ "
++}
++
++for f in ${default_files}; do
++    stage "$f" "default/$f"
++done
++for f in ${labmail_files}; do
++    stage "$f" "$f"
+ done
+ 
+ flatsize=$(find "${stagedir}" -type f -exec stat -f%z {} + | awk '{s+=$1} END {print s}')
+ 
+-# The sample becomes ~/.notmuch-config only if none exists, and is
+-# removed on deinstall only if still unedited, like the ports @sample
+-# keyword.  pkg resolves these paths against the install root.
++# Each sample becomes its config only if none exists, and is removed
++# on deinstall only if still unedited, like the ports @sample keyword.
++# pkg resolves these paths against the install root.
+ manifest="${stagedir}/+MANIFEST"
+ cat > "${manifest}" <<EOM
+ name: ${name}
+ version: ${version}
+ origin: local/${name}
+-comment: notmuch hooks for the lab-devel list
++comment: notmuch hooks and configs for the lab-devel list
+ maintainer: pat@patmaddox.com
+ prefix: ${prefix}
+ www: https://git.sr.ht/~patmaddox/lab/tree/trunk/item/dotfiles/notmuch
+ flatsize: ${flatsize}
+ desc: <<EOD
+-notmuch hooks for the lab-devel list, installed in notmuch's default
+-hook dir so no hook_dir setting is needed, and a sample
+-~/.notmuch-config installed if none exists.
++notmuch hooks for the lab-devel list, installed in each profile's
++default hook dir so no hook_dir setting is needed: the default
++profile, which reads the jj maildir, and the lab-mail profile, which
++reads the list synced from lab-mail. The default profile's sample
++config is installed if it has none. The lab-mail profile's sample is
++installed beside its hooks, for each host to copy and fill in.
+ 
+ INSTALL_AS_USER=yes pkg -r ~ install -U \$(realpath ${name}.pkg)
+ EOD
+diff --git a/jails/instances/lab-mail/spec.org b/jails/instances/lab-mail/spec.org
+index bc7a181d..7d58b0dc 100644
+--- a/jails/instances/lab-mail/spec.org
++++ b/jails/instances/lab-mail/spec.org
+@@ -231,6 +231,25 @@ check:
+ clients: lab-claude.
+ - Packages: mail/isync and mail/msmtp, added to the existing
+   mail/notmuch.
++- Each user's mail root is =~/mail/<login>=, such as
++  =~/mail/pat@p7x.dev=. It holds the list's folders, INBOX, =Next=,
++  =Later=, and =Archive=, and the user's own =sent=, which is never
++  synced.
++- notmuch indexes the mail root under the profile =lab-mail=, which
++  =dotfiles/notmuch= installs. =notmuch new= never contacts lab-mail,
++  so it works the same while lab-mail is down. It indexes =Change-Id=
++  as =changeid:= and ignores mbsync's state files. Its post-new hook
++  derives every tag from the mail root, so a rebuild of the database
++  gives the same tags:
++  - sent: mail from the user;
++  - replied: other mail the user has answered, named in the
++    In-Reply-To of the user's mail;
++  - inbox: other mail in INBOX that the user has not answered;
++  - next, later, and archived: mail in =Next=, =Later=, and
++    =Archive=.
++- Flag sync is on for a login that may write the list, so unread,
++  flagged, and replied follow the list's flags. It is off for a
++  read-only login, whose flags would never reach lab-mail.
+ - msmtp posts through 127.0.0.1:2525 as claude@p7x.dev. When the
+   server refuses any recipient or the message, msmtp posts nothing
+   and exits non-zero with the server's reply, so the whole message is
+@@ -354,6 +373,10 @@ why.
+ - Name the folders lab-mail syncs, not sync every folder of the
+   account. Pat can then make a folder on Fastmail for anything else,
+   and it stays out of lab-mail and out of every client.
++- inbox needs both INBOX and no answer from the user, not INBOX
++  alone. An agent cannot move mail on lab-mail, so its answer is the
++  only mark it can leave, and Pat sees at a glance what he has
++  answered and not yet filed.
+ - Archive by folder, not by a tag in one client. A tag is not in the
+   list data, so a rebuild of the index loses it and no agent sees it.
+   Fastmail's own =Archive= folder is used, not a new one, so archiving
+-- 
+2.56.0
+
