@@ -1,0 +1,73 @@
+From: claude <claude@p7x.dev>
+Subject: Re: Configure notmuch to use lab-mail
+To: Pat Maddox <pat@patmaddox.com>, lab@lists.p7x.dev
+In-Reply-To: <m2ik2zet2i.fsf@beastie.p7x.dev>
+References: <m2zewbevie.fsf@beastie.p7x.dev>
+	<1792281419.52e23808b67a@p7x.dev> <m2ik2zet2i.fsf@beastie.p7x.dev>
+Message-ID: <1792286049.72dc5ac4bb29@p7x.dev>
+Date: Sun, 18 Oct 2026 01:14:14 +0000
+
+On Sat, 17 Oct 2026 17:44:05 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+> Base this work on b/dev then. The code is good - I'm going to rewrite
+> some of the commit messages. But it's stable enough to base this work on.
+
+Done. The series is "[PATCH 00/14] Move beastie and lab-claude onto
+lab-mail" [1]. Its base is b/dev, and the cover letter has a
+base-branch line. It needs nothing from b/dev except v13, and it
+applies with git am onto b/dev to the same tree I built.
+
+> I like this. I also want some way of testing that the config works,
+> before I do the switch.
+
+That is patch 6: "just check" in dotfiles/notmuch. On either host it
+checks that mbsync logs in and lists the four folders, that a dry run
+of the sync works, that the lab-mail profile has its config, hooks,
+and database, and that msmtp reaches lab-mail from the profile's
+address. It prints ok or FAIL for each check, and it changes nothing
+and posts nothing.
+
+The profile also sits beside your current one. After patches 1-6 you
+can sync, index, and read the real list in Emacs with NOTMUCH_PROFILE
+set by hand, while posting still goes to the jj maildir. The cover
+letter gives the commands for both hosts. I ran the lab-claude steps
+against the live lab-mail, and all 12 checks passed.
+
+> pat@p7x.dev
+
+The mail root is ~/mail/pat@p7x.dev. lab-claude's is
+~/mail/claude@p7x.dev.
+
+> Yes FCC is good.
+
+Emacs saves your posts by Fcc into ~/mail/pat@p7x.dev/sent. A pass
+saves its reply the same way, so lab-process-mail still learns the
+outcome from the index, not from anything the agent prints.
+
+> That sounds good. I'm not doing any quarantining right now. I think it's
+> reasonable to just skip unknown senders. And log them.
+
+lab-process-mail now answers only pat@patmaddox.com and pat@p7x.dev,
+or the addresses in LAB_PROCESS_MAIL_SENDERS. It logs each other
+inbox message to stderr once per run, with its id and From, and skips
+it. I withdraw "[PATCH 0/2] Quarantine mail from unapproved senders"
+[2].
+
+> I think the whole thing is one series, right? Though the host commits
+> should be separate from one another.
+
+Yes, it is one series of 14 patches. beastie's commits and
+lab-claude's are separate, and so are Emacs, lab-process-mail, and
+the notmuch package. They are ordered support, check, switch, and
+cleanup, so you can apply the first six and test before you switch.
+
+Two things need your call, and the cover letter has the details:
+
+- The keys. I used M i, M n, M l, and M a in the show, search, and
+  tree views. The stock "a" now gets undone by the next notmuch new on
+  a message that is still in INBOX and not answered.
+- The import. The recipe from v13 puts every old message in INBOX, so
+  your inbox would fill with old threads. Importing into Archive
+  avoids that.
+
+[1] id:cover.1792285964.git.claude@p7x.dev
+[2] id:cover.1792256705.git.claude@p7x.dev
