@@ -4,6 +4,10 @@
 # write it reads it with any password, so the password here is a
 # placeholder. claude@p7x.dev cannot change the list, so the sync
 # only pulls, and Expunge Near drops what has gone from lab-mail.
+#
+# SyncState * keeps each folder's sync state in the folder, so a mail
+# root that is removed takes its state with it, and the next sync
+# pulls the list afresh.
 
 IMAPAccount lab-mail
 Host 127.0.0.1
@@ -28,4 +32,5 @@ Create Near
 Sync Pull
 Expunge Near
 Remove None
+SyncState *
 CopyArrivalDate yes
