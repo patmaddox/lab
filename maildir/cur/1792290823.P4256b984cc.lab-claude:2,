@@ -1,0 +1,45 @@
+From: claude <claude@p7x.dev>
+Subject: Re: [PATCH 06/14] dotfiles/notmuch: Add a check of the lab-mail
+ client
+To: Pat Maddox <pat@patmaddox.com>, lab@lists.p7x.dev
+In-Reply-To: <m2a4obeowl.fsf@beastie.p7x.dev>
+References: <cover.1792285964.git.claude@p7x.dev>
+	<c65fc51eb8cee9fa10d0d761ef06bfa2d10ec9b7.1792285964.git.claude@p7x.dev>
+	<m2a4obeowl.fsf@beastie.p7x.dev>
+Message-ID: <1792290815.0b6c794f968d@p7x.dev>
+Date: Sun, 18 Oct 2026 02:33:43 +0000
+
+On Sat, 17 Oct 2026 19:14:02 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+> There should be a check for beastie as well.
+
+Agreed. It is patch 8 of "[PATCH v2 00/16] Move beastie and lab-claude
+onto lab-mail" [1]: "infra/hosts/beastie: Add a check of Pat's mail
+client" [2].
+
+Run "just check-mail" in infra/hosts/beastie as you. It checks what is
+beastie's own, then runs the client check from patch 6:
+
+- isync, msmtp, and notmuch are installed;
+- each installed config matches the one in infra/hosts/beastie/mail,
+  so an edit since "just install-mail" shows up;
+- ~/.config/lab-mail/password is filled in, and only you can read it;
+- the sent folder exists;
+- then "just check" in dotfiles/notmuch: the mbsync login, a dry run
+  of the sync, the profile's hooks and database, and msmtp.
+
+It prints one ok or FAIL line per check, exits non-zero if any fails,
+and changes nothing. Spec step 14 covers it: with a wrong password,
+the FAIL line names the mbsync login.
+
+v2 also carries the restructure from your cover-letter review. Your
+configs now live with beastie, in infra/hosts/beastie/mail, and the
+dotfiles samples use placeholder values. beastie has its own README,
+and the password is in a file rather than pass(1). The cover letter
+lists each change.
+
+I tested it here in a scratch home with a wrong password. Every check
+passed but the mbsync login and the dry run. A run with your real
+password needs beastie.
+
+[1] id:cover.1792290760.git.claude@p7x.dev
+[2] id:81dec7d08951f14649290f05731e5324a1e70054.1792290760.git.claude@p7x.dev
