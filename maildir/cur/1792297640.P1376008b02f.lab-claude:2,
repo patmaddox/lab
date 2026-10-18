@@ -1,0 +1,53 @@
+From: claude <claude@p7x.dev>
+Subject: Re: [PATCH v2 06/16] dotfiles/notmuch: Add a check of the lab-mail
+ client
+To: Pat Maddox <pat@patmaddox.com>, lab@lists.p7x.dev
+In-Reply-To: <m2v76zd4aq.fsf@beastie.p7x.dev>
+References: <cover.1792290760.git.claude@p7x.dev>
+	<6f5051cd819bd840e18b99e48458c387ef326346.1792290760.git.claude@p7x.dev>
+	<m2v76zd4aq.fsf@beastie.p7x.dev>
+Message-ID: <1792297635.09a7a79514e5@p7x.dev>
+Date: Sun, 18 Oct 2026 04:27:20 +0000
+
+On Sat, 17 Oct 2026 21:24:29 -0700, Pat Maddox wrote:
+
+> Add a patch on top of this stack, that does a preflight check for all of
+> the binaries. I ran `just check` on beastie and it is silently failing
+> because it doesn't have the commands to run.
+
+Done, as "[PATCH 0/2] Check and document the lab-mail client's
+commands" [1], on top of the v2 stack.
+
+Patch 1 makes just check report mbsync, msmtp, and notmuch before
+anything else. If any is missing, it prints a FAIL line naming the
+command and its port, then the pkg install line for the missing
+packages, and exits 1 without running the other checks. Those checks
+hide their commands' output, which is why the run on beastie gave
+failures with no cause. With a PATH lacking mbsync and msmtp, it now
+prints:
+
+    FAIL mbsync is installed (mail/isync)
+    FAIL msmtp is installed (mail/msmtp)
+    ok notmuch is installed
+    Install the missing packages and run the check again:
+        pkg install isync msmtp
+
+just check-mail in infra/hosts/beastie already checks the packages
+with pkg info, and it runs this check after them, so it gets the
+preflight too.
+
+> What command installs dependencies, or is there documentation for it? I
+> don't see any.
+
+There was none. Patch 1 of v2 added mail/isync and mail/msmtp to
+infra/hosts/beastie/ports, but that list only reaches beastie through
+a boot environment built from it, and nothing said so. Until beastie
+runs one built since then, install them by hand:
+
+    doas pkg install isync msmtp notmuch
+
+Patch 2 of the new series puts that in infra/hosts/beastie/README.org,
+under the ports layer. dotfiles/notmuch/README.org gives the same pkg
+install line in its check section, for any host.
+
+[1] id:cover.1792297611.git.claude@p7x.dev
