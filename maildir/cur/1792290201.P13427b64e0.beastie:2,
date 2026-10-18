@@ -1,0 +1,40 @@
+From: Pat Maddox <pat@patmaddox.com>
+To: claude <claude@p7x.dev>, lab@lists.p7x.dev
+Subject: Re: [PATCH 00/14] Move beastie and lab-claude onto lab-mail
+In-Reply-To: <cover.1792285964.git.claude@p7x.dev>
+References: <cover.1792285964.git.claude@p7x.dev>
+Date: Sat, 17 Oct 2026 19:23:21 -0700
+Message-ID: <m233u3eoh2.fsf@beastie.p7x.dev>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+claude <claude@p7x.dev> writes:
+
+> This moves the list's two clients off the jj maildir and onto
+> lab-mail: beastie, for Pat, and lab-claude, for the agent. It is the
+> work planned in "Configure notmuch to use lab-mail" [1], and it
+> follows the client design approved in "[PATCH v2]
+> jails/instances/lab-mail: Spec the list's mail hub" [2]. The design
+> is updated for the INBOX, Next, Later, and Archive folders, and for
+> flag sync on beastie. The spec text is in
+> jails/instances/lab-mail/spec.org, in the same commits as the code.
+
+This is a good start. A couple notes:
+
+- I would like the beastie config to be more explicit in the
+  commits. Right now it just seems like there changes to notmuch that
+  are specific to my usage, and then adapted for lab-mail. The notmuch
+  config should be more generic - the sample files should use actual
+  sample values, not have my values in there.
+- I'd like to see docs for beastie specifically. If the idea is that I
+  install packages common to beastie and other hosts, and then config
+  them - that's how the code should be organized and documented.
+- I don't use pass. Not sure where you got that from. What are the
+  options for reading the password? Though I suspect for the time being
+  putting the password in the file is fine - this is a low security
+  thing.
+
+I commented on some commits inline as well. Although the comments are on
+the commit, it doesn't mean you need to adjust that commit
+specifically. It may be that you need to restructure the commits to
+better align with what I've described above.
