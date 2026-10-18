@@ -1,0 +1,51 @@
+#+TITLE: infra/hosts/beastie
+
+beastie is Pat's FreeBSD workstation. Its system config is under
+=dist/=, and the ports it installs are listed in =ports=.
+
+* mail
+Pat reads and posts to the lab-devel list through lab-mail, whose
+spec is =../../../jails/instances/lab-mail/spec.org=. It is set up in
+three layers, from most shared to most specific:
+
+1. Ports. mail/isync, mail/msmtp, and mail/notmuch are in =ports=,
+   like any other package beastie needs.
+2. The notmuch package. =dotfiles/notmuch= installs the lab-mail
+   profile's hooks, which every host that reads the list shares, and
+   samples of each config:
+   #+BEGIN_EXAMPLE
+   cd ~/lab/default.jj/dotfiles/notmuch && just install
+   #+END_EXAMPLE
+3. beastie's config. =mail/= holds Pat's copy of each sample, for
+   =pat@p7x.dev=:
+   - =notmuch-config= becomes =~/.config/notmuch/lab-mail/config=;
+   - =mbsyncrc= becomes =~/.mbsyncrc=, and syncs both ways, since
+     =pat@p7x.dev= may change the list;
+   - =msmtprc= becomes =~/.msmtprc=, and posts from =pat@p7x.dev=.
+
+   =just install-mail= installs them, and keeps any installed file
+   that differs as =<file>.old=. It also makes the mail root,
+   =~/mail/pat@p7x.dev=, with the =sent= folder that mbsync never
+   syncs.
+
+** password
+mbsync reads the password of =pat@p7x.dev= on lab-mail from
+=~/.config/lab-mail/password=, which =just install-mail= makes empty,
+readable only by Pat. Write the password into it once:
+#+BEGIN_EXAMPLE
+just install-mail
+$EDITOR ~/.config/lab-mail/password
+#+END_EXAMPLE
+
+The password guards only the list, on a server that listens on
+beastie's loopback, so a file only Pat can read is enough. mbsync can
+take it in other ways too: =Pass= in =~/.mbsyncrc= puts it in the
+config, =PassCmd= can run any command that prints it, such as a
+password manager, and with neither mbsync asks for it on each run.
+msmtp needs no password, since lab-mail takes posts with no login.
+
+** sync and read
+#+BEGIN_EXAMPLE
+mbsync lab-mail && NOTMUCH_PROFILE=lab-mail notmuch new
+NOTMUCH_PROFILE=lab-mail notmuch search tag:inbox
+#+END_EXAMPLE

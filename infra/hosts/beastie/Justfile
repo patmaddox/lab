@@ -3,3 +3,7 @@ import "../../common/host.just"
 # Verify backup snapshots are in sync
 verify-backups:
   ./libexec/verify-backups.sh
+
+# Install Pat's mail client config for lab-mail
+install-mail:
+  ./libexec/install-mail.sh

@@ -1,0 +1,34 @@
+# Pat's ~/.mbsyncrc on beastie, installed by just install-mail: sync
+# the list with lab-mail into ~/mail/pat@p7x.dev. It is
+# dotfiles/notmuch/lab-mail/mbsyncrc.sample with Pat's login; see
+# there for what each setting does.
+#
+# pat@p7x.dev may change the list, so the sync runs both ways and
+# expunges on both sides, and Pat's moves and deletions reach
+# lab-mail. The password is in ~/.config/lab-mail/password, which only
+# Pat can read.
+
+IMAPAccount lab-mail
+Host 127.0.0.1
+Port 2143
+TLSType None
+AuthMechs LOGIN
+User pat@p7x.dev
+PassCmd "cat ~/.config/lab-mail/password"
+
+IMAPStore lab-mail
+Account lab-mail
+
+MaildirStore local
+Path ~/mail/pat@p7x.dev/
+Inbox ~/mail/pat@p7x.dev/INBOX
+
+Channel lab-mail
+Far :lab-mail:
+Near :local:
+Patterns INBOX Next Later Archive
+Create Near
+Sync All
+Expunge Both
+Remove None
+CopyArrivalDate yes

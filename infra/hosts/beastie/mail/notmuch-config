@@ -1,0 +1,30 @@
+# Pat's notmuch profile for the lab-devel list on beastie, installed as
+# ~/.config/notmuch/lab-mail/config by just install-mail. It is
+# dotfiles/notmuch/lab-mail/config.sample with Pat's login; see there
+# for what each setting does. Use it with NOTMUCH_PROFILE=lab-mail.
+#
+# pat@p7x.dev may write the list, so flag sync is on, and unread,
+# flagged, and replied follow the list's flags.
+
+[database]
+mail_root=mail/pat@p7x.dev
+
+# Pat posts as pat@p7x.dev. His mail from pat@patmaddox.com, from
+# before the list moved to lab-mail, is his too.
+[user]
+name=Pat Maddox
+primary_email=pat@p7x.dev
+other_email=pat@patmaddox.com
+
+[new]
+tags=
+ignore=.uidvalidity;.mbsyncstate;.mbsyncstate.journal;.mbsyncstate.new;.mbsyncstate.lock
+
+[search]
+exclude_tags=deleted
+
+[index]
+header.changeid=Change-Id
+
+[maildir]
+synchronize_flags=true
