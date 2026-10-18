@@ -1,0 +1,77 @@
+From: claude <claude@p7x.dev>
+Subject: Re: [PATCH v2 00/16] Move beastie and lab-claude onto lab-mail
+To: Pat Maddox <pat@patmaddox.com>, lab@lists.p7x.dev
+In-Reply-To: <m2qzhnd1if.fsf@beastie.p7x.dev>
+References: <cover.1792290760.git.claude@p7x.dev>
+	<m2qzhnd1if.fsf@beastie.p7x.dev>
+Message-ID: <1792301915.0aa32ab96639@p7x.dev>
+Date: Sun, 18 Oct 2026 05:38:40 +0000
+
+On Sat, 17 Oct 2026 22:24:40 -0700, Pat Maddox <pat@patmaddox.com> wrote:
+
+> I've started to apply the patches locally and am through 10/16. For this
+> round, if you make any new patches, base them off of that.
+
+Done. The new series, "[PATCH 0/3] Make lab-mail clients' folders and
+document lab-claude's setup" [1], applies to your patch 10/16 on b/dev.
+Patches 11-16 of v2 rebase onto it without conflicts.
+
+> I have beastie sending and syncing mail, so that's good. There was an
+> issue where there was a core dump when the folders didn't exist locally
+> - so those need to be created.
+
+Patch 1 has just install-mail make INBOX, Next, Later, and Archive, as
+well as sent. I could not reproduce the core dump with isync 1.5.1
+here. If you still have the core, or remember which folders were
+there when it crashed, I can look further.
+
+I found a related failure instead. By default mbsync keeps its sync
+state in ~/.local/state/isync, apart from the folders. When the mail
+root is removed or made again, that state no longer matches, and
+every sync fails with "Unable to recover from UIDVALIDITY change".
+lab-claude had such state from an earlier sync. Patch 2 keeps
+lab-claude's state in each folder. I left beastie's config alone,
+since your sync there runs both ways and already has state. Moving
+that state would make mbsync copy every message to the other side.
+
+> lab-claude I have no idea how to configure it. I don't see anything in
+> the docs. There was a good README for beastie, but nothing for
+> lab-claude.
+
+Patch 3 adds a set-up section to jails/instances/lab-claude/README.org,
+like beastie's. lab-claude needs no password. Its configs are in the
+jail's dist, and bootstrap.sh now makes the mail root's folders.
+
+> What do I need to do to get lab-claude going?
+
+Most of it is done. This jail already had the dist configs from
+patches 4 and 5. In claude's home I installed the .mbsyncrc from
+patch 2 and the notmuch package from your patches 1-10. I made the
+folders as patch 3's bootstrap.sh does, then synced and indexed.
+just check in dotfiles/notmuch passes every check:
+
+    ok mbsync logs in to lab-mail and lists INBOX Next Later Archive
+    ok a dry run of mbsync lab-mail succeeds
+    ok the post-new hook is installed
+    ok msmtp reaches lab-mail
+    ok msmtp posts from the profile's user address
+
+(Seven more ok lines are left out.) The old profile and ~/lab/mail.jj
+are untouched, so the current lab-process-mail runs as before.
+
+Two steps remain, and both are yours since they are the switch:
+
+1. Import the jj maildir into lab-mail, as the v2 cover letter's step
+   1 describes. lab-mail holds three messages now, the two test
+   messages and "How to interdiff versions?". Your message here is not
+   among them, so lab-claude cannot see this thread on lab-mail yet.
+
+2. On lab-claude, as claude, install lab-process-mail from a tree with
+   your patch 10/16. ~/lab/default.jj is at trunk, which does not have
+   it yet, so use a workspace at b/dev@upstream:
+
+       cd <workspace at b/dev>/src/lab-process-mail && just install
+
+   From the next pass on it syncs and answers the list on lab-mail.
+
+[1] id:cover.1792301845.git.claude@p7x.dev
