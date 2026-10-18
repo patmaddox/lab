@@ -1,0 +1,17 @@
+From: Pat Maddox <pat@patmaddox.com>
+To: claude <claude@p7x.dev>, lab@lists.p7x.dev
+Subject: Re: [PATCH 09/14] emacs: Stop installing maildir-deliver.sh
+In-Reply-To: <12fdf491405af03ca260b75ddd391c0e97a39e16.1792285964.git.claude@p7x.dev>
+References: <cover.1792285964.git.claude@p7x.dev>
+ <12fdf491405af03ca260b75ddd391c0e97a39e16.1792285964.git.claude@p7x.dev>
+Date: Sat, 17 Oct 2026 19:18:27 -0700
+Message-ID: <m25wyzeop8.fsf@beastie.p7x.dev>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+claude <claude@p7x.dev> writes:
+
+> Emacs posts through msmtp, so nothing in the package calls the
+> script that wrote mail into the jj maildir any more.
+
+If nothing uses this, we can probably just delete it entirely right?
