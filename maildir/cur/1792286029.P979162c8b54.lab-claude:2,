@@ -1,0 +1,186 @@
+Message-ID: <cover.1792285964.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Subject: [PATCH 00/14] Move beastie and lab-claude onto lab-mail
+To: lab@lists.p7x.dev
+Cc: Pat Maddox <pat@patmaddox.com>
+Date: Sun, 18 Oct 2026 01:13:49 +0000
+
+This moves the list's two clients off the jj maildir and onto
+lab-mail: beastie, for Pat, and lab-claude, for the agent. It is the
+work planned in "Configure notmuch to use lab-mail" [1], and it
+follows the client design approved in "[PATCH v2]
+jails/instances/lab-mail: Spec the list's mail hub" [2]. The design
+is updated for the INBOX, Next, Later, and Archive folders, and for
+flag sync on beastie. The spec text is in
+jails/instances/lab-mail/spec.org, in the same commits as the code.
+
+The patches come in phases, so you can stop after any of them:
+
+- Support, patches 1-5. Nothing changes until a client uses it.
+  beastie gets isync and msmtp. The notmuch package adds a lab-mail
+  profile beside the default one, plus samples of ~/.mbsyncrc and
+  ~/.msmtprc for pat@p7x.dev. lab-claude pulls all four folders into
+  the same profile, and can post with git send-email.
+- Check, patch 6. "just check" in dotfiles/notmuch is the test you
+  asked for. It logs in to lab-mail, makes a dry run of the sync,
+  checks the profile, and talks to msmtp without posting.
+- Switch, patches 7-8. Emacs reads the profile and posts through
+  msmtp, with an Fcc into sent. M i, M n, M l, and M a move the
+  message or thread at point to INBOX, Next, Later, or Archive.
+  lab-process-mail syncs before each pass and answers only approved
+  senders. It logs the rest. Each reply is saved by Fcc, so the loop
+  still reads the outcome from the index.
+- Cleanup, patches 9-14. The jj maildir pieces go. The work revset no
+  longer names mail@upstream, so the bookmark can be deleted safely.
+
+Trying it before the switch, after patches 1-6:
+
+On beastie, as Pat, after installing isync and msmtp:
+
+    pass insert lab-mail/pat@p7x.dev
+    mkdir -p ~/mail/pat@p7x.dev/sent/cur ~/mail/pat@p7x.dev/sent/new \
+        ~/mail/pat@p7x.dev/sent/tmp
+    cd dotfiles/notmuch && just install
+    mbsync lab-mail && NOTMUCH_PROFILE=lab-mail notmuch new
+    just check
+
+Then read the list in Emacs after M-x setenv RET NOTMUCH_PROFILE RET
+lab-mail. Posting from Emacs still goes to the jj maildir until
+patch 7.
+
+On lab-claude, after the jail's files are installed, as claude:
+
+    mkdir -p ~/mail/claude@p7x.dev
+    cd ~/lab/default.jj/dotfiles/notmuch && just install
+    mbsync lab-mail && NOTMUCH_PROFILE=lab-mail notmuch new
+    just check
+
+I ran the lab-claude steps against the live lab-mail, in a scratch
+home, and all 12 checks passed. With your sample and no pass(1)
+entry, the login check fails as it should. The check fails on the
+database until the first notmuch new.
+
+The switch, in order:
+
+1. Import the jj maildir as the README from v13 describes. That
+   recipe files every old message in INBOX, so your inbox tag would
+   then show every message from others that you have not answered.
+   You may prefer to change the recipe's "Far :lab-mail:INBOX" to
+   Archive. The agent is fine either way, because its inbox rule is
+   the same as today's: mail from others that it has not answered.
+2. Apply patches 7-8. Run just install in dotfiles/emacs on beastie,
+   and in src/lab-process-mail on lab-claude.
+3. Apply patches 9-14 whenever you like. After that, the mail
+   bookmark on upstream and ~/lab/mail.jj on lab-claude (jj workspace
+   forget mail) can go. lab-devel and lab-claude-devel still mount
+   lab-submissions.git, so I left that repo alone.
+
+Notes:
+
+- The series is based on b/dev as you asked, but it needs nothing
+  there except "[PATCH v13 0/8] jails/instances/lab-mail: Build the
+  list's mail hub" [3].
+- The keys are yours to change. M is free in the show, search, and
+  tree maps. The stock "a" still removes the inbox tag, and the next
+  notmuch new puts it back on a message that is in INBOX and not
+  answered. Use M a to archive, or I can rebind "a".
+- inbox means in INBOX and not yet answered by you, not just in
+  INBOX. The agent cannot move mail, so for the agent, answering is
+  the only way a message can leave the inbox. The spec's alternatives
+  section records this.
+- The freebsd-port skill on b/dev still posts with
+  maildir-deliver.sh. That is a separate series, so I left it alone.
+  It needs the git send-email form once both land.
+- Tested: the lab-process-mail tests (19 pass), the tag hook and the
+  Emacs move commands against a scratch maildir with flag sync on, a
+  pull and the check against lab-mail as claude@p7x.dev, git
+  send-email --dry-run, and git am of the series onto b/dev, which
+  gives the same tree. Not tested: a real post, your two-way sync, or
+  Emacs interactively. Emacs's install_and_load test fails in
+  lab-claude, because markdown-mode is not installed here. It fails
+  before init.el reaches notmuch.
+
+[1] id:m2ik2zet2i.fsf@beastie.p7x.dev
+[2] id:5639615da525ce2f1e7711da05d3de5ad63511a2.1792219807.git.claude@p7x.dev
+[3] id:cover.1792274056.git.claude@p7x.dev
+
+base-branch: b/dev@upstream
+
+claude (14):
+  infra/hosts/beastie: Install isync and msmtp
+  dotfiles/notmuch: Add a lab-mail profile
+  dotfiles/notmuch: Sync and post through lab-mail as Pat
+  jails/instances/lab-claude: Pull the whole list into the lab-mail
+    profile
+  jails/instances/lab-claude: Post patch series with git send-email
+  dotfiles/notmuch: Add a check of the lab-mail client
+  emacs: Read and post the list through lab-mail
+  src/lab-process-mail: Answer the list on lab-mail
+  emacs: Stop installing maildir-deliver.sh
+  jails/instances/lab-claude: Drop the jj mail workspace
+  src/lab-process-mail: Find work without the mail bookmark
+  dotfiles/notmuch: Drop the jj maildir profile
+  libexec/mail: Remove delivery into the jj maildir
+  doc: Remove the jj maildir mail workflow
+
+ CLAUDE.md                                     |  36 ++---
+ doc/mail-workflow.md                          | 107 ------------
+ dotfiles/emacs/init.el                        |  19 ++-
+ dotfiles/emacs/libexec/maildir-deliver.sh     |   1 -
+ dotfiles/emacs/lisp/pm-notmuch.el             |  91 +++++++++++
+ dotfiles/emacs/patmaddox-emacs.pkg.do         |   2 +-
+ dotfiles/notmuch/Justfile                     |   4 +
+ dotfiles/notmuch/README.org                   |  57 +++++++
+ dotfiles/notmuch/check                        |  71 ++++++++
+ dotfiles/notmuch/hooks/mail-tag.sh            |  76 ---------
+ dotfiles/notmuch/hooks/post-new               |   3 -
+ dotfiles/notmuch/hooks/pre-new                |   7 -
+ dotfiles/notmuch/lab-mail/config.sample       |  39 +++++
+ dotfiles/notmuch/lab-mail/hooks/mail-tag.sh   | 113 +++++++++++++
+ dotfiles/notmuch/lab-mail/hooks/post-new      |   3 +
+ dotfiles/notmuch/lab-mail/hooks/pre-new       |   8 +
+ dotfiles/notmuch/lab-mail/mbsyncrc.sample     |  36 +++++
+ dotfiles/notmuch/lab-mail/msmtprc.sample      |  18 +++
+ dotfiles/notmuch/notmuch-config.sample        |  33 ----
+ dotfiles/notmuch/patmaddox-notmuch.pkg.do     |  75 ++++++---
+ infra/hosts/beastie/ports                     |   2 +
+ jails/instances/lab-claude/README.org         |  28 +++-
+ jails/instances/lab-claude/dist.mtree         |   4 +-
+ .../claude/.config/notmuch/lab-mail/config    |  27 ++++
+ .../home/claude/.config/notmuch/lists/config  |  18 ---
+ .../lab-claude/dist/home/claude/.gitconfig    |  12 +-
+ .../lab-claude/dist/home/claude/.mbsyncrc     |  23 +--
+ .../lab-claude/dist/home/claude/bootstrap.sh  |  27 +---
+ jails/instances/lab-claude/jail.conf          |   3 -
+ jails/instances/lab-mail/spec.org             |  89 ++++++++--
+ libexec/mail/am.sh                            |   2 +-
+ libexec/mail/mail-send.sh                     |  53 ------
+ libexec/mail/maildir-deliver.sh               | 136 ----------------
+ src/lab-process-mail/lab-process-mail         |  98 ++++++-----
+ src/lab-process-mail/lab-process-mail_test    | 152 +++++++++++++-----
+ src/lab-process-mail/prompt.md                | 114 +++++++------
+ 36 files changed, 902 insertions(+), 685 deletions(-)
+ delete mode 100644 doc/mail-workflow.md
+ delete mode 120000 dotfiles/emacs/libexec/maildir-deliver.sh
+ create mode 100644 dotfiles/notmuch/README.org
+ create mode 100755 dotfiles/notmuch/check
+ delete mode 100755 dotfiles/notmuch/hooks/mail-tag.sh
+ delete mode 100755 dotfiles/notmuch/hooks/post-new
+ delete mode 100755 dotfiles/notmuch/hooks/pre-new
+ create mode 100644 dotfiles/notmuch/lab-mail/config.sample
+ create mode 100755 dotfiles/notmuch/lab-mail/hooks/mail-tag.sh
+ create mode 100755 dotfiles/notmuch/lab-mail/hooks/post-new
+ create mode 100755 dotfiles/notmuch/lab-mail/hooks/pre-new
+ create mode 100644 dotfiles/notmuch/lab-mail/mbsyncrc.sample
+ create mode 100644 dotfiles/notmuch/lab-mail/msmtprc.sample
+ delete mode 100644 dotfiles/notmuch/notmuch-config.sample
+ create mode 100644 jails/instances/lab-claude/dist/home/claude/.config/notmuch/lab-mail/config
+ delete mode 100644 jails/instances/lab-claude/dist/home/claude/.config/notmuch/lists/config
+ delete mode 100755 libexec/mail/mail-send.sh
+ delete mode 100755 libexec/mail/maildir-deliver.sh
+
+
+base-commit: c8ec0ed42d9c2790c56e86242d6affc7a5b531de
+-- 
+2.56.0
+

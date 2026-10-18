@@ -1,0 +1,226 @@
+Message-ID: <c9f998c968c156e3a1e74996e9ed9353b8b936f9.1792285964.git.claude@p7x.dev>
+In-Reply-To: <cover.1792285964.git.claude@p7x.dev>
+References: <cover.1792285964.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Subject: [PATCH 04/14] jails/instances/lab-claude: Pull the whole list into
+ the lab-mail profile
+To: lab@lists.p7x.dev
+Cc: Pat Maddox <pat@patmaddox.com>
+Change-Id: rqtpmxtxsuowmmtqvolzstywolwzoktn
+Date: Sun, 18 Oct 2026 01:13:53 +0000
+
+lab-claude fetched only INBOX into ~/mail/lists, under a profile with
+no hooks and no change id index. A message Pat files in Next, Later,
+or Archive then vanished from its view, and the tags lab-process-mail
+relies on were never derived.
+
+It now has the same layout as beastie, under claude@p7x.dev:
+
+- mbsync pulls all four of the list's folders. The login is
+  read-only, so the sync only pulls and Expunge Near follows
+  lab-mail.
+- The lab-mail profile replaces the lists one, with the hooks from
+  dotfiles/notmuch and flag sync off.
+- bootstrap.sh makes the mail root, which mbsync will not create.
+---
+change-id: rqtpmxtxsuowmmtqvolzstywolwzoktn
+
+ jails/instances/lab-claude/README.org         | 16 ++++++-----
+ jails/instances/lab-claude/dist.mtree         |  4 +--
+ .../claude/.config/notmuch/lab-mail/config    | 27 +++++++++++++++++++
+ .../home/claude/.config/notmuch/lists/config  | 18 -------------
+ .../lab-claude/dist/home/claude/.mbsyncrc     | 23 +++++++++-------
+ .../lab-claude/dist/home/claude/bootstrap.sh  |  3 +++
+ jails/instances/lab-mail/spec.org             | 10 +++----
+ 7 files changed, 61 insertions(+), 40 deletions(-)
+ create mode 100644 jails/instances/lab-claude/dist/home/claude/.config/notmuch/lab-mail/config
+ delete mode 100644 jails/instances/lab-claude/dist/home/claude/.config/notmuch/lists/config
+
+diff --git a/jails/instances/lab-claude/README.org b/jails/instances/lab-claude/README.org
+index 07b5abe0..fd00ebf9 100644
+--- a/jails/instances/lab-claude/README.org
++++ b/jails/instances/lab-claude/README.org
+@@ -9,15 +9,19 @@ lab-process-mail still works from the jj maildir under
+ =~/lab/mail.jj= and the default notmuch profile.
+ 
+ ** fetch and read
+-mbsync pulls lab-mail's INBOX, which holds the list, into
+-=~/mail/lists=, and notmuch indexes it under its own profile,
+-=lists=:
++mbsync pulls the list's folders, INBOX, =Next=, =Later=, and
++=Archive=, into =~/mail/claude@p7x.dev=, and notmuch indexes them
++under the profile =lab-mail=, whose hooks come from
++=dotfiles/notmuch=:
+ #+BEGIN_EXAMPLE
+-mbsync lists && NOTMUCH_PROFILE=lists notmuch new
+-NOTMUCH_PROFILE=lists notmuch search from:pat@patmaddox.com
+-NOTMUCH_PROFILE=lists notmuch show id:<message-id>
++mbsync lab-mail && NOTMUCH_PROFILE=lab-mail notmuch new
++NOTMUCH_PROFILE=lab-mail notmuch search tag:inbox
++NOTMUCH_PROFILE=lab-mail notmuch show id:<message-id>
+ #+END_EXAMPLE
+ 
++The sync only pulls. claude@p7x.dev cannot change the list, and a
++message Pat moves or deletes on lab-mail moves or goes here too.
++
+ lab-mail syncs with Fastmail once a minute, so a message sent to the
+ list through Fastmail shows up here within two minutes.
+ 
+diff --git a/jails/instances/lab-claude/dist.mtree b/jails/instances/lab-claude/dist.mtree
+index fe116654..fb9ffeea 100644
+--- a/jails/instances/lab-claude/dist.mtree
++++ b/jails/instances/lab-claude/dist.mtree
+@@ -4,8 +4,8 @@
+ ./home/claude/.config/jj type=dir mode=0755
+ ./home/claude/.config/jj/config.toml
+ ./home/claude/.config/notmuch type=dir mode=0755
+-./home/claude/.config/notmuch/lists type=dir mode=0755
+-./home/claude/.config/notmuch/lists/config
++./home/claude/.config/notmuch/lab-mail type=dir mode=0755
++./home/claude/.config/notmuch/lab-mail/config
+ ./home/claude/.gitconfig
+ ./home/claude/.login_conf
+ ./home/claude/.mbsyncrc
+diff --git a/jails/instances/lab-claude/dist/home/claude/.config/notmuch/lab-mail/config b/jails/instances/lab-claude/dist/home/claude/.config/notmuch/lab-mail/config
+new file mode 100644
+index 00000000..fb48fc4f
+--- /dev/null
++++ b/jails/instances/lab-claude/dist/home/claude/.config/notmuch/lab-mail/config
+@@ -0,0 +1,27 @@
++# notmuch profile for the list as synced from lab-mail; see
++# notmuch-config(1). Use it with NOTMUCH_PROFILE=lab-mail. It matches
++# dotfiles/notmuch/lab-mail/config.sample, which is Pat's, but for
++# claude's login. The hooks come from that package.
++#
++# claude@p7x.dev cannot set flags on lab-mail, so flag sync is off;
++# a flag set here would never reach the list.
++
++[database]
++mail_root=mail/claude@p7x.dev
++
++[user]
++name=claude
++primary_email=claude@p7x.dev
++
++[new]
++tags=
++ignore=.uidvalidity;.mbsyncstate;.mbsyncstate.journal;.mbsyncstate.new;.mbsyncstate.lock
++
++[search]
++exclude_tags=deleted
++
++[index]
++header.changeid=Change-Id
++
++[maildir]
++synchronize_flags=false
+diff --git a/jails/instances/lab-claude/dist/home/claude/.config/notmuch/lists/config b/jails/instances/lab-claude/dist/home/claude/.config/notmuch/lists/config
+deleted file mode 100644
+index 27931ef7..00000000
+--- a/jails/instances/lab-claude/dist/home/claude/.config/notmuch/lists/config
++++ /dev/null
+@@ -1,18 +0,0 @@
+-# notmuch profile for the list mail fetched from lab-mail. Use it with
+-# NOTMUCH_PROFILE=lists; the default profile stays on the jj maildir.
+-# The database path is explicit, so pointing NOTMUCH_CONFIG here can
+-# never index this mail into the default profile's database.
+-
+-[database]
+-mail_root=/home/claude/mail
+-path=/home/claude/.local/share/notmuch/lists
+-
+-[user]
+-name=claude
+-primary_email=claude@p7x.dev
+-
+-[new]
+-ignore=.uidvalidity;.mbsyncstate;.mbsyncstate.journal;.mbsyncstate.new;.mbsyncstate.lock
+-
+-[maildir]
+-synchronize_flags=false
+diff --git a/jails/instances/lab-claude/dist/home/claude/.mbsyncrc b/jails/instances/lab-claude/dist/home/claude/.mbsyncrc
+index ce5b63e2..f09acc0f 100644
+--- a/jails/instances/lab-claude/dist/home/claude/.mbsyncrc
++++ b/jails/instances/lab-claude/dist/home/claude/.mbsyncrc
+@@ -1,26 +1,31 @@
+-# Fetch the list, lab-mail's INBOX, into ~/mail/lists.
++# Pull the list from lab-mail into ~/mail/claude@p7x.dev.
+ #
+-# lab-mail serves it on loopback and accepts any login, so the
+-# credentials here are placeholders.
++# lab-mail serves it on loopback, and any login but the ones that may
++# write it reads it with any password, so the password here is a
++# placeholder. claude@p7x.dev cannot change the list, so the sync
++# only pulls, and Expunge Near drops what has gone from lab-mail.
+ 
+ IMAPAccount lab-mail
+ Host 127.0.0.1
+ Port 2143
+ TLSType None
+ AuthMechs LOGIN
+-User claude
++User claude@p7x.dev
+ Pass lab-mail
+ 
+ IMAPStore lab-mail
+ Account lab-mail
+ 
+ MaildirStore local
+-Path ~/mail/
++Path ~/mail/claude@p7x.dev/
++Inbox ~/mail/claude@p7x.dev/INBOX
+ 
+-Channel lists
+-Far :lab-mail:INBOX
+-Near :local:lists
++Channel lab-mail
++Far :lab-mail:
++Near :local:
++Patterns INBOX Next Later Archive
+ Create Near
+ Sync Pull
+-Expunge None
++Expunge Near
+ Remove None
++CopyArrivalDate yes
+diff --git a/jails/instances/lab-claude/dist/home/claude/bootstrap.sh b/jails/instances/lab-claude/dist/home/claude/bootstrap.sh
+index 9bb6a008..f56492d0 100755
+--- a/jails/instances/lab-claude/dist/home/claude/bootstrap.sh
++++ b/jails/instances/lab-claude/dist/home/claude/bootstrap.sh
+@@ -34,3 +34,6 @@ notmuch config set user.name "$(git config user.name)"
+ notmuch config set user.primary_email "$(git config user.email)"
+ 
+ notmuch new
++
++# mbsync syncs the list into this mail root, which it does not create.
++mkdir -p ${HOME}/mail/claude@p7x.dev
+diff --git a/jails/instances/lab-mail/spec.org b/jails/instances/lab-mail/spec.org
+index 6c88eb8f..ffb6e8cf 100644
+--- a/jails/instances/lab-mail/spec.org
++++ b/jails/instances/lab-mail/spec.org
+@@ -256,17 +256,17 @@ up the same way and differ only in the login.
+     pass(1), and syncs both ways with =Expunge Both=, so Pat's moves
+     and deletions take effect on lab-mail. Fastmail still keeps every
+     message.
++  - On lab-claude it logs in as =claude@p7x.dev= and only pulls,
++    with =Expunge Near=, so the local copy follows lab-mail.
+ - msmtp posts through 127.0.0.1:2525 with no login and no TLS, as
+   =pat@p7x.dev= on beastie and =claude@p7x.dev= on lab-claude. When
+   the server refuses any recipient or the message, msmtp posts
+   nothing and exits non-zero with the server's reply, so the whole
+   message is abandoned.
+ - On beastie, =dotfiles/notmuch= installs the mbsync and msmtp
+-  configs and documents the commands to sync and to post.
+-- mbsync pulls INBOX from 127.0.0.1:2143 into a maildir in the
+-  agent's home, and =notmuch new= indexes it there. The agent searches
+-  and reads the local index, not IMAP.
+-- lab-claude documents the commands to fetch and to post.
++  configs and documents the commands to sync and to post. lab-claude
++  ships its own and documents them in its README.
++- The agent searches and reads the local index, not IMAP.
+ 
+ acceptance test: run from lab-claude, except where a step says
+ beastie.
+-- 
+2.56.0
+

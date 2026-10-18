@@ -1,0 +1,44 @@
+Message-ID: <12fdf491405af03ca260b75ddd391c0e97a39e16.1792285964.git.claude@p7x.dev>
+In-Reply-To: <cover.1792285964.git.claude@p7x.dev>
+References: <cover.1792285964.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Subject: [PATCH 09/14] emacs: Stop installing maildir-deliver.sh
+To: lab@lists.p7x.dev
+Cc: Pat Maddox <pat@patmaddox.com>
+Change-Id: kpuumzntpyunmxokqsqzzpxssuwvxkqw
+Date: Sun, 18 Oct 2026 01:13:58 +0000
+
+Emacs posts through msmtp, so nothing in the package calls the
+script that wrote mail into the jj maildir any more.
+---
+change-id: kpuumzntpyunmxokqsqzzpxssuwvxkqw
+
+ dotfiles/emacs/libexec/maildir-deliver.sh | 1 -
+ dotfiles/emacs/patmaddox-emacs.pkg.do     | 2 +-
+ 2 files changed, 1 insertion(+), 2 deletions(-)
+ delete mode 120000 dotfiles/emacs/libexec/maildir-deliver.sh
+
+diff --git a/dotfiles/emacs/libexec/maildir-deliver.sh b/dotfiles/emacs/libexec/maildir-deliver.sh
+deleted file mode 120000
+index 4ca0294d..00000000
+--- a/dotfiles/emacs/libexec/maildir-deliver.sh
++++ /dev/null
+@@ -1 +0,0 @@
+-../../../libexec/mail/maildir-deliver.sh
+\ No newline at end of file
+diff --git a/dotfiles/emacs/patmaddox-emacs.pkg.do b/dotfiles/emacs/patmaddox-emacs.pkg.do
+index 72253b42..93881b5c 100755
+--- a/dotfiles/emacs/patmaddox-emacs.pkg.do
++++ b/dotfiles/emacs/patmaddox-emacs.pkg.do
+@@ -10,7 +10,7 @@ version="0.0.0"
+ prefix="/.emacs.d"
+ srcdir="."
+ 
+-elfiles="init.el $(jj file list lisp contrib vendor libexec)"
++elfiles="init.el $(jj file list lisp contrib vendor)"
+ redo-ifchange ${elfiles}
+ 
+ # Stage files
+-- 
+2.56.0
+

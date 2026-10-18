@@ -1,0 +1,189 @@
+Message-ID: <c65fc51eb8cee9fa10d0d761ef06bfa2d10ec9b7.1792285964.git.claude@p7x.dev>
+In-Reply-To: <cover.1792285964.git.claude@p7x.dev>
+References: <cover.1792285964.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Subject: [PATCH 06/14] dotfiles/notmuch: Add a check of the lab-mail client
+To: lab@lists.p7x.dev
+Cc: Pat Maddox <pat@patmaddox.com>
+Change-Id: qzzulwprxsmtlllwkstulxmotwotnmkm
+Date: Sun, 18 Oct 2026 01:13:55 +0000
+
+Pat wants to know that a host's mail client works before he
+switches it to lab-mail. A wrong password, a missing mail root, or a
+profile with no hooks would otherwise show up only as a sync that
+fails or tags that never appear, after the switch.
+
+just check runs the steps of a real session without their effects:
+mbsync lists the folders and makes a dry run, notmuch reads the
+profile, and msmtp talks to lab-mail without posting. It prints one
+ok or FAIL line per check, like lab-mail's own check, so it is
+safe to run on either host at any time.
+---
+change-id: qzzulwprxsmtlllwkstulxmotwotnmkm
+
+ dotfiles/notmuch/Justfile             |  4 ++
+ dotfiles/notmuch/README.org           | 12 +++++
+ dotfiles/notmuch/check                | 71 +++++++++++++++++++++++++++
+ jails/instances/lab-claude/README.org |  3 ++
+ jails/instances/lab-mail/spec.org     | 11 +++++
+ 5 files changed, 101 insertions(+)
+ create mode 100755 dotfiles/notmuch/check
+
+diff --git a/dotfiles/notmuch/Justfile b/dotfiles/notmuch/Justfile
+index cdb4673a..f1a7b61e 100644
+--- a/dotfiles/notmuch/Justfile
++++ b/dotfiles/notmuch/Justfile
+@@ -6,3 +6,7 @@ pkg:
+ 
+ install: pkg
+   INSTALL_AS_USER=yes REPOS_DIR=/dev/null pkg -r ~ install -y -U $(realpath patmaddox-notmuch.pkg)
++
++# check this login's mail client for lab-mail; it only reads
++check:
++  ./check
+diff --git a/dotfiles/notmuch/README.org b/dotfiles/notmuch/README.org
+index a6c66233..71326d29 100644
+--- a/dotfiles/notmuch/README.org
++++ b/dotfiles/notmuch/README.org
+@@ -33,6 +33,18 @@ To file a message, move its file to another folder's =cur/=, and
+ drop the =,U== part of its name, so mbsync takes it for a new message
+ there. The next sync moves it on lab-mail.
+ 
++** check
++=just check= checks this login's setup: that mbsync logs in and
++lists the list's folders, that a dry run of the sync works, that the
++profile has its config, hooks, and database, and that msmtp reaches
++lab-mail and posts from the profile's address. It prints one line
++per check, ok or FAIL, and exits non-zero if any fails. It changes
++nothing and posts no mail, so it is safe to run at any time.
++
++The profile sits beside the default one, so it can be tried before
++switching: sync and index as above, then read it in Emacs after
++=M-x setenv RET NOTMUCH_PROFILE RET lab-mail=.
++
+ ** post
+ msmtp posts as pat@p7x.dev. With =-t= it takes the recipients from
+ the To, Cc, and Bcc headers:
+diff --git a/dotfiles/notmuch/check b/dotfiles/notmuch/check
+new file mode 100755
+index 00000000..338ae76b
+--- /dev/null
++++ b/dotfiles/notmuch/check
+@@ -0,0 +1,71 @@
++#!/bin/sh
++# Check that this login's mail client is set up for lab-mail: mbsync,
++# the lab-mail notmuch profile, and msmtp. Run it as the user, as
++# just check, before switching to the profile. Prints one line per
++# check and exits 1 if any fails. It only reads: the sync is a dry
++# run, and no mail is posted.
++set -u
++
++export NOTMUCH_PROFILE=lab-mail
++readonly folders="INBOX Next Later Archive"
++
++failed=0
++
++# check <what> <command> [args]: run the command, and report what was
++# checked by its exit status.
++check() {
++	local what="${1}"; shift
++	if "${@}" >/dev/null 2>&1; then
++		echo "ok ${what}"
++	else
++		echo "FAIL ${what}"
++		failed=1
++	fi
++}
++
++# mbsync -l lists the folders the channel would sync, which logs in
++# with the configured password.
++lists_folders() {
++	local list f
++	list="$(mbsync -l lab-mail 2>/dev/null)" || return 1
++	for f in ${folders}; do
++		printf '%s\n' "${list}" | grep -qx "${f}" || return 1
++	done
++}
++
++is_executable() {
++	[ -x "${HOME}/.config/notmuch/lab-mail/hooks/${1}" ]
++}
++
++has_identity() {
++	[ -n "$(notmuch config get user.primary_email)" ]
++}
++
++# msmtp posts from the address notmuch counts as the user's, so the
++# user's own posts are tagged sent.
++same_sender() {
++	local from
++	from="$(msmtp -P </dev/null 2>/dev/null | sed -n 's/^from *= *//p')"
++	[ -n "${from}" ] &&
++	    [ "${from}" = "$(notmuch config get user.primary_email)" ]
++}
++
++main() {
++	check "~/.mbsyncrc exists" test -r "${HOME}/.mbsyncrc"
++	check "mbsync logs in to lab-mail and lists ${folders}" lists_folders
++	check "the mail root exists" \
++	    test -d "$(notmuch config get database.mail_root 2>/dev/null)"
++	check "a dry run of mbsync lab-mail succeeds" mbsync -y -q lab-mail
++	check "the lab-mail profile has a config" \
++	    test -r "${HOME}/.config/notmuch/lab-mail/config"
++	check "the lab-mail profile has a user address" has_identity
++	check "the post-new hook is installed" is_executable post-new
++	check "the pre-new hook is installed" is_executable pre-new
++	check "the lab-mail profile has a database" notmuch count '*'
++	check "~/.msmtprc exists" test -r "${HOME}/.msmtprc"
++	check "msmtp reaches lab-mail" msmtp --serverinfo
++	check "msmtp posts from the profile's user address" same_sender
++	exit "${failed}"
++}
++
++main "${@}"
+diff --git a/jails/instances/lab-claude/README.org b/jails/instances/lab-claude/README.org
+index 8e3d190a..9bbd98d4 100644
+--- a/jails/instances/lab-claude/README.org
++++ b/jails/instances/lab-claude/README.org
+@@ -22,6 +22,9 @@ NOTMUCH_PROFILE=lab-mail notmuch show id:<message-id>
+ The sync only pulls. claude@p7x.dev cannot change the list, and a
+ message Pat moves or deletes on lab-mail moves or goes here too.
+ 
++=just check= in =~/lab/default.jj/dotfiles/notmuch= checks this
++setup and changes nothing.
++
+ lab-mail syncs with Fastmail once a minute, so a message sent to the
+ list through Fastmail shows up here within two minutes.
+ 
+diff --git a/jails/instances/lab-mail/spec.org b/jails/instances/lab-mail/spec.org
+index ffb6e8cf..36dd7a5e 100644
+--- a/jails/instances/lab-mail/spec.org
++++ b/jails/instances/lab-mail/spec.org
+@@ -267,6 +267,13 @@ up the same way and differ only in the login.
+   configs and documents the commands to sync and to post. lab-claude
+   ships its own and documents them in its README.
+ - The agent searches and reads the local index, not IMAP.
++- =just check= in =dotfiles/notmuch=, run as the user on either
++  host, checks that login's client before it is used: mbsync logs in
++  and lists the list's folders, a dry run of the sync succeeds, the
++  profile has its config, hooks, and database, and msmtp reaches
++  lab-mail from the profile's address. It prints one line per check,
++  ok or FAIL, and exits 0 only if every check passes. It changes
++  nothing and posts no mail.
+ 
+ acceptance test: run from lab-claude, except where a step says
+ beastie.
+@@ -302,6 +309,10 @@ beastie.
+     =Archive= on lab-mail. Within two minutes, it is in =Archive= and
+     not in INBOX on Fastmail. The same holds for =Next= and =Later=,
+     and for a move back to INBOX.
++13. On beastie as Pat, and on lab-claude as the agent, =just check=
++    in =dotfiles/notmuch= exits 0. On beastie, with the pass(1)
++    entry for =pat@p7x.dev= wrong, it exits non-zero and a FAIL line
++    names the mbsync login.
+ 
+ out of scope:
+ - Moving the list's clients off the jj maildir. lab-process-mail, the
+-- 
+2.56.0
+

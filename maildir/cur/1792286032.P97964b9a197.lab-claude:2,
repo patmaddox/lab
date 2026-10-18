@@ -1,0 +1,244 @@
+Message-ID: <06e177f8d26d621f9c4f48c0fea7bee5d3ad9c96.1792285964.git.claude@p7x.dev>
+In-Reply-To: <cover.1792285964.git.claude@p7x.dev>
+References: <cover.1792285964.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Subject: [PATCH 03/14] dotfiles/notmuch: Sync and post through lab-mail as Pat
+To: lab@lists.p7x.dev
+Cc: Pat Maddox <pat@patmaddox.com>
+Change-Id: zvrvrpvxtxrnrszvrwkmoplvnnxnxqpt
+Date: Sun, 18 Oct 2026 01:13:52 +0000
+
+beastie needs mbsync and msmtp configs before Pat can read and post
+through lab-mail. They ship as samples in the notmuch package,
+installed only where no config exists, so a host that has its own,
+like lab-claude, keeps it.
+
+- pat@p7x.dev may write the list, so mbsync syncs both ways and
+  expunges on both sides, and Pat's moves reach lab-mail.
+- The password comes from pass(1), so no secret is in the repo.
+- README.org gives the commands to set up, sync, and post.
+---
+change-id: zvrvrpvxtxrnrszvrwkmoplvnnxnxqpt
+
+ dotfiles/notmuch/README.org               | 45 +++++++++++++++++++++++
+ dotfiles/notmuch/lab-mail/mbsyncrc.sample | 36 ++++++++++++++++++
+ dotfiles/notmuch/lab-mail/msmtprc.sample  | 18 +++++++++
+ dotfiles/notmuch/patmaddox-notmuch.pkg.do | 19 +++++++++-
+ jails/instances/lab-mail/spec.org         | 23 ++++++++----
+ 5 files changed, 133 insertions(+), 8 deletions(-)
+ create mode 100644 dotfiles/notmuch/README.org
+ create mode 100644 dotfiles/notmuch/lab-mail/mbsyncrc.sample
+ create mode 100644 dotfiles/notmuch/lab-mail/msmtprc.sample
+
+diff --git a/dotfiles/notmuch/README.org b/dotfiles/notmuch/README.org
+new file mode 100644
+index 00000000..a6c66233
+--- /dev/null
++++ b/dotfiles/notmuch/README.org
+@@ -0,0 +1,45 @@
++#+TITLE: dotfiles/notmuch
++
++notmuch hooks and configs for the lab-devel list. =just install=
++installs them as a package under =~=.
++
++* lab-mail
++The =lab-mail= profile reads the list as synced from lab-mail, whose
++spec is =../../jails/instances/lab-mail/spec.org=. On beastie, the
++package also installs =~/.mbsyncrc= and =~/.msmtprc= for pat@p7x.dev,
++if they do not exist.
++
++** set up
++Store the password of pat@p7x.dev on lab-mail in pass(1), and make the
++mail root with its =sent= folder, which is never synced. mbsync
++creates the list's folders:
++#+BEGIN_EXAMPLE
++pass insert lab-mail/pat@p7x.dev
++mkdir -p ~/mail/pat@p7x.dev/sent/cur ~/mail/pat@p7x.dev/sent/new \
++    ~/mail/pat@p7x.dev/sent/tmp
++just install
++#+END_EXAMPLE
++
++** sync and read
++Syncing and indexing are separate commands. mbsync syncs INBOX,
++=Next=, =Later=, and =Archive= with lab-mail, both ways, and notmuch
++indexes what it brought:
++#+BEGIN_EXAMPLE
++mbsync lab-mail && NOTMUCH_PROFILE=lab-mail notmuch new
++NOTMUCH_PROFILE=lab-mail notmuch search tag:inbox
++#+END_EXAMPLE
++
++To file a message, move its file to another folder's =cur/=, and
++drop the =,U== part of its name, so mbsync takes it for a new message
++there. The next sync moves it on lab-mail.
++
++** post
++msmtp posts as pat@p7x.dev. With =-t= it takes the recipients from
++the To, Cc, and Bcc headers:
++#+BEGIN_EXAMPLE
++msmtp -t < message.eml
++#+END_EXAMPLE
++
++lab-mail delivers mail for the list's addresses to the list, and
++accepts and discards mail for the people who read it. It refuses any
++other recipient, and msmtp then posts nothing and exits non-zero.
+diff --git a/dotfiles/notmuch/lab-mail/mbsyncrc.sample b/dotfiles/notmuch/lab-mail/mbsyncrc.sample
+new file mode 100644
+index 00000000..ba3b32ca
+--- /dev/null
++++ b/dotfiles/notmuch/lab-mail/mbsyncrc.sample
+@@ -0,0 +1,36 @@
++# ~/.mbsyncrc: sync the list with lab-mail into ~/mail/pat@p7x.dev;
++# see mbsync(1). The package installs this as ~/.mbsyncrc only if that
++# file does not exist, and never overwrites it.
++#
++# pat@p7x.dev may change the list, so the sync runs both ways and
++# expunges on both sides: a move or deletion here takes effect on
++# lab-mail at the next run. Fastmail still keeps every message. Only
++# the list's folders are synced, and the folders come from lab-mail.
++#
++# lab-mail listens only on loopback, so there is no TLS. The password
++# is the one whose hash lab-mail keeps in imap-users.
++
++IMAPAccount lab-mail
++Host 127.0.0.1
++Port 2143
++TLSType None
++AuthMechs LOGIN
++User pat@p7x.dev
++PassCmd "pass show lab-mail/pat@p7x.dev"
++
++IMAPStore lab-mail
++Account lab-mail
++
++MaildirStore local
++Path ~/mail/pat@p7x.dev/
++Inbox ~/mail/pat@p7x.dev/INBOX
++
++Channel lab-mail
++Far :lab-mail:
++Near :local:
++Patterns INBOX Next Later Archive
++Create Near
++Sync All
++Expunge Both
++Remove None
++CopyArrivalDate yes
+diff --git a/dotfiles/notmuch/lab-mail/msmtprc.sample b/dotfiles/notmuch/lab-mail/msmtprc.sample
+new file mode 100644
+index 00000000..e228ef96
+--- /dev/null
++++ b/dotfiles/notmuch/lab-mail/msmtprc.sample
+@@ -0,0 +1,18 @@
++# ~/.msmtprc: post to the list through lab-mail; see msmtp(1). The
++# package installs this as ~/.msmtprc only if that file does not
++# exist, and never overwrites it.
++#
++# lab-mail listens only on loopback and takes posts with no login, so
++# there is no auth and no TLS. msmtp exits non-zero if any recipient
++# is refused, and the message then goes to no one.
++
++defaults
++auth off
++tls off
++
++account lab-mail
++host 127.0.0.1
++port 2525
++from pat@p7x.dev
++
++account default : lab-mail
+diff --git a/dotfiles/notmuch/patmaddox-notmuch.pkg.do b/dotfiles/notmuch/patmaddox-notmuch.pkg.do
+index 0af04487..3dc8710e 100755
+--- a/dotfiles/notmuch/patmaddox-notmuch.pkg.do
++++ b/dotfiles/notmuch/patmaddox-notmuch.pkg.do
+@@ -13,6 +13,10 @@ sample="${prefix}/default/notmuch-config.sample"
+ config="/.notmuch-config"
+ labmail_sample="${prefix}/lab-mail/config.sample"
+ labmail_config="${prefix}/lab-mail/config"
++mbsyncrc_sample="${prefix}/lab-mail/mbsyncrc.sample"
++mbsyncrc="/.mbsyncrc"
++msmtprc_sample="${prefix}/lab-mail/msmtprc.sample"
++msmtprc="/.msmtprc"
+ 
+ default_files="$(jj file list hooks) notmuch-config.sample"
+ labmail_files="$(jj file list lab-mail)"
+@@ -65,7 +69,8 @@ notmuch hooks for the lab-devel list, installed in each profile's
+ default hook dir so no hook_dir setting is needed: the default
+ profile, which reads the jj maildir, and the lab-mail profile, which
+ reads the list synced from lab-mail. Each profile's sample config is
+-installed if it has none.
++installed if it has none, and so are samples of ~/.mbsyncrc and
++~/.msmtprc for syncing and posting to the list as pat@p7x.dev.
+ 
+ INSTALL_AS_USER=yes pkg -r ~ install -U \$(realpath ${name}.pkg)
+ EOD
+@@ -79,6 +84,12 @@ end
+ if not pkg.stat("${labmail_config}") then
+   pkg.copy("${labmail_sample}", "${labmail_config}")
+ end
++if not pkg.stat("${mbsyncrc}") then
++  pkg.copy("${mbsyncrc_sample}", "${mbsyncrc}")
++end
++if not pkg.stat("${msmtprc}") then
++  pkg.copy("${msmtprc_sample}", "${msmtprc}")
++end
+ EOS
+   ]
+   pre-deinstall: [ <<EOS
+@@ -88,6 +99,12 @@ end
+ if pkg.filecmp("${labmail_sample}", "${labmail_config}") == 0 then
+   os.remove("${labmail_config}")
+ end
++if pkg.filecmp("${mbsyncrc_sample}", "${mbsyncrc}") == 0 then
++  os.remove("${mbsyncrc}")
++end
++if pkg.filecmp("${msmtprc_sample}", "${msmtprc}") == 0 then
++  os.remove("${msmtprc}")
++end
+ EOS
+   ]
+ }
+diff --git a/jails/instances/lab-mail/spec.org b/jails/instances/lab-mail/spec.org
+index 7d58b0dc..6c88eb8f 100644
+--- a/jails/instances/lab-mail/spec.org
++++ b/jails/instances/lab-mail/spec.org
+@@ -228,9 +228,9 @@ check:
+ - The check only reads. It changes nothing in the jail and posts no
+   mail, so it is safe to run at any time.
+ 
+-clients: lab-claude.
+-- Packages: mail/isync and mail/msmtp, added to the existing
+-  mail/notmuch.
++clients: beastie, for Pat, and lab-claude, for the agent. Both are set
++up the same way and differ only in the login.
++- Packages: mail/isync, mail/msmtp, and mail/notmuch on both hosts.
+ - Each user's mail root is =~/mail/<login>=, such as
+   =~/mail/pat@p7x.dev=. It holds the list's folders, INBOX, =Next=,
+   =Later=, and =Archive=, and the user's own =sent=, which is never
+@@ -250,10 +250,19 @@ clients: lab-claude.
+ - Flag sync is on for a login that may write the list, so unread,
+   flagged, and replied follow the list's flags. It is off for a
+   read-only login, whose flags would never reach lab-mail.
+-- msmtp posts through 127.0.0.1:2525 as claude@p7x.dev. When the
+-  server refuses any recipient or the message, msmtp posts nothing
+-  and exits non-zero with the server's reply, so the whole message is
+-  abandoned.
++- mbsync syncs the list's folders with lab-mail at 127.0.0.1:2143,
++  only when the user runs it, and no other folder.
++  - On beastie it logs in as =pat@p7x.dev=, with the password from
++    pass(1), and syncs both ways with =Expunge Both=, so Pat's moves
++    and deletions take effect on lab-mail. Fastmail still keeps every
++    message.
++- msmtp posts through 127.0.0.1:2525 with no login and no TLS, as
++  =pat@p7x.dev= on beastie and =claude@p7x.dev= on lab-claude. When
++  the server refuses any recipient or the message, msmtp posts
++  nothing and exits non-zero with the server's reply, so the whole
++  message is abandoned.
++- On beastie, =dotfiles/notmuch= installs the mbsync and msmtp
++  configs and documents the commands to sync and to post.
+ - mbsync pulls INBOX from 127.0.0.1:2143 into a maildir in the
+   agent's home, and =notmuch new= indexes it there. The agent searches
+   and reads the local index, not IMAP.
+-- 
+2.56.0
+

@@ -1,0 +1,207 @@
+Message-ID: <d6f980cd2671fde7e3959faa35a2b5e2edbf2074.1792285964.git.claude@p7x.dev>
+In-Reply-To: <cover.1792285964.git.claude@p7x.dev>
+References: <cover.1792285964.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Subject: [PATCH 07/14] emacs: Read and post the list through lab-mail
+To: lab@lists.p7x.dev
+Cc: Pat Maddox <pat@patmaddox.com>
+Change-Id: umtvyznruxlxkpsymkqrnlmlqxswxspq
+Date: Sun, 18 Oct 2026 01:13:56 +0000
+
+Emacs read the jj maildir and posted by writing into it, so a post
+reached the list only when it was committed and pushed. Through
+lab-mail it is posted at once, and Pat reads the same folders as
+Fastmail and every other client.
+
+- notmuch uses the lab-mail profile.
+- Mail goes out through msmtp, and an Fcc copy in the local sent
+  folder shows it as sent before the next sync.
+- M i, M n, M l, and M a move the message or thread at point to
+  INBOX, Next, Later, or Archive. The folder is the state, so a tag
+  alone would be undone by the next notmuch new.
+- Saved searches for inbox, next, and later.
+---
+change-id: umtvyznruxlxkpsymkqrnlmlqxswxspq
+
+ dotfiles/emacs/init.el            | 19 ++++---
+ dotfiles/emacs/lisp/pm-notmuch.el | 91 +++++++++++++++++++++++++++++++
+ jails/instances/lab-mail/spec.org | 13 ++++-
+ 3 files changed, 113 insertions(+), 10 deletions(-)
+
+diff --git a/dotfiles/emacs/init.el b/dotfiles/emacs/init.el
+index e6202230..61300fc7 100644
+--- a/dotfiles/emacs/init.el
++++ b/dotfiles/emacs/init.el
+@@ -565,16 +565,18 @@ and prefixes every line with \"> \"."
+ (global-set-key (kbd "C-c l o") 'claude-code-oneshot)
+ 
+ ;;; notmuch
++;; Read the list as synced from lab-mail; see dotfiles/notmuch.
++(setenv "NOTMUCH_PROFILE" "lab-mail")
+ (require 'notmuch)
+-;(setenv "NOTMUCH_CONFIG" "/home/patmaddox/lab/default.jj/.notmuch-config")
+ (setq notmuch-show-logo nil)
+ (add-hook 'notmuch-hello-mode-hook (lambda () (display-line-numbers-mode -1)))
+-;; I only save drafts, no need to save the file locally
+-(setq notmuch-fcc-dirs nil)
+-;; Sending delivers into the list maildir; committing it is the transport.
++;; Keep a copy of sent mail in the local sent folder, so it shows as
++;; sent before the next sync brings back the list's copy.
++(setq notmuch-fcc-dirs "sent +sent -unread")
++;; Post through lab-mail. msmtp takes the recipients from the header.
+ (setq message-send-mail-function #'message-send-mail-with-sendmail)
+-(setq sendmail-program
+-      (expand-file-name "libexec/maildir-deliver.sh" user-emacs-directory))
++(setq sendmail-program "msmtp")
++(setq message-sendmail-envelope-from 'header)
+ (setq notmuch-draft-tags '("+draft"))
+ (setq notmuch-search-oldest-first nil)
+ (setq notmuch-show-only-matching-messages t)
+@@ -585,7 +587,10 @@ and prefixes every line with \"> \"."
+         ("flagged" (propertize tag 'face 'notmuch-tag-flagged)
+          (notmuch-tag-format-image-data tag (notmuch-tag-star-icon)))))
+ (setq notmuch-saved-searches
+-      '((:name "unread" :query "tag:unread not tag:draft" :key "u" :sort-order newest-first)
++      '((:name "inbox" :query "tag:inbox" :key "i" :sort-order newest-first)
++        (:name "next" :query "tag:next" :key "n" :sort-order newest-first)
++        (:name "later" :query "tag:later" :key "l" :sort-order newest-first)
++        (:name "unread" :query "tag:unread not tag:draft" :key "u" :sort-order newest-first)
+         ;;(:name "my inbox" :query "tag:new not tag:patch not tag:flagged not to:claude" :key "i")
+         (:name "claude inbox" :query "tag:new and to:claude not tag:draft" :key "c")
+         (:name "flagged" :query "tag:flagged" :key "f" :sort-order newest-first)
+diff --git a/dotfiles/emacs/lisp/pm-notmuch.el b/dotfiles/emacs/lisp/pm-notmuch.el
+index a323f537..235a6703 100644
+--- a/dotfiles/emacs/lisp/pm-notmuch.el
++++ b/dotfiles/emacs/lisp/pm-notmuch.el
+@@ -126,6 +126,97 @@ EVENT is the process status string."
+     (message "claude-handle-message %s"
+              (if success "finished" "failed"))))
+ 
++;;; Filing mail in the list's folders
++
++;; On the list synced from lab-mail, the folder a message is in is its
++;; state, and the post-new hook derives the inbox, next, later, and
++;; archived tags from it. Filing a message moves its file; a tag
++;; alone would be undone by the next notmuch new.
++
++(defvar pm-notmuch-list-folders '("INBOX" "Next" "Later" "Archive")
++  "The folders of the list, which mbsync syncs with lab-mail.")
++
++(defun pm-notmuch--list-files (query)
++  "Return the files of the messages matching QUERY in the list's folders."
++  (let ((root (file-name-as-directory
++               (notmuch-config-get "database.mail_root"))))
++    (seq-filter
++     (lambda (file)
++       (let ((rel (file-relative-name file root)))
++         (seq-some (lambda (folder)
++                     (string-prefix-p (concat folder "/") rel))
++                   pm-notmuch-list-folders)))
++     (process-lines notmuch-command "search" "--output=files" query))))
++
++(defun pm-notmuch--file-name-in (file folder)
++  "Return the name FILE takes in FOLDER's cur/.
++mbsync's ,U= part is dropped, so mbsync takes the file for a new
++message in FOLDER and moves it on lab-mail."
++  (let ((name (replace-regexp-in-string
++               ",U=[0-9]+" "" (file-name-nondirectory file))))
++    (expand-file-name
++     (if (string-match-p ":2," name) name (concat name ":2,"))
++     (expand-file-name
++      "cur" (expand-file-name
++             folder (notmuch-config-get "database.mail_root"))))))
++
++(defun pm-notmuch-move-to-folder (query folder)
++  "Move the messages matching QUERY to the list folder FOLDER.
++Then run notmuch new, so the tags follow at once."
++  (dolist (file (pm-notmuch--list-files query))
++    (let ((dest (pm-notmuch--file-name-in file folder)))
++      (unless (string= file dest)
++        (make-directory (file-name-directory dest) t)
++        (rename-file file dest))))
++  (call-process notmuch-command nil nil nil "new" "--quiet"))
++
++(defun pm-notmuch--move-at-point (folder)
++  "Move the message or thread at point to FOLDER, and refresh the view."
++  (pcase major-mode
++    ('notmuch-show-mode
++     (pm-notmuch-move-to-folder (notmuch-show-get-message-id) folder)
++     (notmuch-show-refresh-view))
++    ('notmuch-search-mode
++     (pm-notmuch-move-to-folder (notmuch-search-find-thread-id) folder)
++     (notmuch-search-refresh-view))
++    ('notmuch-tree-mode
++     (pm-notmuch-move-to-folder (notmuch-tree-get-message-id) folder)
++     (notmuch-tree-refresh-view)))
++  (message "Moved to %s" folder))
++
++(defun pm-notmuch-move-to-inbox ()
++  "Move the message or thread at point to INBOX."
++  (interactive)
++  (pm-notmuch--move-at-point "INBOX"))
++
++(defun pm-notmuch-move-to-next ()
++  "Move the message or thread at point to Next."
++  (interactive)
++  (pm-notmuch--move-at-point "Next"))
++
++(defun pm-notmuch-move-to-later ()
++  "Move the message or thread at point to Later."
++  (interactive)
++  (pm-notmuch--move-at-point "Later"))
++
++(defun pm-notmuch-move-to-archive ()
++  "Move the message or thread at point to Archive."
++  (interactive)
++  (pm-notmuch--move-at-point "Archive"))
++
++(defvar pm-notmuch-move-map
++  (let ((map (make-sparse-keymap)))
++    (define-key map "i" #'pm-notmuch-move-to-inbox)
++    (define-key map "n" #'pm-notmuch-move-to-next)
++    (define-key map "l" #'pm-notmuch-move-to-later)
++    (define-key map "a" #'pm-notmuch-move-to-archive)
++    map)
++  "Keys that move mail between the list's folders, under M.")
++
++(dolist (map (list notmuch-show-mode-map notmuch-search-mode-map
++                   notmuch-tree-mode-map))
++  (define-key map "M" pm-notmuch-move-map))
++
+ ;;; Leaf message search
+ 
+ (defvar pm-notmuch-leaves-program "notmuch-leaves"
+diff --git a/jails/instances/lab-mail/spec.org b/jails/instances/lab-mail/spec.org
+index 36dd7a5e..27ee931f 100644
+--- a/jails/instances/lab-mail/spec.org
++++ b/jails/instances/lab-mail/spec.org
+@@ -267,6 +267,13 @@ up the same way and differ only in the login.
+   configs and documents the commands to sync and to post. lab-claude
+   ships its own and documents them in its README.
+ - The agent searches and reads the local index, not IMAP.
++- On beastie, Emacs reads the profile and posts through msmtp. It
++  saves each message it posts by Fcc into =sent=, so the message shows
++  as sent before the next sync brings back the list's copy, which
++  notmuch then indexes under the same Message-ID. One key each, under
++  =M=, moves the message or thread at point to INBOX, =Next=,
++  =Later=, or =Archive=: it moves the file, and the next sync moves
++  the message on lab-mail. Emacs does not refer to the jj maildir.
+ - =just check= in =dotfiles/notmuch=, run as the user on either
+   host, checks that login's client before it is used: mbsync logs in
+   and lists the list's folders, a dry run of the sync succeeds, the
+@@ -315,9 +322,9 @@ beastie.
+     names the mbsync login.
+ 
+ out of scope:
+-- Moving the list's clients off the jj maildir. lab-process-mail, the
+-  =mail= bookmark, and Pat's notmuch keep using it until a change of
+-  their own moves them to lab-mail.
++- Moving lab-process-mail off the jj maildir. It and the =mail=
++  bookmark keep using it until a change of their own moves them to
++  lab-mail.
+ - An archive of the list in git. It is a separate artifact, and can
+   be fed from the list's folders like any other client.
+ - Restricting which jails or local users may post to lab-mail, or
+-- 
+2.56.0
+

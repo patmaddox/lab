@@ -1,0 +1,711 @@
+Message-ID: <b7f4b5a44dacde88e83b383314a4ed12e8ffa36a.1792285964.git.claude@p7x.dev>
+In-Reply-To: <cover.1792285964.git.claude@p7x.dev>
+References: <cover.1792285964.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Subject: [PATCH 08/14] src/lab-process-mail: Answer the list on lab-mail
+To: lab@lists.p7x.dev
+Cc: Pat Maddox <pat@patmaddox.com>
+Change-Id: xrntqxrrwltkkxwqumvzzlmtouwrznus
+Date: Sun, 18 Oct 2026 01:13:57 +0000
+
+The agent answered the jj maildir, so a reply reached the list only
+once Pat merged the outbox commit that carried it. On lab-mail a reply
+is on the list as soon as it is posted, and Pat no longer has to
+merge mail.
+
+A pass now syncs before it starts, posts series with git send-email
+and replies with msmtp, and saves each reply by Fcc into sent. The
+copy tags the message replied at once, so the loop still checks a
+side effect the agent cannot fake by printing, without waiting for
+the sync to bring the reply back.
+
+The agent cannot file mail on lab-mail, so instead of quarantining
+mail from unknown senders, the loop answers only approved senders
+and logs the rest.
+
+prompt.md and CLAUDE.md describe the new procedure, and the spec
+records it.
+---
+change-id: xrntqxrrwltkkxwqumvzzlmtouwrznus
+
+ CLAUDE.md                                  |  36 +++---
+ jails/instances/lab-claude/README.org      |   3 +-
+ jails/instances/lab-mail/spec.org          |  15 ++-
+ src/lab-process-mail/lab-process-mail      |  90 +++++++++------
+ src/lab-process-mail/lab-process-mail_test | 128 ++++++++++++++-------
+ src/lab-process-mail/prompt.md             | 112 +++++++++---------
+ 6 files changed, 230 insertions(+), 154 deletions(-)
+
+diff --git a/CLAUDE.md b/CLAUDE.md
+index 09358d62..ae6334ad 100644
+--- a/CLAUDE.md
++++ b/CLAUDE.md
+@@ -32,28 +32,26 @@ matters.
+ 
+ ## Mail
+ 
+-The lab-devel mailing list is the primary channel for work. It is a
+-maildir committed to jj on the `mail` bookmark and read with notmuch;
+-"mail", "email", "your mail", "the inbox", "the list", and "check
+-your mail" all mean this list. They never mean Gmail or any Google or
+-other external mail service - do not reach for those tools here.
+-
+-Two remotes, two directions. You **pull from `upstream`** (canonical
+-`trunk` and `mail`; read-only to you) and **push to `submissions`**
+-(your outbox). `submissions` is yours to push freely - the maintainer
+-only reads from it and merges what they accept - so publishing your
+-`claude` bookmark there is expected and never needs approval:
+-
+-    jj git push --remote submissions --bookmark claude
++The lab-devel mailing list is the primary channel for work. It lives
++on lab-mail, which mbsync syncs into ~/mail/<login>, and it is read
++with notmuch under the profile `lab-mail`; "mail", "email", "your
++mail", "the inbox", "the list", and "check your mail" all mean this
++list. They never mean Gmail or any Google or other external mail
++service - do not reach for those tools here.
++
++You pull code from `upstream` (canonical `trunk`; read-only to you)
++and post to the list with msmtp and git send-email. Posting to the
++list is expected and never needs approval. jails/instances/lab-mail
++has the list's spec, and lab-claude's README has the commands.
+ 
+ The operator drains the inbox with lab-process-mail, from
+ src/lab-process-mail. It runs one agent pass per message, oldest
+-first. Each pass takes a message from someone else that you have not
+-replied to, does the work, and pushes the answer on your `claude`
+-bookmark to `submissions`. Patches go out as their own series, a new
+-thread, and the reply to the message cites them. The procedure for a
+-pass is src/lab-process-mail/prompt.md; follow it whenever you answer
+-the list. zib/patch-review-workflow.org has the full picture.
++first. Each pass takes a message from an approved sender that you
++have not replied to, does the work, and posts the answer to the list.
++Patches go out as their own series, a new thread, and the reply to
++the message cites them. The procedure for a pass is
++src/lab-process-mail/prompt.md; follow it whenever you answer the
++list.
+ 
+ ## Own the loop
+ 
+diff --git a/jails/instances/lab-claude/README.org b/jails/instances/lab-claude/README.org
+index 9bbd98d4..996d7d48 100644
+--- a/jails/instances/lab-claude/README.org
++++ b/jails/instances/lab-claude/README.org
+@@ -5,8 +5,7 @@ lab-claude reads and posts to the list on lab-mail, which holds the
+ Fastmail credentials. Both services listen on loopback, so the setup
+ below needs no secrets. See =../lab-mail/spec.org=.
+ 
+-lab-process-mail still works from the jj maildir under
+-=~/lab/mail.jj= and the default notmuch profile.
++lab-process-mail reads and answers the list this way.
+ 
+ ** fetch and read
+ mbsync pulls the list's folders, INBOX, =Next=, =Later=, and
+diff --git a/jails/instances/lab-mail/spec.org b/jails/instances/lab-mail/spec.org
+index 27ee931f..63c3f6ba 100644
+--- a/jails/instances/lab-mail/spec.org
++++ b/jails/instances/lab-mail/spec.org
+@@ -274,6 +274,12 @@ up the same way and differ only in the login.
+   =M=, moves the message or thread at point to INBOX, =Next=,
+   =Later=, or =Archive=: it moves the file, and the next sync moves
+   the message on lab-mail. Emacs does not refer to the jj maildir.
++- On lab-claude, lab-process-mail syncs and indexes the list before
++  each pass. It answers inbox mail only from approved senders, and
++  logs and skips the rest. A pass posts its patch series with git
++  send-email through msmtp, to the list, and saves its reply by Fcc
++  into =sent=, so the message it answered is tagged replied as soon
++  as the pass ends.
+ - =just check= in =dotfiles/notmuch=, run as the user on either
+   host, checks that login's client before it is used: mbsync logs in
+   and lists the list's folders, a dry run of the sync succeeds, the
+@@ -322,9 +328,6 @@ beastie.
+     names the mbsync login.
+ 
+ out of scope:
+-- Moving lab-process-mail off the jj maildir. It and the =mail=
+-  bookmark keep using it until a change of their own moves them to
+-  lab-mail.
+ - An archive of the list in git. It is a separate artifact, and can
+   be fed from the list's folders like any other client.
+ - Restricting which jails or local users may post to lab-mail, or
+@@ -409,6 +412,12 @@ why.
+   Fastmail's own =Archive= folder is used, not a new one, so archiving
+   on Fastmail's web interface means the same. =Next= and =Later= are
+   folders for the same reason.
++- Fcc a reply into =sent=, not wait for the sync to bring back the
++  list's copy. The pass ends with the message tagged replied, so the
++  loop never waits on lab-mail or stalls when it is slow.
++- Skip and log mail from unknown senders, not quarantine it. The
++  agent cannot move mail on lab-mail, so it has nowhere to file it,
++  and nobody sends unknown mail to the list yet.
+ - Import the jj maildir once, not freeze it as an archive. A frozen
+   archive would split the list into two places to search, and a reply
+   to an old thread would arrive with no parent.
+diff --git a/src/lab-process-mail/lab-process-mail b/src/lab-process-mail/lab-process-mail
+index bc5ce6ca..0c53b67a 100755
+--- a/src/lab-process-mail/lab-process-mail
++++ b/src/lab-process-mail/lab-process-mail
+@@ -4,21 +4,28 @@
+ # message, oldest first.
+ #
+ # The loop is deterministic and the agent is not, so the two are kept
+-# apart. Before each pass this script fetches, rebases your work and
+-# the mail outbox, and picks the oldest inbox message. It then runs a
+-# fresh claude with the prompt shipped beside it and that message's id.
+-# The agent's output goes to /dev/null; whether the pass worked is read
+-# from the notmuch index afterwards. A message still in the inbox stops
+-# the loop, rather than being retried forever.
++# apart. Before each pass this script fetches and rebases your work,
++# syncs the list from lab-mail, and picks the oldest inbox message from
++# an approved sender. It then runs a fresh claude with the prompt
++# shipped beside it and that message's id. The agent's output goes to
++# /dev/null; whether the pass worked is read from the notmuch index
++# afterwards, where the reply the agent saved by Fcc marks the message
++# replied. A message still in the inbox stops the loop, rather than
++# being retried forever.
++#
++# The list is read through the notmuch profile ${NOTMUCH_PROFILE}, or
++# lab-mail, and synced with the mbsync channel of the same name. Only
++# mail from ${LAB_PROCESS_MAIL_SENDERS}, or pat@patmaddox.com and
++# pat@p7x.dev, is answered; inbox mail from anyone else is logged to
++# stderr and skipped.
+ #
+ # The trunk workspace is ${TRUNK_WORKSPACE}, or ~/lab/default.jj. Each
+ # pass runs in its own workspace, ${WORK_WORKSPACE}, or ~/lab/work.jj,
+-# created on first use. The mail workspace is ${MAIL_WORKSPACE}, or
+-# ~/lab/mail.jj. The outbox bookmark is named for your login. Each
+-# outcome is posted to the ntfy topic ${NOTIFY_URL}, if set, with the
+-# number of messages left in the inbox. The prompt is
+-# ${LAB_PROCESS_MAIL_PROMPT}, or share/lab-process-mail/prompt.md in the
+-# prefix this script is installed under.
++# created on first use. Each outcome is posted to the ntfy topic
++# ${NOTIFY_URL}, if set, with the number of messages left in the
++# inbox. The prompt is ${LAB_PROCESS_MAIL_PROMPT}, or
++# share/lab-process-mail/prompt.md in the prefix this script is
++# installed under.
+ #
+ # Work is based on the revset ${LAB_BASE_BRANCH}, or trunk(). An
+ # operator's own assistant can set it to their staging branch, such as
+@@ -29,6 +36,8 @@ set -o pipefail
+ 
+ readonly PROGNAME="${0##*/}"
+ readonly BASE="${LAB_BASE_BRANCH:-trunk()}"
++readonly SENDERS="${LAB_PROCESS_MAIL_SENDERS:-pat@patmaddox.com pat@p7x.dev}"
++export NOTMUCH_PROFILE="${NOTMUCH_PROFILE:-lab-mail}"
+ 
+ # Your commits off the base, less everything descended from the list.
+ # The base and the list share no commit but root(), so the outbox is
+@@ -51,13 +60,11 @@ die() {
+ 	exit 1
+ }
+ 
+-# Fetch every remote, rebase your work onto the base and the
+-# outbox onto mail@upstream, and index the list. This judges nothing:
+-# a rebase that conflicts leaves the conflict in the commit, and a
+-# patch applied upstream with edits survives as a redundant commit.
+-# Settling those is the agent's job.
++# Fetch every remote, rebase your work onto the base, sync the list,
++# and index it. This judges nothing: a rebase that conflicts leaves the
++# conflict in the commit, and a patch applied upstream with edits
++# survives as a redundant commit. Settling those is the agent's job.
+ get_up_to_date() {
+-	# Both workspaces share one repo, so one fetch covers them.
+ 	jj --quiet -R "${trunk}" git fetch --all-remotes
+ 
+ 	# Move each stack from its base, not from your first commit in it,
+@@ -65,16 +72,7 @@ get_up_to_date() {
+ 	jj --quiet -R "${trunk}" rebase \
+ 	    -s "roots(::(${WORK}) ~ ::(${BASE}))" -d "${BASE}" --skip-emptied
+ 
+-	# A bookmark with no pending mail, missing or merged in full, has
+-	# nothing to rebase; point it at the list's tip instead.
+-	if [ -z "$(jj -R "${mail}" log --no-graph -T commit_id \
+-	    -r "bookmarks(exact:${me}) ~ ::mail@upstream")" ]; then
+-		jj --quiet -R "${mail}" bookmark set "${me}" -r mail@upstream
+-	fi
+-	jj --quiet -R "${mail}" rebase -b "${me}" -d mail@upstream \
+-	    --skip-emptied
+-	jj --quiet -R "${mail}" new "${me}"
+-
++	mbsync -q "${NOTMUCH_PROFILE}"
+ 	notmuch new --quiet
+ }
+ 
+@@ -89,13 +87,39 @@ prepare_workspace() {
+ 	jj --quiet -R "${ws}" workspace update-stale
+ }
+ 
++# A query matching mail from any approved sender.
++senders_query() {
++	local q s
++	q=""
++	for s in ${SENDERS}; do
++		q="${q:+${q} or }from:\"${s}\""
++	done
++	echo "${q}"
++}
++
+ oldest_inbox_message() {
+ 	notmuch search --sort=oldest-first --output=messages --limit=1 \
+-	    tag:inbox
++	    "tag:inbox and (${senders})"
+ }
+ 
+ inbox_count() {
+-	notmuch count tag:inbox
++	notmuch count "tag:inbox and (${senders})"
++}
++
++# Log each inbox message from someone not approved, which no pass
++# answers, once per run.
++log_unknown_senders() {
++	local id from
++	for id in $(notmuch search --output=messages \
++	    "tag:inbox and not (${senders})"); do
++		case " ${skipped} " in
++		*" ${id} "*) continue ;;
++		esac
++		skipped="${skipped} ${id}"
++		from="$(notmuch show --format=text --body=false "${id}" |
++		    sed -n 's/^From: //p' | head -n 1)"
++		warn "skipping ${id} from unknown sender ${from}"
++	done
+ }
+ 
+ # Post to the operator's ntfy topic. A failed or slow post must not
+@@ -113,19 +137,19 @@ main() {
+ 	[ "${#}" -eq 0 ] || die "usage: ${PROGNAME}"
+ 
+ 	trunk="${TRUNK_WORKSPACE:-${HOME}/lab/default.jj}"
+-	mail="${MAIL_WORKSPACE:-${HOME}/lab/mail.jj}"
+ 	ws="${WORK_WORKSPACE:-${HOME}/lab/work.jj}"
+-	me="$(whoami)"
++	senders="$(senders_query)"
++	skipped=""
+ 	bindir="$(CDPATH= cd -- "$(dirname -- "${0}")" && pwd)"
+ 	prompt="${LAB_PROCESS_MAIL_PROMPT:-${bindir}/../share/lab-process-mail/prompt.md}"
+ 
+ 	[ -d "${trunk}" ] || die "${trunk}: no trunk workspace"
+-	[ -d "${mail}" ] || die "${mail}: no mail workspace"
+ 	[ -r "${prompt}" ] || die "${prompt}: no prompt"
+ 
+ 	while :; do
+ 		get_up_to_date
+ 		prepare_workspace
++		log_unknown_senders
+ 		id="$(oldest_inbox_message)"
+ 		[ -n "${id}" ] || break
+ 		subject="$(notmuch search "${id}" |
+diff --git a/src/lab-process-mail/lab-process-mail_test b/src/lab-process-mail/lab-process-mail_test
+index ba1019b2..267bd8a4 100755
+--- a/src/lab-process-mail/lab-process-mail_test
++++ b/src/lab-process-mail/lab-process-mail_test
+@@ -15,20 +15,23 @@ atf_init_test_cases() {
+ 	atf_add_test_case rebases_work_onto_base
+ 	atf_add_test_case follows_rewritten_base
+ 	atf_add_test_case keeps_work_on_its_prerequisite
+-	atf_add_test_case rebases_outbox_onto_list
++	atf_add_test_case syncs_the_list
++	atf_add_test_case reads_the_lab_mail_profile
++	atf_add_test_case skips_unknown_senders
++	atf_add_test_case takes_approved_senders_from_env
+ }
+ 
+ # Build a small lab in the current directory: an upstream repo with
+-# trunk and a mail list that share no history, an empty submissions
+-# repo, and trunk and mail workspaces cloned from them. Stubs stand in
+-# for claude, notmuch, and curl; see mk_stubs.
++# trunk and a mail list that share no history, and a trunk workspace
++# cloned from it. Stubs stand in for claude, notmuch, mbsync, and curl;
++# see mk_stubs.
+ setup() {
+ 	PROCESS_MAIL="$(atf_get_srcdir)/lab-process-mail"
+ 	export LAB_PROCESS_MAIL_PROMPT="$(atf_get_srcdir)/prompt.md"
+ 	export TRUNK_WORKSPACE="${PWD}/default.jj"
+-	export MAIL_WORKSPACE="${PWD}/mail.jj"
+ 	export WORK_WORKSPACE="${PWD}/work.jj"
+-	unset NOTIFY_URL LAB_BASE_BRANCH
++	unset NOTIFY_URL LAB_BASE_BRANCH LAB_PROCESS_MAIL_SENDERS \
++	    NOTMUCH_PROFILE
+ 
+ 	export JJ_CONFIG="${PWD}/jj.toml"
+ 	cat > jj.toml <<-'EOF'
+@@ -41,7 +44,6 @@ setup() {
+ 	export PATH="${PWD}/bin:${PATH}"
+ 
+ 	git init -q --bare upstream.git 2>/dev/null
+-	git init -q --bare submissions.git 2>/dev/null
+ 	jj git init seed.jj >/dev/null 2>&1
+ 	(
+ 		cd seed.jj
+@@ -63,10 +65,8 @@ setup() {
+ 	    >/dev/null 2>&1 || atf_fail "cannot clone upstream"
+ 	(
+ 		cd default.jj
+-		jj git remote add submissions ../submissions.git
+ 		jj bookmark track mail@upstream
+ 		jj new trunk@upstream
+-		jj workspace add -r mail@upstream ../mail.jj
+ 	) >/dev/null 2>&1 || atf_fail "cannot build workspaces"
+ }
+ 
+@@ -78,13 +78,16 @@ setup() {
+ # the inbox. With STUB_MOVE=1 it moves its working copy to root().
+ #
+ # notmuch reads the inbox from the file inbox, one "id subject" per
+-# line, oldest first. It answers only the queries lab-process-mail
+-# makes.
++# line, oldest first, all from approved senders. Inbox mail from
++# anyone else is in the file unknown, one "id from" per line. It
++# answers only the queries lab-process-mail makes, and logs each
++# query's NOTMUCH_PROFILE to notmuch.log.
+ #
+-# curl appends its argv to curl.log.
++# mbsync and curl append their argv to mbsync.log and curl.log.
+ mk_stubs() {
+ 	mkdir bin
+ 	: > inbox
++	: > unknown
+ 	stubdir="${PWD}"
+ 
+ 	cat > bin/claude <<-EOF
+@@ -104,25 +107,40 @@ mk_stubs() {
+ 	cat > bin/notmuch <<-EOF
+ 	#!/bin/sh
+ 	inbox="${stubdir}/inbox"
++	unknown="${stubdir}/unknown"
++	echo "profile \${NOTMUCH_PROFILE:-}" >> "${stubdir}/notmuch.log"
++	echo "\$*" >> "${stubdir}/notmuch.log"
++	for a in "\$@"; do last="\$a"; done
+ 	case "\$1" in
+ 	new)
+ 		;;
+ 	search)
+-		for a in "\$@"; do last="\$a"; done
+-		if [ "\${last}" = tag:inbox ]; then
++		case "\${last}" in
++		"tag:inbox and not ("*)
++			cut -d ' ' -f 1 "\${unknown}"
++			;;
++		"tag:inbox and ("*)
+ 			head -n 1 "\${inbox}" | cut -d ' ' -f 1
+-		else
++			;;
++		*)
+ 			subject="\$(grep "^\${last} " "\${inbox}" | cut -d ' ' -f 2-)"
+ 			echo "thread:1 today [1/1] Pat; \${subject} (inbox)"
+-		fi
++			;;
++		esac
++		;;
++	show)
++		echo "From: \$(grep "^\${last} " "\${unknown}" | cut -d ' ' -f 2-)"
+ 		;;
+ 	count)
+-		if [ "\$2" = tag:inbox ]; then
++		case "\$2" in
++		"tag:inbox and ("*)
+ 			grep -c . "\${inbox}" || :
+-		else
++			;;
++		*)
+ 			id="\${2%% and tag:inbox}"
+ 			grep -c "^\${id} " "\${inbox}" || :
+-		fi
++			;;
++		esac
+ 		;;
+ 	*)
+ 		echo "notmuch stub: \$*" >&2
+@@ -131,6 +149,11 @@ mk_stubs() {
+ 	esac
+ 	EOF
+ 
++	cat > bin/mbsync <<-EOF
++	#!/bin/sh
++	echo "\$*" >> "${stubdir}/mbsync.log"
++	EOF
++
+ 	cat > bin/curl <<-EOF
+ 	#!/bin/sh
+ 	echo "\$*" >> "${stubdir}/curl.log"
+@@ -346,26 +369,53 @@ keeps_work_on_its_prerequisite_body() {
+ 	    "$(parent_of 'description(substring:"list: theirs")')"
+ }
+ 
+-atf_test_case rebases_outbox_onto_list
+-rebases_outbox_onto_list_body() {
++atf_test_case syncs_the_list
++syncs_the_list_head() {
++	atf_set descr "Each pass starts from a sync of the list"
++}
++syncs_the_list_body() {
+ 	setup
+-	me="$(whoami)"
+-	(
+-		cd mail.jj
+-		echo reply > maildir/reply
+-		jj commit -m 'mail: Reply'
+-		jj bookmark create "${me}" -r @-
+-	) >/dev/null 2>&1
+-	(
+-		cd seed.jj
+-		jj new mail
+-		echo post > maildir/post
+-		jj commit -m 'mail: Post'
+-		jj bookmark set mail -r @-
+-		jj git push --remote upstream --bookmark mail
+-	) >/dev/null 2>&1 || atf_fail "cannot advance the list"
++	printf 'id:a@x First\nid:b@x Second\n' > inbox
++	export STUB_ANSWER=1
++	atf_check -s exit:0 -o ignore -e ignore "${PROCESS_MAIL}"
++	# One sync before each pass, and one that finds the inbox empty.
++	atf_check -o inline:"-q lab-mail\n-q lab-mail\n-q lab-mail\n" \
++	    cat mbsync.log
++}
++
++atf_test_case reads_the_lab_mail_profile
++reads_the_lab_mail_profile_body() {
++	setup
++	echo 'id:a@x Hello there' > inbox
++	export STUB_ANSWER=1
++	atf_check -s exit:0 -o ignore -e ignore "${PROCESS_MAIL}"
++	atf_check -o not-match:"^profile \$" -o match:"^profile lab-mail\$" \
++	    cat notmuch.log
++}
++
++atf_test_case skips_unknown_senders
++skips_unknown_senders_head() {
++	atf_set descr "Inbox mail from an unknown sender is logged once" \
++	    "and never answered"
++}
++skips_unknown_senders_body() {
++	setup
++	echo 'id:u@x Eve <eve@example.org>' > unknown
++	printf 'id:a@x First\nid:b@x Second\n' > inbox
++	export STUB_ANSWER=1
++	atf_check -s exit:0 -o ignore \
++	    -e inline:"W: lab-process-mail: skipping id:u@x from unknown sender Eve <eve@example.org>\n" \
++	    "${PROCESS_MAIL}"
++	atf_check -o inline:"2\n" grep -c '^cwd ' claude.log
++	atf_check -s exit:1 grep -q 'u@x' claude.log
++}
++
++atf_test_case takes_approved_senders_from_env
++takes_approved_senders_from_env_body() {
++	setup
++	echo 'id:a@x Hello there' > inbox
++	export STUB_ANSWER=1 LAB_PROCESS_MAIL_SENDERS="a@example.org b@example.org"
+ 	atf_check -s exit:0 -o ignore -e ignore "${PROCESS_MAIL}"
+-	atf_check_equal "mail: Post" "$(parent_of "${me}")"
+-	atf_check -o inline:"mail: Reply" \
+-	    jj -R mail.jj log --no-graph -T 'description.first_line()' -r @-
++	atf_check -o match:'^search .*tag:inbox and \(from:"a@example.org" or from:"b@example.org"\)$' \
++	    cat notmuch.log
+ }
+diff --git a/src/lab-process-mail/prompt.md b/src/lab-process-mail/prompt.md
+index 6066c13a..ab4a697c 100644
+--- a/src/lab-process-mail/prompt.md
++++ b/src/lab-process-mail/prompt.md
+@@ -5,20 +5,23 @@ prompt, does whatever it asks, and answers it on the list. The answer
+ is always a reply; any patches go out first as their own series, which
+ the reply cites.
+ 
+-The list is a maildir carried by jj on the `mail` bookmark.
+-zib/patch-review-workflow.org describes the whole workflow; this pass
+-is the contributor side of it.
++The list lives on lab-mail. mbsync pulls its folders, INBOX, Next,
++Later, and Archive, into `~/mail/claude@p7x.dev`, notmuch indexes them
++under the profile `lab-mail`, and you post with msmtp and git
++send-email. jails/instances/lab-mail/spec.org describes the list and
++its clients.
+ 
+ lab-process-mail runs you, once per message, and does the mechanical
+-work around the pass: it gets both workspaces up to date before you
+-start, and checks the inbox after you finish. Never use Gmail or any
+-external mail tool.
++work around the pass: it gets your work and the list up to date before
++you start, and checks the inbox after you finish. It sets
++`NOTMUCH_PROFILE=lab-mail`, so every notmuch command here reads the
++list. Never use Gmail or any external mail tool.
+ 
+ ## The operator does not read your output
+ 
+ Nobody reads your stdout. The result of a pass is what lands on the
+-list: a commit on your bookmark, pushed to `submissions`. Put every
+-answer, question, and caveat in mail.
++list: the mail you post to it. Put every answer, question, and caveat
++in mail.
+ 
+ Do not notify the operator either. lab-process-mail does that after
+ each pass, from whether the message left the inbox.
+@@ -33,23 +36,24 @@ each pass, from whether the message left the inbox.
+   b/dev@upstream.
+ - `~/lab/default.jj` - the operator's trunk workspace. Leave its
+   working copy alone.
+-- `~/lab/mail.jj` - mail workspace; its `maildir/` is the list.
+-- `upstream` - the three sources below. Read-only to you.
+-- `submissions` - your outbox. Push your bookmark, named for your
+-  login, and nothing else. Pushing it never needs approval.
++- `~/mail/claude@p7x.dev` - your copy of the list, which mbsync
++  pulls. Never change its folders; your login cannot change the list,
++  and the next sync undoes any change here. Your own mail is saved in
++  its `sent` folder, which is never synced.
++- `upstream` - the two branches below. Read-only to you.
+ 
+ ## Sources
+ 
+-Work flows from the list to trunk. Three branches on `upstream` carry
+-it, from most settled to least:
++Work flows from the list to trunk. Three sources carry it, from most
++settled to least:
+ 
+ - `trunk@upstream` - the canonical tree, published for everyone.
+ - `b/dev@upstream` - Pat's staging tree of trunk candidates. It is
+   published for anyone interested, but he revises it freely, so a
+   commit on it may change or be dropped before it reaches trunk.
+-- `mail@upstream` - the list. It holds every patch posted and the
+-  discussion around it. Some patches are applied, some rejected, and
+-  many not yet considered.
++- the list, searched with notmuch. It holds every patch posted and
++  the discussion around it. Some patches are applied, some rejected,
++  and many not yet considered.
+ 
+ `${lab_base}` is one of the first two. Consult all three: a patch on
+ the list may already do part of what you need, and you may build on
+@@ -62,19 +66,19 @@ ready, so say so in the reply and leave it until that commit lands.
+ 
+ notmuch derives the tags from the list itself on every `notmuch new`:
+ your mail is `sent`, mail you answered with an In-Reply-To is
+-`replied`, and all other mail from others is `inbox`. Replying to a
+-message is what moves it out of your inbox.
++`replied`, and other mail in INBOX from others is `inbox`. Mail in
++Next, Later, and Archive is tagged `next`, `later`, and `archived`.
++Replying to a message is what moves it out of your inbox; you cannot
++move it to another folder.
+ 
+ ## 1. Settle what the update left
+ 
+ Before starting you, lab-process-mail brought in everything that has
+ landed since the last pass, on both trunk and the list. It fetched
+ every remote, rebased your unmerged work (`${work}`) onto
+-`${lab_base}`, rebased your outbox onto mail@upstream, started a
+-fresh change in the mail workspace, and indexed the list, so messages
+-you already answered count as replied:
++`${lab_base}`, synced the list, and indexed it, so messages you
++already answered count as replied:
+ 
+-    me="$(whoami)"
+     lab_base='<revset>'    # from "Your base is" near the end
+     work="mine() ~ ::(${lab_base}) ~ (::mail@upstream ~ root())::
+         ~ (immutable() ~ ::(${lab_base}))::"
+@@ -97,7 +101,8 @@ conflict-free, and nothing landed is left, your work is current.
+ ## 2. Take the message
+ 
+ The last line of this prompt names the message to answer, as a notmuch
+-id, `id:<message-id>`. You do not choose the message:
++id, `id:<message-id>`. You do not choose the message, and
++lab-process-mail names only mail from senders the operator approved:
+ 
+     id="id:<message-id>"   # from the last line of this prompt
+     thread="$(notmuch search --output=threads "${id}")"
+@@ -186,10 +191,13 @@ come from the commit author, your address:
+     rm -rf /tmp/series
+     "${ws}"/libexec/mail/format-patch.sh -o /tmp/series \
+         --thread=shallow --base="${base}" \
+-        --to="<sender's From>" "${base}..${head}"
++        --to=lab@lists.p7x.dev --cc="<sender's From>" \
++        "${base}..${head}"
+ 
+ `--base` adds a `base-commit:` line naming the commit the series
+-applies to. Always pass it.
++applies to. Always pass it. Always send the series to the list:
++lab-mail discards mail sent only to people who read the list, so a
++series addressed only to Pat would reach no one.
+ 
+ **Base branch.** The series applies to `${lab_base}`. When that is
+ not trunk(), the series requires every commit between trunk and the
+@@ -227,16 +235,14 @@ each patch to its earlier version with `notmuch search changeid:<id>`.
+ 
+ Note the series' subject and Message-ID from its first file, the cover
+ letter or the only patch, for the reply. A long Subject continues on
+-indented lines. Then deliver each file in order into the mail
+-workspace's maildir, which keeps the From as composed and adds a Date,
+-and commit the series on its own:
++indented lines. Then post it. git send-email takes the recipients
++from the files, keeps each Message-ID, dates each message as it goes,
++and posts through msmtp, as your git config sets:
+ 
+-    for p in /tmp/series/*.patch; do
+-        "${ws}"/libexec/mail/maildir-deliver.sh < "${p}"
+-    done
+-    cd ~/lab/mail.jj
+-    jj diff --summary      # only "A maildir/..." lines
+-    jj commit -m "mail: Post [PATCH] <subject>"
++    git send-email /tmp/series/*.patch
++
++It must exit 0. If lab-mail refuses a message, msmtp prints why and
++that message reaches no one; fix it and post the rest again.
+ 
+ ## 6. Reply
+ 
+@@ -253,10 +259,10 @@ everyone already copied. The list is the record of the work, so a
+ reply that leaves it out is lost to everyone else.
+ 
+ Add a Message-ID header, e.g.
+-`Message-ID: <$(date +%s).$(openssl rand -hex 6)@p7x.dev>`. Write the
+-body by CLAUDE.md's quoting rules: trim the quote to what you answer,
+-never reword it, and put each answer beneath the lines it answers.
+-Wrap at 72.
++`Message-ID: <$(date +%s).$(openssl rand -hex 6)@p7x.dev>`, and a Date
++header, `Date: $(date -R)`. Write the body by CLAUDE.md's quoting
++rules: trim the quote to what you answer, never reword it, and put
++each answer beneath the lines it answers. Wrap at 72.
+ 
+ If you posted a series, summarize what it does and cite it by its full
+ subject with the Message-ID in a footnote, as CLAUDE.md describes, so
+@@ -266,33 +272,23 @@ the reader can find it with `notmuch show`:
+ 
+     [1] id:<message-id of the series>
+ 
+-Cite any other message the same way. Then deliver and commit it on its
+-own:
+-
+-    "${ws}"/libexec/mail/maildir-deliver.sh < /tmp/reply.eml
+-    cd ~/lab/mail.jj
+-    jj diff --summary      # only "A maildir/..." lines
+-    jj commit -m "mail: Reply to <subject>"
+-
+-## 7. Push
+-
+-The series and the reply are separate commits, so the moderator can
+-take or leave each. Point your bookmark at the last one and push:
++Cite any other message the same way. Then post it, and once msmtp
++exits 0, save a copy by Fcc into your `sent` folder. The copy is what
++marks the message replied before the next sync brings back the list's:
+ 
+-    jj bookmark set "${me}" -r @-
+-    jj git push --remote submissions --bookmark "${me}"
++    msmtp -t < /tmp/reply.eml
++    notmuch insert --folder=sent --create-folder +sent < /tmp/reply.eml
+ 
+-## 8. Verify
++## 7. Verify
+ 
+ Check the outcome from outside, not from what you printed:
+ 
+     notmuch new
+     notmuch search --output=tags "${id}"        # includes replied
+-    jj log -r "${me}@submissions" --no-graph -T commit_id
+-    jj log -r "${me}" --no-graph -T commit_id   # the same commit
+ 
+-If the message is not `replied`, the reply's In-Reply-To is wrong. If
+-the commits differ, the push failed. Fix it before stopping.
++If the message is not `replied`, the reply's In-Reply-To is wrong, or
++the copy did not reach `sent`. Fix it before stopping, but never post
++the same reply twice: if msmtp exited 0, the list already has it.
+ 
+ ## Missing dependencies
+ - Do not install missing dependencies
+-- 
+2.56.0
+
