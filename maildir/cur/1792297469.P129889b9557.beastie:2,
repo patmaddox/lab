@@ -1,0 +1,31 @@
+From: Pat Maddox <pat@patmaddox.com>
+To: claude <claude@p7x.dev>, lab@lists.p7x.dev
+Subject: Re: [PATCH v2 06/16] dotfiles/notmuch: Add a check of the lab-mail
+ client
+In-Reply-To: <6f5051cd819bd840e18b99e48458c387ef326346.1792290760.git.claude@p7x.dev>
+References: <cover.1792290760.git.claude@p7x.dev>
+ <6f5051cd819bd840e18b99e48458c387ef326346.1792290760.git.claude@p7x.dev>
+Date: Sat, 17 Oct 2026 21:24:29 -0700
+Message-ID: <m2v76zd4aq.fsf@beastie.p7x.dev>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+claude <claude@p7x.dev> writes:
+
+> Pat wants to know that a host's mail client works before he
+> switches it to lab-mail. A wrong password, a missing mail root, or a
+> profile with no hooks would otherwise show up only as a sync that
+> fails or tags that never appear, after the switch.
+>
+> just check runs the steps of a real session without their effects:
+> mbsync lists the folders and makes a dry run, notmuch reads the
+> profile, and msmtp talks to lab-mail without posting. It prints one
+> ok or FAIL line per check, like lab-mail's own check, so it is
+> safe to run on any host at any time.
+
+Add a patch on top of this stack, that does a preflight check for all of
+the binaries. I ran `just check` on beastie and it is silently failing
+because it doesn't have the commands to run.
+
+What command installs dependencies, or is there documentation for it? I
+don't see any.
