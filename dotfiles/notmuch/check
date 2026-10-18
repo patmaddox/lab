@@ -1,0 +1,71 @@
+#!/bin/sh
+# Check that this login's mail client is set up for lab-mail: mbsync,
+# the lab-mail notmuch profile, and msmtp. Run it as the user, as
+# just check, before switching to the profile. Prints one line per
+# check and exits 1 if any fails. It only reads: the sync is a dry
+# run, and no mail is posted.
+set -u
+
+export NOTMUCH_PROFILE=lab-mail
+readonly folders="INBOX Next Later Archive"
+
+failed=0
+
+# check <what> <command> [args]: run the command, and report what was
+# checked by its exit status.
+check() {
+	local what="${1}"; shift
+	if "${@}" >/dev/null 2>&1; then
+		echo "ok ${what}"
+	else
+		echo "FAIL ${what}"
+		failed=1
+	fi
+}
+
+# mbsync -l lists the folders the channel would sync, which logs in
+# with the configured password.
+lists_folders() {
+	local list f
+	list="$(mbsync -l lab-mail 2>/dev/null)" || return 1
+	for f in ${folders}; do
+		printf '%s\n' "${list}" | grep -qx "${f}" || return 1
+	done
+}
+
+is_executable() {
+	[ -x "${HOME}/.config/notmuch/lab-mail/hooks/${1}" ]
+}
+
+has_identity() {
+	[ -n "$(notmuch config get user.primary_email)" ]
+}
+
+# msmtp posts from the address notmuch counts as the user's, so the
+# user's own posts are tagged sent.
+same_sender() {
+	local from
+	from="$(msmtp -P </dev/null 2>/dev/null | sed -n 's/^from *= *//p')"
+	[ -n "${from}" ] &&
+	    [ "${from}" = "$(notmuch config get user.primary_email)" ]
+}
+
+main() {
+	check "~/.mbsyncrc exists" test -r "${HOME}/.mbsyncrc"
+	check "mbsync logs in to lab-mail and lists ${folders}" lists_folders
+	check "the mail root exists" \
+	    test -d "$(notmuch config get database.mail_root 2>/dev/null)"
+	check "a dry run of mbsync lab-mail succeeds" mbsync -y -q lab-mail
+	check "the lab-mail profile has a config" \
+	    test -r "${HOME}/.config/notmuch/lab-mail/config"
+	check "the lab-mail profile has a user address" has_identity
+	check "the post-new hook is installed" is_executable post-new
+	check "the pre-new hook is installed" is_executable pre-new
+	check "the lab-mail profile has a database" notmuch count '*'
+	check "~/.msmtprc exists" test -r "${HOME}/.msmtprc"
+	check "msmtp reaches lab-mail" msmtp --serverinfo
+	check "msmtp posts from the profile's user address" same_sender
+	exit "${failed}"
+}
+
+main "${@}"

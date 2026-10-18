@@ -6,3 +6,7 @@ pkg:
 
 install: pkg
   INSTALL_AS_USER=yes REPOS_DIR=/dev/null pkg -r ~ install -y -U $(realpath patmaddox-notmuch.pkg)
+
+# check this login's mail client for lab-mail; it only reads
+check:
+  ./check

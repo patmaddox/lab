@@ -22,6 +22,9 @@ NOTMUCH_PROFILE=lab-mail notmuch show id:<message-id>
 The sync only pulls. claude@p7x.dev cannot change the list, and a
 message Pat moves or deletes on lab-mail moves or goes here too.
 
+=just check= in =~/lab/default.jj/dotfiles/notmuch= checks this
+setup and changes nothing.
+
 lab-mail syncs with Fastmail once a minute, so a message sent to the
 list through Fastmail shows up here within two minutes.
 

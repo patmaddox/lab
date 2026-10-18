@@ -270,6 +270,13 @@ up the same way and differ only in the login.
   itself; each host installs its own, with its login. lab-claude
   ships its own and documents them in its README.
 - The agent searches and reads the local index, not IMAP.
+- =just check= in =dotfiles/notmuch=, run as the user on any
+  host, checks that login's client before it is used: mbsync logs in
+  and lists the list's folders, a dry run of the sync succeeds, the
+  profile has its config, hooks, and database, and msmtp reaches
+  lab-mail from the profile's address. It prints one line per check,
+  ok or FAIL, and exits 0 only if every check passes. It changes
+  nothing and posts no mail.
 
 acceptance test: run from lab-claude, except where a step says
 beastie.
@@ -305,6 +312,10 @@ beastie.
     =Archive= on lab-mail. Within two minutes, it is in =Archive= and
     not in INBOX on Fastmail. The same holds for =Next= and =Later=,
     and for a move back to INBOX.
+13. On lab-claude as the agent, =just check= in =dotfiles/notmuch=
+    exits 0. With =Port= in =~/.mbsyncrc= changed to one lab-mail
+    does not listen on, it exits non-zero and a FAIL line names the
+    mbsync login.
 
 out of scope:
 - Moving the list's clients off the jj maildir. lab-process-mail, the
