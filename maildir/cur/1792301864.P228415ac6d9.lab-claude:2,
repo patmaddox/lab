@@ -1,0 +1,86 @@
+Message-ID: <5846529bb63d6db50f87cf73ec457a7222bb0ed2.1792301845.git.claude@p7x.dev>
+In-Reply-To: <cover.1792301845.git.claude@p7x.dev>
+References: <cover.1792301845.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Subject: [PATCH 3/3] jails/instances/lab-claude: Document setting up its mail
+ client
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab@lists.p7x.dev
+Change-Id: xmklotwktlvnzuzzttvqvzlrzuzowswo
+Date: Sun, 18 Oct 2026 05:37:44 +0000
+
+lab-claude's mail configs ship in its jail's dist, but nothing said
+what else a working client needs, or in what order. Pat, setting it
+up, found no docs for it. The README now gives the steps from the
+installed configs to lab-process-mail, and none needs a password.
+
+bootstrap.sh, one of those steps, now makes the list's folders as
+well as the mail root, since mbsync dumped core on beastie on a first
+sync into folders that did not exist.
+---
+change-id: xmklotwktlvnzuzzttvqvzlrzuzowswo
+
+ jails/instances/lab-claude/README.org         | 30 +++++++++++++++++++
+ .../lab-claude/dist/home/claude/bootstrap.sh  |  8 ++++-
+ 2 files changed, 37 insertions(+), 1 deletion(-)
+
+diff --git a/jails/instances/lab-claude/README.org b/jails/instances/lab-claude/README.org
+index 996d7d48..fdb028c4 100644
+--- a/jails/instances/lab-claude/README.org
++++ b/jails/instances/lab-claude/README.org
+@@ -7,6 +7,36 @@ below needs no secrets. See =../lab-mail/spec.org=.
+ 
+ lab-process-mail reads and answers the list this way.
+ 
++** set up
++lab-claude needs no password and no config by hand. Its configs are
++in =dist/home/claude= and the jail installs them:
++- =.mbsyncrc= pulls the list from lab-mail as =claude@p7x.dev=;
++- =.msmtprc= posts through lab-mail;
++- =.config/notmuch/lab-mail/config= is the notmuch profile;
++- =.gitconfig= has git send-email post through msmtp.
++
++A jail built before them takes each file from =dist/home/claude= into
++=~claude= by hand, with the mode =dist.mtree= gives it.
++
++Then, as claude, run =~/bootstrap.sh=. It installs the notmuch
++package from =dotfiles/notmuch=, which brings the profile's hooks, and
++makes the mail root with the list's folders. Sync, index, and check:
++#+BEGIN_EXAMPLE
++~/bootstrap.sh
++mbsync lab-mail && NOTMUCH_PROFILE=lab-mail notmuch new
++cd ~/lab/default.jj/dotfiles/notmuch && just check
++#+END_EXAMPLE
++
++Last, install lab-process-mail from =src/lab-process-mail=, so each
++pass syncs and answers the list on lab-mail:
++#+BEGIN_EXAMPLE
++cd ~/lab/default.jj/src/lab-process-mail && just install
++#+END_EXAMPLE
++
++To start over, remove =~/mail/claude@p7x.dev= and run =~/bootstrap.sh=
++again. mbsync keeps its state in each folder, so the next sync pulls
++the whole list.
++
+ ** fetch and read
+ mbsync pulls the list's folders, INBOX, =Next=, =Later=, and
+ =Archive=, into =~/mail/claude@p7x.dev=, and notmuch indexes them
+diff --git a/jails/instances/lab-claude/dist/home/claude/bootstrap.sh b/jails/instances/lab-claude/dist/home/claude/bootstrap.sh
+index f56492d0..00812dee 100755
+--- a/jails/instances/lab-claude/dist/home/claude/bootstrap.sh
++++ b/jails/instances/lab-claude/dist/home/claude/bootstrap.sh
+@@ -36,4 +36,10 @@ notmuch config set user.primary_email "$(git config user.email)"
+ notmuch new
+ 
+ # mbsync syncs the list into this mail root, which it does not create.
+-mkdir -p ${HOME}/mail/claude@p7x.dev
++# Make the list's folders too, since mbsync has dumped core on a first
++# sync into folders that did not exist.
++for box in INBOX Next Later Archive; do
++	install -d ${HOME}/mail/claude@p7x.dev/${box}/cur \
++	    ${HOME}/mail/claude@p7x.dev/${box}/new \
++	    ${HOME}/mail/claude@p7x.dev/${box}/tmp
++done
+-- 
+2.56.0
+

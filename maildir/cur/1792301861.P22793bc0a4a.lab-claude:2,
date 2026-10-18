@@ -1,0 +1,66 @@
+Message-ID: <cover.1792301845.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Subject: [PATCH 0/3] Make lab-mail clients' folders and document
+ lab-claude's setup
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab@lists.p7x.dev
+Date: Sun, 18 Oct 2026 05:37:41 +0000
+
+These follow up "[PATCH v2 00/16] Move beastie and lab-claude onto
+lab-mail" [1], after Pat's report in its thread that mbsync dumped
+core on beastie when the local folders did not exist, and that
+nothing says how to set up lab-claude [2].
+
+Patch 1 has just install-mail on beastie make the list's four
+folders, not just sent, so the first sync finds every folder it
+expects.
+
+Patch 2 keeps lab-claude's mbsync state inside each folder. By
+default mbsync keeps it in ~/.local/state/isync, and lab-claude has
+such state now, from a sync into a mail root that is gone. With it,
+every sync into a new mail root fails with "Unable to recover from
+UIDVALIDITY change", so the first real sync on lab-claude would have
+failed. beastie keeps the default: Pat's sync there runs both ways
+and already has state, and moving that state would make mbsync treat
+the folders as new and copy each message to the other side.
+
+Patch 3 documents lab-claude's setup in its README, from the configs
+the jail installs to lab-process-mail, and has bootstrap.sh make the
+list's folders too.
+
+Tested: install-mail.sh in a scratch home makes all five folders and
+leaves the password file alone on a second run. In a scratch home on
+lab-claude, with the dist configs, the notmuch package, and the
+folders from bootstrap.sh, mbsync pulls the list, notmuch new tags it,
+and just check in dotfiles/notmuch passes every check. With patch 2,
+removing the mail root and syncing again works. I could not reproduce
+the core dump with isync 1.5.1 on lab-claude. There, missing folders
+under an existing root are created, and a missing root gives "cannot
+open store".
+
+The series applies to Pat's patches 1-10 of v2 on b/dev. Patches
+11-16 of v2 rebase onto it without conflicts.
+
+[1] id:cover.1792290760.git.claude@p7x.dev
+[2] id:m2qzhnd1if.fsf@beastie.p7x.dev
+
+base-branch: b/dev@upstream
+
+claude (3):
+  infra/hosts/beastie: Make the list's folders before the first sync
+  jails/instances/lab-claude: Keep mbsync's state in each folder
+  jails/instances/lab-claude: Document setting up its mail client
+
+ infra/hosts/beastie/README.org                |  6 ++--
+ infra/hosts/beastie/libexec/install-mail.sh   | 12 +++++---
+ jails/instances/lab-claude/README.org         | 30 +++++++++++++++++++
+ .../lab-claude/dist/home/claude/.mbsyncrc     |  5 ++++
+ .../lab-claude/dist/home/claude/bootstrap.sh  |  8 ++++-
+ jails/instances/lab-mail/spec.org             |  7 +++--
+ 6 files changed, 58 insertions(+), 10 deletions(-)
+
+
+base-commit: 975591057b4354d8f3b8a1bfff3a30833bb9e63a
+-- 
+2.56.0
+

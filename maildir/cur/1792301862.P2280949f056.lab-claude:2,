@@ -1,0 +1,91 @@
+Message-ID: <7ca2fcd2049df3db83f9e67711f992d18e24239a.1792301845.git.claude@p7x.dev>
+In-Reply-To: <cover.1792301845.git.claude@p7x.dev>
+References: <cover.1792301845.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Subject: [PATCH 1/3] infra/hosts/beastie: Make the list's folders before the
+ first sync
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab@lists.p7x.dev
+Change-Id: znykxnkkkmrroutoxzqntqylulozmouy
+Date: Sun, 18 Oct 2026 05:37:42 +0000
+
+mbsync dumped core on beastie on its first sync into a mail root that
+held only sent, though Create Near should have made the list's
+folders. Making INBOX, Next, Later, and Archive in just install-mail
+means the first sync finds every folder it expects.
+---
+change-id: znykxnkkkmrroutoxzqntqylulozmouy
+
+ infra/hosts/beastie/README.org              |  6 ++++--
+ infra/hosts/beastie/libexec/install-mail.sh | 12 ++++++++----
+ jails/instances/lab-mail/spec.org           |  7 ++++---
+ 3 files changed, 16 insertions(+), 9 deletions(-)
+
+diff --git a/infra/hosts/beastie/README.org b/infra/hosts/beastie/README.org
+index d2bd8e4e..a59777df 100644
+--- a/infra/hosts/beastie/README.org
++++ b/infra/hosts/beastie/README.org
+@@ -25,8 +25,10 @@ three layers, from most shared to most specific:
+ 
+    =just install-mail= installs them, and keeps any installed file
+    that differs as =<file>.old=. It also makes the mail root,
+-   =~/mail/pat@p7x.dev=, with the =sent= folder that mbsync never
+-   syncs.
++   =~/mail/pat@p7x.dev=, with the list's folders, INBOX, =Next=,
++   =Later=, and =Archive=, and the =sent= folder that mbsync never
++   syncs. mbsync dumped core on beastie on a first sync into folders
++   that did not exist.
+ 
+ ** password
+ mbsync reads the password of =pat@p7x.dev= on lab-mail from
+diff --git a/infra/hosts/beastie/libexec/install-mail.sh b/infra/hosts/beastie/libexec/install-mail.sh
+index ce1f4568..12625034 100755
+--- a/infra/hosts/beastie/libexec/install-mail.sh
++++ b/infra/hosts/beastie/libexec/install-mail.sh
+@@ -4,9 +4,9 @@
+ # it as Pat, as just install-mail. The repo holds the config, so an
+ # installed file that differs is replaced and kept as <file>.old.
+ #
+-# It also makes the mail root's sent folder, which mbsync never syncs,
+-# and an empty password file for Pat to fill in. It never changes a
+-# password file that exists.
++# It also makes the mail root's folders, the list's and the sent
++# folder that mbsync never syncs, and an empty password file for Pat to
++# fill in. It never changes a password file that exists.
+ set -eu
+ 
+ src="$(dirname "$(realpath "$0")")/../mail"
+@@ -20,7 +20,11 @@ install -b -C -m 0644 "${src}/notmuch-config" \
+ install -b -C -m 0600 "${src}/mbsyncrc" "${HOME}/.mbsyncrc"
+ install -b -C -m 0600 "${src}/msmtprc" "${HOME}/.msmtprc"
+ 
+-install -d "${root}/sent/cur" "${root}/sent/new" "${root}/sent/tmp"
++# mbsync dumped core on beastie on a first sync into folders that did
++# not exist, though Create Near should make them.
++for box in INBOX Next Later Archive sent; do
++	install -d "${root}/${box}/cur" "${root}/${box}/new" "${root}/${box}/tmp"
++done
+ 
+ install -d -m 0700 "${pwdir}"
+ if [ ! -e "${pwfile}" ]; then
+diff --git a/jails/instances/lab-mail/spec.org b/jails/instances/lab-mail/spec.org
+index d2deeaad..4f626269 100644
+--- a/jails/instances/lab-mail/spec.org
++++ b/jails/instances/lab-mail/spec.org
+@@ -270,9 +270,10 @@ up the same way and differ only in the login.
+   itself; each host installs its own, with its login. lab-claude
+   ships its own and documents them in its README.
+ - On beastie, =infra/hosts/beastie/mail= holds Pat's configs, and
+-  =just install-mail= there installs them, makes the mail root, and
+-  makes an empty password file for Pat to fill in. beastie's README
+-  documents the setup, from the ports to the password.
++  =just install-mail= there installs them, makes the mail root and
++  its folders, and makes an empty password file for Pat to fill in.
++  beastie's README documents the setup, from the ports to the
++  password.
+ - The agent searches and reads the local index, not IMAP.
+ - On beastie, Emacs reads the profile and posts through msmtp. It
+   saves each message it posts by Fcc into =sent=, so the message shows
+-- 
+2.56.0
+

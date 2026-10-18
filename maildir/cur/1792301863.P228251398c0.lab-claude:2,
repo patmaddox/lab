@@ -1,0 +1,51 @@
+Message-ID: <403ff75c5ea02d874aa15964ce24f9f4b3b63c83.1792301845.git.claude@p7x.dev>
+In-Reply-To: <cover.1792301845.git.claude@p7x.dev>
+References: <cover.1792301845.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Subject: [PATCH 2/3] jails/instances/lab-claude: Keep mbsync's state in each
+ folder
+To: Pat Maddox <pat@patmaddox.com>
+Cc: lab@lists.p7x.dev
+Change-Id: lpvkltvotmlwzuppprpkqqwtkwznlplt
+Date: Sun, 18 Oct 2026 05:37:43 +0000
+
+mbsync keeps its sync state in ~/.local/state/isync by default, apart
+from the folders it describes. Once the mail root is removed or made
+again, that state no longer matches the folders, and every later sync
+of the list fails with "Unable to recover from UIDVALIDITY change".
+lab-claude has such state now, from a sync into a mail root that is
+gone. lab-claude's copy is only a mirror of lab-mail, so starting over
+should be as easy as removing the mail root.
+
+notmuch already ignores mbsync's state files, so they are not indexed
+as mail.
+---
+change-id: lpvkltvotmlwzuppprpkqqwtkwznlplt
+
+ jails/instances/lab-claude/dist/home/claude/.mbsyncrc | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/jails/instances/lab-claude/dist/home/claude/.mbsyncrc b/jails/instances/lab-claude/dist/home/claude/.mbsyncrc
+index f09acc0f..163f4e3c 100644
+--- a/jails/instances/lab-claude/dist/home/claude/.mbsyncrc
++++ b/jails/instances/lab-claude/dist/home/claude/.mbsyncrc
+@@ -4,6 +4,10 @@
+ # write it reads it with any password, so the password here is a
+ # placeholder. claude@p7x.dev cannot change the list, so the sync
+ # only pulls, and Expunge Near drops what has gone from lab-mail.
++#
++# SyncState * keeps each folder's sync state in the folder, so a mail
++# root that is removed takes its state with it, and the next sync
++# pulls the list afresh.
+ 
+ IMAPAccount lab-mail
+ Host 127.0.0.1
+@@ -28,4 +32,5 @@ Create Near
+ Sync Pull
+ Expunge Near
+ Remove None
++SyncState *
+ CopyArrivalDate yes
+-- 
+2.56.0
+
