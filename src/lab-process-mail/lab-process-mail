@@ -4,21 +4,28 @@
 # message, oldest first.
 #
 # The loop is deterministic and the agent is not, so the two are kept
-# apart. Before each pass this script fetches, rebases your work and
-# the mail outbox, and picks the oldest inbox message. It then runs a
-# fresh claude with the prompt shipped beside it and that message's id.
-# The agent's output goes to /dev/null; whether the pass worked is read
-# from the notmuch index afterwards. A message still in the inbox stops
-# the loop, rather than being retried forever.
+# apart. Before each pass this script fetches and rebases your work,
+# syncs the list from lab-mail, and picks the oldest inbox message from
+# an approved sender. It then runs a fresh claude with the prompt
+# shipped beside it and that message's id. The agent's output goes to
+# /dev/null; whether the pass worked is read from the notmuch index
+# afterwards, where the reply the agent saved by Fcc marks the message
+# replied. A message still in the inbox stops the loop, rather than
+# being retried forever.
+#
+# The list is read through the notmuch profile ${NOTMUCH_PROFILE}, or
+# lab-mail, and synced with the mbsync channel of the same name. Only
+# mail from ${LAB_PROCESS_MAIL_SENDERS}, or pat@patmaddox.com and
+# pat@p7x.dev, is answered; inbox mail from anyone else is logged to
+# stderr and skipped.
 #
 # The trunk workspace is ${TRUNK_WORKSPACE}, or ~/lab/default.jj. Each
 # pass runs in its own workspace, ${WORK_WORKSPACE}, or ~/lab/work.jj,
-# created on first use. The mail workspace is ${MAIL_WORKSPACE}, or
-# ~/lab/mail.jj. The outbox bookmark is named for your login. Each
-# outcome is posted to the ntfy topic ${NOTIFY_URL}, if set, with the
-# number of messages left in the inbox. The prompt is
-# ${LAB_PROCESS_MAIL_PROMPT}, or share/lab-process-mail/prompt.md in the
-# prefix this script is installed under.
+# created on first use. Each outcome is posted to the ntfy topic
+# ${NOTIFY_URL}, if set, with the number of messages left in the
+# inbox. The prompt is ${LAB_PROCESS_MAIL_PROMPT}, or
+# share/lab-process-mail/prompt.md in the prefix this script is
+# installed under.
 #
 # Work is based on the revset ${LAB_BASE_BRANCH}, or trunk(). An
 # operator's own assistant can set it to their staging branch, such as
@@ -29,6 +36,8 @@ set -o pipefail
 
 readonly PROGNAME="${0##*/}"
 readonly BASE="${LAB_BASE_BRANCH:-trunk()}"
+readonly SENDERS="${LAB_PROCESS_MAIL_SENDERS:-pat@patmaddox.com pat@p7x.dev}"
+export NOTMUCH_PROFILE="${NOTMUCH_PROFILE:-lab-mail}"
 
 # Your commits off the base, less everything descended from the list.
 # The base and the list share no commit but root(), so the outbox is
@@ -51,13 +60,11 @@ die() {
 	exit 1
 }
 
-# Fetch every remote, rebase your work onto the base and the
-# outbox onto mail@upstream, and index the list. This judges nothing:
-# a rebase that conflicts leaves the conflict in the commit, and a
-# patch applied upstream with edits survives as a redundant commit.
-# Settling those is the agent's job.
+# Fetch every remote, rebase your work onto the base, sync the list,
+# and index it. This judges nothing: a rebase that conflicts leaves the
+# conflict in the commit, and a patch applied upstream with edits
+# survives as a redundant commit. Settling those is the agent's job.
 get_up_to_date() {
-	# Both workspaces share one repo, so one fetch covers them.
 	jj --quiet -R "${trunk}" git fetch --all-remotes
 
 	# Move each stack from its base, not from your first commit in it,
@@ -65,16 +72,7 @@ get_up_to_date() {
 	jj --quiet -R "${trunk}" rebase \
 	    -s "roots(::(${WORK}) ~ ::(${BASE}))" -d "${BASE}" --skip-emptied
 
-	# A bookmark with no pending mail, missing or merged in full, has
-	# nothing to rebase; point it at the list's tip instead.
-	if [ -z "$(jj -R "${mail}" log --no-graph -T commit_id \
-	    -r "bookmarks(exact:${me}) ~ ::mail@upstream")" ]; then
-		jj --quiet -R "${mail}" bookmark set "${me}" -r mail@upstream
-	fi
-	jj --quiet -R "${mail}" rebase -b "${me}" -d mail@upstream \
-	    --skip-emptied
-	jj --quiet -R "${mail}" new "${me}"
-
+	mbsync -q "${NOTMUCH_PROFILE}"
 	notmuch new --quiet
 }
 
@@ -89,13 +87,39 @@ prepare_workspace() {
 	jj --quiet -R "${ws}" workspace update-stale
 }
 
+# A query matching mail from any approved sender.
+senders_query() {
+	local q s
+	q=""
+	for s in ${SENDERS}; do
+		q="${q:+${q} or }from:\"${s}\""
+	done
+	echo "${q}"
+}
+
 oldest_inbox_message() {
 	notmuch search --sort=oldest-first --output=messages --limit=1 \
-	    tag:inbox
+	    "tag:inbox and (${senders})"
 }
 
 inbox_count() {
-	notmuch count tag:inbox
+	notmuch count "tag:inbox and (${senders})"
+}
+
+# Log each inbox message from someone not approved, which no pass
+# answers, once per run.
+log_unknown_senders() {
+	local id from
+	for id in $(notmuch search --output=messages \
+	    "tag:inbox and not (${senders})"); do
+		case " ${skipped} " in
+		*" ${id} "*) continue ;;
+		esac
+		skipped="${skipped} ${id}"
+		from="$(notmuch show --format=text --body=false "${id}" |
+		    sed -n 's/^From: //p' | head -n 1)"
+		warn "skipping ${id} from unknown sender ${from}"
+	done
 }
 
 # Post to the operator's ntfy topic. A failed or slow post must not
@@ -113,19 +137,19 @@ main() {
 	[ "${#}" -eq 0 ] || die "usage: ${PROGNAME}"
 
 	trunk="${TRUNK_WORKSPACE:-${HOME}/lab/default.jj}"
-	mail="${MAIL_WORKSPACE:-${HOME}/lab/mail.jj}"
 	ws="${WORK_WORKSPACE:-${HOME}/lab/work.jj}"
-	me="$(whoami)"
+	senders="$(senders_query)"
+	skipped=""
 	bindir="$(CDPATH= cd -- "$(dirname -- "${0}")" && pwd)"
 	prompt="${LAB_PROCESS_MAIL_PROMPT:-${bindir}/../share/lab-process-mail/prompt.md}"
 
 	[ -d "${trunk}" ] || die "${trunk}: no trunk workspace"
-	[ -d "${mail}" ] || die "${mail}: no mail workspace"
 	[ -r "${prompt}" ] || die "${prompt}: no prompt"
 
 	while :; do
 		get_up_to_date
 		prepare_workspace
+		log_unknown_senders
 		id="$(oldest_inbox_message)"
 		[ -n "${id}" ] || break
 		subject="$(notmuch search "${id}" |

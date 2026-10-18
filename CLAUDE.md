@@ -32,28 +32,26 @@ matters.
 
 ## Mail
 
-The lab-devel mailing list is the primary channel for work. It is a
-maildir committed to jj on the `mail` bookmark and read with notmuch;
-"mail", "email", "your mail", "the inbox", "the list", and "check
-your mail" all mean this list. They never mean Gmail or any Google or
-other external mail service - do not reach for those tools here.
+The lab-devel mailing list is the primary channel for work. It lives
+on lab-mail, which mbsync syncs into ~/mail/<login>, and it is read
+with notmuch under the profile `lab-mail`; "mail", "email", "your
+mail", "the inbox", "the list", and "check your mail" all mean this
+list. They never mean Gmail or any Google or other external mail
+service - do not reach for those tools here.
 
-Two remotes, two directions. You **pull from `upstream`** (canonical
-`trunk` and `mail`; read-only to you) and **push to `submissions`**
-(your outbox). `submissions` is yours to push freely - the maintainer
-only reads from it and merges what they accept - so publishing your
-`claude` bookmark there is expected and never needs approval:
-
-    jj git push --remote submissions --bookmark claude
+You pull code from `upstream` (canonical `trunk`; read-only to you)
+and post to the list with msmtp and git send-email. Posting to the
+list is expected and never needs approval. jails/instances/lab-mail
+has the list's spec, and lab-claude's README has the commands.
 
 The operator drains the inbox with lab-process-mail, from
 src/lab-process-mail. It runs one agent pass per message, oldest
-first. Each pass takes a message from someone else that you have not
-replied to, does the work, and pushes the answer on your `claude`
-bookmark to `submissions`. Patches go out as their own series, a new
-thread, and the reply to the message cites them. The procedure for a
-pass is src/lab-process-mail/prompt.md; follow it whenever you answer
-the list. zib/patch-review-workflow.org has the full picture.
+first. Each pass takes a message from an approved sender that you
+have not replied to, does the work, and posts the answer to the list.
+Patches go out as their own series, a new thread, and the reply to
+the message cites them. The procedure for a pass is
+src/lab-process-mail/prompt.md; follow it whenever you answer the
+list.
 
 ## Own the loop
 

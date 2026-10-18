@@ -15,20 +15,23 @@ atf_init_test_cases() {
 	atf_add_test_case rebases_work_onto_base
 	atf_add_test_case follows_rewritten_base
 	atf_add_test_case keeps_work_on_its_prerequisite
-	atf_add_test_case rebases_outbox_onto_list
+	atf_add_test_case syncs_the_list
+	atf_add_test_case reads_the_lab_mail_profile
+	atf_add_test_case skips_unknown_senders
+	atf_add_test_case takes_approved_senders_from_env
 }
 
 # Build a small lab in the current directory: an upstream repo with
-# trunk and a mail list that share no history, an empty submissions
-# repo, and trunk and mail workspaces cloned from them. Stubs stand in
-# for claude, notmuch, and curl; see mk_stubs.
+# trunk and a mail list that share no history, and a trunk workspace
+# cloned from it. Stubs stand in for claude, notmuch, mbsync, and curl;
+# see mk_stubs.
 setup() {
 	PROCESS_MAIL="$(atf_get_srcdir)/lab-process-mail"
 	export LAB_PROCESS_MAIL_PROMPT="$(atf_get_srcdir)/prompt.md"
 	export TRUNK_WORKSPACE="${PWD}/default.jj"
-	export MAIL_WORKSPACE="${PWD}/mail.jj"
 	export WORK_WORKSPACE="${PWD}/work.jj"
-	unset NOTIFY_URL LAB_BASE_BRANCH
+	unset NOTIFY_URL LAB_BASE_BRANCH LAB_PROCESS_MAIL_SENDERS \
+	    NOTMUCH_PROFILE
 
 	export JJ_CONFIG="${PWD}/jj.toml"
 	cat > jj.toml <<-'EOF'
@@ -41,7 +44,6 @@ setup() {
 	export PATH="${PWD}/bin:${PATH}"
 
 	git init -q --bare upstream.git 2>/dev/null
-	git init -q --bare submissions.git 2>/dev/null
 	jj git init seed.jj >/dev/null 2>&1
 	(
 		cd seed.jj
@@ -63,10 +65,8 @@ setup() {
 	    >/dev/null 2>&1 || atf_fail "cannot clone upstream"
 	(
 		cd default.jj
-		jj git remote add submissions ../submissions.git
 		jj bookmark track mail@upstream
 		jj new trunk@upstream
-		jj workspace add -r mail@upstream ../mail.jj
 	) >/dev/null 2>&1 || atf_fail "cannot build workspaces"
 }
 
@@ -78,13 +78,16 @@ setup() {
 # the inbox. With STUB_MOVE=1 it moves its working copy to root().
 #
 # notmuch reads the inbox from the file inbox, one "id subject" per
-# line, oldest first. It answers only the queries lab-process-mail
-# makes.
+# line, oldest first, all from approved senders. Inbox mail from
+# anyone else is in the file unknown, one "id from" per line. It
+# answers only the queries lab-process-mail makes, and logs each
+# query's NOTMUCH_PROFILE to notmuch.log.
 #
-# curl appends its argv to curl.log.
+# mbsync and curl append their argv to mbsync.log and curl.log.
 mk_stubs() {
 	mkdir bin
 	: > inbox
+	: > unknown
 	stubdir="${PWD}"
 
 	cat > bin/claude <<-EOF
@@ -104,31 +107,51 @@ mk_stubs() {
 	cat > bin/notmuch <<-EOF
 	#!/bin/sh
 	inbox="${stubdir}/inbox"
+	unknown="${stubdir}/unknown"
+	echo "profile \${NOTMUCH_PROFILE:-}" >> "${stubdir}/notmuch.log"
+	echo "\$*" >> "${stubdir}/notmuch.log"
+	for a in "\$@"; do last="\$a"; done
 	case "\$1" in
 	new)
 		;;
 	search)
-		for a in "\$@"; do last="\$a"; done
-		if [ "\${last}" = tag:inbox ]; then
+		case "\${last}" in
+		"tag:inbox and not ("*)
+			cut -d ' ' -f 1 "\${unknown}"
+			;;
+		"tag:inbox and ("*)
 			head -n 1 "\${inbox}" | cut -d ' ' -f 1
-		else
+			;;
+		*)
 			subject="\$(grep "^\${last} " "\${inbox}" | cut -d ' ' -f 2-)"
 			echo "thread:1 today [1/1] Pat; \${subject} (inbox)"
-		fi
+			;;
+		esac
+		;;
+	show)
+		echo "From: \$(grep "^\${last} " "\${unknown}" | cut -d ' ' -f 2-)"
 		;;
 	count)
-		if [ "\$2" = tag:inbox ]; then
+		case "\$2" in
+		"tag:inbox and ("*)
 			grep -c . "\${inbox}" || :
-		else
+			;;
+		*)
 			id="\${2%% and tag:inbox}"
 			grep -c "^\${id} " "\${inbox}" || :
-		fi
+			;;
+		esac
 		;;
 	*)
 		echo "notmuch stub: \$*" >&2
 		exit 1
 		;;
 	esac
+	EOF
+
+	cat > bin/mbsync <<-EOF
+	#!/bin/sh
+	echo "\$*" >> "${stubdir}/mbsync.log"
 	EOF
 
 	cat > bin/curl <<-EOF
@@ -348,26 +371,53 @@ keeps_work_on_its_prerequisite_body() {
 	    "$(parent_of 'description(substring:"list: theirs")')"
 }
 
-atf_test_case rebases_outbox_onto_list
-rebases_outbox_onto_list_body() {
+atf_test_case syncs_the_list
+syncs_the_list_head() {
+	atf_set descr "Each pass starts from a sync of the list"
+}
+syncs_the_list_body() {
 	setup
-	me="$(whoami)"
-	(
-		cd mail.jj
-		echo reply > maildir/reply
-		jj commit -m 'mail: Reply'
-		jj bookmark create "${me}" -r @-
-	) >/dev/null 2>&1
-	(
-		cd seed.jj
-		jj new mail
-		echo post > maildir/post
-		jj commit -m 'mail: Post'
-		jj bookmark set mail -r @-
-		jj git push --remote upstream --bookmark mail
-	) >/dev/null 2>&1 || atf_fail "cannot advance the list"
+	printf 'id:a@x First\nid:b@x Second\n' > inbox
+	export STUB_ANSWER=1
 	atf_check -s exit:0 -o ignore -e ignore "${PROCESS_MAIL}"
-	atf_check_equal "mail: Post" "$(parent_of "${me}")"
-	atf_check -o inline:"mail: Reply" \
-	    jj -R mail.jj log --no-graph -T 'description.first_line()' -r @-
+	# One sync before each pass, and one that finds the inbox empty.
+	atf_check -o inline:"-q lab-mail\n-q lab-mail\n-q lab-mail\n" \
+	    cat mbsync.log
+}
+
+atf_test_case reads_the_lab_mail_profile
+reads_the_lab_mail_profile_body() {
+	setup
+	echo 'id:a@x Hello there' > inbox
+	export STUB_ANSWER=1
+	atf_check -s exit:0 -o ignore -e ignore "${PROCESS_MAIL}"
+	atf_check -o not-match:"^profile \$" -o match:"^profile lab-mail\$" \
+	    cat notmuch.log
+}
+
+atf_test_case skips_unknown_senders
+skips_unknown_senders_head() {
+	atf_set descr "Inbox mail from an unknown sender is logged once" \
+	    "and never answered"
+}
+skips_unknown_senders_body() {
+	setup
+	echo 'id:u@x Eve <eve@example.org>' > unknown
+	printf 'id:a@x First\nid:b@x Second\n' > inbox
+	export STUB_ANSWER=1
+	atf_check -s exit:0 -o ignore \
+	    -e inline:"W: lab-process-mail: skipping id:u@x from unknown sender Eve <eve@example.org>\n" \
+	    "${PROCESS_MAIL}"
+	atf_check -o inline:"2\n" grep -c '^cwd ' claude.log
+	atf_check -s exit:1 grep -q 'u@x' claude.log
+}
+
+atf_test_case takes_approved_senders_from_env
+takes_approved_senders_from_env_body() {
+	setup
+	echo 'id:a@x Hello there' > inbox
+	export STUB_ANSWER=1 LAB_PROCESS_MAIL_SENDERS="a@example.org b@example.org"
+	atf_check -s exit:0 -o ignore -e ignore "${PROCESS_MAIL}"
+	atf_check -o match:'^search .*tag:inbox and \(from:"a@example.org" or from:"b@example.org"\)$' \
+	    cat notmuch.log
 }

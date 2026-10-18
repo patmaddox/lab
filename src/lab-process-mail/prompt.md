@@ -5,20 +5,23 @@ prompt, does whatever it asks, and answers it on the list. The answer
 is always a reply; any patches go out first as their own series, which
 the reply cites.
 
-The list is a maildir carried by jj on the `mail` bookmark.
-zib/patch-review-workflow.org describes the whole workflow; this pass
-is the contributor side of it.
+The list lives on lab-mail. mbsync pulls its folders, INBOX, Next,
+Later, and Archive, into `~/mail/claude@p7x.dev`, notmuch indexes them
+under the profile `lab-mail`, and you post with msmtp and git
+send-email. jails/instances/lab-mail/spec.org describes the list and
+its clients.
 
 lab-process-mail runs you, once per message, and does the mechanical
-work around the pass: it gets both workspaces up to date before you
-start, and checks the inbox after you finish. Never use Gmail or any
-external mail tool.
+work around the pass: it gets your work and the list up to date before
+you start, and checks the inbox after you finish. It sets
+`NOTMUCH_PROFILE=lab-mail`, so every notmuch command here reads the
+list. Never use Gmail or any external mail tool.
 
 ## The operator does not read your output
 
 Nobody reads your stdout. The result of a pass is what lands on the
-list: a commit on your bookmark, pushed to `submissions`. Put every
-answer, question, and caveat in mail.
+list: the mail you post to it. Put every answer, question, and caveat
+in mail.
 
 Do not notify the operator either. lab-process-mail does that after
 each pass, from whether the message left the inbox.
@@ -33,23 +36,24 @@ each pass, from whether the message left the inbox.
   b/dev@upstream.
 - `~/lab/default.jj` - the operator's trunk workspace. Leave its
   working copy alone.
-- `~/lab/mail.jj` - mail workspace; its `maildir/` is the list.
-- `upstream` - the three sources below. Read-only to you.
-- `submissions` - your outbox. Push your bookmark, named for your
-  login, and nothing else. Pushing it never needs approval.
+- `~/mail/claude@p7x.dev` - your copy of the list, which mbsync
+  pulls. Never change its folders; your login cannot change the list,
+  and the next sync undoes any change here. Your own mail is saved in
+  its `sent` folder, which is never synced.
+- `upstream` - the two branches below. Read-only to you.
 
 ## Sources
 
-Work flows from the list to trunk. Three branches on `upstream` carry
-it, from most settled to least:
+Work flows from the list to trunk. Three sources carry it, from most
+settled to least:
 
 - `trunk@upstream` - the canonical tree, published for everyone.
 - `b/dev@upstream` - Pat's staging tree of trunk candidates. It is
   published for anyone interested, but he revises it freely, so a
   commit on it may change or be dropped before it reaches trunk.
-- `mail@upstream` - the list. It holds every patch posted and the
-  discussion around it. Some patches are applied, some rejected, and
-  many not yet considered.
+- the list, searched with notmuch. It holds every patch posted and
+  the discussion around it. Some patches are applied, some rejected,
+  and many not yet considered.
 
 `${lab_base}` is one of the first two. Consult all three: a patch on
 the list may already do part of what you need, and you may build on
@@ -62,19 +66,19 @@ ready, so say so in the reply and leave it until that commit lands.
 
 notmuch derives the tags from the list itself on every `notmuch new`:
 your mail is `sent`, mail you answered with an In-Reply-To is
-`replied`, and all other mail from others is `inbox`. Replying to a
-message is what moves it out of your inbox.
+`replied`, and other mail in INBOX from others is `inbox`. Mail in
+Next, Later, and Archive is tagged `next`, `later`, and `archived`.
+Replying to a message is what moves it out of your inbox; you cannot
+move it to another folder.
 
 ## 1. Settle what the update left
 
 Before starting you, lab-process-mail brought in everything that has
 landed since the last pass, on both trunk and the list. It fetched
 every remote, rebased your unmerged work (`${work}`) onto
-`${lab_base}`, rebased your outbox onto mail@upstream, started a
-fresh change in the mail workspace, and indexed the list, so messages
-you already answered count as replied:
+`${lab_base}`, synced the list, and indexed it, so messages you
+already answered count as replied:
 
-    me="$(whoami)"
     lab_base='<revset>'    # from "Your base is" near the end
     work="mine() ~ ::(${lab_base}) ~ (::mail@upstream ~ root())::
         ~ (immutable() ~ ::(${lab_base}))::"
@@ -97,7 +101,8 @@ conflict-free, and nothing landed is left, your work is current.
 ## 2. Take the message
 
 The last line of this prompt names the message to answer, as a notmuch
-id, `id:<message-id>`. You do not choose the message:
+id, `id:<message-id>`. You do not choose the message, and
+lab-process-mail names only mail from senders the operator approved:
 
     id="id:<message-id>"   # from the last line of this prompt
     thread="$(notmuch search --output=threads "${id}")"
@@ -186,10 +191,13 @@ come from the commit author, your address:
     rm -rf /tmp/series
     "${ws}"/libexec/mail/format-patch.sh -o /tmp/series \
         --thread=shallow --base="${base}" \
-        --to="<sender's From>" "${base}..${head}"
+        --to=lab@lists.p7x.dev --cc="<sender's From>" \
+        "${base}..${head}"
 
 `--base` adds a `base-commit:` line naming the commit the series
-applies to. Always pass it.
+applies to. Always pass it. Always send the series to the list:
+lab-mail discards mail sent only to people who read the list, so a
+series addressed only to Pat would reach no one.
 
 **Base branch.** The series applies to `${lab_base}`. When that is
 not trunk(), the series requires every commit between trunk and the
@@ -227,16 +235,14 @@ each patch to its earlier version with `notmuch search changeid:<id>`.
 
 Note the series' subject and Message-ID from its first file, the cover
 letter or the only patch, for the reply. A long Subject continues on
-indented lines. Then deliver each file in order into the mail
-workspace's maildir, which keeps the From as composed and adds a Date,
-and commit the series on its own:
+indented lines. Then post it. git send-email takes the recipients
+from the files, keeps each Message-ID, dates each message as it goes,
+and posts through msmtp, as your git config sets:
 
-    for p in /tmp/series/*.patch; do
-        "${ws}"/libexec/mail/maildir-deliver.sh < "${p}"
-    done
-    cd ~/lab/mail.jj
-    jj diff --summary      # only "A maildir/..." lines
-    jj commit -m "mail: Post [PATCH] <subject>"
+    git send-email /tmp/series/*.patch
+
+It must exit 0. If lab-mail refuses a message, msmtp prints why and
+that message reaches no one; fix it and post the rest again.
 
 ## 6. Reply
 
@@ -253,10 +259,10 @@ everyone already copied. The list is the record of the work, so a
 reply that leaves it out is lost to everyone else.
 
 Add a Message-ID header, e.g.
-`Message-ID: <$(date +%s).$(openssl rand -hex 6)@p7x.dev>`. Write the
-body by CLAUDE.md's quoting rules: trim the quote to what you answer,
-never reword it, and put each answer beneath the lines it answers.
-Wrap at 72.
+`Message-ID: <$(date +%s).$(openssl rand -hex 6)@p7x.dev>`, and a Date
+header, `Date: $(date -R)`. Write the body by CLAUDE.md's quoting
+rules: trim the quote to what you answer, never reword it, and put
+each answer beneath the lines it answers. Wrap at 72.
 
 If you posted a series, summarize what it does and cite it by its full
 subject with the Message-ID in a footnote, as CLAUDE.md describes, so
@@ -266,33 +272,23 @@ the reader can find it with `notmuch show`:
 
     [1] id:<message-id of the series>
 
-Cite any other message the same way. Then deliver and commit it on its
-own:
+Cite any other message the same way. Then post it, and once msmtp
+exits 0, save a copy by Fcc into your `sent` folder. The copy is what
+marks the message replied before the next sync brings back the list's:
 
-    "${ws}"/libexec/mail/maildir-deliver.sh < /tmp/reply.eml
-    cd ~/lab/mail.jj
-    jj diff --summary      # only "A maildir/..." lines
-    jj commit -m "mail: Reply to <subject>"
+    msmtp -t < /tmp/reply.eml
+    notmuch insert --folder=sent --create-folder +sent < /tmp/reply.eml
 
-## 7. Push
-
-The series and the reply are separate commits, so the moderator can
-take or leave each. Point your bookmark at the last one and push:
-
-    jj bookmark set "${me}" -r @-
-    jj git push --remote submissions --bookmark "${me}"
-
-## 8. Verify
+## 7. Verify
 
 Check the outcome from outside, not from what you printed:
 
     notmuch new
     notmuch search --output=tags "${id}"        # includes replied
-    jj log -r "${me}@submissions" --no-graph -T commit_id
-    jj log -r "${me}" --no-graph -T commit_id   # the same commit
 
-If the message is not `replied`, the reply's In-Reply-To is wrong. If
-the commits differ, the push failed. Fix it before stopping.
+If the message is not `replied`, the reply's In-Reply-To is wrong, or
+the copy did not reach `sent`. Fix it before stopping, but never post
+the same reply twice: if msmtp exited 0, the list already has it.
 
 ## Missing dependencies
 - Do not install missing dependencies

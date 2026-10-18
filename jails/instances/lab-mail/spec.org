@@ -281,6 +281,12 @@ up the same way and differ only in the login.
   =M=, moves the message or thread at point to INBOX, =Next=,
   =Later=, or =Archive=: it moves the file, and the next sync moves
   the message on lab-mail. Emacs does not refer to the jj maildir.
+- On lab-claude, lab-process-mail syncs and indexes the list before
+  each pass. It answers inbox mail only from approved senders, and
+  logs and skips the rest. A pass posts its patch series with git
+  send-email through msmtp, to the list, and saves its reply by Fcc
+  into =sent=, so the message it answered is tagged replied as soon
+  as the pass ends.
 - =just check= in =dotfiles/notmuch=, run as the user on any
   host, checks that login's client before it is used: mbsync logs in
   and lists the list's folders, a dry run of the sync succeeds, the
@@ -339,9 +345,6 @@ beastie.
     =~/.mbsyncrc= edited, a FAIL line names =~/.mbsyncrc=.
 
 out of scope:
-- Moving lab-process-mail off the jj maildir. It and the =mail=
-  bookmark keep using it until a change of their own moves them to
-  lab-mail.
 - An archive of the list in git. It is a separate artifact, and can
   be fed from the list's folders like any other client.
 - Restricting which jails or local users may post to lab-mail, or
@@ -426,6 +429,12 @@ why.
   Fastmail's own =Archive= folder is used, not a new one, so archiving
   on Fastmail's web interface means the same. =Next= and =Later= are
   folders for the same reason.
+- Fcc a reply into =sent=, not wait for the sync to bring back the
+  list's copy. The pass ends with the message tagged replied, so the
+  loop never waits on lab-mail or stalls when it is slow.
+- Skip and log mail from unknown senders, not quarantine it. The
+  agent cannot move mail on lab-mail, so it has nowhere to file it,
+  and nobody sends unknown mail to the list yet.
 - Import the jj maildir once, not freeze it as an archive. A frozen
   archive would split the list into two places to search, and a reply
   to an old thread would arrive with no parent.

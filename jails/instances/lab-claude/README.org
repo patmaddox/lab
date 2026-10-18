@@ -5,8 +5,7 @@ lab-claude reads and posts to the list on lab-mail, which holds the
 Fastmail credentials. Both services listen on loopback, so the setup
 below needs no secrets. See =../lab-mail/spec.org=.
 
-lab-process-mail still works from the jj maildir under
-=~/lab/mail.jj= and the default notmuch profile.
+lab-process-mail reads and answers the list this way.
 
 ** fetch and read
 mbsync pulls the list's folders, INBOX, =Next=, =Later=, and
