@@ -32,6 +32,12 @@ from the To, Cc and Bcc headers:
 msmtp -t < message.eml
 #+END_EXAMPLE
 
+git send-email posts a patch series through msmtp, as =.gitconfig=
+sets, taking the recipients from each patch:
+#+BEGIN_EXAMPLE
+git send-email /tmp/series/*.patch
+#+END_EXAMPLE
+
 lab-mail delivers mail for =lab-devel@p7x.dev=, =lab@lists.p7x.dev=,
 and =freebsd-ports@lists.p7x.dev= to the list, and
 accepts and discards mail for =pat@p7x.dev=, =pat@patmaddox.com=, and

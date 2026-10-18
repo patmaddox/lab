@@ -6,3 +6,10 @@
 	# as dubious ownership unless they are marked safe.
 	directory = /data/lab.git
 	directory = /data/lab-submissions.git
+[sendemail]
+	# Post patch series to the list through lab-mail, from the
+	# address in each patch's From, without asking.
+	sendmailCmd = msmtp
+	envelopeSender = auto
+	confirm = never
+	suppressCc = self
