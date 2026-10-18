@@ -270,9 +270,10 @@ up the same way and differ only in the login.
   itself; each host installs its own, with its login. lab-claude
   ships its own and documents them in its README.
 - On beastie, =infra/hosts/beastie/mail= holds Pat's configs, and
-  =just install-mail= there installs them, makes the mail root, and
-  makes an empty password file for Pat to fill in. beastie's README
-  documents the setup, from the ports to the password.
+  =just install-mail= there installs them, makes the mail root and
+  its folders, and makes an empty password file for Pat to fill in.
+  beastie's README documents the setup, from the ports to the
+  password.
 - The agent searches and reads the local index, not IMAP.
 - On beastie, Emacs reads the profile and posts through msmtp. It
   saves each message it posts by Fcc into =sent=, so the message shows

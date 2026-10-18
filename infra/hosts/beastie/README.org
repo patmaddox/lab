@@ -25,8 +25,10 @@ three layers, from most shared to most specific:
 
    =just install-mail= installs them, and keeps any installed file
    that differs as =<file>.old=. It also makes the mail root,
-   =~/mail/pat@p7x.dev=, with the =sent= folder that mbsync never
-   syncs.
+   =~/mail/pat@p7x.dev=, with the list's folders, INBOX, =Next=,
+   =Later=, and =Archive=, and the =sent= folder that mbsync never
+   syncs. mbsync dumped core on beastie on a first sync into folders
+   that did not exist.
 
 ** password
 mbsync reads the password of =pat@p7x.dev= on lab-mail from
