@@ -1,0 +1,8 @@
+#!/bin/sh
+# Remove drafts notmuch-emacs has marked deleted, i.e. superseded by a
+# newer save or sent. Only drafts: the rest of the mail root is synced
+# with the list, which a stray deleted tag must never change. This
+# runs before notmuch new scans, so the same run drops them from the
+# database. It never fetches mail; mbsync does that.
+notmuch search --format=text0 --output=files 'tag:deleted and path:drafts/**' \
+  | xargs -0 rm -f

@@ -1,0 +1,40 @@
+# notmuch profile for the lab-devel list as synced from lab-mail; see
+# notmuch-config(1). Use it with NOTMUCH_PROFILE=lab-mail. Each host
+# that reads the list installs its own copy as
+# ~/.config/notmuch/lab-mail/config, with its login's name, address,
+# and mail root in place of the sample values below.
+#
+# mbsync fills the mail root with the list's folders, INBOX, Next,
+# Later, and Archive; notmuch new only indexes them. mail_root is
+# relative to $HOME. The database and the hooks take notmuch's
+# defaults for the profile, ~/.local/share/notmuch/lab-mail and
+# ~/.config/notmuch/lab-mail/hooks.
+
+[database]
+mail_root=mail/you@p7x.dev
+
+# The address you post to the list from. Mail from it, or from any
+# other_email (separated by ;), is tagged sent.
+[user]
+name=Your Name
+primary_email=you@p7x.dev
+
+# Tags are derived by the post-new hook, so notmuch new adds none of
+# its own. Left unset, it would add inbox and unread.
+[new]
+tags=
+ignore=.uidvalidity;.mbsyncstate;.mbsyncstate.journal;.mbsyncstate.new;.mbsyncstate.lock
+
+[search]
+exclude_tags=deleted
+
+# Patches carry their commit's jj change id in a Change-Id header, the
+# same across every version of a patch. changeid:<id> finds them all.
+[index]
+header.changeid=Change-Id
+
+# unread, flagged, and replied follow \Seen, \Flagged, and \Answered
+# on lab-mail and Fastmail. A read-only login, which cannot set
+# flags, turns this off.
+[maildir]
+synchronize_flags=true

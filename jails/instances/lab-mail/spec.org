@@ -231,6 +231,25 @@ check:
 clients: lab-claude.
 - Packages: mail/isync and mail/msmtp, added to the existing
   mail/notmuch.
+- Each user's mail root is =~/mail/<login>=, such as
+  =~/mail/pat@p7x.dev=. It holds the list's folders, INBOX, =Next=,
+  =Later=, and =Archive=, and the user's own =sent=, which is never
+  synced.
+- notmuch indexes the mail root under the profile =lab-mail=, which
+  =dotfiles/notmuch= installs. =notmuch new= never contacts lab-mail,
+  so it works the same while lab-mail is down. It indexes =Change-Id=
+  as =changeid:= and ignores mbsync's state files. Its post-new hook
+  derives every tag from the mail root, so a rebuild of the database
+  gives the same tags:
+  - sent: mail from the user;
+  - replied: other mail the user has answered, named in the
+    In-Reply-To of the user's mail;
+  - inbox: other mail in INBOX that the user has not answered;
+  - next, later, and archived: mail in =Next=, =Later=, and
+    =Archive=.
+- Flag sync is on for a login that may write the list, so unread,
+  flagged, and replied follow the list's flags. It is off for a
+  read-only login, whose flags would never reach lab-mail.
 - msmtp posts through 127.0.0.1:2525 as claude@p7x.dev. When the
   server refuses any recipient or the message, msmtp posts nothing
   and exits non-zero with the server's reply, so the whole message is
@@ -354,6 +373,10 @@ why.
 - Name the folders lab-mail syncs, not sync every folder of the
   account. Pat can then make a folder on Fastmail for anything else,
   and it stays out of lab-mail and out of every client.
+- inbox needs both INBOX and no answer from the user, not INBOX
+  alone. An agent cannot move mail on lab-mail, so its answer is the
+  only mark it can leave, and Pat sees at a glance what he has
+  answered and not yet filed.
 - Archive by folder, not by a tag in one client. A tag is not in the
   list data, so a rebuild of the index loses it and no agent sees it.
   Fastmail's own =Archive= folder is used, not a new one, so archiving

@@ -1,0 +1,3 @@
+#!/bin/sh
+# Derive the tags from the folders and contents of the list.
+"$(dirname "$0")/mail-tag.sh"
