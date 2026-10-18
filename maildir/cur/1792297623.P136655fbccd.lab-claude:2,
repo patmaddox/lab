@@ -1,0 +1,65 @@
+Message-ID: <cover.1792297611.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Subject: [PATCH 0/2] Check and document the lab-mail client's commands
+To: lab@lists.p7x.dev
+Cc: Pat Maddox <pat@patmaddox.com>
+Date: Sun, 18 Oct 2026 04:27:03 +0000
+
+Pat ran just check in dotfiles/notmuch on beastie, where mbsync and
+msmtp are not installed yet. Every check failed, and nothing said
+why, since the check hides each command's output.
+
+Patch 1 makes just check report mbsync, msmtp, and notmuch first. If
+any is missing, it prints the pkg install line that provides it and
+stops, so the other checks do not pile up failures for the same
+cause. Patch 2 documents how beastie gets the mail ports: they are in
+its ports list, so a boot environment built from it has them, and
+until beastie runs one, "doas pkg install isync msmtp notmuch"
+installs them on the running system.
+
+The series goes on top of "[PATCH v2 00/16] Move beastie and
+lab-claude onto lab-mail" [1], as Pat asked in "Re: [PATCH v2 06/16]
+dotfiles/notmuch: Add a check of the lab-mail client" [2]. Its
+patches are the prerequisite-patch-id lines below.
+
+Tested on lab-claude: with a PATH that lacks mbsync and msmtp, just
+check prints a FAIL line for each, the line "pkg install isync
+msmtp", and exits 1 before any other check. With all three present,
+it prints three ok lines and runs the checks as before.
+
+[1] id:cover.1792290760.git.claude@p7x.dev
+[2] id:m2v76zd4aq.fsf@beastie.p7x.dev
+
+base-branch: b/dev@upstream
+
+claude (2):
+  dotfiles/notmuch: Check that the mail commands are installed
+  infra/hosts/beastie: Document installing the mail ports
+
+ dotfiles/notmuch/README.org       | 20 ++++++++++++++------
+ dotfiles/notmuch/check            | 24 ++++++++++++++++++++++++
+ infra/hosts/beastie/README.org    |  7 ++++++-
+ jails/instances/lab-mail/spec.org |  5 ++++-
+ 4 files changed, 48 insertions(+), 8 deletions(-)
+
+
+base-commit: c8ec0ed42d9c2790c56e86242d6affc7a5b531de
+prerequisite-patch-id: d90af6aa2ad84386bc61112f7804fc44c5c75b99
+prerequisite-patch-id: 6b8d583f609decdff570ca9acc82e3c5f0e1613b
+prerequisite-patch-id: affaeff6c94599190437756964ab0658b3e850b7
+prerequisite-patch-id: 32f18b7d016dfbafd27daae2ecc9d10c793f4f33
+prerequisite-patch-id: d94a3074300253ff4af2491b0e36db995121f353
+prerequisite-patch-id: e160030ee6abc4a62f5e3fa35606a2e037a64309
+prerequisite-patch-id: cf700bd0884ef5cd5ad331bece4a6135ad23c7b0
+prerequisite-patch-id: 15a6ae27ec36ebbaff074eeb2b695cf6ca9d2b19
+prerequisite-patch-id: ba16e2370bee55115bd7667c871d85b6457f317a
+prerequisite-patch-id: 816b10962ad2f5f6fb3ede2aebc00e3998c2e9cb
+prerequisite-patch-id: 8e610170cb456a2d032a7f518c5b585fc19ee2d5
+prerequisite-patch-id: 75c86b4541ed964c15c422193581006f1744787c
+prerequisite-patch-id: 998d3fcb2f3bf0dc26b64ed3fc492a57fa5008d4
+prerequisite-patch-id: cbc214435997c6bc85a9aa8e114cb18754b922f9
+prerequisite-patch-id: 2a2bfb64b95b338eb466bd0b35cda089bf2094f5
+prerequisite-patch-id: 9fc4e9228adcd90d649341e0e4d9f8e9b4399242
+-- 
+2.56.0
+

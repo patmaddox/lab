@@ -1,0 +1,126 @@
+Message-ID: <1e95618d1e252ead31f83a499aed908ab012469e.1792297611.git.claude@p7x.dev>
+In-Reply-To: <cover.1792297611.git.claude@p7x.dev>
+References: <cover.1792297611.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Subject: [PATCH 1/2] dotfiles/notmuch: Check that the mail commands are
+ installed
+To: lab@lists.p7x.dev
+Cc: Pat Maddox <pat@patmaddox.com>
+Change-Id: ykxvquumrkourmwkqsmktssryqwmktpo
+Date: Sun, 18 Oct 2026 04:27:04 +0000
+
+just check hides each command's output and reports only its exit
+status. On a host without mbsync, msmtp, or notmuch, every check that
+runs one fails, and nothing says the command is missing, so the result
+looks like a broken config rather than a missing package.
+
+Report each command first, and stop if any is missing, with the pkg
+install line that provides it. The remaining checks only mean
+something once the commands are present.
+---
+change-id: ykxvquumrkourmwkqsmktssryqwmktpo
+
+ dotfiles/notmuch/README.org       | 20 ++++++++++++++------
+ dotfiles/notmuch/check            | 24 ++++++++++++++++++++++++
+ jails/instances/lab-mail/spec.org |  5 ++++-
+ 3 files changed, 42 insertions(+), 7 deletions(-)
+
+diff --git a/dotfiles/notmuch/README.org b/dotfiles/notmuch/README.org
+index 170f7678..65f62d96 100644
+--- a/dotfiles/notmuch/README.org
++++ b/dotfiles/notmuch/README.org
+@@ -48,12 +48,20 @@ drop the =,U== part of its name, so mbsync takes it for a new message
+ there. The next sync moves it on lab-mail.
+ 
+ ** check
+-=just check= checks this login's setup: that mbsync logs in and
+-lists the list's folders, that a dry run of the sync works, that the
+-profile has its config, hooks, and database, and that msmtp reaches
+-lab-mail and posts from the profile's address. It prints one line
+-per check, ok or FAIL, and exits non-zero if any fails. It changes
+-nothing and posts no mail, so it is safe to run at any time.
++=just check= checks this login's setup. It first checks that mbsync,
++msmtp, and notmuch are installed. If any is missing, it names the
++packages and stops, since the other checks would only fail without
++saying why:
++#+BEGIN_EXAMPLE
++pkg install isync msmtp notmuch
++#+END_EXAMPLE
++
++Then it checks that mbsync logs in and lists the list's folders, that
++a dry run of the sync works, that the profile has its config, hooks,
++and database, and that msmtp reaches lab-mail and posts from the
++profile's address. It prints one line per check, ok or FAIL, and
++exits non-zero if any fails. It changes nothing and posts no mail, so
++it is safe to run at any time.
+ 
+ ** post
+ msmtp posts from the login's address. With =-t= it takes the
+diff --git a/dotfiles/notmuch/check b/dotfiles/notmuch/check
+index 338ae76b..2f0c23b4 100755
+--- a/dotfiles/notmuch/check
++++ b/dotfiles/notmuch/check
+@@ -8,6 +8,8 @@ set -u
+ 
+ export NOTMUCH_PROFILE=lab-mail
+ readonly folders="INBOX Next Later Archive"
++# The commands the checks run, each with the port that installs it.
++readonly commands="mbsync:mail/isync msmtp:mail/msmtp notmuch:mail/notmuch"
+ 
+ failed=0
+ 
+@@ -23,6 +25,27 @@ check() {
+ 	fi
+ }
+ 
++# preflight: report each command the checks run, and stop if any is
++# missing. Every later check would then fail with its output hidden,
++# which says nothing about the cause.
++preflight() {
++	local c cmd port missing=""
++	for c in ${commands}; do
++		cmd="${c%%:*}" port="${c#*:}"
++		if command -v "${cmd}" >/dev/null 2>&1; then
++			echo "ok ${cmd} is installed"
++		else
++			echo "FAIL ${cmd} is installed (${port})"
++			missing="${missing} ${port##*/}"
++		fi
++	done
++	if [ -n "${missing}" ]; then
++		echo "Install the missing packages and run the check again:" >&2
++		echo "    pkg install${missing}" >&2
++		exit 1
++	fi
++}
++
+ # mbsync -l lists the folders the channel would sync, which logs in
+ # with the configured password.
+ lists_folders() {
+@@ -51,6 +74,7 @@ same_sender() {
+ }
+ 
+ main() {
++	preflight
+ 	check "~/.mbsyncrc exists" test -r "${HOME}/.mbsyncrc"
+ 	check "mbsync logs in to lab-mail and lists ${folders}" lists_folders
+ 	check "the mail root exists" \
+diff --git a/jails/instances/lab-mail/spec.org b/jails/instances/lab-mail/spec.org
+index 8325776e..e8d7e118 100644
+--- a/jails/instances/lab-mail/spec.org
++++ b/jails/instances/lab-mail/spec.org
+@@ -290,7 +290,10 @@ up the same way and differ only in the login.
+ - No client reads or writes the jj maildir. The =mail= bookmark, the
+   =submissions= remote, and =~/lab/mail.jj= are retired.
+ - =just check= in =dotfiles/notmuch=, run as the user on any
+-  host, checks that login's client before it is used: mbsync logs in
++  host, checks that login's client before it is used. It first
++  checks that mbsync, msmtp, and notmuch are installed; if any is
++  missing, it names the package to install and stops, since every
++  later check would fail for that reason alone. Then mbsync logs in
+   and lists the list's folders, a dry run of the sync succeeds, the
+   profile has its config, hooks, and database, and msmtp reaches
+   lab-mail from the profile's address. It prints one line per check,
+-- 
+2.56.0
+

@@ -1,0 +1,41 @@
+Message-ID: <ce853c52017e981c0f5416a9eba93346c5ef96fc.1792297611.git.claude@p7x.dev>
+In-Reply-To: <cover.1792297611.git.claude@p7x.dev>
+References: <cover.1792297611.git.claude@p7x.dev>
+From: claude <claude@p7x.dev>
+Subject: [PATCH 2/2] infra/hosts/beastie: Document installing the mail ports
+To: lab@lists.p7x.dev
+Cc: Pat Maddox <pat@patmaddox.com>
+Change-Id: ukuzptmwxvppvnszwyxxrqprlynvyokm
+Date: Sun, 18 Oct 2026 04:27:05 +0000
+
+The mail ports reach beastie only through a boot environment built
+from its ports list, so a running beastie lacks them until the next
+one. Nothing said so, or how to get them sooner, and the mail checks
+then fail on a host that cannot run them.
+---
+change-id: ukuzptmwxvppvnszwyxxrqprlynvyokm
+
+ infra/hosts/beastie/README.org | 7 ++++++-
+ 1 file changed, 6 insertions(+), 1 deletion(-)
+
+diff --git a/infra/hosts/beastie/README.org b/infra/hosts/beastie/README.org
+index d2bd8e4e..942d9539 100644
+--- a/infra/hosts/beastie/README.org
++++ b/infra/hosts/beastie/README.org
+@@ -9,7 +9,12 @@ spec is =../../../jails/instances/lab-mail/spec.org=. It is set up in
+ three layers, from most shared to most specific:
+ 
+ 1. Ports. mail/isync, mail/msmtp, and mail/notmuch are in =ports=,
+-   like any other package beastie needs.
++   like any other package beastie needs, so a boot environment built
++   from =ports= has them. Until beastie runs one built since they
++   were added, install them on the running system:
++   #+BEGIN_EXAMPLE
++   doas pkg install isync msmtp notmuch
++   #+END_EXAMPLE
+ 2. The notmuch package. =dotfiles/notmuch= installs the lab-mail
+    profile's hooks, which every host that reads the list shares, and
+    samples of each config:
+-- 
+2.56.0
+
