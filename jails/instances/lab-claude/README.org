@@ -7,6 +7,36 @@ below needs no secrets. See =../lab-mail/spec.org=.
 
 lab-process-mail reads and answers the list this way.
 
+** set up
+lab-claude needs no password and no config by hand. Its configs are
+in =dist/home/claude= and the jail installs them:
+- =.mbsyncrc= pulls the list from lab-mail as =claude@p7x.dev=;
+- =.msmtprc= posts through lab-mail;
+- =.config/notmuch/lab-mail/config= is the notmuch profile;
+- =.gitconfig= has git send-email post through msmtp.
+
+A jail built before them takes each file from =dist/home/claude= into
+=~claude= by hand, with the mode =dist.mtree= gives it.
+
+Then, as claude, run =~/bootstrap.sh=. It installs the notmuch
+package from =dotfiles/notmuch=, which brings the profile's hooks, and
+makes the mail root with the list's folders. Sync, index, and check:
+#+BEGIN_EXAMPLE
+~/bootstrap.sh
+mbsync lab-mail && NOTMUCH_PROFILE=lab-mail notmuch new
+cd ~/lab/default.jj/dotfiles/notmuch && just check
+#+END_EXAMPLE
+
+Last, install lab-process-mail from =src/lab-process-mail=, so each
+pass syncs and answers the list on lab-mail:
+#+BEGIN_EXAMPLE
+cd ~/lab/default.jj/src/lab-process-mail && just install
+#+END_EXAMPLE
+
+To start over, remove =~/mail/claude@p7x.dev= and run =~/bootstrap.sh=
+again. mbsync keeps its state in each folder, so the next sync pulls
+the whole list.
+
 ** fetch and read
 mbsync pulls the list's folders, INBOX, =Next=, =Later=, and
 =Archive=, into =~/mail/claude@p7x.dev=, and notmuch indexes them
