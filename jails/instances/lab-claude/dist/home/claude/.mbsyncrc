@@ -1,26 +1,31 @@
-# Fetch the list, lab-mail's INBOX, into ~/mail/lists.
+# Pull the list from lab-mail into ~/mail/claude@p7x.dev.
 #
-# lab-mail serves it on loopback and accepts any login, so the
-# credentials here are placeholders.
+# lab-mail serves it on loopback, and any login but the ones that may
+# write it reads it with any password, so the password here is a
+# placeholder. claude@p7x.dev cannot change the list, so the sync
+# only pulls, and Expunge Near drops what has gone from lab-mail.
 
 IMAPAccount lab-mail
 Host 127.0.0.1
 Port 2143
 TLSType None
 AuthMechs LOGIN
-User claude
+User claude@p7x.dev
 Pass lab-mail
 
 IMAPStore lab-mail
 Account lab-mail
 
 MaildirStore local
-Path ~/mail/
+Path ~/mail/claude@p7x.dev/
+Inbox ~/mail/claude@p7x.dev/INBOX
 
-Channel lists
-Far :lab-mail:INBOX
-Near :local:lists
+Channel lab-mail
+Far :lab-mail:
+Near :local:
+Patterns INBOX Next Later Archive
 Create Near
 Sync Pull
-Expunge None
+Expunge Near
 Remove None
+CopyArrivalDate yes

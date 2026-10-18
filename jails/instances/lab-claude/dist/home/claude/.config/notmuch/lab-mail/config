@@ -1,0 +1,27 @@
+# notmuch profile for the list as synced from lab-mail; see
+# notmuch-config(1). Use it with NOTMUCH_PROFILE=lab-mail. It is
+# dotfiles/notmuch/lab-mail/config.sample with claude's login. The
+# hooks come from that package.
+#
+# claude@p7x.dev cannot set flags on lab-mail, so flag sync is off;
+# a flag set here would never reach the list.
+
+[database]
+mail_root=mail/claude@p7x.dev
+
+[user]
+name=claude
+primary_email=claude@p7x.dev
+
+[new]
+tags=
+ignore=.uidvalidity;.mbsyncstate;.mbsyncstate.journal;.mbsyncstate.new;.mbsyncstate.lock
+
+[search]
+exclude_tags=deleted
+
+[index]
+header.changeid=Change-Id
+
+[maildir]
+synchronize_flags=false

@@ -34,3 +34,6 @@ notmuch config set user.name "$(git config user.name)"
 notmuch config set user.primary_email "$(git config user.email)"
 
 notmuch new
+
+# mbsync syncs the list into this mail root, which it does not create.
+mkdir -p ${HOME}/mail/claude@p7x.dev

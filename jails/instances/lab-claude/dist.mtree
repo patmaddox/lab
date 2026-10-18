@@ -4,8 +4,8 @@
 ./home/claude/.config/jj type=dir mode=0755
 ./home/claude/.config/jj/config.toml
 ./home/claude/.config/notmuch type=dir mode=0755
-./home/claude/.config/notmuch/lists type=dir mode=0755
-./home/claude/.config/notmuch/lists/config
+./home/claude/.config/notmuch/lab-mail type=dir mode=0755
+./home/claude/.config/notmuch/lab-mail/config
 ./home/claude/.gitconfig
 ./home/claude/.login_conf
 ./home/claude/.mbsyncrc

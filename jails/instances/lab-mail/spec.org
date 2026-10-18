@@ -257,6 +257,8 @@ up the same way and differ only in the login.
     =~/.config/lab-mail/password=, and syncs both ways with =Expunge
     Both=, so Pat's moves and deletions take effect on lab-mail.
     Fastmail still keeps every message.
+  - On lab-claude it logs in as =claude@p7x.dev= and only pulls,
+    with =Expunge Near=, so the local copy follows lab-mail.
 - msmtp posts through 127.0.0.1:2525 with no login and no TLS, as
   =pat@p7x.dev= on beastie and =claude@p7x.dev= on lab-claude. When
   the server refuses any recipient or the message, msmtp posts
@@ -265,11 +267,9 @@ up the same way and differ only in the login.
 - =dotfiles/notmuch= ships samples of the profile's config and of
   the mbsync and msmtp configs, with =you@p7x.dev= for the login, and
   documents the commands to sync and to post. It installs no config
-  itself; each host installs its own, with its login.
-- mbsync pulls INBOX from 127.0.0.1:2143 into a maildir in the
-  agent's home, and =notmuch new= indexes it there. The agent searches
-  and reads the local index, not IMAP.
-- lab-claude documents the commands to fetch and to post.
+  itself; each host installs its own, with its login. lab-claude
+  ships its own and documents them in its README.
+- The agent searches and reads the local index, not IMAP.
 
 acceptance test: run from lab-claude, except where a step says
 beastie.

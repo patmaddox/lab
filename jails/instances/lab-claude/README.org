@@ -9,14 +9,18 @@ lab-process-mail still works from the jj maildir under
 =~/lab/mail.jj= and the default notmuch profile.
 
 ** fetch and read
-mbsync pulls lab-mail's INBOX, which holds the list, into
-=~/mail/lists=, and notmuch indexes it under its own profile,
-=lists=:
+mbsync pulls the list's folders, INBOX, =Next=, =Later=, and
+=Archive=, into =~/mail/claude@p7x.dev=, and notmuch indexes them
+under the profile =lab-mail=, whose hooks come from
+=dotfiles/notmuch=:
 #+BEGIN_EXAMPLE
-mbsync lists && NOTMUCH_PROFILE=lists notmuch new
-NOTMUCH_PROFILE=lists notmuch search from:pat@patmaddox.com
-NOTMUCH_PROFILE=lists notmuch show id:<message-id>
+mbsync lab-mail && NOTMUCH_PROFILE=lab-mail notmuch new
+NOTMUCH_PROFILE=lab-mail notmuch search tag:inbox
+NOTMUCH_PROFILE=lab-mail notmuch show id:<message-id>
 #+END_EXAMPLE
+
+The sync only pulls. claude@p7x.dev cannot change the list, and a
+message Pat moves or deletes on lab-mail moves or goes here too.
 
 lab-mail syncs with Fastmail once a minute, so a message sent to the
 list through Fastmail shows up here within two minutes.
