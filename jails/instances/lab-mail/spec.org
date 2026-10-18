@@ -281,6 +281,12 @@ up the same way and differ only in the login.
   lab-mail from the profile's address. It prints one line per check,
   ok or FAIL, and exits 0 only if every check passes. It changes
   nothing and posts no mail.
+- =just check-mail= in =infra/hosts/beastie=, run as Pat, checks
+  beastie's setup the same way before he switches to it: the ports are
+  installed, each config is the one in =infra/hosts/beastie/mail=,
+  the password file is not empty and only Pat can read it, and the
+  =sent= folder exists. It then runs =just check= of
+  =dotfiles/notmuch= and fails if that fails.
 
 acceptance test: run from lab-claude, except where a step says
 beastie.
@@ -320,6 +326,10 @@ beastie.
     exits 0. With =Port= in =~/.mbsyncrc= changed to one lab-mail
     does not listen on, it exits non-zero and a FAIL line names the
     mbsync login.
+14. On beastie as Pat, =just check-mail= in =infra/hosts/beastie=
+    exits 0. With a wrong password in =~/.config/lab-mail/password=,
+    it exits non-zero and a FAIL line names the mbsync login. With
+    =~/.mbsyncrc= edited, a FAIL line names =~/.mbsyncrc=.
 
 out of scope:
 - Moving the list's clients off the jj maildir. lab-process-mail, the

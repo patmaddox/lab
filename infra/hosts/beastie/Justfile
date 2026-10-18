@@ -7,3 +7,7 @@ verify-backups:
 # Install Pat's mail client config for lab-mail
 install-mail:
   ./libexec/install-mail.sh
+
+# Check Pat's mail client for lab-mail; it only reads
+check-mail:
+  ./libexec/check-mail.sh

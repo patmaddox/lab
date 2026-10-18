@@ -44,6 +44,16 @@ config, =PassCmd= can run any command that prints it, such as a
 password manager, and with neither mbsync asks for it on each run.
 msmtp needs no password, since lab-mail takes posts with no login.
 
+** check
+=just check-mail= checks the setup before Pat switches to it, and
+at any time after. It checks that the ports are installed, that each
+installed config is the one in =mail/=, that the password file is
+filled in and only Pat can read it, and that the =sent= folder
+exists. Then it runs =just check= of =dotfiles/notmuch=, which logs
+in to lab-mail, makes a dry run of the sync, checks the profile's
+hooks and database, and reaches msmtp. It prints one line per check,
+ok or FAIL, exits non-zero if any fails, and changes nothing.
+
 ** sync and read
 #+BEGIN_EXAMPLE
 mbsync lab-mail && NOTMUCH_PROFILE=lab-mail notmuch new
