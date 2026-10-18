@@ -1,0 +1,122 @@
+From: Pat Maddox <pat@patmaddox.com>
+To: claude <claude@p7x.dev>, lab@lists.p7x.dev
+Subject: Re: Configure notmuch to use lab-mail
+In-Reply-To: <1792281419.52e23808b67a@p7x.dev>
+References: <m2zewbevie.fsf@beastie.p7x.dev> <1792281419.52e23808b67a@p7x.dev>
+Date: Sat, 17 Oct 2026 17:44:05 -0700
+Message-ID: <m2ik2zet2i.fsf@beastie.p7x.dev>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+claude <claude@p7x.dev> writes:
+
+> On Sat, 17 Oct 2026 16:51:21 -0700, Pat Maddox wrote:
+>> Now that lab-mail is working, I want to configure notmuch to use it. I
+>> think this might need to be done on beastie and lab-claude
+>> together. Basically this is the point at which we stop doing the
+>> git-backed mailing list, and move to the real maildir.
+>>
+>> Investigate the work involved, and provide patch series messages if it's
+>> straightforward.
+>
+> I looked into it, and it is not straightforward yet, so there are no
+> patches in this reply. One dependency blocks it, and a few decisions
+> are yours. The design itself is mostly settled. You approved it in
+> "Re: [PATCH v2] jails/instances/lab-mail: Spec the list's mail hub"
+> [1], and it says beastie and lab-claude "are set up the same way and
+> differ only in the login".
+>
+> * Blocker: lab-mail is not on trunk
+>
+> "[PATCH v13 0/8] jails/instances/lab-mail: Build the list's mail hub"
+> [2] is in b/dev and running, but it is not on trunk. Everything on the
+> client side depends on it. The INBOX, Next, Later, and Archive folders,
+> the pat@p7x.dev login, and OpenSMTPD on port 2525 all come from it.
+> lab-claude's .mbsyncrc, .msmtprc, and README.org are changed in v13 as
+> well. A client series based on trunk would therefore either repeat v13
+> or conflict with it. Once v13 reaches trunk, the work below can go out
+> against it.
+
+Base this work on b/dev then. The code is good - I'm going to rewrite
+some of the commit messages. But it's stable enough to base this work on.
+
+> * The work, in your three phases
+>
+> These phases are the ones from "Re: How to configure beastie to use
+> lab-mail" [3].
+>
+> 1. Support (no behaviour change):
+>    - beastie: add mail/isync and mail/msmtp to
+>      infra/hosts/beastie/ports.
+>    - dotfiles: ship sample configs for ~/.mbsyncrc and ~/.msmtprc.
+>      mbsync logs in as pat@p7x.dev with PassCmd "pass show
+>      lab-mail/pat@p7x.dev", syncs INBOX Next Later Archive two-way,
+>      and uses Expunge Both. msmtp sends to 127.0.0.1:2525.
+>    - dotfiles/notmuch: add a second profile whose mail_root is the
+>      synced maildir. It indexes Change-Id, ignores mbsync's state
+>      files, and uses synchronize_flags=true for you, as you asked in
+>      "[RFC] removing inbox tags in notmuch" [4]. Its post-new hook
+>      derives inbox, next, later, and archived from the folder, and it
+>      has no pre-new fetch, since you don't want notmuch new to touch
+>      the network.
+>    - lab-claude: same layout as claude@p7x.dev, pull-only with
+>      Expunge Near, and with the profile's hooks and Change-Id
+>      indexing (today's lists profile has neither).
+
+I like this. I also want some way of testing that the config works,
+before I do the switch.
+
+> 2. Switch:
+>    - Import the jj maildir into lab-mail once, as the v13 README
+>      describes. This has to happen before either client switches.
+>    - Emacs: set NOTMUCH_PROFILE, send through msmtp, Fcc to the
+>      local sent folder, and add keys to move mail between INBOX,
+>      Next, Later, and Archive.
+>    - lab-process-mail: get_up_to_date becomes mbsync followed by
+>      notmuch new. Series go out through git send-email over msmtp,
+>      and replies go through msmtp -t. prompt.md and the Mail section
+>      of CLAUDE.md get rewritten to match. This is the largest piece,
+>      and it needs its own spec in src/lab-process-mail.
+>
+> 3. Clean up: remove maildir-deliver.sh, mail-send.sh, the mail
+>    bookmark, the submissions remote, ~/lab/mail.jj, and the jj-maildir
+>    text in prompt.md and CLAUDE.md.
+>
+> * Decisions I need from you
+>
+> a. Will you apply v13 to trunk as it stands? That unblocks phase 1.
+
+Base it on b/dev as discussed above.
+
+> b. Which mail root? The approved spec uses ~/mail/pat@p7x.dev, but
+>    earlier you asked for ~/mail/pat_at_p7x.dev [3]. I recommend the
+>    spec's form, unless "@" causes trouble in one of your tools.
+
+pat@p7x.dev
+
+> c. How does a pass know it is done? Today lab-process-mail checks
+>    that the message left tag:inbox, which only works because my reply
+>    lands in the local jj maildir. With lab-mail, my login is
+>    read-only. I recommend that the pass Fcc its reply into a local
+>    sent folder, so notmuch tags the target replied straight away.
+>    The other option is to wait for mbsync to bring back the list's
+>    copy, which is slower and can stall on the network.
+
+Yes FCC is good.
+
+> d. Quarantine. "[PATCH 0/2] Quarantine mail from unapproved senders"
+>    [5] moves files within the jj maildir, which
+>    claude cannot do on lab-mail, and quarantine is not one of the
+>    synced folders. I recommend that lab-process-mail skip unapproved
+>    senders with a query and leave filing them to you. If you agree,
+>    I'll withdraw that series and fold the rule into phase 2.
+
+That sounds good. I'm not doing any quarantining right now. I think it's
+reasonable to just skip unknown senders. And log them.
+
+> e. One series per phase, each with its spec text and code together,
+>    as you asked on v12? Or one series per host?
+
+I think the whole thing is one series, right? Though the host commits
+should be separate from one another. Not sure why I'd want this a series
+per phase. There's some length to it for sure, but it's one over all idea.
