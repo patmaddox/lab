@@ -36,4 +36,10 @@ notmuch config set user.primary_email "$(git config user.email)"
 notmuch new
 
 # mbsync syncs the list into this mail root, which it does not create.
-mkdir -p ${HOME}/mail/claude@p7x.dev
+# Make the list's folders too, since mbsync has dumped core on a first
+# sync into folders that did not exist.
+for box in INBOX Next Later Archive; do
+	install -d ${HOME}/mail/claude@p7x.dev/${box}/cur \
+	    ${HOME}/mail/claude@p7x.dev/${box}/new \
+	    ${HOME}/mail/claude@p7x.dev/${box}/tmp
+done
