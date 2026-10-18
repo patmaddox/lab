@@ -1,0 +1,23 @@
+Return-Path: <pat@p7x.dev>
+Delivered-To: lab@lists.p7x.dev
+Return-Path: <pat@p7x.dev>
+Delivered-To: lab@lists.p7x.dev
+Received: from localhost (localhost [127.0.0.1])
+	by lab-mail.p7x.dev (OpenSMTPD) with ESMTP id 47db0524
+	for <lab@lists.p7x.dev>;
+	Sun, 18 Oct 2026 04:47:23 +0000 (UTC)
+From: Pat Maddox <pat@p7x.dev>
+To: lab@lists.p7x.dev
+Subject: How to interdiff versions?
+Date: Sat, 17 Oct 2026 21:47:22 -0700
+Message-ID: <m2fqy3eht1.fsf@beastie.p7x.dev>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+There are multiple versions of patch series posted to the
+list. Sometimes they contain interdiffs, sometimes they don't.
+
+I need a way to interdiff versions of patch series that are on the
+list. What are some potential ways to go about this? I likely want to
+lean on existing tools, but am open to some simple scripting if that's
+what's needed.
