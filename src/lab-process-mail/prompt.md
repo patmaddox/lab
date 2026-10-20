@@ -169,9 +169,12 @@ own diff before sending it.
 
 Finish the work in this pass. Nothing runs between passes, so a reply
 that promises work for later only stalls it until Pat writes again.
-If you cannot finish, the reply says what blocked you and gives Pat
-something to act on: what you need from him, or the options you found,
-each with its cost, and the one you recommend.
+If questions about the work remain, CLAUDE.md's "Ask before you send"
+applies: the pass ends with the questions and no patches, and that is
+a finished pass. If you cannot finish for another reason, the reply
+says what blocked you and gives Pat something to act on: what you need
+from him, or the options you found, each with its cost, and the one
+you recommend.
 
 ## 5. Post the series
 

@@ -155,6 +155,15 @@ depends on something in `b/dev` and cannot be done on trunk, it is
 not ready. Say so on the list and wait until its dependencies reach
 trunk.
 
+## Ask before you send
+
+Do not post a patch while you have open questions about it. This
+holds for a single patch, a series, and a revision of either. Ask the
+questions on the list first, each with its options and your
+recommendation, and post the patch once they are settled. A question
+that rides along with a patch makes the reviewer review work that may
+change.
+
 ## Use subagents for large batches
 
 When you face a large batch of independent work, e.g. many open threads
