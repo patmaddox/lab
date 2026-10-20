@@ -90,13 +90,15 @@ That update makes no judgements, so settle what its rebase left:
   comparing your commits with trunk's log and the list (an "applied"
   reply, or its thread filed as accepted or merged), and abandon it
   with `jj abandon`.
-- A conflicted commit (`jj log -r "conflicts() & mine()"`) must be
-  resolved: `jj new <commit>`, fix the files, `jj squash`. If you
-  posted it and it is still open, the series on the list is now stale;
-  note that it needs a revised version.
+- A conflicted commit (`jj log -r "conflicts() & mine()"`) matters
+  only to a pass that builds on it or revises its series. Then resolve
+  it: `jj new <commit>`, fix the files, `jj squash`. Leave any other
+  conflict alone, and do not mention it in the reply. A posted patch
+  stops applying as trunk moves, and Pat says so when he picks it up.
 
-When `jj log -r "${work}"` shows only open work, every commit is
-conflict-free, and nothing landed is left, your work is current.
+When `jj log -r "${work}"` shows only open work, nothing landed is
+left, and the commits this pass needs are conflict-free, your work is
+current.
 
 ## 2. Take the message
 
