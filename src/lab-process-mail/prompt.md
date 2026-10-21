@@ -223,10 +223,37 @@ git then adds `prerequisite-patch-id:` lines for the commits between
 the base and the series. Name the prerequisite series in the cover
 letter by its full subject, with its Message-ID in a footnote.
 
-**Revisions.** For a revised series add `-v N`. Address every review
-point the list researcher found unaddressed, or say why not. End the
-cover letter blurb with what changed and a link to the previous
-version:
+**Revisions.** For a revised series add `-v N` and an interdiff
+against the previous version, so Pat sees exactly what changed. Every
+revised series carries one. The version notes alone are not enough.
+Before your first edit, record the head of the previous version as it
+stands in your workspace. lab-process-mail has already rebased it onto
+`${lab_base}`, so the interdiff shows your revision and not trunk's
+movement:
+
+    prev="$(jj log -r <head of the series> --no-graph -T commit_id)"
+
+If the previous version is not in your workspace, rebuild it from the
+list on its `base-commit:` and rebase it onto `${lab_base}`, then take
+its head; abandon those commits once the series is formatted. Every
+message of one series shares the timestamp in its Message-ID, e.g.
+`cover.1792005540.git.claude@p7x.dev`, which selects that version and
+no other, even when later versions share its thread:
+
+    jj new <base-commit of v(N-1)>
+    notmuch show --format=mbox 'mid:"/\.1792005540\.git\./"' |
+        "${ws}"/libexec/mail/am.sh "${ws}"
+    jj rebase -s <first patch of v(N-1)> -d "${lab_base}"
+
+Pass `-v N --interdiff="${prev}"` to the format command. git puts the
+interdiff in the cover letter, or below the `---` of a single patch.
+Check it is there before you post, and fix the command if not:
+
+    grep -l '^Interdiff against v' /tmp/series/*.patch
+
+Address every review point the list researcher found unaddressed, or
+say why not. End the cover letter blurb with what changed and a link
+to the previous version:
 
     Changes in vN:
     - <what changed, and why>
