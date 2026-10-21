@@ -111,8 +111,13 @@ A reader with only this commit must understand it in full.
 
 You may refer to earlier commits that are already in the tree. When you
 revise and resend a patch, write the message as if this were the first
-and only version. Version notes and interdiffs belong in the cover
-letter, not in the commit.
+and only version. Version notes and the interdiff belong in the cover
+letter, or below the `---` of a single patch, not in the commit.
+
+Every revised series carries an interdiff against the previous
+version, made with `git format-patch -v N --interdiff=<rev>`. Version
+notes say what changed, but only the interdiff shows it, and it is
+what Pat reviews a revision by.
 
 ## Citing messages
 
