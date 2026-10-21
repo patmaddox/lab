@@ -145,8 +145,8 @@ messages, each as subject, Message-ID, and one line on why it matters,
 plus any decision found elsewhere that constrains this work.
 
 Second, if the target concerns a patch series, it finds every earlier
-version: by `changeid:<id>` for each patch's change id, and by the
-"Link to v(N-1)" lines in cover letters. It reads each earlier
+version: by the "Link to v(N-1)" lines in cover letters, and by
+searching for each patch's subject. It reads each earlier
 version's whole thread, since that is where review happened, and
 returns every review point raised there: who raised it, the subject
 and Message-ID it was raised in, and whether the latest version
@@ -184,17 +184,14 @@ Skip this step if the work produced no commits.
 
 A patch series is its own thread on the list, never a reply to the
 message that asked for it. It follows the Linux kernel's conventions,
-less the archive links. Format it with
-`${ws}/libexec/mail/format-patch.sh`, which runs git
-format-patch and gives each patch its commit's jj change id, as a
-Change-Id header and a `change-id:` line under the `---`. The patches
-come from the commit author, your address:
+less the archive links. Format it with git format-patch. The
+patches come from the commit author, your address:
 
     cd "${ws}"
     base="$(jj log -r "${lab_base}" --no-graph -T commit_id)"
     head="$(jj log -r @- --no-graph -T commit_id)"
     rm -rf /tmp/series
-    "${ws}"/libexec/mail/format-patch.sh -o /tmp/series \
+    git format-patch -o /tmp/series \
         --thread=shallow --base="${base}" \
         --to=lab@lists.p7x.dev --cc="<sender's From>" \
         "${base}..${head}"
@@ -234,9 +231,6 @@ version:
     Changes in vN:
     - <what changed, and why>
     - Link to v(N-1): id:<message-id of the previous cover>
-
-The change ids are unchanged across versions, so a reader can match
-each patch to its earlier version with `notmuch search changeid:<id>`.
 
 Note the series' subject and Message-ID from its first file, the cover
 letter or the only patch, for the reply. A long Subject continues on
