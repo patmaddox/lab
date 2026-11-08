@@ -1,0 +1,38 @@
+#+TITLE: yolo - an untrusted dev box for AI agents
+
+Agents on yolo work as root: they build with poudriere, run bhyve
+guests, and install what they like. Nothing on it is trusted. It is
+cabled straight to rowdy's igb3, and rowdy lets it reach the internet
+and nothing else. It holds no secrets but its own host keys and
+password hashes.
+
+* Build
+
+On beastie, signed in to 1Password:
+
+: redo yolo.be.zfs
+
+The result is a ZFS send stream of a FreeBSD 15.1 pkgbase boot
+environment with =dist/= applied and secrets from
+=op://Personal/yolo-secrets=. It holds password hashes and private
+keys, so it is mode 0600 and ignored by jj. Delete it after deploying.
+
+* Install
+
+yolo needs FreeBSD on ZFS before the first boot environment can go
+in. Install 15.1 from the installer with Auto (ZFS), GPT (UEFI), on
+nda0, so that p1 is the EFI partition and p2 is swap, as
+=dist/etc/fstab= expects.
+
+* Deploy
+
+Copy the stream to yolo, then as root:
+
+: bectl import yolo-15.1 < /tmp/yolo.be.zfs
+: rm /tmp/yolo.be.zfs
+: bectl activate -t yolo-15.1
+: shutdown -r now
+
+=activate -t= boots the new BE once; if it fails, the next reboot
+returns to the old one. Once it works, make it permanent with
+=bectl activate yolo-15.1=.

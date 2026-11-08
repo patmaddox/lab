@@ -1,0 +1,13 @@
+# Keys only, from root-owned files that ship with the image. /home is
+# shared across boot environments, so keys there would not.
+AuthorizedKeysFile /etc/ssh/authorized_keys/%u
+AuthenticationMethods publickey
+KbdInteractiveAuthentication no
+
+# Agents on yolo work as root. The box is untrusted as a whole, so a
+# privilege boundary inside it buys little.
+PermitRootLogin prohibit-password
+AllowUsers patmaddox root
+UseDNS no
+
+Subsystem	sftp	/usr/libexec/sftp-server

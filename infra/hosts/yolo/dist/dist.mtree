@@ -1,0 +1,26 @@
+/set type=dir uname=root gname=wheel mode=0755
+.
+./boot
+./etc
+./etc/ssh
+./etc/ssh/authorized_keys
+./usr
+./usr/local
+./usr/local/etc
+./usr/local/etc/pkg
+./usr/local/etc/pkg/repos
+
+/set type=file mode=0644
+./boot/loader.conf
+./etc/fstab
+./etc/hosts
+./etc/rc.conf
+./etc/resolv.conf
+./etc/ssh/authorized_keys/patmaddox
+./etc/ssh/authorized_keys/root
+./etc/ssh/ssh_host_ecdsa_key.pub
+./etc/ssh/ssh_host_ed25519_key.pub
+./etc/ssh/sshd_config
+./etc/sysctl.conf
+./etc/ttys
+./usr/local/etc/pkg/repos/FreeBSD.conf
