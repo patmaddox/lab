@@ -17,18 +17,12 @@ and `jj show`.
 
 ### Commit messages
 
-FreeBSD style. Subject ~50 chars, imperative mood, prefixed with
-`<area>: ` where area matches the subdirectory. Body wrapped at
-72 chars - explain why, not what. No Co-Authored-By trailers.
-
-Good body: "Cloning prints a detached HEAD advisory and progress
-           info that clutter handler output, making errors harder
-           to spot."
-Bad body:  "Set advice.detachedHead=false on the clone command and
-           pass -q to suppress all clone noise."
-
-The diff already shows what changed. The body should say why it
-matters.
+The commit-message skill defines the house style for commit
+messages. Follow it whenever you write a commit message, and whenever
+you change a commit's diff or message: commit, describe, squash,
+split, absorb, diffedit, resolve, or editing files in a described
+change. A message must describe its diff as it stands now, all of it
+and nothing else. No Co-Authored-By trailers.
 
 ## Mail
 
@@ -97,22 +91,10 @@ the rest and you spend effort on a task the batch has already redefined.
 
 Read the batch, find the messages that constrain the others, then work.
 
-## Commit messages describe the patch, not its history
+## Revised series
 
-A patch stands alone, and so does its commit message. Write the message
-to describe the change as it stands, or the before and after of applying
-it.
-
-Do not describe the evolution of the patch itself. Phrases like "rewrap
-the earlier version" or "unchanged from v1" point at a version that is
-lost once history is rewritten, so they describe nothing the reader can
-see. Do not refer to work later in a series, or to patches not yet sent.
-A reader with only this commit must understand it in full.
-
-You may refer to earlier commits that are already in the tree. When you
-revise and resend a patch, write the message as if this were the first
-and only version. Version notes and the interdiff belong in the cover
-letter, or below the `---` of a single patch, not in the commit.
+Version notes and the interdiff belong in the cover letter, or below
+the `---` of a single patch, never in the commit message.
 
 Every revised series carries an interdiff against the previous
 version, made with `git format-patch -v N --interdiff=<rev>`. Version

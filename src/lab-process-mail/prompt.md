@@ -164,8 +164,8 @@ For code changes, work in your workspace on a fresh change:
     cd "${ws}"
     jj new "${lab_base}"
 
-Follow CLAUDE.md for commit messages and patch scope: one logical
-change per commit, each message explaining why, and the series
+Follow the commit-message skill for commit messages, and CLAUDE.md
+for patch scope: one logical change per commit, and the series
 self-contained against `${lab_base}`. Test the change and review your
 own diff before sending it.
 
