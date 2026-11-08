@@ -1,0 +1,31 @@
+/set type=dir uname=root gname=wheel mode=0755
+.
+./boot
+./etc
+./etc/ssh
+./etc/wireguard
+./usr
+./usr/local
+./usr/local/etc
+./usr/local/etc/pkg
+./usr/local/etc/pkg/repos
+./usr/local/etc/unbound
+
+/set type=file mode=0644
+./boot/loader.conf
+./etc/dhclient.conf
+./etc/fstab
+./etc/hosts
+./etc/pf.conf
+./etc/rc.conf
+./etc/ssh/ssh_host_ecdsa_key.pub
+./etc/ssh/ssh_host_ed25519_key.pub
+./etc/ssh/sshd_config
+./etc/start_if.wg0 mode=0600
+./etc/sysctl.conf
+./etc/ttys
+./etc/wireguard/wg0.conf mode=0600
+./etc/wireguard/wg0.pub
+./usr/local/etc/dhcpd.conf
+./usr/local/etc/pkg/repos/FreeBSD.conf
+./usr/local/etc/unbound/unbound.conf

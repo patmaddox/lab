@@ -1,0 +1,7 @@
+# Only reachable from the workstations network
+ListenAddress 10.10.0.1
+
+AuthorizedKeysFile	.ssh/authorized_keys
+UseDNS no
+
+Subsystem	sftp	/usr/libexec/sftp-server
