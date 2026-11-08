@@ -1,5 +1,9 @@
-# Only reachable from the workstations network
+# Listen on rowdy's admin, workstations, and WireGuard addresses, never
+# the WAN. pf lets those three networks reach them; keys decide who
+# gets in.
+ListenAddress 172.21.1.1
 ListenAddress 10.10.0.1
+ListenAddress 172.22.1.1
 
 # Keys only, from root-owned files that ship with the image. /home is
 # shared across boot environments, so keys there would not.
