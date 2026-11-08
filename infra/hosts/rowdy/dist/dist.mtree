@@ -20,6 +20,7 @@
 ./etc/pf.conf
 ./etc/rc.conf
 ./etc/ssh/authorized_keys/patmaddox
+./etc/ssh/authorized_keys/root
 ./etc/ssh/ssh_host_ecdsa_key.pub
 ./etc/ssh/ssh_host_ed25519_key.pub
 ./etc/ssh/sshd_config

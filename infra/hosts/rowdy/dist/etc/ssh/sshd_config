@@ -10,8 +10,8 @@ ListenAddress 172.22.1.1
 AuthorizedKeysFile /etc/ssh/authorized_keys/%u
 AuthenticationMethods publickey
 KbdInteractiveAuthentication no
-PermitRootLogin no
-AllowUsers patmaddox
+PermitRootLogin prohibit-password
+AllowUsers patmaddox root
 UseDNS no
 
 Subsystem	sftp	/usr/libexec/sftp-server
