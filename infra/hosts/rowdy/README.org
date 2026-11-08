@@ -1,0 +1,25 @@
+#+TITLE: rowdy - my home router
+
+* Build
+
+On beastie, signed in to 1Password:
+
+: redo rowdy.be.zfs
+
+The result is a ZFS send stream of a FreeBSD 15.1 pkgbase boot
+environment with =dist/= applied and secrets from
+=op://Personal/rowdy-secrets=. It holds password hashes and private
+keys, so it is mode 0600 and ignored by jj. Delete it after deploying.
+
+* Deploy
+
+Copy the stream to rowdy, then as root:
+
+: bectl import rowdy-15.1 < /tmp/rowdy.be.zfs
+: rm /tmp/rowdy.be.zfs
+: bectl activate -t rowdy-15.1
+: shutdown -r now
+
+=activate -t= boots the new BE once; if it fails, the next reboot
+returns to the old one. Once it works, make it permanent with
+=bectl activate rowdy-15.1=.
