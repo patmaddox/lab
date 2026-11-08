@@ -15,15 +15,13 @@
 # (etc/wireguard/*.key) must match their public halves in dist, at
 # <key>.pub and <name>.pub. Other secrets need only be non-empty.
 #
-# ${users} holds master.passwd(5) lines, rendered with op inject so the
-# password field can name a 1Password hash. Each replaces the image's
-# line for that user, or is appended. Groups are added with pw(8).
-# Either way, accounts the base system and packages create are left
-# alone.
+# ${users} holds master.passwd(5) lines. Each replaces the image's line
+# for that user, or is appended. Groups are added with pw(8). Either
+# way, accounts the base system and packages create are left alone.
 #
-# ${passwords} pairs a user with the 1Password reference of a plain
-# password. The image's pw(8) hashes it into master.passwd, so the
-# user's line in ${users} carries * in the password field.
+# The password field in ${users} is *, which refuses password logins.
+# ${passwords} pairs a user with the 1Password reference of a password,
+# and the image's pw(8) hashes it into that user's field.
 set -eu
 set -o pipefail
 
@@ -84,6 +82,7 @@ main() {
     secretdir=${workdir}/secrets
     usersfile=${workdir}/users
     passworddir=${workdir}/passwords
+    lines "${users}" > ${usersfile}
 
     fetch_secrets
     verify_secrets
@@ -116,11 +115,6 @@ fetch_secrets() {
 	op inject -i secrets/${path} -o ${secretdir}/${path} \
 	    < /dev/null > /dev/null
     done
-
-    : > ${usersfile}
-    if [ -n "$(lines "${users}")" ]; then
-	lines "${users}" | op inject > ${usersfile}
-    fi
 
     mkdir ${passworddir}
     lines "${passwords}" | while read -r user ref; do
@@ -160,11 +154,9 @@ verify_secrets() {
 	    fail "${path} does not match ${pub}"
     done
 
-    # A crypt(3) hash, or * to lock the account; never a plain password.
+    # The repository holds no hashes, and never a plain password.
     while IFS=: read -r user hash rest; do
-	echo "${hash}" |
-	    grep -Eq '^(\$[0-9a-z]+\$[^:[:space:]]+|\*[^:[:space:]]*)$' ||
-	    fail "${user} password is not a crypt(3) hash"
+	[ "${hash}" = "*" ] || fail "${user} password field is not *"
     done < ${usersfile}
 
     # pw reads a password as one line.
