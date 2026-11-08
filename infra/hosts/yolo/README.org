@@ -19,12 +19,36 @@ keys, so it is mode 0600 and ignored by jj. Delete it after deploying.
 
 * Install
 
-yolo needs FreeBSD on ZFS before the first boot environment can go
-in. Install 15.1 from the installer with Auto (ZFS), GPT (UEFI), on
-nda0, with a swap size of 0. =dist/etc/fstab= finds the EFI partition
-by the label the installer gives it, efiboot0.
+yolo is installed from a USB stick. On beastie, signed in to
+1Password:
 
-* Deploy
+: redo yolo-installer.img
+
+This is a one-off, so =all= does not build it.
+=infra/scripts/bsdinstall-stick.sh= makes it from the FreeBSD 15.1
+memstick, as released, with a slice added that holds =yolo.be.zfs= and
+the installer. It holds what the stream holds, so it is mode 0600 and
+ignored by jj. Write it to the stick, here da0:
+
+: dd if=yolo-installer.img of=/dev/da0 bs=1m
+
+Boot yolo from the stick, choose Shell at the installer's welcome
+screen, and run:
+
+: mount -r /dev/ufs/installer /media
+: sh /media/install.sh nda0
+
+=install.sh= with no disk lists the disks. It asks you to type the
+disk again, then lays out the disk as Auto (ZFS) on GPT (UEFI) does,
+with no swap, as =stick.conf= asks. =dist/etc/fstab= finds the EFI
+partition by the label bsdinstall gives it, efiboot0. Then it imports
+the stream as yolo-15.1, activates it, and destroys the stock default
+boot environment.
+
+Remove the stick and reboot. Then wipe the stick, and delete
+=yolo-installer.img= and =yolo.be.zfs=.
+
+* Upgrade
 
 Copy the stream to yolo, then as root:
 
