@@ -1,0 +1,16 @@
+# bsdinstall(8) script, run by install.sh, which exports ZFSBOOT_DISKS
+# and ZFSBOOT_SWAP_SIZE. It lays out the disk the way Auto (ZFS) does on
+# GPT (UEFI), and installs the stock system from the stick. install.sh
+# then replaces that system with the host's boot environment.
+
+export nonInteractive=YES
+
+export ZFSBOOT_PARTITION_SCHEME=GPT
+export ZFSBOOT_BOOT_TYPE=UEFI
+
+# bsdinstall must install a system into the default boot environment,
+# but install.sh destroys default once the host's boot environment is
+# in. So install the least pkgbase allows, the minimal set, pkg, and
+# the kernel, from the memstick's offline repository.
+export BSDINSTALL_PKG_REPOS_DIR=/usr/freebsd-packages/repos/
+export COMPONENTS=""
