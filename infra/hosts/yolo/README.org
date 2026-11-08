@@ -21,8 +21,8 @@ keys, so it is mode 0600 and ignored by jj. Delete it after deploying.
 
 yolo needs FreeBSD on ZFS before the first boot environment can go
 in. Install 15.1 from the installer with Auto (ZFS), GPT (UEFI), on
-nda0, so that p1 is the EFI partition and p2 is swap, as
-=dist/etc/fstab= expects.
+nda0, with a swap size of 0. =dist/etc/fstab= finds the EFI partition
+by the label the installer gives it, efiboot0.
 
 * Deploy
 
