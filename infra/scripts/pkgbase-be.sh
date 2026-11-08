@@ -20,6 +20,10 @@
 # line for that user, or is appended. Groups are added with pw(8).
 # Either way, accounts the base system and packages create are left
 # alone.
+#
+# ${passwords} pairs a user with the 1Password reference of a plain
+# password. The image's pw(8) hashes it into master.passwd, so the
+# user's line in ${users} carries * in the password field.
 set -eu
 set -o pipefail
 
@@ -45,6 +49,7 @@ build_nameservers="8.8.8.8 8.8.4.4"
 packages=""
 groups=""
 users=""
+passwords=""
 group_members=""
 required_files=""
 config_checks=""
@@ -78,6 +83,7 @@ main() {
     mounted=yes
     secretdir=${workdir}/secrets
     usersfile=${workdir}/users
+    passworddir=${workdir}/passwords
 
     fetch_secrets
     verify_secrets
@@ -103,7 +109,7 @@ main() {
 
 # Fetch first, so a missing secret fails the build before any doas.
 fetch_secrets() {
-    local path
+    local path user ref
 
     secret_paths | while read -r path; do
 	mkdir -p $(dirname ${secretdir}/${path})
@@ -115,6 +121,11 @@ fetch_secrets() {
     if [ -n "$(lines "${users}")" ]; then
 	lines "${users}" | op inject > ${usersfile}
     fi
+
+    mkdir ${passworddir}
+    lines "${passwords}" | while read -r user ref; do
+	op read --no-newline ${ref} < /dev/null > ${passworddir}/${user}
+    done
 }
 
 verify_secrets() {
@@ -155,6 +166,13 @@ verify_secrets() {
 	    grep -Eq '^(\$[0-9a-z]+\$[^:[:space:]]+|\*[^:[:space:]]*)$' ||
 	    fail "${user} password is not a crypt(3) hash"
     done < ${usersfile}
+
+    # pw reads a password as one line.
+    lines "${passwords}" | while read -r user ref; do
+	[ -s ${passworddir}/${user} ] || fail "${user} password is empty"
+	[ $(wc -l < ${passworddir}/${user}) -eq 0 ] ||
+	    fail "${user} password is more than one line"
+    done
 }
 
 create_pool() {
@@ -242,7 +260,7 @@ install_tree() {
 }
 
 add_accounts() {
-    local etc group gid members
+    local etc group gid members user ref
 
     etc=${rootdir}/etc
 
@@ -264,12 +282,18 @@ add_accounts() {
     lines "${group_members}" | while read -r group members; do
 	doas pw -R ${rootdir} groupmod ${group} -m ${members}
     done
+
+    # Hash in the image, so its login.conf picks the format.
+    lines "${passwords}" | while read -r user ref; do
+	doas chroot ${rootdir} pw usermod ${user} -h 0 \
+	    < ${passworddir}/${user}
+    done
 }
 
 # Check the finished tree the way the host will use it, so a bad image
 # fails here rather than at boot.
 verify_image() {
-    local f group gid line user members cmd
+    local f group gid line user members cmd shown ref hash
 
     mount_dev
 
@@ -287,10 +311,31 @@ verify_image() {
 	[ "$(in_image pw groupshow ${group} | cut -d: -f3)" = "${gid}" ] ||
 	    fail "group ${group} does not have gid ${gid}"
     done
+    # A user in ${passwords} has a hash where its config has *.
     while read -r line; do
-	[ "$(in_image pw usershow ${line%%:*})" = "${line}" ] ||
-	    fail "user ${line%%:*} does not match its config"
+	user=${line%%:*}
+	shown=$(in_image pw usershow ${user})
+	if [ -e ${passworddir}/${user} ]; then
+	    shown=$(echo "${shown}" | cut -d: -f1,3-)
+	    line=$(echo "${line}" | cut -d: -f1,3-)
+	fi
+	[ "${shown}" = "${line}" ] ||
+	    fail "user ${user} does not match its config"
     done < ${usersfile}
+
+    # pw gives each hash its own random salt. Hash each password again
+    # with the salt from its hash in the image; it must give that hash.
+    # Only SHA-512 crypt, FreeBSD's default, is understood.
+    lines "${passwords}" | while read -r user ref; do
+	hash=$(in_image pw usershow ${user} | cut -d: -f2)
+	case ${hash} in
+	\$6\$*) ;;
+	*) fail "${user} password is not a SHA-512 crypt hash" ;;
+	esac
+	[ "$(openssl passwd -6 -salt $(echo "${hash}" | cut -d'$' -f3) \
+	    -stdin < ${passworddir}/${user})" = "${hash}" ] ||
+	    fail "${user} password does not match its hash"
+    done
     lines "${group_members}" | while read -r group members; do
 	for user in $(echo ${members} | tr , ' '); do
 	    in_image id -Gn ${user} | tr ' ' '\n' | grep -qx ${group} ||
