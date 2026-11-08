@@ -1,7 +1,13 @@
 # Only reachable from the workstations network
 ListenAddress 10.10.0.1
 
-AuthorizedKeysFile	.ssh/authorized_keys
+# Keys only, from root-owned files that ship with the image. /home is
+# shared across boot environments, so keys there would not.
+AuthorizedKeysFile /etc/ssh/authorized_keys/%u
+AuthenticationMethods publickey
+KbdInteractiveAuthentication no
+PermitRootLogin no
+AllowUsers patmaddox
 UseDNS no
 
 Subsystem	sftp	/usr/libexec/sftp-server
