@@ -100,3 +100,4 @@ template. To start a jail over, stop it and destroy that dataset.
 
 The jails' addresses:
 - lab-1, lab-2, and lab-3: 10.200.0.11 to .13
+- devops-1, devops-2, and devops-3: 10.200.0.21 to .23
