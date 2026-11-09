@@ -1,4 +1,4 @@
-# lab.jj
+# lab
 
 ## System
 
@@ -7,13 +7,8 @@ When unsure, check `man <tool>`.
 
 ## Version Control
 
-This repo uses jj (Jujutsu), not git.
-
-Use `jj commit -m` to commit after successful work. Do not commit
-after errors. Never run `just promote` or `promote.sh`.
-
-Only modify `mutable()` commits. Always use `--git` with `jj diff`
-and `jj show`.
+Working tree may be managed by jj (jujutsu) or git. Check before
+working.
 
 ### Commit messages
 
@@ -206,6 +201,7 @@ are how each of them earns trust.
 - Prefer complete sentences over fragments using semicolons
 
 ## Dependencies
+
 - Do not install dependencies.
 - If you get blocked on a missing dependency, report to user the
   dependencies that need to be installed.
