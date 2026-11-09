@@ -3,6 +3,16 @@
 yolo-jail builds the ZFS templates that yolo's jails are cloned from,
 and clones them.
 
+* Build
+
+: redo yolo-jail.pkg
+
+* Install
+
+Copy =yolo-jail.pkg= to yolo, then as root:
+
+: pkg add yolo-jail.pkg
+
 * Templates
 
 As root on yolo:
