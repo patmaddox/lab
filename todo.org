@@ -1,0 +1,26 @@
+#+TITLE: lab todo
+* TODO RFD reviewer agent
+* TODO Build vs buy agent
+Lots of things I want to do, unclear if there are existing tools out
+there. Want an agent that researches the problem, looks for good fit,
+gaps, etc.
+* TODO Mailing list agent
+Similar to message transformation agent. Idea is to take some data,
+turn it into mailing list messages, and send them out.
+* TODO Message transformation agent
+I realize that I'm trying to encode too much process into my
+system... really I just need to produce files on disk. Then I can have
+other tools that convert them into formats to feed into deterministic
+tools.
+
+For example, I don't need to have a whole agent that knows how to send
+emails. I just need it to be able to generate replies. Those replies
+could be in any format - org files, email files on disk,
+whatever. Then I just need to convert them.
+
+I often use a tmp dir as a buffer for conversations with LLMs. So it
+would be feasible to have that be a drafts folder that is then
+delivered.
+* TODO Spike agent
+Just take an idea and make a spike out of it, to get a feel for how it
+works, where the trouble areas are, etc.
