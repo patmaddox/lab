@@ -1,4 +1,41 @@
 #+TITLE: lab todo
+* TODO agent instructions: do not rewrite commits after next bookmark
+...unless explicitly told to
+
+I use seen -> next -> trunk to review, integrate, and promote
+work. Once code is in next, I'm planning to revise it - by splitting
+it, revising commit message, whatever. Agents should not rewrite
+anything after next unless I tell them to.
+
+Chances are a better approach to me telling them to, is backing the
+change out of next and into seen.
+* TODO agent jails: configure git committer info by default
+agent jails like to make something up. They should be configured out
+of the box
+* TODO look into tmux alternatives
+zmx and shpool
+* TODO freebsd: kernel bug - moving a null mount file
+null mount a file into a jail, and try to move it, it hangs
+* TODO claude: enable remote-control by default
+* TODO claude: disable memory by default
+I thought I did, but it seems to want to consult memory anyway.
+* TODO come up with a way to represent branch state
+an agent might be working on a branch, and I wouldn't know. It would
+be helpful if the agent has a wip namespace, and then when it's done
+it moves it to ready or something like that. wip -> review -> ready
+would be cool.
+* TODO slice and dice my claude setup
+* TODO install claude-code by default into jails
+* TODO make the BE include a git commit count and sha
+right now it's just the date - would prefer something more
+deterministic when I view it
+* TODO integrate git-publish into the workflow
+for turning tags into patch series, version handling, etc
+
+https://github.com/stefanha/git-publish
+* TODO improve commit splitting skill
+https://web.archive.org/web/20260207003716/https://wiki.openstack.org/wiki/GitCommitMessages
+https://qemu.readthedocs.io/en/master/devel/submitting-a-patch.html
 * TODO RFD reviewer agent
 * TODO Build vs buy agent
 Lots of things I want to do, unclear if there are existing tools out
@@ -24,3 +61,13 @@ delivered.
 * TODO Spike agent
 Just take an idea and make a spike out of it, to get a feel for how it
 works, where the trouble areas are, etc.
+
+It could send a ~[SPIKE]~ email to the list, which is a patch with
+instructions on how to use it, results, etc. The point is to get an
+idea of how it works, not produce a perfect patch series.
+* TODO emacs on yolo (prob via SSH)
+* TODO figure out best claude code setup in emacs
+There's a claude code package, it works well.
+
+still, need to be able to send CLI args - e.g. so I can use --agent to
+select a specific agent.
