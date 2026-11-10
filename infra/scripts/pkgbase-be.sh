@@ -5,6 +5,9 @@
 # Build a boot environment from upstream pkgbase and packages, and write
 # it to <outfile> as a ZFS send stream for bectl import.
 #
+# <config> sets ${release}, e.g. 15.1. It picks the ABI, the pkgbase
+# repository, and the keys that sign it.
+#
 # <config> is a sh(1) file in the host directory, which also holds:
 #
 #   dist/     files installed whole, listed with modes in dist/dist.mtree
@@ -51,11 +54,18 @@ passwords=""
 group_members=""
 required_files=""
 config_checks=""
+arch=amd64
 
 . ${config}
 
-: ${name:?} ${abi:?} ${base_url:?} ${base_keys:?} ${timezone:?}
+: ${name:?} ${release:?} ${timezone:?}
 : ${base_packages:?}
+
+# The release, e.g. 15.1, picks the ABI, the base repository, and the
+# keys that sign it.
+abi=FreeBSD:${release%%.*}:${arch}
+base_url="pkg+https://pkg.FreeBSD.org/${abi}/base_release_${release#*.}"
+base_keys=/usr/share/keys/pkgbase-${release%%.*}
 
 # Downloaded packages and repository catalogs are kept here between
 # builds, and shared by every host built for the same ABI.
