@@ -12,12 +12,15 @@
 #
 # <config> is a sh(1) file in the host directory that sets:
 #
+#   name             the host's name
 #   release          the FreeBSD release, e.g. 15.1
 #   memstick_sha256  the SHA256 of its memstick.img.xz, as listed in
 #                    the release's CHECKSUM.SHA256 file
 #   stream           the boot environment stream, relative to <config>
-#   be               the name to import it as
 #   swap_size        the swap partition's size, or 0 for none
+#
+# The stick imports the stream as <name>-<release>-<date>, the date
+# being the day the stream was built, e.g. yolo-15.1-2026-11-09.
 set -eu
 set -o pipefail
 
@@ -41,7 +44,7 @@ label=installer
 
 . ${config}
 
-: ${release:?} ${memstick_sha256:?} ${stream:?} ${be:?} ${swap_size:?}
+: ${name:?} ${release:?} ${memstick_sha256:?} ${stream:?} ${swap_size:?}
 
 memstick=FreeBSD-${release}-RELEASE-${arch}-memstick.img.xz
 url=https://download.freebsd.org/releases/${arch}/${arch}/ISO-IMAGES/${release}/${memstick}
@@ -56,6 +59,8 @@ mnt=""
 mounted=""
 
 redo-ifchange ${stream} ${tooldir}/install.sh ${tooldir}/installerconfig
+
+be=${name}-${release}-$(stat -f %Sm -t %Y-%m-%d ${stream})
 
 main() {
     trap 'exit 1' INT TERM

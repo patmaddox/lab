@@ -42,8 +42,9 @@ screen, and run:
 disk again, then lays out the disk as Auto (ZFS) on GPT (UEFI) does,
 with no swap, as =stick.conf= asks. =dist/etc/fstab= finds the EFI
 partition by the label bsdinstall gives it, efiboot0. Then it imports
-the stream as yolo-15.1, activates it, and destroys the stock default
-boot environment.
+the stream as yolo-<release>-<date>, e.g. yolo-15.1-2026-11-09, where
+the date is the day the stream was built. It activates that BE and
+destroys the stock default boot environment.
 
 Remove the stick and reboot. Then wipe the stick, and delete
 =yolo-installer.img= and =yolo.be.zfs=.
