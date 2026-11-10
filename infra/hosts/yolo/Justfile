@@ -8,3 +8,8 @@ pkg:
 # Copy yolo's packages to /tmp on yolo, named for their versions
 push-pkg: pkg
   ./tools/push-pkg.sh src/*/*.pkg jails/*.pkg
+
+# Import the BE on yolo as yolo-<release>-<date>-new, and activate -t it
+deploy-be:
+  redo-ifchange yolo.be.zfs
+  ./tools/deploy-be.sh yolo.conf yolo.be.zfs

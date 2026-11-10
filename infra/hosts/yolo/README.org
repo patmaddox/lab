@@ -51,16 +51,20 @@ Remove the stick and reboot. Then wipe the stick, and delete
 
 * Upgrade
 
-Copy the stream to yolo, then as root:
+On beastie, signed in to 1Password:
 
-: bectl import yolo-15.1 < /tmp/yolo.be.zfs
-: rm /tmp/yolo.be.zfs
-: bectl activate -t yolo-15.1
+: just deploy-be
+
+It builds the stream if needed, sends it over ssh to =bectl import= on
+yolo, so it never lands on yolo's disk, and names the BE as the
+installer does, with =-new= appended, e.g. =yolo-15.1-2026-11-09-new=.
+Then it runs =bectl activate -t= on it. Reboot yolo as root:
+
 : shutdown -r now
 
 =activate -t= boots the new BE once; if it fails, the next reboot
 returns to the old one. Once it works, make it permanent with
-=bectl activate yolo-15.1=.
+=bectl activate <name>=.
 
 * Jails
 
