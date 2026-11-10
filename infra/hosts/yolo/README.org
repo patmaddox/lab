@@ -72,3 +72,28 @@ README says how.
 The =coding-agent= template is for jails that coding agents run in.
 It has an =agent= user with unrestricted =doas=, so the agent
 installs whatever else it needs.
+
+The =yolo-jails= package, from =jails/=, installs each jail's config
+in =/etc/jail.conf.d=. =jails/jails= lists the jails, each with its
+template and the last octet of its address on 10.200.0.0/24, which
+also numbers its epair. =jails/jail.conf.in= is the config they share.
+Each jail has its own network stack, on an epair whose other end
+joins =bridge0=, which puts it on yolo's /24.
+Build it with =redo jails/yolo-jails.pkg=. It depends on =yolo-jail=,
+so install that first. Then as root:
+
+: pkg add yolo-jails.pkg
+: yolo-jail-template coding-agent
+
+=yolo-jail-template= creates =zroot/jails= and builds the template
+=zroot/jails/templates/coding-agent@ready=, which every jail clones.
+Run it once, and again only to rebuild the template.
+
+Jails run no sshd. To use one, sign in to yolo, and as root:
+
+: service jail onestart <name>
+: jexec -l -U agent <name>
+: service jail onestop <name>
+
+The first start clones =zroot/jails/instances/<name>= from its
+template. To start a jail over, stop it and destroy that dataset.

@@ -1,0 +1,2 @@
+# yolo's jails. Each line: jail, template, and the last octet of its
+# address on 10.200.0.0/24, which also numbers its epair.
