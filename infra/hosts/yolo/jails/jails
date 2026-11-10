@@ -1,5 +1,5 @@
-# yolo's jails. Each line: jail, template, and the last octet of its
-# address on 10.200.0.0/24, which also numbers its epair.
+# yolo's jails. Each line: jail, template, and its number, which names
+# its /24, 10.200.<number>.0/24, and its epair.
 lab-1 coding-agent 11
 lab-2 coding-agent 12
 lab-3 coding-agent 13

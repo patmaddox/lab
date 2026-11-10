@@ -93,10 +93,15 @@ installs whatever else it needs.
 
 The =yolo-jails= package, from =jails/=, installs each jail's config
 in =/etc/jail.conf.d=. =jails/jails= lists the jails, each with its
-template and the last octet of its address on 10.200.0.0/24, which
-also numbers its epair. =jails/jail.conf.in= is the config they share.
-Each jail has its own network stack, on an epair whose other end
-joins =bridge0=, which puts it on yolo's /24.
+template and its number. =jails/jail.conf.in= is the config they
+share.
+
+Each jail has its own network stack and its own /24,
+10.200.<number>.0/24, on an epair to yolo. yolo is .1 on its end and
+the jail is .2. yolo routes each jail's /24 and forwards it to rowdy,
+which routes all of 10.200.0.0/16 back to yolo. Jails share no network
+with each other, with yolo's link to rowdy, or with rowdy.
+
 To set up the jails, as root on yolo:
 
 : yolo-jail-template coding-agent
@@ -132,9 +137,12 @@ and are given to the jail by adding them to its =zfs.dataset=.
 
 The jails may run bhyve. They see =/dev/vmmctl=, their VMs under
 =/dev/vmm=, =nmdm= consoles, and =tap= interfaces, by devfs ruleset 10
-in =dist/etc/devfs.rules=. A VM's network is the jail's to arrange,
-e.g. a bridge in the jail holding its epair and the VM's tap.
+in =dist/etc/devfs.rules=. A VM's network is the jail's to arrange.
+To give VMs addresses from the jail's /24, make a bridge in the jail
+holding its epair and the VMs' taps, and give each VM an address in
+the /24 with yolo's .1 as its router. Networks a jail NATs for itself
+should come from outside 10.200.0.0/16.
 
-The jails' addresses:
-- lab-1, lab-2, and lab-3: 10.200.0.11 to .13
-- devops-1, devops-2, and devops-3: 10.200.0.21 to .23
+The jails' networks:
+- lab-1, lab-2, and lab-3: 10.200.11.0/24 to 10.200.13.0/24
+- devops-1, devops-2, and devops-3: 10.200.21.0/24 to 10.200.23.0/24
