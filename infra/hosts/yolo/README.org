@@ -13,9 +13,11 @@ On beastie, signed in to 1Password:
 : redo yolo.be.zfs
 
 The result is a ZFS send stream of a FreeBSD 15.1 pkgbase boot
-environment with =dist/= applied and secrets from
-=op://Personal/yolo-secrets=. It holds password hashes and private
-keys, so it is mode 0600 and ignored by jj. Delete it after deploying.
+environment with =dist/= applied, yolo's own packages installed, and
+secrets from =op://Personal/yolo-secrets=. yolo's packages are the
+ones =local_packages= in =yolo.conf= lists, and the build makes them
+first. It holds password hashes and private keys, so it is mode 0600
+and ignored by jj. Delete it after deploying.
 
 * Install
 
@@ -51,6 +53,13 @@ Remove the stick and reboot. Then wipe the stick, and delete
 
 * Upgrade
 
+A new BE is the whole update: base, ports, yolo's packages, and
+=dist/= all come with it. Everything in =/usr/local= and =/etc= belongs
+to the BE, so a package added by hand is gone after the next upgrade;
+put it in =yolo.conf= instead. =zroot/jails= is outside the BE, so the
+templates and jails carry over as they are; rebuilding a template is
+separate, and yolo-jail's README says how.
+
 On beastie, signed in to 1Password:
 
 : just deploy-be
@@ -72,10 +81,11 @@ yolo's jails, where agents run, are cloned from ZFS templates.
 =zroot/jails/templates= holds the templates, and
 =zroot/jails/instances= the jails. The yolo-jail tool, in
 =src/yolo-jail=, builds the templates and clones jails from them. Its
-README says how. =just push-pkg= builds yolo's packages, one per tool
-in =src/= and the jail configs, and copies them to =/tmp= on yolo,
-each named =<name>-<version>.pkg=. =pkg add= of one finds its
-dependencies beside it under those names.
+README says how. The BE carries yolo's packages, one per tool in
+=src/= and the jail configs. To try a change to one without a new BE,
+=just push-pkg= builds them and copies them to =/tmp= on yolo, each
+named =<name>-<version>.pkg=, where =pkg add= of one finds its
+dependencies beside it. The next upgrade replaces what it added.
 
 The =coding-agent= template is for jails that coding agents run in.
 It has an =agent= user with unrestricted =doas=, so the agent
@@ -87,10 +97,8 @@ template and the last octet of its address on 10.200.0.0/24, which
 also numbers its epair. =jails/jail.conf.in= is the config they share.
 Each jail has its own network stack, on an epair whose other end
 joins =bridge0=, which puts it on yolo's /24.
-To set up the jails, run =just push-pkg=, which copies =yolo-jails= to
-yolo along with =yolo-jail=, which it depends on, and as root on yolo:
+To set up the jails, as root on yolo:
 
-: pkg add /tmp/yolo-jails-0.0.0.pkg
 : yolo-jail-template coding-agent
 
 =yolo-jail-template= creates =zroot/jails= and builds the template

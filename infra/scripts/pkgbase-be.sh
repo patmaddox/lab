@@ -18,6 +18,11 @@
 # (etc/wireguard/*.key) must match their public halves in dist, at
 # <key>.pub and <name>.pub. Other secrets need only be non-empty.
 #
+# ${packages} names packages from FreeBSD-ports. ${local_packages} lists
+# paths to .pkg files, relative to <config>, which are built with redo
+# and installed with pkg add in that order, so list each package after
+# its dependencies.
+#
 # ${users} holds master.passwd(5) lines. Each replaces the image's line
 # for that user, or is appended. Groups are added with pw(8). Either
 # way, accounts the base system and packages create are left alone.
@@ -48,6 +53,7 @@ pool_size=2g
 # dist has no resolv.conf.
 build_nameservers="8.8.8.8 8.8.4.4"
 packages=""
+local_packages=""
 groups=""
 users=""
 passwords=""
@@ -77,7 +83,7 @@ mounted=""
 devmounted=""
 cachemounted=""
 
-redo-ifchange $(jj file list dist secrets)
+redo-ifchange $(jj file list dist secrets) ${local_packages}
 
 main() {
     trap 'exit 1' INT TERM
@@ -107,6 +113,7 @@ main() {
     install_tree dist dist/dist.mtree ./usr/local/etc/pkg
     install_tree ${secretdir} secrets/secrets.mtree
     install_ports
+    install_local
     umount_cache
     install_tree dist dist/dist.mtree ./usr/local
 
@@ -246,6 +253,30 @@ install_ports() {
     if [ -n "${temporary}" ]; then
 	doas rm ${rootdir}/etc/resolv.conf
     fi
+}
+
+# Packages built in this tree go in with pkg add, from a directory in
+# the image's /tmp, each named <name>-<version>.pkg so pkg add finds
+# its dependencies beside it.
+install_local() {
+    local pkg pkgdir
+
+    [ -n "$(echo ${local_packages})" ] || return 0
+
+    pkgdir=/tmp/local-packages
+    doas mkdir ${rootdir}${pkgdir}
+    for pkg in ${local_packages}; do
+	doas cp ${pkg} ${rootdir}${pkgdir}/$(pkg query -F ${pkg} %n-%v).pkg
+    done
+
+    mount_dev
+    for pkg in ${local_packages}; do
+	doas pkg --chroot ${rootdir} -o IGNORE_OSVERSION=yes \
+	    add ${pkgdir}/$(pkg query -F ${pkg} %n-%v).pkg
+    done
+    umount_dev
+
+    doas rm -r ${rootdir}${pkgdir}
 }
 
 # install_tree <dir> <mtree> [path ...]: install the entries in <mtree>,
