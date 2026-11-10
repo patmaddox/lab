@@ -60,3 +60,11 @@ Copy the stream to yolo, then as root:
 =activate -t= boots the new BE once; if it fails, the next reboot
 returns to the old one. Once it works, make it permanent with
 =bectl activate yolo-15.1=.
+
+* Jails
+
+yolo's jails, where agents run, are cloned from ZFS templates.
+=zroot/jails/templates= holds the templates, and
+=zroot/jails/instances= the jails. The yolo-jail tool, in
+=src/yolo-jail=, builds the templates and clones jails from them. Its
+README says how.

@@ -1,0 +1,28 @@
+#+TITLE: yolo-jail - jails for agents on yolo
+
+yolo-jail builds the ZFS templates that yolo's jails are cloned from,
+and clones them.
+
+* Templates
+
+As root on yolo:
+
+: yolo-jail-template <template>
+
+=yolo-jail-template= creates =zroot/jails=, mounted at =/jails=, if it
+is missing. It installs base and the template's packages and users,
+from =templates/<name>.conf=, into =zroot/jails/templates/<name>=.
+Each user gets unrestricted =doas=. Then it takes the snapshot
+=@ready= that jails are cloned from.
+
+It refuses to replace a template that exists. To rebuild one, destroy
+it and its clones first.
+
+* Clones
+
+: yolo-jail-clone <name> <template>
+
+=yolo-jail-clone= clones =zroot/jails/instances/<name>= from the
+template's =@ready= snapshot, unless it exists. A jail's config runs
+it as =exec.prepare=, so the first start creates the jail. Only the
+admin destroys a jail, to start it over.
