@@ -68,3 +68,7 @@ yolo's jails, where agents run, are cloned from ZFS templates.
 =zroot/jails/instances= the jails. The yolo-jail tool, in
 =src/yolo-jail=, builds the templates and clones jails from them. Its
 README says how.
+
+The =coding-agent= template is for jails that coding agents run in.
+It has an =agent= user with unrestricted =doas=, so the agent
+installs whatever else it needs.
