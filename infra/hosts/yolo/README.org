@@ -104,7 +104,23 @@ Jails run no sshd. To use one, sign in to yolo, and as root:
 : service jail onestop <name>
 
 The first start clones =zroot/jails/instances/<name>= from its
-template. To start a jail over, stop it and destroy that dataset.
+template, and makes =zroot/jails/instances/<name>/data=, a ZFS dataset
+the jail runs itself. It has no mountpoint of its own, and the jail
+may make, mount, and destroy datasets under it. For poudriere there,
+set in =poudriere.conf=:
+
+: ZPOOL=zroot
+: ZROOTFS=/jails/instances/<name>/data/poudriere
+
+To start a jail over, stop it, destroy its dataset and everything under
+it, and start it again:
+
+: service jail onestop <name>
+: zfs destroy -r zroot/jails/instances/<name>
+: service jail onestart <name>
+
+Datasets meant to outlive a reset belong under =zroot/jails/data/<name>=,
+and are given to the jail by adding them to its =zfs.dataset=.
 
 The jails may run bhyve. They see =/dev/vmmctl=, their VMs under
 =/dev/vmm=, =nmdm= consoles, and =tap= interfaces, by devfs ruleset 10

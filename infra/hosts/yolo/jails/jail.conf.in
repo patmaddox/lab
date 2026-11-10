@@ -8,6 +8,15 @@
   # Clone the jail from its template the first time it starts.
   exec.prepare = "/usr/local/libexec/yolo-jail-clone ${name} %TEMPLATE%";
 
+  # A ZFS dataset of its own, <name>/data under the jail's, so it goes
+  # when the jail is reset. It is made on the first start, with jailed
+  # on, so yolo never mounts it, and zfs.dataset gives it to the jail
+  # as it starts. The jail may make, mount, snapshot, and destroy
+  # datasets under it, and no others, so poudriere there can use ZFS.
+  allow.mount.zfs;
+  exec.prepare += "/sbin/zfs list -H zroot/jails/instances/${name}/data >/dev/null 2>&1 || /sbin/zfs create -o jailed=on -o mountpoint=none zroot/jails/instances/${name}/data";
+  zfs.dataset = "zroot/jails/instances/${name}/data";
+
   # The jail has its own network stack, on one end of an epair. The
   # other end joins bridge0, which puts the jail on yolo's /24.
   vnet;
@@ -20,6 +29,7 @@
   # and the host never writes into a jail's root.
   exec.start = "/sbin/ifconfig epair%HOST%b inet 10.200.0.%HOST%/24 up";
   exec.start += "/sbin/route add default 10.200.0.1";
+  exec.start += "/sbin/zfs mount -a";
   exec.start += "/bin/sh /etc/rc";
   exec.stop = "/bin/sh /etc/rc.shutdown jail";
   exec.clean;
