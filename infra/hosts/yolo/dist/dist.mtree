@@ -15,6 +15,7 @@
 ./etc/devfs.rules
 ./etc/fstab
 ./etc/hosts
+./etc/pf.conf
 ./etc/rc.conf
 ./etc/resolv.conf
 ./etc/ssh/authorized_keys/patmaddox

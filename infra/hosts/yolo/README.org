@@ -100,7 +100,8 @@ Each jail has its own network stack and its own /24,
 10.200.<number>.0/24, on an epair to yolo. yolo is .1 on its end and
 the jail is .2. yolo routes each jail's /24 and forwards it to rowdy,
 which routes all of 10.200.0.0/16 back to yolo. Jails share no network
-with each other, with yolo's link to rowdy, or with rowdy.
+with each other, with yolo's link to rowdy, or with rowdy, and pf on
+yolo drops what a jail sends from an address outside its /24.
 
 To set up the jails, as root on yolo:
 
