@@ -1,0 +1,10 @@
+# The devices of yolo's jails: those of any VNET jail, and bhyve's, so
+# an agent can run VMs in its jail. vmmctl makes VMs, each of which
+# appears under vmm/. nmdm gives them consoles, and tap networks.
+[devfsrules_yolo_jail=10]
+add include $devfsrules_jail_vnet
+add path vmmctl unhide
+add path vmm unhide
+add path 'vmm/*' unhide
+add path 'nmdm*' unhide
+add path 'tap*' unhide

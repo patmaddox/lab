@@ -24,7 +24,39 @@
   exec.stop = "/bin/sh /etc/rc.shutdown jail";
   exec.clean;
 
+  # Ruleset 10, from yolo's /etc/devfs.rules, shows a VNET jail's
+  # devices and bhyve's.
   mount.devfs;
-  devfs_ruleset = 5;
+  devfs_ruleset = 10;
   allow.raw_sockets;
+
+  # Each jail is an agent's workstation, where it has root, so it may do
+  # what a host's root may, short of what reaches past the jail: setting
+  # yolo's clock, its quotas, serving NFS from its kernel, or reading the
+  # kernel's messages, which carry other jails'.
+  enforce_statfs = 1;
+  allow.mount;
+  allow.mount.devfs;
+  allow.mount.fdescfs;
+  allow.mount.fusefs;
+  allow.mount.nullfs;
+  allow.mount.procfs;
+  allow.mount.tmpfs;
+  allow.chflags;
+  allow.extattr;
+  allow.mlock;
+  allow.reserved_ports;
+  allow.set_hostname;
+  allow.socket_af;
+  allow.unprivileged_proc_debug;
+  allow.vmm;
+
+  # SysV IPC of its own, as PostgreSQL and others need.
+  sysvmsg = new;
+  sysvsem = new;
+  sysvshm = new;
+
+  # Jails of its own, as poudriere makes one per builder. jail(8) has
+  # no unlimited, so allow more than any build will want.
+  children.max = 1000;
 }

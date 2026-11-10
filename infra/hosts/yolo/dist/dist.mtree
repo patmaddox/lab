@@ -12,6 +12,7 @@
 
 /set type=file mode=0644
 ./boot/loader.conf
+./etc/devfs.rules
 ./etc/fstab
 ./etc/hosts
 ./etc/rc.conf
