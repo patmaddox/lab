@@ -97,3 +97,6 @@ Jails run no sshd. To use one, sign in to yolo, and as root:
 
 The first start clones =zroot/jails/instances/<name>= from its
 template. To start a jail over, stop it and destroy that dataset.
+
+The jails' addresses:
+- lab-1, lab-2, and lab-3: 10.200.0.11 to .13
