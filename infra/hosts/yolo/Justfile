@@ -1,0 +1,10 @@
+help:
+  just -l
+
+# Build yolo's packages: one per tool in src/, and the jail configs
+pkg:
+  redo-ifchange $(ls src/*/all.do | sed 's/\.do$//') jails/all
+
+# Copy yolo's packages to /tmp on yolo, named for their versions
+push-pkg: pkg
+  ./tools/push-pkg.sh src/*/*.pkg jails/*.pkg
