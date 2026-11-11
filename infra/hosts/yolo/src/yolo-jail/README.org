@@ -52,3 +52,13 @@ It points each repo's =HEAD= at =<branch>=, the branch a clone checks
 out, every time it runs, so changing the branch and running it again
 changes it on yolo. It prints each repo it makes and each =HEAD= it
 changes.
+
+* Git
+
+: yolo-jail-git <name> <owner>/<repo>
+
+=yolo-jail-git= makes =zroot/git/jails/<name>=, if it is missing,
+which holds the jail's own repos and belongs to the agent, uid 15000.
+It refuses if the jail's upstream repo, =/git/<owner>/<repo>.git=, is
+missing; =yolo-git-init= makes it. A jail's config runs it as
+=exec.prepare=.

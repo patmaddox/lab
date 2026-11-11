@@ -31,11 +31,12 @@ as_user() {
 }
 
 # Names go into commands run as the user, so allow only plain ones.
+# jails is where the jails' own repos go, so no owner may take it.
 for arg in "${@}"; do
 	repo=${arg%%:*}
 	branch=${arg#*:}
 	case ${repo} in
-	.*|*/.*|*/*/*|*[!A-Za-z0-9._/-]*) usage ;;
+	jails/*|.*|*/.*|*/*/*|*[!A-Za-z0-9._/-]*) usage ;;
 	?*/?*) ;;
 	*) usage ;;
 	esac

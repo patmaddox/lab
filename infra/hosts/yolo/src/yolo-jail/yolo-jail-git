@@ -1,0 +1,41 @@
+#!/bin/sh
+set -eu
+
+# yolo-jail-git name repo: make the dataset that holds a jail's own git
+# repos, unless it exists. repo is <owner>/<repo>, the upstream repo
+# /git/<owner>/<repo>.git that the jail clones, which yolo-git-init
+# makes. jail.conf runs this as exec.prepare.
+
+readonly zroot=zroot/git/jails
+# The agent user of the coding-agent template, from its conf.
+readonly agent=15000
+
+usage() {
+	echo "usage: yolo-jail-git name owner/repo" >&2
+	exit 64
+}
+
+[ ${#} -eq 2 ] || usage
+readonly name=${1} repo=${2}
+
+# jails is where the jails' own repos go, so no owner may take it.
+case ${repo} in
+jails/*|.*|*/.*|*/*/*|*[!A-Za-z0-9._/-]*) usage ;;
+?*/?*) ;;
+*) usage ;;
+esac
+
+if [ ! -d /git/${repo}.git ]; then
+	echo "E: no /git/${repo}.git; make it with yolo-git-init" >&2
+	exit 1
+fi
+
+exists() {
+	zfs list -H -o name ${1} >/dev/null 2>&1
+}
+
+exists ${zroot} || zfs create ${zroot}
+if ! exists ${zroot}/${name}; then
+	zfs create ${zroot}/${name}
+	chown ${agent}:${agent} /git/jails/${name}
+fi
