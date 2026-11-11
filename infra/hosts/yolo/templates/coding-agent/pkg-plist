@@ -1,6 +1,7 @@
 @comment Each file and symlink the package installs, from dist/. They
 @comment belong to root:wheel, with the mode set here.
 @mode 0644
+/usr/local/etc/claude-code/CLAUDE.md
 /usr/local/etc/claude-code/managed-settings.d/eat.json
 /usr/local/etc/claude-code/managed-settings.d/prefs.json
 /usr/local/etc/gitconfig

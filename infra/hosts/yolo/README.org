@@ -144,6 +144,7 @@ Its =pkg-plist= lists its files:
 @comment Each file and symlink the package installs, from dist/. They
 @comment belong to root:wheel, with the mode set here.
 @mode 0644
+/usr/local/etc/claude-code/CLAUDE.md
 /usr/local/etc/claude-code/managed-settings.d/eat.json
 /usr/local/etc/claude-code/managed-settings.d/prefs.json
 /usr/local/etc/gitconfig
@@ -163,6 +164,13 @@ unless =@owner= and =@group= say otherwise, and a line such as
 and mode. A symlink is a symlink in =dist/=, listed like a file. To add
 a package or a file to every =coding-agent= jail, add it here, run
 =just push-pkg=, and upgrade each jail.
+
+Its =CLAUDE.md= is Claude Code's managed memory, which every session
+reads first. It is what a new developer would be told on day one: that
+the jail is their workstation, where they have root and work on their
+own, which repos under =/git= are upstream and which are the agent's,
+and that they should isolate their work in child jails, or in bhyve
+VMs when jails won't do.
 
 Its Claude Code settings suit a session in Emacs's eat, which keeps
 the scrollback. =managed-settings.d/eat.json= turns on screen-reader
