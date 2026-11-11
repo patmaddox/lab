@@ -1,0 +1,30 @@
+#!/bin/sh
+set -eu
+
+# yolo-jail-repo name repo: in the running jail, as its agent, make a
+# bare repo of the agent's own at /git/agent/<owner>/<repo>.git, for
+# its work, unless it exists. jail.conf runs this as exec.poststart.
+#
+# git runs only in the jail, so nothing the jail has written runs on
+# yolo.
+
+usage() {
+	echo "usage: yolo-jail-repo name owner/repo" >&2
+	exit 64
+}
+
+[ ${#} -eq 2 ] || usage
+readonly name=${1} repo=${2}
+
+# repo goes into a command run in the jail, so allow only plain names.
+case ${repo} in
+jails/*|.*|*/.*|*/*/*|*[!A-Za-z0-9._/-]*) usage ;;
+?*/?*) ;;
+*) usage ;;
+esac
+
+readonly own=/git/agent/${repo}.git
+
+jexec -l -U agent ${name} sh -euc "
+	[ -d ${own} ] || git init -q --bare ${own}
+"

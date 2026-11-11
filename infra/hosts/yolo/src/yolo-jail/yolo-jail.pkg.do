@@ -13,6 +13,7 @@ files="
 0555 yolo-jail-clone /usr/local/libexec/yolo-jail-clone
 0555 yolo-git-init /usr/local/sbin/yolo-git-init
 0555 yolo-jail-git /usr/local/libexec/yolo-jail-git
+0555 yolo-jail-repo /usr/local/libexec/yolo-jail-repo
 0444 templates/coding-agent.conf /usr/local/share/${name}/templates/coding-agent.conf
 0444 templates/coding-agent.files/usr/local/etc/gitconfig /usr/local/share/${name}/templates/coding-agent.files/usr/local/etc/gitconfig
 "

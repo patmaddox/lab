@@ -69,3 +69,11 @@ It then makes the jail's mountpoints for the repos,
 =git/<owner>/<repo>.git= and =git/agent= under the jail's root. The
 jail's root may have turned a directory on the way into a symlink,
 which mkdir would follow out of the jail, so it refuses those.
+
+: yolo-jail-repo <name> <owner>/<repo>
+
+=yolo-jail-repo= makes a bare repo of the jail's agent's own, at
+=/git/agent/<owner>/<repo>.git=, for its work, unless it exists. It
+runs git in the jail, as the agent, so nothing the jail has written
+runs on yolo. A jail's config runs it as =exec.poststart=, so every
+start makes it if it is missing.

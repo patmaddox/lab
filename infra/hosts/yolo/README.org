@@ -153,6 +153,9 @@ It runs =doas yolo-git-init= on yolo, as yolo-jail's README says, so
 the repos belong to you there. Run it again after changing =repos=. A
 jail's first start makes the dataset for its own repos.
 
+Once a jail starts, its agent has a bare repo of its own for its
+work, at =/git/agent/<owner>/<repo>.git=. yolo-jail's README says how.
+
 The jails may run bhyve. They see =/dev/vmmctl=, their VMs under
 =/dev/vmm=, =nmdm= consoles, and =tap= interfaces, by devfs ruleset 10
 in =dist/etc/devfs.rules=. A VM's network is the jail's to arrange.
