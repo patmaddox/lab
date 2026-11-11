@@ -1,0 +1,75 @@
+#!/bin/sh
+set -eu
+
+# yolo-git-init repo:branch ...: make each upstream repo that jails
+# clone, /git/<owner>/<repo>.git, and the datasets that hold it, those
+# that are missing, and point its HEAD at branch, the branch a clone
+# checks out. Run it with doas, and they belong to the user who ran
+# it, whatever their owner namespace.
+
+readonly zroot=zroot/git
+
+usage() {
+	echo "usage: doas yolo-git-init owner/repo:branch ..." >&2
+	exit 64
+}
+
+[ ${#} -gt 0 ] || usage
+
+# doas names the user who ran it in DOAS_USER, whatever the rule.
+readonly user=${DOAS_USER:-}
+if [ -z "${user}" ] || [ "${user}" = root ]; then
+	echo "E: run with doas, as the user the repos belong to" >&2
+	exit 1
+fi
+
+home=$(getent passwd ${user} | cut -d: -f6)
+readonly home
+
+as_user() {
+	HOME=${home} su -m ${user} -c "${1}"
+}
+
+# Names go into commands run as the user, so allow only plain ones.
+for arg in "${@}"; do
+	repo=${arg%%:*}
+	branch=${arg#*:}
+	case ${repo} in
+	.*|*/.*|*/*/*|*[!A-Za-z0-9._/-]*) usage ;;
+	?*/?*) ;;
+	*) usage ;;
+	esac
+	case ${branch} in
+	"${arg}"|-*|*[!A-Za-z0-9._/-]*) usage ;;
+	esac
+	as_user "git check-ref-format refs/heads/${branch}" || usage
+done
+
+exists() {
+	zfs list -H -o name ${1} >/dev/null 2>&1
+}
+
+# Nothing under /git runs, so a jail cannot leave anything there for
+# yolo to run.
+exists ${zroot} ||
+    zfs create -o mountpoint=/git -o exec=off -o setuid=off ${zroot}
+
+for arg in "${@}"; do
+	repo=${arg%%:*}
+	branch=${arg#*:}
+	owner=${repo%/*}
+	dir=/git/${repo}.git
+	if ! exists ${zroot}/${owner}; then
+		zfs create ${zroot}/${owner}
+		chown ${user}:${user} /git/${owner}
+	fi
+	if [ ! -d ${dir} ]; then
+		as_user "git init -q --bare -b ${branch} ${dir}"
+		echo "${dir}"
+	fi
+	if [ "$(as_user "git -C ${dir} symbolic-ref HEAD")" != \
+	    refs/heads/${branch} ]; then
+		as_user "git -C ${dir} symbolic-ref HEAD refs/heads/${branch}"
+		echo "${dir}: HEAD is ${branch}"
+	fi
+done

@@ -11,6 +11,7 @@ version="0.0.0"
 files="
 0555 yolo-jail-template /usr/local/sbin/yolo-jail-template
 0555 yolo-jail-clone /usr/local/libexec/yolo-jail-clone
+0555 yolo-git-init /usr/local/sbin/yolo-git-init
 0444 templates/coding-agent.conf /usr/local/share/${name}/templates/coding-agent.conf
 "
 

@@ -36,3 +36,19 @@ it and its clones first.
 template's =@ready= snapshot, unless it exists. A jail's config runs
 it as =exec.prepare=, so the first start creates the jail. Only the
 admin destroys a jail, to start it over.
+
+* Repos
+
+: doas yolo-git-init <owner>/<repo>:<branch> ...
+
+=yolo-git-init= makes each upstream repo that jails clone,
+=/git/<owner>/<repo>.git=, and the datasets that hold it, those that
+are missing. =zroot/git=, mounted at =/git=, has =exec=off= and
+=setuid=off=, so nothing there runs. =zroot/git/<owner>= holds an
+owner's repos. Both it and the repos belong to the user who ran
+=doas=, and it makes the repos as that user, so no git runs as root.
+
+It points each repo's =HEAD= at =<branch>=, the branch a clone checks
+out, every time it runs, so changing the branch and running it again
+changes it on yolo. It prints each repo it makes and each =HEAD= it
+changes.
