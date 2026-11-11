@@ -22,6 +22,8 @@ As root on yolo:
 =yolo-jail-template= creates =zroot/jails=, mounted at =/jails=, if it
 is missing. It installs base and the template's packages and users,
 from =templates/<name>.conf=, into =zroot/jails/templates/<name>=.
+Then it copies =templates/<name>.files=, if there is one, over the
+template's root, so =coding-agent= gets its =/usr/local/etc/gitconfig=.
 Each user gets unrestricted =doas=. Then it takes the snapshot
 =@ready= that jails are cloned from.
 

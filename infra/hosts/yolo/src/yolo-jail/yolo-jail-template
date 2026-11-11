@@ -72,6 +72,12 @@ if [ -n "$(echo ${packages})" ]; then
 	umount ${root}/dev
 fi
 
+# The template's own files, from templates/<name>.files, go over the
+# root as they are, after the packages so none replaces them.
+if [ -d ${share}/templates/${name}.files ]; then
+	cp -R ${share}/templates/${name}.files/ ${root}/
+fi
+
 # users: one user:uid per line. Each gets a group of the same name and
 # id, and unrestricted doas.
 echo "${users}" | while IFS=: read -r user uid; do
