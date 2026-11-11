@@ -1,0 +1,5 @@
+# The upstream repos on yolo, which jails clone. Each line: the repo, as
+# <owner>/<repo> under /git, and its default branch, which a clone
+# checks out. just git-init makes them on yolo.
+patmaddox/lab trunk
+rxv/devops main

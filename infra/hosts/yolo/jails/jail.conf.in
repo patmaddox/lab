@@ -17,6 +17,14 @@
   exec.prepare += "/sbin/zfs list -H zroot/jails/instances/${name}/data >/dev/null 2>&1 || /sbin/zfs create -o jailed=on -o mountpoint=none zroot/jails/instances/${name}/data";
   zfs.dataset = "zroot/jails/instances/${name}/data";
 
+  # Its repo, read-only at the same path as on yolo, so it clones but
+  # never writes it. Its own repos, read-write at /git/agent, where
+  # beastie fetches them. jail(8) refuses a mountpoint with a symlink
+  # below the jail's path, so the jail cannot point a mount out of it.
+  exec.prepare += "/usr/local/libexec/yolo-jail-git ${name} %REPO%";
+  mount += "/git/%REPO%.git ${path}/git/%REPO%.git nullfs ro 0 0";
+  mount += "/git/jails/${name} ${path}/git/agent nullfs rw 0 0";
+
   # The jail has its own network stack, on one end of an epair, and a
   # /24 of its own, 10.200.%HOST%.0/24. yolo is .1 on the other end and
   # routes it; the jail is .2.

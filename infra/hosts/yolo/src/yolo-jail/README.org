@@ -62,3 +62,8 @@ which holds the jail's own repos and belongs to the agent, uid 15000.
 It refuses if the jail's upstream repo, =/git/<owner>/<repo>.git=, is
 missing; =yolo-git-init= makes it. A jail's config runs it as
 =exec.prepare=.
+
+It then makes the jail's mountpoints for the repos,
+=git/<owner>/<repo>.git= and =git/agent= under the jail's root. The
+jail's root may have turned a directory on the way into a symlink,
+which mkdir would follow out of the jail, so it refuses those.

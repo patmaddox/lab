@@ -14,9 +14,9 @@ stagedir=$(mktemp -d)
 trap "rm -rf ${stagedir}" EXIT
 
 mkdir -p "${stagedir}/etc/jail.conf.d"
-grep -v -e '^#' -e '^$' instances | while read -r jail template host; do
+grep -v -e '^#' -e '^$' instances | while read -r jail template host repo; do
 	sed -e "s/%NAME%/${jail}/g" -e "s/%TEMPLATE%/${template}/g" \
-	    -e "s/%HOST%/${host}/g" jail.conf.in \
+	    -e "s/%HOST%/${host}/g" -e "s|%REPO%|${repo}|g" jail.conf.in \
 	    > "${stagedir}/etc/jail.conf.d/${jail}.conf"
 done
 

@@ -136,6 +136,23 @@ it, and start it again:
 Datasets meant to outlive a reset belong under =zroot/jails/data/<name>=,
 and are given to the jail by adding them to its =zfs.dataset=.
 
+Each jail gets one git repo, which =jails/instances= names as
+=<owner>/<repo>=. yolo keeps it at =/git/<owner>/<repo>.git=, and the
+jail sees it there too, read-only. The jail's own repos are at
+=/git/agent= in the jail and =/git/jails/<name>= on yolo, read-write.
+Both are outside =zroot/jails/instances=, so a reset keeps them. A
+jail does not start until its repo exists.
+
+=repos= lists the repos, each with its default branch, which a clone
+checks out, and must list each repo that =jails/instances= names. On
+beastie, make those that are missing and set their default branches:
+
+: just git-init
+
+It runs =doas yolo-git-init= on yolo, as yolo-jail's README says, so
+the repos belong to you there. Run it again after changing =repos=. A
+jail's first start makes the dataset for its own repos.
+
 The jails may run bhyve. They see =/dev/vmmctl=, their VMs under
 =/dev/vmm=, =nmdm= consoles, and =tap= interfaces, by devfs ruleset 10
 in =dist/etc/devfs.rules=. A VM's network is the jail's to arrange.
