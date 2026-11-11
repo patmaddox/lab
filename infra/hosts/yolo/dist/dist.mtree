@@ -25,4 +25,5 @@
 ./etc/ssh/sshd_config
 ./etc/sysctl.conf
 ./etc/ttys
+./usr/local/etc/doas.conf
 ./usr/local/etc/pkg/repos/FreeBSD.conf
