@@ -1,6 +1,7 @@
 #+TITLE: yolo-jail - jails for agents on yolo
 
-yolo-jail creates yolo's jails from their templates' packages.
+yolo-jail creates yolo's jails from their templates' packages, and
+upgrades them.
 
 * Build
 
@@ -67,6 +68,16 @@ jail.conf can mount something there. A jail's config runs it as
 mountpoint too. The jail's root may have turned a directory on the
 way into a symlink, which mkdir would follow out of the jail, so it
 refuses those.
+
+* Upgrade
+
+: yolo-jail-upgrade [-a] <name>
+
+=yolo-jail-upgrade= upgrades the =yolo-= packages in a running jail,
+and whatever their new versions need. With =-a=, it upgrades all of
+the jail's packages, including FreeBSD's base. It runs pkg in the
+jail with =jexec=, so nothing the jail has written runs on yolo.
+Nothing runs it on its own.
 
 * Repos
 

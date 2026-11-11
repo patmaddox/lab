@@ -34,3 +34,7 @@ pkg-init:
 push-templates:
   redo-ifchange templates/all
   ./tools/push-templates.sh templates/*.pkg
+
+# Upgrade a running jail's template package, or with -a all its packages
+upgrade-jail name *flags:
+  ssh yolo.p7x.dev doas yolo-jail-upgrade {{flags}} {{name}}

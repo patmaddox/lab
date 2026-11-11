@@ -10,7 +10,7 @@ set -eu
 # It installs yolo-<template> with pkg --chroot, so its scripts run as
 # yolo's root in a chroot, which is no jail. That is safe only because
 # the root is new. yolo never runs pkg on a root a jail has run in, so
-# an upgrade goes through jexec.
+# yolo-jail-upgrade goes through jexec.
 
 readonly zroot=zroot/jails
 readonly repo=/pkg/yolo

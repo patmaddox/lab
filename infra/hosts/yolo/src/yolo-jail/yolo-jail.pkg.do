@@ -12,6 +12,7 @@ files="
 0555 yolo-pkg-init /usr/local/sbin/yolo-pkg-init
 0555 yolo-jail-create /usr/local/libexec/yolo-jail-create
 0555 yolo-jail-create-mountpoints /usr/local/libexec/yolo-jail-create-mountpoints
+0555 yolo-jail-upgrade /usr/local/sbin/yolo-jail-upgrade
 0555 yolo-git-init /usr/local/sbin/yolo-git-init
 0555 yolo-jail-git /usr/local/libexec/yolo-jail-git
 0555 yolo-jail-repo /usr/local/libexec/yolo-jail-repo
@@ -35,14 +36,14 @@ cat > "${manifest}" <<EOM
 name: ${name}
 version: ${version}
 origin: local/${name}
-comment: Create yolo's jails
+comment: Create and upgrade yolo's jails
 maintainer: pat@patmaddox.com
 prefix: /
 www: https://git.sr.ht/~patmaddox/lab/tree/trunk/item/infra/hosts/yolo/src/yolo-jail
 flatsize: ${flatsize}
 desc: <<EOD
-Create yolo's jails from their templates' packages. See
-infra/hosts/yolo/src/yolo-jail/README.org.
+Create yolo's jails from their templates' packages, and upgrade
+them. See infra/hosts/yolo/src/yolo-jail/README.org.
 EOD
 files: {
 $(echo "${files}" | awk 'NF { print "  " $3 ": \"-\"" }')

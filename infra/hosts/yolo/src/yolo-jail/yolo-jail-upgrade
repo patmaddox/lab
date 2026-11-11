@@ -1,0 +1,41 @@
+#!/bin/sh
+set -eu
+
+# yolo-jail-upgrade [-a] name: upgrade the yolo- packages in a running
+# jail, and whatever their new versions need, or with -a all of its
+# packages, including FreeBSD's base. pkg runs in the jail, by jexec,
+# so nothing the jail has written runs on yolo.
+
+usage() {
+	echo "usage: yolo-jail-upgrade [-a] name" >&2
+	exit 64
+}
+
+all=false
+while getopts a opt; do
+	case ${opt} in
+	a) all=true ;;
+	*) usage ;;
+	esac
+done
+shift $((OPTIND - 1))
+
+[ ${#} -eq 1 ] || usage
+readonly name=${1}
+
+if ! jls -j ${name} jid >/dev/null 2>&1; then
+	echo "E: jail ${name} is not running" >&2
+	exit 1
+fi
+
+if ${all}; then
+	exec jexec -l ${name} env ASSUME_ALWAYS_YES=yes pkg upgrade
+fi
+exec jexec -l ${name} sh -euc '
+	pkgs=$(pkg query -g %n "yolo-*")
+	if [ -z "${pkgs}" ]; then
+		echo "E: no yolo- packages installed" >&2
+		exit 1
+	fi
+	ASSUME_ALWAYS_YES=yes pkg upgrade ${pkgs}
+'
