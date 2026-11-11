@@ -167,3 +167,38 @@ should come from outside 10.200.0.0/16.
 The jails' networks:
 - lab-1, lab-2, and lab-3: 10.200.11.0/24 to 10.200.13.0/24
 - devops-1, devops-2, and devops-3: 10.200.21.0/24 to 10.200.23.0/24
+
+* Git
+
+beastie pushes repos to yolo and fetches the agents' work from the
+jails' own repos, all over ssh as patmaddox. yolo holds no credentials
+for them, and no git runs as root.
+
+Make the repos that =repos= lists before their jails first start, and
+again after changing =repos=:
+
+: just git-init
+
+In the repo on beastie, add yolo, and each jail that has the repo:
+
+: jj git remote add yolo patmaddox@yolo.p7x.dev:/git/patmaddox/lab.git
+: jj git remote add lab-1 patmaddox@yolo.p7x.dev:/git/jails/lab-1/patmaddox/lab.git
+
+Then push to yolo, and fetch from the jails:
+
+: jj git push --remote yolo -b trunk
+: jj git fetch --remote lab-1
+
+In the jail, as agent, clone the repo, and add the agent's own repo,
+which beastie fetches from, as a remote to push to:
+
+: git clone /git/patmaddox/lab.git ~/lab
+: cd ~/lab
+: git remote add agent /git/agent/patmaddox/lab.git
+: git push agent <branch>
+
+A jail's repo is the jail's to write, so treat what beastie fetches
+from it as untrusted. jj does not track a new remote bookmark, so a
+jail that pushes trunk leaves beastie's trunk alone, as trunk@lab-1.
+Read a bookmark's diff before checking it out on beastie. Files such
+as =.claude/=, =CLAUDE.md=, =Justfile=, and =*.do= run code there.
