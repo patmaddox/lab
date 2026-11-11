@@ -1,0 +1,4 @@
+@comment Each file the package installs, from dist/.
+@mode 0644
+/usr/local/etc/pkg/repos/FreeBSD.conf
+/usr/local/etc/pkg/repos/yolo.conf

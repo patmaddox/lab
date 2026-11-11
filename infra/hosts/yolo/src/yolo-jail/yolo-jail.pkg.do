@@ -10,6 +10,7 @@ version="0.0.0"
 # Each line: mode, source, and path in the package.
 files="
 0555 yolo-jail-template /usr/local/sbin/yolo-jail-template
+0555 yolo-pkg-init /usr/local/sbin/yolo-pkg-init
 0555 yolo-jail-clone /usr/local/libexec/yolo-jail-clone
 0555 yolo-jail-create-mountpoints /usr/local/libexec/yolo-jail-create-mountpoints
 0555 yolo-git-init /usr/local/sbin/yolo-git-init

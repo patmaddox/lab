@@ -1,0 +1,32 @@
+#!/bin/sh
+set -eu
+
+# yolo-pkg-init: make zroot/pkg/yolo, mounted at /pkg/yolo, which holds
+# the pkg repository of the templates' packages, and zroot/pkg, those
+# that are missing. Run it with doas, and the repository belongs to the
+# user who ran it, who copies it there. Root never writes it.
+
+readonly zroot=zroot/pkg
+
+[ ${#} -eq 0 ] || { echo "usage: doas yolo-pkg-init" >&2; exit 64; }
+
+# doas names the user who ran it in DOAS_USER, whatever the rule.
+readonly user=${DOAS_USER:-}
+if [ -z "${user}" ] || [ "${user}" = root ]; then
+	echo "E: run with doas, as the user the repository belongs to" >&2
+	exit 1
+fi
+
+exists() {
+	zfs list -H -o name ${1} >/dev/null 2>&1
+}
+
+# Nothing under /pkg runs on yolo.
+exists ${zroot} ||
+    zfs create -o mountpoint=/pkg -o exec=off -o setuid=off ${zroot}
+
+if ! exists ${zroot}/yolo; then
+	zfs create ${zroot}/yolo
+	chown ${user}:${user} /pkg/yolo
+	echo "/pkg/yolo"
+fi

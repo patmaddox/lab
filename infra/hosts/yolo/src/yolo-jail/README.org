@@ -13,6 +13,17 @@ Copy =yolo-jail.pkg= to yolo, then as root:
 
 : pkg add yolo-jail.pkg
 
+* Repository
+
+: doas yolo-pkg-init
+
+=yolo-pkg-init= makes =zroot/pkg=, mounted at =/pkg=, and
+=zroot/pkg/yolo= in it, those that are missing. =/pkg/yolo= holds the
+pkg repository of the templates' packages. =zroot/pkg= has =exec=off=
+and =setuid=off=, so nothing there runs. =/pkg/yolo= belongs to the
+user who ran =doas=, who copies the repository there. Root never
+writes it.
+
 * Templates
 
 As root on yolo:

@@ -1,0 +1,4 @@
+@comment Each file and symlink the package installs, from dist/. They
+@comment belong to root:wheel, with the mode set here.
+@mode 0644
+/usr/local/etc/gitconfig

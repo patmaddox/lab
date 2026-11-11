@@ -93,6 +93,81 @@ The =coding-agent= template is for jails that coding agents run in.
 It has an =agent= user with unrestricted =doas=, so the agent
 installs whatever else it needs.
 
+Each template is also a package. =templates/= holds the packages for
+jails, one directory each, and =templates/<name>= builds the package
+=yolo-<name>=. It has three parts:
+
+- =<name>.conf=, a shell fragment that sets =comment=, =packages=, the
+  names of the packages it depends on, and =users=, one =<user>:<uid>=
+  per line.
+- =pkg-plist=, pkg's own list of the files and symlinks the package
+  installs, with their owners and modes. See pkg-create(8).
+- =dist/=, which holds them in the shape of the jail's root, as yolo's
+  own =dist/= does for the BE.
+
+pkg builds the package straight from =dist/=, with
+=pkg create -p pkg-plist -r dist=, and only what the plist lists goes
+in. On install and upgrade, the package makes each of its users that
+is missing, with a group of the same name and id and unrestricted
+=doas=.
+
+=templates/pkg-repos= is no template. Its package, =yolo-pkg-repos=,
+holds the jails' pkg repository configs: FreeBSD's, as yolo has them,
+and one for =yolo=. Every template depends on it.
+
+The =coding-agent= template's conf,
+=templates/coding-agent/coding-agent.conf=, is:
+
+#+begin_src sh
+# Template for jails that coding agents run in. The agent has doas, so
+# it installs whatever else it needs. git is here because every jail
+# clones its repo from /git. pkg and yolo-pkg-repos are here so the
+# jail can upgrade itself from the repositories.
+
+comment="Template for yolo's coding-agent jails"
+
+packages="
+pkg
+yolo-pkg-repos
+git
+doas
+"
+
+users="
+agent:15000
+"
+#+end_src
+
+Its =pkg-plist= lists its one file:
+
+#+begin_src text
+@comment Each file and symlink the package installs, from dist/. They
+@comment belong to root:wheel, with the mode set here.
+@mode 0644
+/usr/local/etc/gitconfig
+#+end_src
+
+The package installs =dist/usr/local/etc/gitconfig= at
+=/usr/local/etc/gitconfig= in the jail. Files belong to root:wheel
+unless =@owner= and =@group= say otherwise, and a line such as
+=@(root,wheel,0600) /usr/local/etc/foo= sets one file's owner, group,
+and mode. A symlink is a symlink in =dist/=, listed like a file.
+
+The packages live in a pkg repository on yolo, at =/pkg/yolo=, outside
+the BE. It belongs to you, and =yolo-pkg-repos= names it =yolo=. On
+beastie, make it once:
+
+: just pkg-init
+
+Then build the packages, and sync the repository to yolo with rsync,
+deleting what it no longer holds:
+
+: just push-templates
+
+A package is versioned by the time it was built. redo rebuilds it only
+when its conf, its plist, or a file the plist lists changes, so its
+version moves only when it does.
+
 The =yolo-jails= package, from =jails/=, installs each jail's config
 in =/etc/jail.conf.d=. =jails/instances= lists the jails, each with
 its template and its number. =jails/jail.conf.in= is the config they

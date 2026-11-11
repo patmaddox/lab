@@ -23,3 +23,14 @@ deploy-be:
 # the user you sign in to yolo as, and set their default branches
 git-init:
   ssh yolo.p7x.dev doas yolo-git-init $(awk '!/^#/ && NF { print $1 ":" $2 }' repos)
+
+# Make the templates' package repository on yolo, if it is missing, as
+# the user you sign in to yolo as
+pkg-init:
+  ssh yolo.p7x.dev doas yolo-pkg-init
+
+# Build the templates' packages and copy their repository to yolo,
+# replacing what is there
+push-templates:
+  redo-ifchange templates/all
+  ./tools/push-templates.sh templates/*.pkg
