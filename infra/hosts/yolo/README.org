@@ -92,8 +92,8 @@ It has an =agent= user with unrestricted =doas=, so the agent
 installs whatever else it needs.
 
 The =yolo-jails= package, from =jails/=, installs each jail's config
-in =/etc/jail.conf.d=. =jails/jails= lists the jails, each with its
-template and its number. =jails/jail.conf.in= is the config they
+in =/etc/jail.conf.d=. =jails/instances= lists the jails, each with
+its template and its number. =jails/jail.conf.in= is the config they
 share.
 
 Each jail has its own network stack and its own /24,

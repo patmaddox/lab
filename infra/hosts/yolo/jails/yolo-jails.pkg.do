@@ -2,19 +2,19 @@
 set -eu
 
 # Build the package of yolo's jail configs, one in /etc/jail.conf.d
-# for each line of jails, made from jail.conf.in.
+# for each line of instances, made from jail.conf.in.
 # Install on yolo, as root, with: pkg add yolo-jails.pkg
 
 name="yolo-jails"
 version="0.0.0"
 
-redo-ifchange jails jail.conf.in
+redo-ifchange instances jail.conf.in
 
 stagedir=$(mktemp -d)
 trap "rm -rf ${stagedir}" EXIT
 
 mkdir -p "${stagedir}/etc/jail.conf.d"
-grep -v -e '^#' -e '^$' jails | while read -r jail template host; do
+grep -v -e '^#' -e '^$' instances | while read -r jail template host; do
 	sed -e "s/%NAME%/${jail}/g" -e "s/%TEMPLATE%/${template}/g" \
 	    -e "s/%HOST%/${host}/g" jail.conf.in \
 	    > "${stagedir}/etc/jail.conf.d/${jail}.conf"
