@@ -9,6 +9,11 @@ pkg:
 push-pkg: pkg
   ./tools/push-pkg.sh src/*/*.pkg jails/*.pkg
 
+# Copy yolo's packages to yolo and install them, replacing what is
+# installed, since their versions do not change
+install-pkg: push-pkg
+  ssh yolo.p7x.dev doas pkg add -f $(for p in src/*/*.pkg jails/*.pkg; do echo /tmp/$(pkg query -F $p %n-%v).pkg; done)
+
 # Import the BE on yolo as yolo-<release>-<date>-new, and activate -t it
 deploy-be:
   redo-ifchange yolo.be.zfs

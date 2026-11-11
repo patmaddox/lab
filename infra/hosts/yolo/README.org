@@ -85,7 +85,9 @@ README says how. The BE carries yolo's packages, one per tool in
 =src/= and the jail configs. To try a change to one without a new BE,
 =just push-pkg= builds them and copies them to =/tmp= on yolo, each
 named =<name>-<version>.pkg=, where =pkg add= of one finds its
-dependencies beside it. The next upgrade replaces what it added.
+dependencies beside it. =just install-pkg= also installs them all,
+replacing the ones installed, which have the same versions. The next
+upgrade replaces what either added.
 
 The =coding-agent= template is for jails that coding agents run in.
 It has an =agent= user with unrestricted =doas=, so the agent
