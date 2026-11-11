@@ -1,0 +1,13 @@
+{
+  "axScreenReader": true,
+  "tui": "default",
+  "prefersReducedMotion": true,
+  "spinnerTipsEnabled": false,
+  "promptSuggestionEnabled": false,
+  "terminalProgressBarEnabled": false,
+  "disableAgentView": true,
+  "env": {
+    "CLAUDE_CODE_DISABLE_MOUSE": "1",
+    "CLAUDE_CODE_DISABLE_TERMINAL_TITLE": "1"
+  }
+}

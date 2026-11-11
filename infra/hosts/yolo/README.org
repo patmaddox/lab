@@ -138,13 +138,21 @@ agent:15000
 "
 #+end_src
 
-Its =pkg-plist= lists its one file:
+Its =pkg-plist= lists its files:
 
 #+begin_src text
 @comment Each file and symlink the package installs, from dist/. They
 @comment belong to root:wheel, with the mode set here.
 @mode 0644
+/usr/local/etc/claude-code/managed-settings.d/eat.json
 /usr/local/etc/gitconfig
+@comment Claude Code reads its managed settings only from
+@comment /etc/claude-code, so point that at them.
+/etc/claude-code
+@comment The settings' directories, which pkg removes once they are
+@comment empty. @mode does not suit them, so they set their own.
+@dir(root,wheel,0755) /usr/local/etc/claude-code/managed-settings.d
+@dir(root,wheel,0755) /usr/local/etc/claude-code
 #+end_src
 
 The package installs =dist/usr/local/etc/gitconfig= at
@@ -154,6 +162,23 @@ unless =@owner= and =@group= say otherwise, and a line such as
 and mode. A symlink is a symlink in =dist/=, listed like a file. To add
 a package or a file to every =coding-agent= jail, add it here, run
 =just push-pkg=, and upgrade each jail.
+
+Its Claude Code settings suit a session in Emacs's eat, which keeps
+the scrollback. =managed-settings.d/eat.json= turns on screen-reader
+mode, whose flat text copies cleanly, and the classic renderer, which
+writes to the terminal's own screen rather than an alternate one with
+scrollback of its own. It turns off animations, spinner tips, prompt
+suggestions, progress and title escapes, mouse hints, and agent view.
+Managed settings outrank the user's own, and their =env= outranks the
+environment. To try a session without screen-reader mode:
+
+: CLAUDE_AX_SCREEN_READER=0 claude
+
+Claude Code reads managed settings only from =/etc/claude-code=. The
+template keeps them in =/usr/local/etc/claude-code=, and its =dist/=
+holds a symlink at =/etc/claude-code= that points there. Its plist
+lists the settings' directories with =@dir=, so pkg removes them once
+they are empty.
 
 The packages live in a pkg repository on yolo, at =/pkg/yolo=, outside
 the BE, with yolo's own. It belongs to you. yolo installs its own
