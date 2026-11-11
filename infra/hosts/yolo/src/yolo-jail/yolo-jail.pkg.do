@@ -9,15 +9,12 @@ version="0.0.0"
 
 # Each line: mode, source, and path in the package.
 files="
-0555 yolo-jail-template /usr/local/sbin/yolo-jail-template
 0555 yolo-pkg-init /usr/local/sbin/yolo-pkg-init
-0555 yolo-jail-clone /usr/local/libexec/yolo-jail-clone
+0555 yolo-jail-create /usr/local/libexec/yolo-jail-create
 0555 yolo-jail-create-mountpoints /usr/local/libexec/yolo-jail-create-mountpoints
 0555 yolo-git-init /usr/local/sbin/yolo-git-init
 0555 yolo-jail-git /usr/local/libexec/yolo-jail-git
 0555 yolo-jail-repo /usr/local/libexec/yolo-jail-repo
-0444 templates/coding-agent.conf /usr/local/share/${name}/templates/coding-agent.conf
-0444 templates/coding-agent.files/usr/local/etc/gitconfig /usr/local/share/${name}/templates/coding-agent.files/usr/local/etc/gitconfig
 "
 
 redo-ifchange $(echo "${files}" | awk 'NF { print $2 }')
@@ -38,14 +35,14 @@ cat > "${manifest}" <<EOM
 name: ${name}
 version: ${version}
 origin: local/${name}
-comment: Build and clone the ZFS templates of yolo's jails
+comment: Create yolo's jails
 maintainer: pat@patmaddox.com
 prefix: /
 www: https://git.sr.ht/~patmaddox/lab/tree/trunk/item/infra/hosts/yolo/src/yolo-jail
 flatsize: ${flatsize}
 desc: <<EOD
-Build the ZFS templates that yolo's jails are cloned from, and clone
-them. See infra/hosts/yolo/src/yolo-jail/README.org.
+Create yolo's jails from their templates' packages. See
+infra/hosts/yolo/src/yolo-jail/README.org.
 EOD
 files: {
 $(echo "${files}" | awk 'NF { print "  " $3 ": \"-\"" }')

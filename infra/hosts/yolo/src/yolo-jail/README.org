@@ -1,7 +1,6 @@
 #+TITLE: yolo-jail - jails for agents on yolo
 
-yolo-jail builds the ZFS templates that yolo's jails are cloned from,
-and clones them.
+yolo-jail creates yolo's jails from their templates' packages.
 
 * Build
 
@@ -24,42 +23,50 @@ and =setuid=off=, so nothing there runs. =/pkg/yolo= belongs to the
 user who ran =doas=, who copies the repository there. Root never
 writes it.
 
-* Templates
+* Create
 
-As root on yolo:
+: yolo-jail-create <name> <template>
 
-: yolo-jail-template <template>
+=yolo-jail-create= makes =zroot/jails/instances/<name>= with FreeBSD's
+base and the template's package, =yolo-<template>=, installed, unless
+the dataset exists. A jail's config runs it as =exec.prepare=, so the
+first start creates the jail. Only the admin destroys a jail, to start
+it over.
 
-=yolo-jail-template= creates =zroot/jails=, mounted at =/jails=, if it
-is missing. It installs base and the template's packages and users,
-from =templates/<name>.conf=, into =zroot/jails/templates/<name>=.
-Then it copies =templates/<name>.files=, if there is one, over the
-template's root, so =coding-agent= gets its =/usr/local/etc/gitconfig=.
-Each user gets unrestricted =doas=. Then it takes the snapshot
-=@ready= that jails are cloned from.
+It builds the jail in =zroot/jails/instances/<name>.new= and renames
+that to =<name>= once it is done, so a jail that exists is complete.
+A =<name>.new= left by a failed run was never started, so it destroys
+that and begins again. pkg's cache, =/var/cache/pkg= in the new root,
+is =zroot/jails/pkg-cache= mounted there while it works, so a jail
+gets the packages the last one downloaded, and only what is new is
+fetched. It is outside the BE, and no jail sees it. pkg checks each
+cached package against its repository's checksum before installing
+it, and =pkg clean= drops those the repositories no longer offer, so
+it holds only current packages. It installs base with =pkg --rootdir=, from
+yolo's own repository config. It copies in yolo's =resolv.conf=, and
+adds =yolo-pkg-repos= from =/pkg/yolo= with =pkg --rootdir= too, since
+it runs no scripts, so pkg in the root has the jail's repository
+configs. Then it mounts devfs and =/pkg/yolo= in the new root, and
+installs =yolo-<template>= with =pkg --chroot=, so its install scripts
+run against the jail's own tools and accounts. It refuses to start
+unless =/pkg/yolo= holds =yolo-pkg-repos=.
 
-It refuses to replace a template that exists. To rebuild one, destroy
-it and its clones first.
-
-* Clones
-
-: yolo-jail-clone <name> <template>
-
-=yolo-jail-clone= clones =zroot/jails/instances/<name>= from the
-template's =@ready= snapshot, unless it exists. A jail's config runs
-it as =exec.prepare=, so the first start creates the jail. Only the
-admin destroys a jail, to start it over.
+Those scripts run as yolo's root in a chroot, which is no jail. That
+is safe only because the root is new, and holds nothing but what
+FreeBSD's repositories and yolo's put there. yolo never runs pkg on a
+root that a jail has run in, so an upgrade goes through =jexec=.
 
 : yolo-jail-create-mountpoints <name> <path> ...
 
 =yolo-jail-create-mountpoints= makes each =<path>= under the jail's
 root, and each directory on the way that is missing, so that
 jail.conf can mount something there. A jail's config runs it as
-=exec.prepare= for every mount it makes in the jail: the git repos at
-=git/<owner>/<repo>.git= and =git/agent=. So a jail made before one of
-them was added gets its mountpoint too. The jail's root may have
-turned a directory on the way into a symlink, which mkdir would follow
-out of the jail, so it refuses those.
+=exec.prepare= for every mount it makes in the jail: the repository at
+=pkg/yolo=, and the git repos at =git/<owner>/<repo>.git= and
+=git/agent=. So a jail made before one of them was added gets its
+mountpoint too. The jail's root may have turned a directory on the
+way into a symlink, which mkdir would follow out of the jail, so it
+refuses those.
 
 * Repos
 

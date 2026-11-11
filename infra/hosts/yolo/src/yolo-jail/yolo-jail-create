@@ -1,0 +1,113 @@
+#!/bin/sh
+set -eu
+
+# yolo-jail-create name template: make a jail, zroot/jails/instances/
+# <name>, with FreeBSD's base and its template's package,
+# yolo-<template>, installed, unless the jail exists. jail.conf runs
+# this as exec.prepare, so the first start creates the jail. Only the
+# admin destroys a jail, to start it over.
+#
+# It installs yolo-<template> with pkg --chroot, so its scripts run as
+# yolo's root in a chroot, which is no jail. That is safe only because
+# the root is new. yolo never runs pkg on a root a jail has run in, so
+# an upgrade goes through jexec.
+
+readonly zroot=zroot/jails
+readonly repo=/pkg/yolo
+readonly keys=/usr/share/keys/pkgbase-15
+readonly cache=${zroot}/pkg-cache
+
+usage() {
+	echo "usage: yolo-jail-create name template" >&2
+	exit 64
+}
+
+[ ${#} -eq 2 ] || usage
+readonly name=${1} template=${2}
+
+for arg in ${name} ${template}; do
+	case ${arg} in
+	.*|*[!A-Za-z0-9_-]*) usage ;;
+	?*) ;;
+	*) usage ;;
+	esac
+done
+
+readonly dataset=${zroot}/instances/${name}
+readonly new=${dataset}.new
+
+exists() {
+	zfs list -H -o name ${1} >/dev/null 2>&1
+}
+
+exists ${dataset} && exit 0
+
+if ! exists zroot/pkg/yolo; then
+	echo "E: no zroot/pkg/yolo; make it with yolo-pkg-init" >&2
+	exit 1
+fi
+repos_pkg=$(ls ${repo}/All/yolo-pkg-repos-*.pkg 2>/dev/null | tail -1)
+if [ -z "${repos_pkg}" ]; then
+	echo "E: no yolo-pkg-repos in ${repo}; run just push-templates" >&2
+	exit 1
+fi
+readonly repos_pkg
+
+# jail.conf finds the jails under /jails/instances.
+exists ${zroot} || zfs create -o mountpoint=/jails ${zroot}
+exists ${zroot}/instances || zfs create ${zroot}/instances
+
+# The packages that every new jail installs, kept between runs, so that
+# a jail is made without downloading them again. It is outside the BE,
+# so an upgrade keeps it, and no jail ever sees it.
+exists ${cache} || zfs create ${cache}
+cachedir=$(zfs get -H -o value mountpoint ${cache})
+readonly cachedir
+
+# A <name>.new is left by a run that failed. No jail has run in it, so
+# start it over.
+exists ${new} && zfs destroy -r ${new}
+zfs create ${new}
+root=$(zfs get -H -o value mountpoint ${new})
+readonly root
+
+cleanup() {
+	umount ${root}${repo} 2>/dev/null || true
+	umount ${root}/dev 2>/dev/null || true
+	umount ${root}/var/cache/pkg 2>/dev/null || true
+}
+trap cleanup EXIT
+
+# pkg keeps its cache in the root's /var/cache/pkg, with --rootdir as
+# with --chroot, so the cache goes there for both. pkg checks each
+# cached package against the repository's checksum before using it.
+mkdir -p ${root}/var/cache/pkg
+mount -t nullfs ${cachedir} ${root}/var/cache/pkg
+
+# Base goes in with --rootdir, from yolo's own repository config. pkg
+# reads the signing keys relative to the root, so they go in first.
+mkdir -p ${root}${keys}
+cp -R ${keys}/ ${root}${keys}/
+pkg --rootdir ${root} -o ASSUME_ALWAYS_YES=yes \
+    install -r FreeBSD-base FreeBSD-set-base-jail
+
+# yolo's resolvers, and the jail's repository configs, so pkg in the
+# root finds the template's package. yolo-pkg-repos holds the configs
+# and runs no scripts, so it goes in with --rootdir too.
+cp /etc/resolv.conf ${root}/etc/resolv.conf
+pkg --rootdir ${root} add ${repos_pkg}
+
+# The template's package goes in with --chroot, so its scripts run
+# against the jail's own tools and accounts. The repository is mounted
+# where the jail sees it.
+mkdir -p ${root}${repo}
+mount -t devfs devfs ${root}/dev
+mount -t nullfs -o ro ${repo} ${root}${repo}
+pkg --chroot ${root} -o ASSUME_ALWAYS_YES=yes install yolo-${template}
+# Drop what the repositories no longer offer, so the cache holds only
+# current packages and stops growing.
+pkg --chroot ${root} clean -q -y
+cleanup
+
+zfs rename ${new} ${dataset}
+echo "${dataset}"

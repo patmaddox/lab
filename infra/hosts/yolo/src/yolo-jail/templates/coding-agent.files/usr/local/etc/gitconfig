@@ -1,4 +1,0 @@
-# The repos under /git belong to patmaddox, not agent, and git refuses
-# to clone from a repo another user owns unless it is trusted here.
-[safe]
-	directory = /git/*

@@ -56,9 +56,10 @@ Remove the stick and reboot. Then wipe the stick, and delete
 A new BE is the whole update: base, ports, yolo's packages, and
 =dist/= all come with it. Everything in =/usr/local= and =/etc= belongs
 to the BE, so a package added by hand is gone after the next upgrade;
-put it in =yolo.conf= instead. =zroot/jails= is outside the BE, so the
-templates and jails carry over as they are; rebuilding a template is
-separate, and yolo-jail's README says how.
+put it in =yolo.conf= instead. =zroot/jails= and =zroot/pkg= are
+outside the BE, so the jails and the templates' package repository
+carry over as they are. Upgrading a jail is separate, and the Jails
+section says how.
 
 On beastie, signed in to 1Password:
 
@@ -77,10 +78,9 @@ returns to the old one. Once it works, make it permanent with
 
 * Jails
 
-yolo's jails, where agents run, are cloned from ZFS templates.
-=zroot/jails/templates= holds the templates, and
-=zroot/jails/instances= the jails. The yolo-jail tool, in
-=src/yolo-jail=, builds the templates and clones jails from them. Its
+yolo's jails, where agents run, are each provisioned from a template,
+and upgraded from it after. =zroot/jails/instances= holds the jails.
+The yolo-jail tool, in =src/yolo-jail=, creates them. Its
 README says how. The BE carries yolo's packages, one per tool in
 =src/= and the jail configs. To try a change to one without a new BE,
 =just push-pkg= builds them and copies them to =/tmp= on yolo, each
@@ -89,12 +89,8 @@ dependencies beside it. =just install-pkg= also installs them all,
 replacing the ones installed, which have the same versions. The next
 upgrade replaces what either added.
 
-The =coding-agent= template is for jails that coding agents run in.
-It has an =agent= user with unrestricted =doas=, so the agent
-installs whatever else it needs.
-
-Each template is also a package. =templates/= holds the packages for
-jails, one directory each, and =templates/<name>= builds the package
+A template is a package. =templates/= holds the packages jails
+install, one directory each, and =templates/<name>= builds the package
 =yolo-<name>=. It has three parts:
 
 - =<name>.conf=, a shell fragment that sets =comment=, =packages=, the
@@ -109,13 +105,18 @@ pkg builds the package straight from =dist/=, with
 =pkg create -p pkg-plist -r dist=, and only what the plist lists goes
 in. On install and upgrade, the package makes each of its users that
 is missing, with a group of the same name and id and unrestricted
-=doas=.
+=doas=. A jail is made by installing its template's package and
+updated by upgrading it, so a change to a template reaches a jail
+without resetting it.
 
 =templates/pkg-repos= is no template. Its package, =yolo-pkg-repos=,
 holds the jails' pkg repository configs: FreeBSD's, as yolo has them,
-and one for =yolo=. Every template depends on it.
+and one for =yolo=. Every template depends on it, so an upgrade
+updates them too.
 
-The =coding-agent= template's conf,
+The =coding-agent= template is for jails that coding agents run in.
+It has an =agent= user with unrestricted =doas=, so the agent
+installs whatever else it needs. Its conf,
 =templates/coding-agent/coding-agent.conf=, is:
 
 #+begin_src sh
@@ -151,11 +152,13 @@ The package installs =dist/usr/local/etc/gitconfig= at
 =/usr/local/etc/gitconfig= in the jail. Files belong to root:wheel
 unless =@owner= and =@group= say otherwise, and a line such as
 =@(root,wheel,0600) /usr/local/etc/foo= sets one file's owner, group,
-and mode. A symlink is a symlink in =dist/=, listed like a file.
+and mode. A symlink is a symlink in =dist/=, listed like a file. To add
+a package or a file to every =coding-agent= jail, add it here, run
+=just push-templates=, and upgrade each jail.
 
 The packages live in a pkg repository on yolo, at =/pkg/yolo=, outside
-the BE. It belongs to you, and =yolo-pkg-repos= names it =yolo=. On
-beastie, make it once:
+the BE. It belongs to you, and each jail sees it read-only at the same
+path, as the repository =yolo=. On beastie, make it once:
 
 : just pkg-init
 
@@ -165,8 +168,9 @@ deleting what it no longer holds:
 : just push-templates
 
 A package is versioned by the time it was built. redo rebuilds it only
-when its conf, its plist, or a file the plist lists changes, so its
-version moves only when it does.
+when its conf, its plist, or a file the plist lists changes, so a
+jail's next upgrade picks up exactly what changed. A jail's agent may
+also install packages from the repository itself.
 
 The =yolo-jails= package, from =jails/=, installs each jail's config
 in =/etc/jail.conf.d=. =jails/instances= lists the jails, each with
@@ -180,31 +184,26 @@ which routes all of 10.200.0.0/16 back to yolo. Jails share no network
 with each other, with yolo's link to rowdy, or with rowdy, and pf on
 yolo drops what a jail sends from an address outside its /24.
 
-To set up the jails, as root on yolo:
-
-: yolo-jail-template coding-agent
-
-=yolo-jail-template= creates =zroot/jails= and builds the template
-=zroot/jails/templates/coding-agent@ready=, which every jail clones.
-Run it once, and again only to rebuild the template.
-
 Jails run no sshd. To use one, sign in to yolo, and as root:
 
 : service jail onestart <name>
 : jexec -l -U agent <name>
 : service jail onestop <name>
 
-The first start clones =zroot/jails/instances/<name>= from its
-template, and makes =zroot/jails/instances/<name>/data=, a ZFS dataset
-the jail runs itself. It has no mountpoint of its own, and the jail
-may make, mount, and destroy datasets under it. For poudriere there,
-set in =poudriere.conf=:
+The first start creates =zroot/jails/instances/<name>=. It installs
+FreeBSD's base and then the template's package from the repository,
+so the jail starts with both in place. A jail does not start until its
+template's package is in the repository. The first start also makes
+=zroot/jails/instances/<name>/data=, a ZFS dataset the jail runs
+itself. It has no mountpoint of its own, and the jail may make, mount,
+and destroy datasets under it. For poudriere there, set in
+=poudriere.conf=:
 
 : ZPOOL=zroot
 : ZROOTFS=/jails/instances/<name>/data/poudriere
 
 To start a jail over, stop it, destroy its dataset and everything under
-it, and start it again:
+it, and start it again, which creates it afresh:
 
 : service jail onestop <name>
 : zfs destroy -r zroot/jails/instances/<name>
