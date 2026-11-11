@@ -39,6 +39,17 @@ template's =@ready= snapshot, unless it exists. A jail's config runs
 it as =exec.prepare=, so the first start creates the jail. Only the
 admin destroys a jail, to start it over.
 
+: yolo-jail-create-mountpoints <name> <path> ...
+
+=yolo-jail-create-mountpoints= makes each =<path>= under the jail's
+root, and each directory on the way that is missing, so that
+jail.conf can mount something there. A jail's config runs it as
+=exec.prepare= for every mount it makes in the jail: the git repos at
+=git/<owner>/<repo>.git= and =git/agent=. So a jail made before one of
+them was added gets its mountpoint too. The jail's root may have
+turned a directory on the way into a symlink, which mkdir would follow
+out of the jail, so it refuses those.
+
 * Repos
 
 : doas yolo-git-init <owner>/<repo>:<branch> ...
@@ -63,12 +74,8 @@ changes.
 which holds the jail's own repos and belongs to the agent, uid 15000.
 It refuses if the jail's upstream repo, =/git/<owner>/<repo>.git=, is
 missing; =yolo-git-init= makes it. A jail's config runs it as
-=exec.prepare=.
-
-It then makes the jail's mountpoints for the repos,
-=git/<owner>/<repo>.git= and =git/agent= under the jail's root. The
-jail's root may have turned a directory on the way into a symlink,
-which mkdir would follow out of the jail, so it refuses those.
+=exec.prepare=. =yolo-jail-create-mountpoints= makes the repos'
+mountpoints in the jail.
 
 : yolo-jail-repo <name> <owner>/<repo>
 

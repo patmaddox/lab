@@ -1,0 +1,45 @@
+#!/bin/sh
+set -eu
+
+# yolo-jail-create-mountpoints name path ...: make each path under a
+# jail's root, and each directory on the way that is missing, for
+# jail.conf to mount something there. jail.conf runs this as
+# exec.prepare, after the jail is created and before jail(8) mounts
+# anything.
+#
+# The jail's root writes there, so a directory may have become a
+# symlink, and mkdir would follow it out of the jail. Refuse those. The
+# jail is not running, so nothing changes between the check and the
+# mkdir.
+
+usage() {
+	echo "usage: yolo-jail-create-mountpoints name path ..." >&2
+	exit 64
+}
+
+[ ${#} -ge 2 ] || usage
+readonly name=${1}
+shift
+
+for path in "${@}"; do
+	case ${path} in
+	/*|.*|*/.*|*[!A-Za-z0-9._/-]*) usage ;;
+	?*) ;;
+	*) usage ;;
+	esac
+done
+
+root=$(zfs get -H -o value mountpoint zroot/jails/instances/${name})
+readonly root
+
+for path in "${@}"; do
+	dir=${root}
+	for part in $(echo ${path} | tr / ' '); do
+		dir=${dir}/${part}
+		if [ -L ${dir} ]; then
+			echo "E: ${dir} is a symbolic link" >&2
+			exit 1
+		fi
+		[ -d ${dir} ] || mkdir ${dir}
+	done
+done

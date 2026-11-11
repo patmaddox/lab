@@ -8,6 +8,10 @@
   # Clone the jail from its template the first time it starts.
   exec.prepare = "/usr/local/libexec/yolo-jail-clone ${name} %TEMPLATE%";
 
+  # The mountpoints in the jail's root for what yolo mounts there,
+  # below. A jail made before one of them was added gets it too.
+  exec.prepare += "/usr/local/libexec/yolo-jail-create-mountpoints ${name} git/%REPO%.git git/agent";
+
   # A ZFS dataset of its own, <name>/data under the jail's, so it goes
   # when the jail is reset. It is made on the first start, with jailed
   # on, so yolo never mounts it, and zfs.dataset gives it to the jail

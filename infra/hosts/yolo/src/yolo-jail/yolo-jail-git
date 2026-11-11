@@ -2,11 +2,10 @@
 set -eu
 
 # yolo-jail-git name repo: make the dataset that holds a jail's own git
-# repos, unless it exists, and the jail's mountpoints for its repos.
-# repo is <owner>/<repo>, the upstream repo /git/<owner>/<repo>.git
-# that the jail clones, which yolo-git-init makes. jail.conf runs this
-# as exec.prepare, after the jail is cloned and before jail(8) mounts
-# anything.
+# repos, unless it exists. yolo-jail-create-mountpoints makes the
+# jail's mountpoints for them. repo is <owner>/<repo>, the upstream
+# repo /git/<owner>/<repo>.git that the jail clones, which
+# yolo-git-init makes. jail.conf runs this as exec.prepare.
 
 readonly zroot=zroot/git/jails
 # The agent user of the coding-agent template, from its conf.
@@ -41,26 +40,3 @@ if ! exists ${zroot}/${name}; then
 	zfs create ${zroot}/${name}
 	chown ${agent}:${agent} /git/jails/${name}
 fi
-
-root=$(zfs get -H -o value mountpoint zroot/jails/instances/${name})
-readonly root
-
-# mountpoint path: make path under the jail's root, and each directory
-# on the way that is missing. The jail's root writes there, so a
-# directory may have become a symlink, and mkdir would follow it out of
-# the jail. Refuse those. The jail is not running, so nothing changes
-# between the check and the mkdir.
-mountpoint() {
-	dir=${root}
-	for part in $(echo ${1} | tr / ' '); do
-		dir=${dir}/${part}
-		if [ -L ${dir} ]; then
-			echo "E: ${dir} is a symbolic link" >&2
-			exit 1
-		fi
-		[ -d ${dir} ] || mkdir ${dir}
-	done
-}
-
-mountpoint git/${repo}.git
-mountpoint git/agent
