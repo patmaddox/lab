@@ -13,7 +13,6 @@ git-rebase:
 
 push:
   jj git push --quiet --tracked  --deleted --remote tngl
-  jj git push --quiet --tracked  --deleted --remote jails
   jj git push --quiet --tracked  --deleted --remote github
   jj git push --quiet --tracked  --deleted --remote yolo
   jj git export --quiet
