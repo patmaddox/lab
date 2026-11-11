@@ -2,12 +2,13 @@
 #
 # push-pkg.sh <pkg> ...
 #
-# Copy packages to /tmp on yolo, each named <name>-<version>.pkg as
-# read from the package itself. pkg add of one of them then finds its
-# dependencies beside it under those names. Run it as just push-pkg.
+# Make a pkg repository of yolo's packages and the templates', and sync
+# it to /pkg/yolo on yolo, deleting what it no longer holds. yolo
+# installs its own from there, and jails see it read-only as the
+# repository yolo. Run it as just push-pkg.
 set -eu
 
-host=root@yolo.p7x.dev
+host=yolo.p7x.dev
 
 usage() {
 	echo "usage: push-pkg.sh <pkg> ..." >&2
@@ -16,6 +17,15 @@ usage() {
 
 [ ${#} -gt 0 ] || usage
 
+stagedir=$(mktemp -d)
+trap "rm -rf ${stagedir}" EXIT
+# rsync gives /pkg/yolo the stage's mode, and jails' users read it.
+chmod 0755 ${stagedir}
+
+mkdir ${stagedir}/All
 for pkg in "${@}"; do
-	scp -q ${pkg} ${host}:/tmp/$(pkg query -F ${pkg} %n-%v).pkg
+	cp ${pkg} ${stagedir}/All/$(pkg query -F ${pkg} %n-%v).pkg
 done
+pkg repo -q ${stagedir}
+
+rsync -a --delete ${stagedir}/ ${host}:/pkg/yolo/

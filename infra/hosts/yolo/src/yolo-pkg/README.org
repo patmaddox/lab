@@ -1,0 +1,34 @@
+#+TITLE: yolo-pkg - yolo's package repository
+
+yolo-pkg configures the pkg repository =yolo=, at =/pkg/yolo=, which
+holds yolo's own packages and the templates'. yolo installs its own
+from there, and each jail sees it read-only at the same path.
+
+* Build
+
+: redo yolo-pkg.pkg
+
+* Install
+
+yolo's BE carries it. On a yolo without it, on beastie in
+=infra/hosts/yolo=:
+
+: just pkg-init
+
+It adds yolo-pkg from a copy, since yolo has no repository to install
+it from yet, runs =yolo-pkg-init=, below, and then installs yolo's
+packages from the repository with =just install-pkg=, which upgrades
+yolo-pkg after that. Running it again only does the last.
+
+* Repository
+
+: doas yolo-pkg-init
+
+=yolo-pkg-init= makes =zroot/pkg=, mounted at =/pkg=, and
+=zroot/pkg/yolo= in it, those that are missing. =zroot/pkg= has
+=exec=off= and =setuid=off=, so nothing there runs. =/pkg/yolo=
+belongs to the user who ran =doas=, who copies the repository there.
+Root never writes it.
+
+Until it exists, pkg on yolo warns that it cannot open =yolo=, and
+works from the other repositories.

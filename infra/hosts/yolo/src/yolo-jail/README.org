@@ -9,20 +9,15 @@ upgrades them.
 
 * Install
 
-Copy =yolo-jail.pkg= to yolo, then as root:
+yolo's BE carries it. It depends on yolo-pkg, in =src/yolo-pkg=,
+whose repository, =/pkg/yolo=, it creates jails from. To install a
+newer one without a new BE, on beastie in =infra/hosts/yolo=:
 
-: pkg add yolo-jail.pkg
+: just install-pkg
 
-* Repository
-
-: doas yolo-pkg-init
-
-=yolo-pkg-init= makes =zroot/pkg=, mounted at =/pkg=, and
-=zroot/pkg/yolo= in it, those that are missing. =/pkg/yolo= holds the
-pkg repository of the templates' packages. =zroot/pkg= has =exec=off=
-and =setuid=off=, so nothing there runs. =/pkg/yolo= belongs to the
-user who ran =doas=, who copies the repository there. Root never
-writes it.
+It syncs the package, with the rest of =/pkg/yolo=, to yolo, and
+installs it from there. A yolo without yolo-pkg needs
+=just pkg-init= first.
 
 * Init
 

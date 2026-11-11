@@ -82,12 +82,11 @@ yolo's jails, where agents run, are each provisioned from a template,
 and upgraded from it after. =zroot/jails/instances= holds the jails.
 The yolo-jail tool, in =src/yolo-jail=, creates and upgrades them. Its
 README says how. The BE carries yolo's packages, one per tool in
-=src/= and the jail configs. To try a change to one without a new BE,
-=just push-pkg= builds them and copies them to =/tmp= on yolo, each
-named =<name>-<version>.pkg=, where =pkg add= of one finds its
-dependencies beside it. =just install-pkg= also installs them all,
-replacing the ones installed, which have the same versions. The next
-upgrade replaces what either added.
+=src/= and the jail configs. Each is versioned by the time it was
+built, and redo rebuilds it only when what it holds changes. To try a
+change to one without a new BE, =just install-pkg= builds them, syncs
+them to yolo's package repository, below, and installs them from
+there, upgrading those that are older. The next BE replaces them.
 
 A template is a package. =templates/= holds the packages jails
 install, one directory each, and =templates/<name>= builds the package
@@ -154,18 +153,25 @@ unless =@owner= and =@group= say otherwise, and a line such as
 =@(root,wheel,0600) /usr/local/etc/foo= sets one file's owner, group,
 and mode. A symlink is a symlink in =dist/=, listed like a file. To add
 a package or a file to every =coding-agent= jail, add it here, run
-=just push-templates=, and upgrade each jail.
+=just push-pkg=, and upgrade each jail.
 
 The packages live in a pkg repository on yolo, at =/pkg/yolo=, outside
-the BE. It belongs to you, and each jail sees it read-only at the same
-path, as the repository =yolo=. On beastie, make it once:
+the BE, with yolo's own. It belongs to you. yolo installs its own
+from there, and each jail sees it read-only at the same path, as the
+repository =yolo=. yolo-pkg, in =src/yolo-pkg=, configures it. On
+beastie, set yolo up for it once:
 
 : just pkg-init
 
-Then build the packages, and sync the repository to yolo with rsync,
-deleting what it no longer holds:
+It adds yolo-pkg if yolo lacks it, as a yolo from an older BE does,
+makes the repository, and installs yolo's packages from it, so no new
+BE is needed. Until then, pkg on yolo warns that it cannot open
+=yolo=, and works from the other repositories.
 
-: just push-templates
+After that, build the packages, and sync the repository to yolo with
+rsync, deleting what it no longer holds:
+
+: just push-pkg
 
 A package is versioned by the time it was built. redo rebuilds it only
 when its conf, its plist, or a file the plist lists changes, so a
@@ -216,7 +222,7 @@ there, set in =poudriere.conf=:
 : ZROOTFS=/jails/instances/<name>/data/poudriere
 
 A jail is upgraded only when you upgrade it. After
-=just push-templates=, upgrade a running jail's template package, and
+=just push-pkg=, upgrade a running jail's template package, and
 whatever its new version needs, from beastie:
 
 : just upgrade-jail <name>

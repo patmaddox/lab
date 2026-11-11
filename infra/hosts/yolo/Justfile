@@ -5,14 +5,14 @@ help:
 pkg:
   redo-ifchange $(ls src/*/all.do | sed 's/\.do$//') jails/all
 
-# Copy yolo's packages to /tmp on yolo, named for their versions
+# Build all packages, templates too, and sync them to /pkg/yolo on yolo
 push-pkg: pkg
-  ./tools/push-pkg.sh src/*/*.pkg jails/*.pkg
+  redo-ifchange templates/all
+  ./tools/push-pkg.sh src/*/*.pkg jails/*.pkg templates/*.pkg
 
-# Copy yolo's packages to yolo and install them, replacing what is
-# installed, since their versions do not change
+# Run push-pkg, then install or upgrade yolo's own packages on yolo
 install-pkg: push-pkg
-  ssh yolo.p7x.dev doas pkg add -f $(for p in src/*/*.pkg jails/*.pkg; do echo /tmp/$(pkg query -F $p %n-%v).pkg; done)
+  ssh yolo.p7x.dev doas pkg install -y -r yolo $(for p in src/*/*.pkg jails/*.pkg; do pkg query -F $p %n; done)
 
 # Import the BE on yolo as yolo-<release>-<date>-new, and activate -t it
 deploy-be:
@@ -24,16 +24,15 @@ deploy-be:
 git-init:
   ssh yolo.p7x.dev doas yolo-git-init $(awk '!/^#/ && NF { print $1 ":" $2 }' repos)
 
-# Make the templates' package repository on yolo, if it is missing, as
-# the user you sign in to yolo as
-pkg-init:
+# Once per yolo, make /pkg/yolo and install yolo's packages from it
+pkg-init: pkg && install-pkg
+  #!/bin/sh
+  set -eu
+  if ! ssh yolo.p7x.dev pkg info -q -e yolo-pkg; then
+    scp src/yolo-pkg/yolo-pkg.pkg yolo.p7x.dev:/tmp/yolo-pkg.pkg
+    ssh yolo.p7x.dev 'doas pkg add /tmp/yolo-pkg.pkg && rm /tmp/yolo-pkg.pkg'
+  fi
   ssh yolo.p7x.dev doas yolo-pkg-init
-
-# Build the templates' packages and copy their repository to yolo,
-# replacing what is there
-push-templates:
-  redo-ifchange templates/all
-  ./tools/push-templates.sh templates/*.pkg
 
 # Upgrade a running jail's template package, or with -a all its packages
 upgrade-jail name *flags:

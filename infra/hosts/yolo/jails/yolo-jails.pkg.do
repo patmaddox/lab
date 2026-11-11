@@ -4,10 +4,14 @@ set -eu
 # Build the package of yolo's jail configs, one in /etc/jail.conf.d
 # for each line of instances, made from jail.conf.in, and instances
 # itself, which yolo-jail-init reads.
-# Install on yolo, as root, with: pkg add yolo-jails.pkg
+# yolo's BE carries it, and just install-pkg installs a newer one
+# from the repository on yolo.
 
 name="yolo-jails"
-version="0.0.0"
+# Its version is the time it was built. redo rebuilds it only when what
+# it holds changes, so the version moves only then, and pkg on yolo
+# upgrades to it from the repository.
+version=$(date -u +%Y.%m.%d.%H%M%S)
 
 redo-ifchange instances jail.conf.in
 
@@ -31,15 +35,17 @@ paths=$(cd "${stagedir}" && find . -type f | sed 's/^\.//' | sort)
 manifest="${stagedir}/+MANIFEST"
 cat > "${manifest}" <<EOM
 name: ${name}
-version: ${version}
+version: "${version}"
 origin: local/${name}
 comment: yolo's jail configs
 maintainer: pat@patmaddox.com
 prefix: /
 www: https://git.sr.ht/~patmaddox/lab/tree/trunk/item/infra/hosts/yolo/jails
 flatsize: ${flatsize:-0}
+# pkg resolves a dependency by its name, so its version is only
+# recorded.
 deps: {
-  yolo-jail: { origin: local/yolo-jail, version: 0.0.0 }
+  yolo-jail: { origin: local/yolo-jail, version: "0" }
 }
 desc: <<EOD
 yolo's jail configs, in /etc/jail.conf.d, and the list of its jails.

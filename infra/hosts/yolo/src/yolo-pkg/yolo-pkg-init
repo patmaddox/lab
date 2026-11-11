@@ -2,9 +2,10 @@
 set -eu
 
 # yolo-pkg-init: make zroot/pkg/yolo, mounted at /pkg/yolo, which holds
-# the pkg repository of the templates' packages, and zroot/pkg, those
-# that are missing. Run it with doas, and the repository belongs to the
-# user who ran it, who copies it there. Root never writes it.
+# the pkg repository of yolo's packages and the templates', and
+# zroot/pkg, those that are missing. Run it with doas, and the
+# repository belongs to the user who ran it, who copies it there. Root
+# never writes it.
 
 readonly zroot=zroot/pkg
 

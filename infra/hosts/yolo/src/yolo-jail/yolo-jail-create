@@ -47,7 +47,7 @@ if ! exists zroot/pkg/yolo; then
 fi
 repos_pkg=$(ls ${repo}/All/yolo-pkg-repos-*.pkg 2>/dev/null | tail -1)
 if [ -z "${repos_pkg}" ]; then
-	echo "E: no yolo-pkg-repos in ${repo}; run just push-templates" >&2
+	echo "E: no yolo-pkg-repos in ${repo}; run just push-pkg" >&2
 	exit 1
 fi
 readonly repos_pkg
