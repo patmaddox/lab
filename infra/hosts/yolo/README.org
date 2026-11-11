@@ -184,20 +184,33 @@ which routes all of 10.200.0.0/16 back to yolo. Jails share no network
 with each other, with yolo's link to rowdy, or with rowdy, and pf on
 yolo drops what a jail sends from an address outside its /24.
 
+Set a jail up before its first start, from beastie:
+
+: just init-jail <name>
+
+Or as root on yolo:
+
+: yolo-jail-init <name>
+
+It creates =zroot/jails/instances/<name>=, with FreeBSD's base and the
+template's package from the repository, so it needs the package in
+the repository and the jail's repo made. It makes the mountpoints for
+what the jail's config mounts, and the datasets the jail needs. A jail
+does not start until it is set up, and starting it sets nothing up,
+so it starts quickly. =yolo-jail-init= makes only what is missing, so
+running it again on a stopped jail gives it whatever a newer
+yolo-jail adds.
+
 Jails run no sshd. To use one, sign in to yolo, and as root:
 
 : service jail onestart <name>
 : jexec -l -U agent <name>
 : service jail onestop <name>
 
-The first start creates =zroot/jails/instances/<name>=. It installs
-FreeBSD's base and then the template's package from the repository,
-so the jail starts with both in place. A jail does not start until its
-template's package is in the repository. The first start also makes
-=zroot/jails/instances/<name>/data=, a ZFS dataset the jail runs
-itself. It has no mountpoint of its own, and the jail may make, mount,
-and destroy datasets under it. For poudriere there, set in
-=poudriere.conf=:
+=yolo-jail-init= also makes =zroot/jails/instances/<name>/data=, a ZFS
+dataset the jail runs itself. It has no mountpoint of its own, and the
+jail may make, mount, and destroy datasets under it. For poudriere
+there, set in =poudriere.conf=:
 
 : ZPOOL=zroot
 : ZROOTFS=/jails/instances/<name>/data/poudriere
@@ -219,10 +232,11 @@ An upgrade replaces the template's files, so a change the agent made
 to one of them is lost.
 
 To start a jail over, stop it, destroy its dataset and everything under
-it, and start it again, which creates it afresh:
+it, set it up afresh, and start it again:
 
 : service jail onestop <name>
 : zfs destroy -r zroot/jails/instances/<name>
+: yolo-jail-init <name>
 : service jail onestart <name>
 
 Datasets meant to outlive a reset belong under =zroot/jails/data/<name>=,
@@ -232,8 +246,8 @@ Each jail gets one git repo, which =jails/instances= names as
 =<owner>/<repo>=. yolo keeps it at =/git/<owner>/<repo>.git=, and the
 jail sees it there too, read-only. The jail's own repos are at
 =/git/agent= in the jail and =/git/jails/<name>= on yolo, read-write.
-Both are outside =zroot/jails/instances=, so a reset keeps them. A
-jail does not start until its repo exists.
+Both are outside =zroot/jails/instances=, so a reset keeps them.
+=yolo-jail-init= refuses to set a jail up until its repo exists.
 
 =repos= lists the repos, each with its default branch, which a clone
 checks out, and must list each repo that =jails/instances= names. On
@@ -242,8 +256,8 @@ beastie, make those that are missing and set their default branches:
 : just git-init
 
 It runs =doas yolo-git-init= on yolo, as yolo-jail's README says, so
-the repos belong to you there. Run it again after changing =repos=. A
-jail's first start makes the dataset for its own repos.
+the repos belong to you there. Run it again after changing =repos=.
+=yolo-jail-init= makes the dataset for a jail's own repos.
 
 Once a jail starts, its agent has a bare repo of its own for its
 work, at =/git/agent/<owner>/<repo>.git=. yolo-jail's README says how.
@@ -266,7 +280,7 @@ beastie pushes repos to yolo and fetches the agents' work from the
 jails' own repos, all over ssh as patmaddox. yolo holds no credentials
 for them, and no git runs as root.
 
-Make the repos that =repos= lists before their jails first start, and
+Make the repos that =repos= lists before their jails are set up, and
 again after changing =repos=:
 
 : just git-init

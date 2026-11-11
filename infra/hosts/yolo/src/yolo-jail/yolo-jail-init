@@ -1,0 +1,59 @@
+#!/bin/sh
+set -eu
+
+# yolo-jail-init name: set up a jail, as the yolo-jails package's
+# instances lists it, so that it starts with nothing left to make. It
+# makes its root, with base and its template's package, the
+# mountpoints for what jail.conf mounts there, the dataset the jail
+# runs itself, and the dataset for the jail's own git repos. Run it as
+# root on yolo before the jail's first start.
+#
+# It makes only what is missing, so running it again on a jail that
+# exists gives the jail whatever a newer yolo-jail adds.
+
+readonly instances=/usr/local/share/yolo-jails/instances
+readonly libexec=/usr/local/libexec
+
+usage() {
+	echo "usage: yolo-jail-init name" >&2
+	exit 64
+}
+
+[ ${#} -eq 1 ] || usage
+readonly name=${1}
+
+case ${name} in
+.*|*[!A-Za-z0-9_-]*) usage ;;
+?*) ;;
+*) usage ;;
+esac
+
+# Each line of instances: jail, template, number, and repo.
+line=$(awk -v name=${name} '!/^#/ && $1 == name' ${instances})
+if [ -z "${line}" ]; then
+	echo "E: no jail ${name} in ${instances}" >&2
+	exit 1
+fi
+set -- ${line}
+readonly template=${2} repo=${4}
+
+# The jail writes its root while it runs, so a directory there could
+# turn into a symlink between yolo-jail-create-mountpoints' check and
+# its mkdir.
+if jls -j ${name} jid >/dev/null 2>&1; then
+	echo "E: jail ${name} is running; stop it first" >&2
+	exit 1
+fi
+
+# The jail's own repos first, since it refuses unless the repo it
+# clones exists, and the root takes a while to make.
+${libexec}/yolo-jail-git ${name} ${repo}
+${libexec}/yolo-jail-create ${name} ${template}
+${libexec}/yolo-jail-create-mountpoints ${name} \
+    pkg/yolo git/${repo}.git git/agent
+
+# The ZFS dataset the jail runs itself, under its own, so a reset
+# destroys it. jailed is on, so yolo never mounts it.
+readonly data=zroot/jails/instances/${name}/data
+zfs list -H -o name ${data} >/dev/null 2>&1 ||
+    zfs create -o jailed=on -o mountpoint=none ${data}

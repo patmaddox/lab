@@ -5,33 +5,27 @@
   path = "/jails/instances/${name}";
   host.hostname = "${name}.p7x.dev";
 
-  # Create the jail the first time it starts, with base and its
-  # template's package, yolo-%TEMPLATE%, from the repository in
-  # /pkg/yolo.
-  exec.prepare = "/usr/local/libexec/yolo-jail-create ${name} %TEMPLATE%";
-
-  # The mountpoints in the jail's root for what yolo mounts there,
-  # below. A jail made before one of them was added gets it too.
-  exec.prepare += "/usr/local/libexec/yolo-jail-create-mountpoints ${name} pkg/yolo git/%REPO%.git git/agent";
+  # yolo-jail-init sets the jail up before its first start: its root,
+  # with base and yolo-%TEMPLATE%, the mountpoints for what is mounted
+  # below, and its datasets. The jail starts only once it has.
+  exec.prepare = "test -d ${path} || { echo 'E: ${name} is not set up; run yolo-jail-init ${name}' >&2; exit 1; }";
 
   # The repository, read-only at the same path as on yolo, where the
   # jail's pkg finds its template's package to upgrade it.
   mount += "/pkg/yolo ${path}/pkg/yolo nullfs ro 0 0";
 
   # A ZFS dataset of its own, <name>/data under the jail's, so it goes
-  # when the jail is reset. It is made on the first start, with jailed
-  # on, so yolo never mounts it, and zfs.dataset gives it to the jail
-  # as it starts. The jail may make, mount, snapshot, and destroy
-  # datasets under it, and no others, so poudriere there can use ZFS.
+  # when the jail is reset. yolo-jail-init makes it with jailed on, so
+  # yolo never mounts it, and zfs.dataset gives it to the jail as it
+  # starts. The jail may make, mount, snapshot, and destroy datasets
+  # under it, and no others, so poudriere there can use ZFS.
   allow.mount.zfs;
-  exec.prepare += "/sbin/zfs list -H zroot/jails/instances/${name}/data >/dev/null 2>&1 || /sbin/zfs create -o jailed=on -o mountpoint=none zroot/jails/instances/${name}/data";
   zfs.dataset = "zroot/jails/instances/${name}/data";
 
   # Its repo, read-only at the same path as on yolo, so it clones but
   # never writes it. Its own repos, read-write at /git/agent, where
   # beastie fetches them. jail(8) refuses a mountpoint with a symlink
   # below the jail's path, so the jail cannot point a mount out of it.
-  exec.prepare += "/usr/local/libexec/yolo-jail-git ${name} %REPO%";
   mount += "/git/%REPO%.git ${path}/git/%REPO%.git nullfs ro 0 0";
   mount += "/git/jails/${name} ${path}/git/agent nullfs rw 0 0";
 

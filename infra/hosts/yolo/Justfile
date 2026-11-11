@@ -38,3 +38,7 @@ push-templates:
 # Upgrade a running jail's template package, or with -a all its packages
 upgrade-jail name *flags:
   ssh yolo.p7x.dev doas yolo-jail-upgrade {{flags}} {{name}}
+
+# Set up a stopped jail, or give it what a newer yolo-jail adds
+init-jail name:
+  ssh yolo.p7x.dev doas yolo-jail-init {{name}}

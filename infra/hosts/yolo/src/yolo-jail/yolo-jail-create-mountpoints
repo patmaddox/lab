@@ -3,9 +3,8 @@ set -eu
 
 # yolo-jail-create-mountpoints name path ...: make each path under a
 # jail's root, and each directory on the way that is missing, for
-# jail.conf to mount something there. jail.conf runs this as
-# exec.prepare, after the jail is created and before jail(8) mounts
-# anything.
+# jail.conf to mount something there. yolo-jail-init runs this, after
+# it creates the jail, while the jail is not running.
 #
 # The jail's root writes there, so a directory may have become a
 # symlink, and mkdir would follow it out of the jail. Refuse those. The

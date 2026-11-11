@@ -3,9 +3,8 @@ set -eu
 
 # yolo-jail-create name template: make a jail, zroot/jails/instances/
 # <name>, with FreeBSD's base and its template's package,
-# yolo-<template>, installed, unless the jail exists. jail.conf runs
-# this as exec.prepare, so the first start creates the jail. Only the
-# admin destroys a jail, to start it over.
+# yolo-<template>, installed, unless the jail exists. yolo-jail-init
+# runs this. Only the admin destroys a jail, to start it over.
 #
 # It installs yolo-<template> with pkg --chroot, so its scripts run as
 # yolo's root in a chroot, which is no jail. That is safe only because

@@ -2,7 +2,8 @@
 set -eu
 
 # Build the package of yolo's jail configs, one in /etc/jail.conf.d
-# for each line of instances, made from jail.conf.in.
+# for each line of instances, made from jail.conf.in, and instances
+# itself, which yolo-jail-init reads.
 # Install on yolo, as root, with: pkg add yolo-jails.pkg
 
 name="yolo-jails"
@@ -19,6 +20,10 @@ grep -v -e '^#' -e '^$' instances | while read -r jail template host repo; do
 	    -e "s/%HOST%/${host}/g" -e "s|%REPO%|${repo}|g" jail.conf.in \
 	    > "${stagedir}/etc/jail.conf.d/${jail}.conf"
 done
+
+# yolo-jail-init finds each jail's template and repo here.
+mkdir -p "${stagedir}/usr/local/share/yolo-jails"
+install -m 0444 instances "${stagedir}/usr/local/share/yolo-jails/instances"
 
 flatsize=$(find "${stagedir}" -type f -exec stat -f%z {} + | awk '{s+=$1} END {print s}')
 paths=$(cd "${stagedir}" && find . -type f | sed 's/^\.//' | sort)
@@ -37,8 +42,8 @@ deps: {
   yolo-jail: { origin: local/yolo-jail, version: 0.0.0 }
 }
 desc: <<EOD
-yolo's jail configs, in /etc/jail.conf.d. See
-infra/hosts/yolo/README.org.
+yolo's jail configs, in /etc/jail.conf.d, and the list of its jails.
+See infra/hosts/yolo/README.org.
 EOD
 files: {
 $(echo "${paths}" | awk 'NF { print "  " $1 ": \"-\"" }')

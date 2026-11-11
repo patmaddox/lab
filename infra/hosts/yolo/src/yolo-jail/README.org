@@ -24,15 +24,32 @@ and =setuid=off=, so nothing there runs. =/pkg/yolo= belongs to the
 user who ran =doas=, who copies the repository there. Root never
 writes it.
 
+* Init
+
+: yolo-jail-init <name>
+
+=yolo-jail-init= sets a jail up, so that starting it makes nothing.
+It looks the jail's template and repo up in
+=/usr/local/share/yolo-jails/instances=, from the yolo-jails package.
+Then it runs =yolo-jail-git=, =yolo-jail-create=, and
+=yolo-jail-create-mountpoints=, below, and makes
+=zroot/jails/instances/<name>/data=, the dataset the jail runs itself,
+with =jailed=on=. Each makes only what is missing, so running it again
+gives a jail whatever a newer yolo-jail adds. It refuses while the
+jail runs, since the jail could then change its root under
+=yolo-jail-create-mountpoints=.
+
+A jail's config refuses to start the jail until its root exists, and
+says to run =yolo-jail-init=.
+
 * Create
 
 : yolo-jail-create <name> <template>
 
 =yolo-jail-create= makes =zroot/jails/instances/<name>= with FreeBSD's
 base and the template's package, =yolo-<template>=, installed, unless
-the dataset exists. A jail's config runs it as =exec.prepare=, so the
-first start creates the jail. Only the admin destroys a jail, to start
-it over.
+the dataset exists. =yolo-jail-init= runs it. Only the admin destroys
+a jail, to start it over.
 
 It builds the jail in =zroot/jails/instances/<name>.new= and renames
 that to =<name>= once it is done, so a jail that exists is complete.
@@ -61,13 +78,11 @@ root that a jail has run in, so an upgrade goes through =jexec=.
 
 =yolo-jail-create-mountpoints= makes each =<path>= under the jail's
 root, and each directory on the way that is missing, so that
-jail.conf can mount something there. A jail's config runs it as
-=exec.prepare= for every mount it makes in the jail: the repository at
-=pkg/yolo=, and the git repos at =git/<owner>/<repo>.git= and
-=git/agent=. So a jail made before one of them was added gets its
-mountpoint too. The jail's root may have turned a directory on the
-way into a symlink, which mkdir would follow out of the jail, so it
-refuses those.
+jail.conf can mount something there. =yolo-jail-init= runs it for
+every mount the jail's config makes: the repository at =pkg/yolo=, and
+the git repos at =git/<owner>/<repo>.git= and =git/agent=. The jail's
+root may have turned a directory on the way into a symlink, which
+mkdir would follow out of the jail, so it refuses those.
 
 * Upgrade
 
@@ -102,9 +117,9 @@ changes.
 =yolo-jail-git= makes =zroot/git/jails/<name>=, if it is missing,
 which holds the jail's own repos and belongs to the agent, uid 15000.
 It refuses if the jail's upstream repo, =/git/<owner>/<repo>.git=, is
-missing; =yolo-git-init= makes it. A jail's config runs it as
-=exec.prepare=. =yolo-jail-create-mountpoints= makes the repos'
-mountpoints in the jail.
+missing; =yolo-git-init= makes it. =yolo-jail-init= runs it, and
+=yolo-jail-create-mountpoints= makes the repos' mountpoints in the
+jail.
 
 : yolo-jail-repo <name> <owner>/<repo>
 
