@@ -12,6 +12,8 @@ atf_init_test_cases() {
 	atf_add_test_case accepts_a_change_id
 	atf_add_test_case merges_a_shared_topic_into_next_only
 	atf_add_test_case dry_run_prints_commands
+	atf_add_test_case reads_topics_below_the_cook_line
+	atf_add_test_case requires_a_cook_line
 }
 
 # Make a jj repo in ./repo and enter it. It holds trunk, next on trunk,
@@ -46,9 +48,15 @@ commit() {
 	jj --quiet new 'root()'
 }
 
-# topics <line>...: give next a description that lists the lines.
+# describe <line>...: give next a description of the lines.
+describe() {
+	jj --quiet describe -r next -m "$(printf '%s\n' "${@}")"
+}
+
+# topics <line>...: give next a description that lists the lines as
+# its topics.
 topics() {
-	jj --quiet describe -r next -m "$(printf '%s\n' next '' "${@}")"
+	describe next '' '[cook]' "${@}"
 }
 
 # assert_parents <rev> <name>...: check a commit's parents, in order.
@@ -167,5 +175,26 @@ jj --quiet simplify-parents -r next
 jj --quiet rebase -s seen -o next -o c
 jj --quiet simplify-parents -r seen
 " "${COOK}" -n
+	atf_check -o inline:"${op}" jj op log -n 1 --no-graph -T id
+}
+
+atf_test_case reads_topics_below_the_cook_line
+reads_topics_below_the_cook_line_body() {
+	setup
+	commit a trunk
+	commit b trunk
+	describe next '' 'next b' '' '[cook]' 'next a'
+	atf_check "${COOK}"
+	assert_parents next a
+}
+
+atf_test_case requires_a_cook_line
+requires_a_cook_line_body() {
+	setup
+	commit a trunk
+	describe next '' 'next a'
+	op=$(op_id)
+	atf_check -s exit:1 -e inline:"cook: next has no [cook] line\n" \
+	    "${COOK}"
 	atf_check -o inline:"${op}" jj op log -n 1 --no-graph -T id
 }

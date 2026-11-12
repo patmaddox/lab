@@ -20,7 +20,10 @@ to trunk.
 .Pp
 The description of the
 .Sy next
-commit lists the topics of both branches, one per line:
+commit lists the topics of both branches, one per line, below a line
+that reads
+.Li [cook] .
+Text above that line is free prose, such as a title and notes.
 .Bd -literal -offset indent
 next <ref>
 seen <ref>
@@ -74,6 +77,11 @@ commands instead of running them.
 .El
 .Sh EXIT STATUS
 .Ex -std
+It fails, and changes nothing, if the description of
+.Sy next
+has no
+.Li [cook]
+line.
 .Sh EXAMPLES
 A description of
 .Sy next
@@ -83,6 +91,7 @@ in
 .Bd -literal -offset indent
 next
 
+[cook]
 next fix-parser
 next feature@origin
 seen experiment

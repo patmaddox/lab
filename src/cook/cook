@@ -9,6 +9,11 @@ set -f
 
 readonly PROGNAME="${0##*/}"
 
+die() {
+	echo "${PROGNAME}: ${*}" >&2
+	exit 1
+}
+
 usage() {
 	echo "usage: ${PROGNAME} [-n]" >&2
 	exit 2
@@ -68,7 +73,14 @@ shift $((OPTIND - 1))
 
 next_topics=
 seen_topics=
+in_cook=
 while read -r keyword ref _; do
+	if [ -z "${in_cook}" ]; then
+		if [ "${keyword}" = "[cook]" ] && [ -z "${ref}" ]; then
+			in_cook=1
+		fi
+		continue
+	fi
 	case "${keyword}" in
 	next) next_topics="${next_topics} ${ref}" ;;
 	seen) seen_topics="${seen_topics} ${ref}" ;;
@@ -76,6 +88,7 @@ while read -r keyword ref _; do
 done <<-EOF
 $(jj log --no-graph -r next -T description)
 EOF
+[ -n "${in_cook}" ] || die "next has no [cook] line"
 
 # shellcheck disable=SC2086 # topic lists are split on purpose
 rebuild next 'trunk()' ${next_topics}
