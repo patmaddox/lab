@@ -72,5 +72,6 @@ am workspace='.':
 claude-mail-purge:
   NOTMUCH_CONFIG=$(realpath .notmuch-config) notmuch search --output=files 'tag:deleted' | xargs rm
 
+# take authorship of given revset
 reauthor *revset:
   jj metaedit --update-author {{revset}}
