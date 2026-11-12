@@ -20,11 +20,11 @@ usage() {
 readonly name=${1}
 shift
 
+# A path stays under the root: it is relative, and no part of it is .
+# or .., though a part may start with a dot, as .claude does.
 for path in "${@}"; do
-	case ${path} in
-	/*|.*|*/.*|*[!A-Za-z0-9._/-]*) usage ;;
-	?*) ;;
-	*) usage ;;
+	case /${path}/ in
+	//*|*//*|*/./*|*/../*|*[!A-Za-z0-9._/-]*) usage ;;
 	esac
 done
 

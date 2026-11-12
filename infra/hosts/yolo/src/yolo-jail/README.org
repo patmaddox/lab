@@ -77,7 +77,9 @@ jail.conf can mount something there. =yolo-jail-init= runs it for
 every mount the jail's config makes: the repository at =pkg/yolo=, and
 the git repos at =git/<owner>/<repo>.git= and =git/agent=. The jail's
 root may have turned a directory on the way into a symlink, which
-mkdir would follow out of the jail, so it refuses those.
+mkdir would follow out of the jail, so it refuses those. It refuses a
+=<path>= that is absolute or has a =.= or =..= in it, though a part of
+it may start with a dot.
 
 * Upgrade
 
