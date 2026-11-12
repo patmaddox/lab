@@ -20,6 +20,7 @@ files="
 0555 yolo-git-init /usr/local/sbin/yolo-git-init
 0555 yolo-jail-git /usr/local/libexec/yolo-jail-git
 0555 yolo-jail-repo /usr/local/libexec/yolo-jail-repo
+0555 yolo-jail-data /usr/local/libexec/yolo-jail-data
 "
 
 redo-ifchange $(echo "${files}" | awk 'NF { print $2 }')

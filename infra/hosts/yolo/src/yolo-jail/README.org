@@ -26,8 +26,8 @@ installs it from there. A yolo without yolo-pkg needs
 =yolo-jail-init= sets a jail up, so that starting it makes nothing.
 It looks the jail's template and repo up in
 =/usr/local/share/yolo-jails/instances=, from the yolo-jails package.
-Then it runs =yolo-jail-git=, =yolo-jail-create=, and
-=yolo-jail-create-mountpoints=, below, and makes
+Then it runs =yolo-jail-git=, =yolo-jail-data=, =yolo-jail-create=,
+and =yolo-jail-create-mountpoints=, below, and makes
 =zroot/jails/instances/<name>/data=, the dataset the jail runs itself,
 with =jailed=on=. Each makes only what is missing, so running it again
 gives a jail whatever a newer yolo-jail adds. It refuses while the
@@ -128,3 +128,11 @@ jail.
 runs git in the jail, as the agent, so nothing the jail has written
 runs on yolo. A jail's config runs it as =exec.poststart=, so every
 start makes it if it is missing.
+
+* Data
+
+: yolo-jail-data <name>
+
+=yolo-jail-data= makes =zroot/jails/data/<name>=, if it is missing,
+under which go the datasets that hold what a jail keeps across resets.
+=zroot/jails/data= has =setuid=off=. =yolo-jail-init= runs it.

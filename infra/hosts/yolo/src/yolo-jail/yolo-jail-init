@@ -5,8 +5,9 @@ set -eu
 # instances lists it, so that it starts with nothing left to make. It
 # makes its root, with base and its template's package, the
 # mountpoints for what jail.conf mounts there, the dataset the jail
-# runs itself, and the dataset for the jail's own git repos. Run it as
-# root on yolo before the jail's first start.
+# runs itself, the dataset for the jail's own git repos, and those for
+# what it keeps across resets. Run it as root on yolo before the jail's
+# first start.
 #
 # It makes only what is missing, so running it again on a jail that
 # exists gives the jail whatever a newer yolo-jail adds.
@@ -48,6 +49,7 @@ fi
 # The jail's own repos first, since it refuses unless the repo it
 # clones exists, and the root takes a while to make.
 ${libexec}/yolo-jail-git ${name} ${repo}
+${libexec}/yolo-jail-data ${name}
 ${libexec}/yolo-jail-create ${name} ${template}
 ${libexec}/yolo-jail-create-mountpoints ${name} \
     pkg/yolo git/${repo}.git git/agent

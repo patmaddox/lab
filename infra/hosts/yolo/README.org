@@ -307,8 +307,12 @@ it, set it up afresh, and start it again:
 : yolo-jail-init <name>
 : service jail onestart <name>
 
-Datasets meant to outlive a reset belong under =zroot/jails/data/<name>=,
-and are given to the jail by adding them to its =zfs.dataset=.
+What a jail keeps across a reset goes in datasets under
+=zroot/jails/data/<name>=, at =/jails/data/<name>= on yolo, which
+=yolo-jail-init= makes. A ZFS dataset the jail runs itself and that
+outlives a reset also belongs under =zroot/jails/data/<name>=, with
+=jailed=on=, and is given to the jail by adding it to its
+=zfs.dataset=.
 
 Each jail gets one git repo, which =jails/instances= names as
 =<owner>/<repo>=. yolo keeps it at =/git/<owner>/<repo>.git=, and the

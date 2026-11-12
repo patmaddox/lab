@@ -1,0 +1,31 @@
+#!/bin/sh
+set -eu
+
+# yolo-jail-data name: make the datasets that hold what a jail keeps
+# across resets, those that are missing. They are outside
+# zroot/jails/instances, so a reset keeps them. zroot/jails/data/<name>
+# holds the jail's. yolo-jail-init runs this.
+
+readonly zroot=zroot/jails/data
+
+usage() {
+	echo "usage: yolo-jail-data name" >&2
+	exit 64
+}
+
+[ ${#} -eq 1 ] || usage
+readonly name=${1}
+
+case ${name} in
+.*|*[!A-Za-z0-9_-]*) usage ;;
+?*) ;;
+*) usage ;;
+esac
+
+exists() {
+	zfs list -H -o name ${1} >/dev/null 2>&1
+}
+
+# yolo never runs what is here, and the jail runs nothing setuid from it.
+exists ${zroot} || zfs create -o setuid=off ${zroot}
+exists ${zroot}/${name} || zfs create ${zroot}/${name}
