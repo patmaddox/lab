@@ -74,13 +74,22 @@ shift $((OPTIND - 1))
 next_topics=
 seen_topics=
 in_cook=
-while read -r keyword ref _; do
+line=0
+while read -r keyword ref extra; do
+	line=$((line + 1))
 	if [ -z "${in_cook}" ]; then
 		if [ "${keyword}" = "[cook]" ] && [ -z "${ref}" ]; then
 			in_cook=1
 		fi
 		continue
 	fi
+	case "${keyword}" in
+	"") continue ;;
+	next | seen) ;;
+	*) die "line ${line}: unknown keyword: ${keyword}" ;;
+	esac
+	[ -n "${ref}" ] || die "line ${line}: ${keyword} needs a ref"
+	[ -z "${extra}" ] || die "line ${line}: too many fields"
 	case "${keyword}" in
 	next) next_topics="${next_topics} ${ref}" ;;
 	seen) seen_topics="${seen_topics} ${ref}" ;;

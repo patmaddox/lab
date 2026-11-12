@@ -14,6 +14,10 @@ atf_init_test_cases() {
 	atf_add_test_case dry_run_prints_commands
 	atf_add_test_case reads_topics_below_the_cook_line
 	atf_add_test_case requires_a_cook_line
+	atf_add_test_case allows_blank_lines
+	atf_add_test_case rejects_an_unknown_keyword
+	atf_add_test_case rejects_a_topic_without_a_ref
+	atf_add_test_case rejects_extra_fields
 }
 
 # Make a jj repo in ./repo and enter it. It holds trunk, next on trunk,
@@ -66,6 +70,18 @@ assert_parents() {
 
 	atf_check -o inline:"${*}" jj log --no-graph -r "${rev}" \
 	    -T 'parents.map(|c| c.description().first_line()).join(" ")'
+}
+
+# assert_rejects <error> <line>...: check that cook fails with <error>
+# when next lists the lines as its topics, and changes nothing.
+assert_rejects() {
+	local error="${1}" op
+	shift
+
+	topics "${@}"
+	op=$(op_id)
+	atf_check -s exit:1 -e inline:"cook: ${error}\n" "${COOK}"
+	atf_check -o inline:"${op}" jj op log -n 1 --no-graph -T id
 }
 
 # op_id: print the id of the repo's latest operation.
@@ -197,4 +213,35 @@ requires_a_cook_line_body() {
 	atf_check -s exit:1 -e inline:"cook: next has no [cook] line\n" \
 	    "${COOK}"
 	atf_check -o inline:"${op}" jj op log -n 1 --no-graph -T id
+}
+
+atf_test_case allows_blank_lines
+allows_blank_lines_body() {
+	setup
+	commit a trunk
+	commit b trunk
+	topics '' 'next a' '' 'next b'
+	atf_check "${COOK}"
+	assert_parents next a b
+}
+
+atf_test_case rejects_an_unknown_keyword
+rejects_an_unknown_keyword_body() {
+	setup
+	commit a trunk
+	assert_rejects 'line 5: unknown keyword: nxt' 'next a' 'nxt a'
+}
+
+atf_test_case rejects_a_topic_without_a_ref
+rejects_a_topic_without_a_ref_body() {
+	setup
+	commit a trunk
+	assert_rejects 'line 5: seen needs a ref' 'next a' 'seen'
+}
+
+atf_test_case rejects_extra_fields
+rejects_extra_fields_body() {
+	setup
+	commit a trunk
+	assert_rejects 'line 5: too many fields' 'next a' 'next a b c'
 }
