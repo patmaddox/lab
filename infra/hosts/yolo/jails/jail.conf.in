@@ -37,7 +37,12 @@
   # routes it; the jail is .2.
   vnet;
   vnet.interface = "epair%HOST%b";
-  exec.prestart = "/sbin/ifconfig epair%HOST% create";
+  # A start that fails before the jail exists runs no exec.poststop, so
+  # it leaves the epair behind, and the next start could not create it.
+  # jail(8) runs exec.prestart only when no jail of this name runs, so
+  # an epair here is such a leftover, or a dying jail's. Destroy it.
+  exec.prestart = "! /sbin/ifconfig epair%HOST%a >/dev/null 2>&1 || /sbin/ifconfig epair%HOST%a destroy";
+  exec.prestart += "/sbin/ifconfig epair%HOST% create";
   exec.prestart += "/sbin/ifconfig epair%HOST%a inet 10.200.%HOST%.1/24 up";
   exec.poststop = "/sbin/ifconfig epair%HOST%a destroy";
 
