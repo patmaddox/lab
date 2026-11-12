@@ -225,7 +225,10 @@ would replace the claude-code package's install with one that does
 not run on FreeBSD, and the =/usage-credits= command. Setting
 =attribution= to false leaves Claude Code's attribution out of a
 session's commits and pull requests: the Co-Authored-By trailer, the
-Claude Code footer, and the claude.ai session link.
+Claude Code footer, and the claude.ai session link. It turns off
+auto memory, the notes a session writes for itself under
+=~/.claude/projects=, so a session follows only the instructions it
+is given.
 
 Claude Code loads managed skills from =.claude/skills= under the same
 folder, and offers them in every session. =code-sync= fetches a
