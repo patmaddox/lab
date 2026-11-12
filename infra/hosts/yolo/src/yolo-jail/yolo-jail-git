@@ -36,7 +36,14 @@ exists() {
 }
 
 exists ${zroot} || zfs create ${zroot}
-if ! exists ${zroot}/${name}; then
-	zfs create ${zroot}/${name}
-	chown ${agent}:${agent} /git/jails/${name}
-fi
+exists ${zroot}/${name} || zfs create ${zroot}/${name}
+
+# The jail mounts /git/jails/<name> as its /git/agent, where its agent
+# makes its repos. Unless the dataset is mounted, that is the root-owned
+# directory beneath it, and the agent cannot write there. Check both on
+# every run, so running yolo-jail-init again repairs a dataset that was
+# made but never mounted or given to the agent. -h, so a symlink is
+# never followed, though the jail cannot replace a mountpoint.
+[ "$(zfs get -H -o value mounted ${zroot}/${name})" = yes ] ||
+    zfs mount ${zroot}/${name}
+chown -h ${agent}:${agent} /git/jails/${name}

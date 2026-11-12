@@ -111,7 +111,12 @@ changes.
 
 =yolo-jail-git= makes =zroot/git/jails/<name>=, if it is missing,
 which holds the jail's own repos and belongs to the agent, uid 15000.
-It refuses if the jail's upstream repo, =/git/<owner>/<repo>.git=, is
+On every run it mounts the dataset if it is not mounted, and gives it
+to the agent. Otherwise the jail's =/git/agent= would be the
+root-owned directory beneath it, and the agent's repo could not be
+made there. So if a jail fails to start with =cannot mkdir
+/git/agent/...: Permission denied=, stop it and run =yolo-jail-init=
+again. It refuses if the jail's upstream repo, =/git/<owner>/<repo>.git=, is
 missing; =yolo-git-init= makes it. =yolo-jail-init= runs it, and
 =yolo-jail-create-mountpoints= makes the repos' mountpoints in the
 jail.
