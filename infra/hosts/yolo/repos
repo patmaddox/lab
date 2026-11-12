@@ -4,4 +4,8 @@
 patmaddox/lab trunk
 rxv/devops main
 rxv/rxv_phx_example main
+rxv/rxv_core main
+rxv/rxv_doctor main
+rxv/rxv_frontline main
+rxv/rxv_verify main
 freebsd/freebsd-ports main

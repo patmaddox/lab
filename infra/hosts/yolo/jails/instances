@@ -4,9 +4,9 @@
 lab-1 coding-agent 11 patmaddox/lab
 lab-2 coding-agent 12 patmaddox/lab
 lab-3 coding-agent 13 patmaddox/lab
-devops-1 coding-agent 21 rxv/devops rxv/rxv_phx_example
-devops-2 coding-agent 22 rxv/devops rxv/rxv_phx_example
-devops-3 coding-agent 23 rxv/devops rxv/rxv_phx_example
+devops-1 coding-agent 21 rxv/devops rxv/rxv_phx_example rxv/rxv_core rxv/rxv_doctor rxv/rxv_frontline rxv/rxv_verify
+devops-2 coding-agent 22 rxv/devops rxv/rxv_phx_example rxv/rxv_core rxv/rxv_doctor rxv/rxv_frontline rxv/rxv_verify
+devops-3 coding-agent 23 rxv/devops rxv/rxv_phx_example rxv/rxv_core rxv/rxv_doctor rxv/rxv_frontline rxv/rxv_verify
 freebsd-ports-1 coding-agent 31 freebsd/freebsd-ports
 freebsd-ports-2 coding-agent 32 freebsd/freebsd-ports
 freebsd-ports-3 coding-agent 33 freebsd/freebsd-ports
