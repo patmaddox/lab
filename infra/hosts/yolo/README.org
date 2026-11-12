@@ -146,6 +146,7 @@ Its =pkg-plist= lists its files:
 @mode 0644
 /usr/local/etc/claude-code/CLAUDE.md
 /usr/local/etc/claude-code/managed-settings.d/eat.json
+/usr/local/etc/claude-code/managed-settings.d/permissions.json
 /usr/local/etc/claude-code/managed-settings.d/prefs.json
 /usr/local/etc/gitconfig
 @comment Claude Code reads its managed settings only from
@@ -171,6 +172,18 @@ the jail is their workstation, where they have root and work on their
 own, which repos under =/git= are upstream and which are the agent's,
 and that they should isolate their work in child jails, or in bhyve
 VMs when jails won't do.
+
+=managed-settings.d/permissions.json= gives Claude Code what
+=CLAUDE.md= promises. Without it, a session asks before running =doas=
+or reading outside its working directory, and with nobody to answer,
+as under =claude -p=, it stops. It starts every session in
+bypassPermissions mode, and skips the prompt that confirms that mode.
+That mode lets a session go anywhere, so it also adds =/git= and
+=/home/agent= to a session's directories, for when the session leaves
+bypassPermissions for a mode that checks paths, such as plan mode.
+Claude Code refuses bypassPermissions to root unless =IS_SANDBOX= is
+=1=, so a session run as root, through =doas claude= or a plain
+=jexec=, would not start. Its =env= sets that.
 
 Its Claude Code settings suit a session in Emacs's eat, which keeps
 the scrollback. =managed-settings.d/eat.json= turns on screen-reader

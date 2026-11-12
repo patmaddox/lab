@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "defaultMode": "bypassPermissions",
+    "additionalDirectories": ["/git", "/home/agent"]
+  },
+  "skipDangerousModePermissionPrompt": true,
+  "env": {
+    "IS_SANDBOX": "1"
+  }
+}
