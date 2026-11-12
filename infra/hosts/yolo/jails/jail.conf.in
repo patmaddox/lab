@@ -22,10 +22,11 @@
   allow.mount.zfs;
   zfs.dataset = "zroot/jails/instances/${name}/data";
 
-  # Its repo, read-only at the same path as on yolo, so it clones but
-  # never writes it. Its own repos, read-write at /git/agent, where
-  # beastie fetches them. jail(8) refuses a mountpoint with a symlink
-  # below the jail's path, so the jail cannot point a mount out of it.
+  # Its repos, read-only at the same paths as on yolo, so it clones but
+  # never writes them, one line for each. Its own repos, read-write at
+  # /git/agent, where beastie fetches them. jail(8) refuses a mountpoint
+  # with a symlink below the jail's path, so the jail cannot point a
+  # mount out of it.
   mount += "/git/%REPO%.git ${path}/git/%REPO%.git nullfs ro 0 0";
   mount += "/git/jails/${name} ${path}/git/agent nullfs rw 0 0";
 
@@ -34,7 +35,8 @@
   # reset. yolo-jail-init makes it.
   mount += "/jails/data/${name}/claude ${path}/home/agent/.claude nullfs rw 0 0";
 
-  # Once it runs, give its agent a repo of its own to push its work to.
+  # Once it runs, give its agent a repo of its own to push its work to,
+  # for each of its repos.
   exec.poststart += "/usr/local/libexec/yolo-jail-repo ${name} %REPO%";
 
   # The jail has its own network stack, on one end of an epair, and a

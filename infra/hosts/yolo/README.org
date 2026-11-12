@@ -343,12 +343,14 @@ outlives a reset also belongs under =zroot/jails/data/<name>=, with
 which the jail sees read-write at =/home/agent/.claude=, so a sign-in
 lasts until that dataset is destroyed.
 
-Each jail gets one git repo, which =jails/instances= names as
-=<owner>/<repo>=. yolo keeps it at =/git/<owner>/<repo>.git=, and the
-jail sees it there too, read-only. The jail's own repos are at
-=/git/agent= in the jail and =/git/jails/<name>= on yolo, read-write.
-Both are outside =zroot/jails/instances=, so a reset keeps them.
-=yolo-jail-init= refuses to set a jail up until its repo exists.
+Each jail gets one or more git repos, which =jails/instances= names
+after its number, each as =<owner>/<repo>=. The devops jails, for
+instance, get =rxv/devops= and =rxv/rxv_phx_example=. yolo keeps each
+at =/git/<owner>/<repo>.git=, and the jail sees it there too,
+read-only. The jail's own repos are at =/git/agent= in the jail and
+=/git/jails/<name>= on yolo, read-write. Both are outside
+=zroot/jails/instances=, so a reset keeps them. =yolo-jail-init=
+refuses to set a jail up until all of its repos exist.
 
 =repos= lists the repos, each with its default branch, which a clone
 checks out, and must list each repo that =jails/instances= names. On
@@ -360,8 +362,12 @@ It runs =doas yolo-git-init= on yolo, as yolo-jail's README says, so
 the repos belong to you there. Run it again after changing =repos=.
 =yolo-jail-init= makes the dataset for a jail's own repos.
 
-Once a jail starts, its agent has a bare repo of its own for its
-work, at =/git/agent/<owner>/<repo>.git=. yolo-jail's README says how.
+Once a jail starts, its agent has a bare repo of its own for the work
+on each of its repos, at =/git/agent/<owner>/<repo>.git=. yolo-jail's
+README says how. To give a jail another repo, add it to =repos= and
+to the jail's line in =jails/instances=, run =just git-init= and
+=just install-pkg=, then stop the jail, run =yolo-jail-init= on it,
+and start it again.
 
 The jails may run bhyve. They see =/dev/vmmctl=, their VMs under
 =/dev/vmm=, =nmdm= consoles, and =tap= interfaces, by devfs ruleset 10

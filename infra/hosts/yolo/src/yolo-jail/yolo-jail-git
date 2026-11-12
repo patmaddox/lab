@@ -1,9 +1,9 @@
 #!/bin/sh
 set -eu
 
-# yolo-jail-git name repo: make the dataset that holds a jail's own git
-# repos, unless it exists. yolo-jail-create-mountpoints makes the
-# jail's mountpoints for them. repo is <owner>/<repo>, the upstream
+# yolo-jail-git name repo ...: make the dataset that holds a jail's own
+# git repos, unless it exists. yolo-jail-create-mountpoints makes the
+# jail's mountpoints for them. Each repo is <owner>/<repo>, an upstream
 # repo /git/<owner>/<repo>.git that the jail clones, which
 # yolo-git-init makes. yolo-jail-init runs this.
 
@@ -12,24 +12,26 @@ readonly zroot=zroot/git/jails
 readonly agent=15000
 
 usage() {
-	echo "usage: yolo-jail-git name owner/repo" >&2
+	echo "usage: yolo-jail-git name owner/repo ..." >&2
 	exit 64
 }
 
-[ ${#} -eq 2 ] || usage
-readonly name=${1} repo=${2}
+[ ${#} -ge 2 ] || usage
+readonly name=${1}
+shift
 
-# jails is where the jails' own repos go, so no owner may take it.
-case ${repo} in
-jails/*|.*|*/.*|*/*/*|*[!A-Za-z0-9._/-]*) usage ;;
-?*/?*) ;;
-*) usage ;;
-esac
-
-if [ ! -d /git/${repo}.git ]; then
-	echo "E: no /git/${repo}.git; make it with yolo-git-init" >&2
-	exit 1
-fi
+for repo in "${@}"; do
+	# jails is where the jails' own repos go, so no owner may take it.
+	case ${repo} in
+	jails/*|.*|*/.*|*/*/*|*[!A-Za-z0-9._/-]*) usage ;;
+	?*/?*) ;;
+	*) usage ;;
+	esac
+	if [ ! -d /git/${repo}.git ]; then
+		echo "E: no /git/${repo}.git; make it with yolo-git-init" >&2
+		exit 1
+	fi
+done
 
 exists() {
 	zfs list -H -o name ${1} >/dev/null 2>&1

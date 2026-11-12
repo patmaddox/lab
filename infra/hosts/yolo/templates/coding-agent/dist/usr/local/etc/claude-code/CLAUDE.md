@@ -20,10 +20,11 @@ permission to do it.
 
 `/git` holds bare repos. Clone them to work in them.
 
-- `/git/<owner>/<repo>.git` is upstream, and read-only. It is the human's
-  repo, which this jail is for. Run `ls /git` to find it.
+- `/git/<owner>/<repo>.git` is upstream, and read-only. These are the
+  human's repos, which this jail is for. There may be more than one.
+  Run `ls -d /git/*/*.git` to find them.
 - `/git/agent` is yours, and read-write. `/git/agent/<owner>/<repo>.git`
-  is your fork of the upstream repo. Push your work there, and the human
+  is your fork of that upstream repo. Push your work there, and the human
   fetches it from there. You may make more bare repos under `/git/agent`.
 
 Keep clones in your home directory, with upstream as `origin` and your

@@ -29,14 +29,20 @@ case ${name} in
 *) usage ;;
 esac
 
-# Each line of instances: jail, template, number, and repo.
+# Each line of instances: jail, template, number, and one or more repos.
 line=$(awk -v name=${name} '!/^#/ && $1 == name' ${instances})
 if [ -z "${line}" ]; then
 	echo "E: no jail ${name} in ${instances}" >&2
 	exit 1
 fi
-set -- ${line}
-readonly template=${2} repo=${4}
+# The repos are the rest of the line: one or more.
+read -r _ template _ repos <<EOL
+${line}
+EOL
+if [ -z "${repos}" ]; then
+	echo "E: jail ${name} has no repo in ${instances}" >&2
+	exit 1
+fi
 
 # The jail writes its root while it runs, so a directory there could
 # turn into a symlink between yolo-jail-create-mountpoints' check and
@@ -46,13 +52,16 @@ if jls -j ${name} jid >/dev/null 2>&1; then
 	exit 1
 fi
 
-# The jail's own repos first, since it refuses unless the repo it
-# clones exists, and the root takes a while to make.
-${libexec}/yolo-jail-git ${name} ${repo}
+# The jail's own repos first, since it refuses unless the repos it
+# clones exist, and the root takes a while to make.
+${libexec}/yolo-jail-git ${name} ${repos}
 ${libexec}/yolo-jail-data ${name}
 ${libexec}/yolo-jail-create ${name} ${template}
-${libexec}/yolo-jail-create-mountpoints ${name} \
-    pkg/yolo git/${repo}.git git/agent home/agent/.claude
+mountpoints="pkg/yolo git/agent home/agent/.claude"
+for repo in ${repos}; do
+	mountpoints="${mountpoints} git/${repo}.git"
+done
+${libexec}/yolo-jail-create-mountpoints ${name} ${mountpoints}
 
 # The ZFS dataset the jail runs itself, under its own, so a reset
 # destroys it. jailed is on, so yolo never mounts it.

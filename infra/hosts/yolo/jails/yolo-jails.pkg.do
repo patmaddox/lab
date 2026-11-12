@@ -19,10 +19,32 @@ stagedir=$(mktemp -d)
 trap "rm -rf ${stagedir}" EXIT
 
 mkdir -p "${stagedir}/etc/jail.conf.d"
-grep -v -e '^#' -e '^$' instances | while read -r jail template host repo; do
-	sed -e "s/%NAME%/${jail}/g" -e "s/%TEMPLATE%/${template}/g" \
-	    -e "s/%HOST%/${host}/g" -e "s|%REPO%|${repo}|g" jail.conf.in \
-	    > "${stagedir}/etc/jail.conf.d/${jail}.conf"
+# Print jail.conf.in, with each line that names %REPO% repeated once
+# for each of the jail's repos.
+repeat_repo_lines() {
+	while IFS= read -r line; do
+		case ${line} in
+		*%REPO%*)
+			for repo in ${repos}; do
+				printf '%s\n' "${line}" | sed "s|%REPO%|${repo}|g"
+			done
+			;;
+		*)
+			printf '%s\n' "${line}"
+			;;
+		esac
+	done < jail.conf.in
+}
+
+# repos is the rest of the line: one or more repos.
+grep -v -e '^#' -e '^$' instances | while read -r jail template host repos; do
+	if [ -z "${repos}" ]; then
+		echo "E: jail ${jail} has no repo in instances" >&2
+		exit 1
+	fi
+	repeat_repo_lines |
+	    sed -e "s/%NAME%/${jail}/g" -e "s/%TEMPLATE%/${template}/g" \
+	    -e "s/%HOST%/${host}/g" > "${stagedir}/etc/jail.conf.d/${jail}.conf"
 done
 
 # yolo-jail-init finds each jail's template and repo here.

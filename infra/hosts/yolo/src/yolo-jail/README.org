@@ -24,7 +24,7 @@ installs it from there. A yolo without yolo-pkg needs
 : yolo-jail-init <name>
 
 =yolo-jail-init= sets a jail up, so that starting it makes nothing.
-It looks the jail's template and repo up in
+It looks the jail's template and repos up in
 =/usr/local/share/yolo-jails/instances=, from the yolo-jails package.
 Then it runs =yolo-jail-git=, =yolo-jail-data=, =yolo-jail-create=,
 and =yolo-jail-create-mountpoints=, below, and makes
@@ -75,7 +75,7 @@ root that a jail has run in, so an upgrade goes through =jexec=.
 root, and each directory on the way that is missing, so that
 jail.conf can mount something there. =yolo-jail-init= runs it for
 every mount the jail's config makes: the repository at =pkg/yolo=, and
-the git repos at =git/<owner>/<repo>.git= and =git/agent=, and the
+each git repo at =git/<owner>/<repo>.git= and =git/agent=, and the
 agent's Claude Code settings at =home/agent/.claude=. The jail's
 root may have turned a directory on the way into a symlink, which
 mkdir would follow out of the jail, so it refuses those. It refuses a
@@ -110,7 +110,7 @@ changes.
 
 * Git
 
-: yolo-jail-git <name> <owner>/<repo>
+: yolo-jail-git <name> <owner>/<repo> ...
 
 =yolo-jail-git= makes =zroot/git/jails/<name>=, if it is missing,
 which holds the jail's own repos and belongs to the agent, uid 15000.
@@ -119,18 +119,18 @@ to the agent. Otherwise the jail's =/git/agent= would be the
 root-owned directory beneath it, and the agent's repo could not be
 made there. So if a jail fails to start with =cannot mkdir
 /git/agent/...: Permission denied=, stop it and run =yolo-jail-init=
-again. It refuses if the jail's upstream repo, =/git/<owner>/<repo>.git=, is
-missing; =yolo-git-init= makes it. =yolo-jail-init= runs it, and
-=yolo-jail-create-mountpoints= makes the repos' mountpoints in the
-jail.
+again. It refuses if any of the jail's upstream repos,
+=/git/<owner>/<repo>.git=, is missing; =yolo-git-init= makes them.
+=yolo-jail-init= runs it, and =yolo-jail-create-mountpoints= makes
+the repos' mountpoints in the jail.
 
 : yolo-jail-repo <name> <owner>/<repo>
 
 =yolo-jail-repo= makes a bare repo of the jail's agent's own, at
 =/git/agent/<owner>/<repo>.git=, for its work, unless it exists. It
 runs git in the jail, as the agent, so nothing the jail has written
-runs on yolo. A jail's config runs it as =exec.poststart=, so every
-start makes it if it is missing.
+runs on yolo. A jail's config runs it as =exec.poststart=, once for
+each of the jail's repos, so every start makes those that are missing.
 
 * Data
 
