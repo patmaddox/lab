@@ -1,8 +1,5 @@
 {
-  "attribution": {
-    "commit": "",
-    "pr": ""
-  },
+  "attribution": false,
   "env": {
     "DISABLE_UPDATES": "1",
     "DISABLE_EXTRA_USAGE_COMMAND": "1"
