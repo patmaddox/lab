@@ -31,6 +31,10 @@ If the current directory is inside a clone, sync that clone. If not,
 sync each clone directly under the current directory, one after
 another. If arguments are given, sync only the branches they name.
 
+The skill runs unattended, so it never stops to ask the user. What it
+cannot decide, or must not touch, it leaves alone and reports under
+"Your action".
+
 Finding landed commits and rebasing are slow and need judgment, so
 each runs in a subagent of its own. The main loop reads the clone's
 layout, fetches, gathers branches, makes the cheap checks, acts on
@@ -43,7 +47,8 @@ remote, the default branch, and where each branch is pushed from the
 clone's own config. Do not assume any remote or branch name.
 
 **Upstream remote.** This is where the default branch comes from.
-Find it with the first rule that gives exactly one remote:
+Find it with the first rule that gives exactly one remote, and call
+that remote `$up`:
 
 1. `git remote` lists only one remote.
 2. Exactly one remote `<r>` has a local branch `<b>` that tracks the
@@ -52,8 +57,8 @@ Find it with the first rule that gives exactly one remote:
    `refs/remotes/<r>/HEAD` points at.
 3. Exactly one remote is not `remote.pushDefault`.
 
-If no rule settles it, list the remotes with their URLs and ask the
-user which is upstream. Call the answer `$up`.
+If no rule settles it, sync nothing in this clone. Report the remotes
+with their URLs under "Your action", and move on to the next clone.
 
 **Default branch.** Read it from upstream after the fetch in step 2,
 because upstream may have changed it:
@@ -75,7 +80,8 @@ on a fork are ours to delete and rewrite.
 **Push remote of a branch.** For branch `<b>`, take the first that
 applies:
 
-1. The fork that already has `<b>`. If more than one does, ask.
+1. The fork that already has `<b>`. If more than one does, the branch
+   has no single push remote, and step 7 leaves it alone.
 2. The remote of `git rev-parse --abbrev-ref <b>@{push}`, if that
    resolves. It often does not, for a branch that tracks the default
    branch under another name.
@@ -83,11 +89,12 @@ applies:
 
 If none applies, the branch is local only.
 
-**Upstream is not ours.** Never push to `$up`, and never delete its
-branches, without asking the user first. A branch whose push remote
-is `$up` still gets its local checks, but ask before deleting or
-force-pushing its copy on `$up`. Ask once for the whole run, listing
-every branch the answer covers.
+**Upstream is not ours.** Never push to `$up`, and never delete a
+branch from it. A branch whose push remote is `$up` gets the same
+checks as the others, and its local copy is deleted once all its
+commits have landed, but its copy on `$up` stays, and it is never
+rebased. Report it under "Your action", so the user can delete or
+rebase it there.
 
 ## 2. Fetch
 
@@ -191,7 +198,9 @@ Launch a rebase subagent for each branch to rebase, all in one
 message so they run in parallel. Use the prompt in "Rebase subagent"
 below. Each works in a worktree of its own, so they do not touch the
 main checkout or each other. A local-only branch has no push remote,
-so its subagent updates the local branch instead of pushing.
+so its subagent updates the local branch instead of pushing. A branch
+pushed to `$up`, or to more than one fork, is not rebased. Report it
+under "Your action" instead.
 
 When a subagent reports that it pushed, update the local branch to
 match, if one exists and is not checked out:
@@ -229,9 +238,10 @@ each branch once.
 
 **Your action.** One line for each decision or command left to the
 user, with the reason in a few words: a diverged branch, a rebase
-given up, a published branch with landed commits or conflicts, an
-error, a `$main` that cannot fast-forward, or a checked-out branch
-to reset. If nothing is left, write "None."
+given up, a published branch with landed commits or conflicts, a
+branch that lives on `$up` or on more than one fork, an error, a
+`$main` that cannot fast-forward, a checked-out branch to reset, or an
+upstream the rules cannot find. If nothing is left, write "None."
 
 ## Integration subagent
 
