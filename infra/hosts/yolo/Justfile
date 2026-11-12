@@ -1,3 +1,4 @@
+# List the recipes
 help:
   just -l
 
@@ -14,13 +15,12 @@ push-pkg: pkg
 install-pkg: push-pkg
   ssh yolo.p7x.dev doas pkg install -y -r yolo $(for p in src/*/*.pkg jails/*.pkg; do pkg query -F $p %n; done)
 
-# Import the BE on yolo as yolo-<release>-<date>-new, and activate -t it
+# Build the BE, import it on yolo, and boot it once at the next reboot
 deploy-be:
   redo-ifchange yolo.be.zfs
   ./tools/deploy-be.sh yolo.conf yolo.be.zfs
 
-# Make the repos that repos lists on yolo, those that are missing, as
-# the user you sign in to yolo as, and set their default branches
+# Make the upstream repos that repos lists on yolo, and set their branches
 git-init:
   ssh yolo.p7x.dev doas yolo-git-init $(awk '!/^#/ && NF { print $1 ":" $2 }' repos)
 
