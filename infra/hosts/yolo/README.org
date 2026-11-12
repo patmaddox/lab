@@ -145,6 +145,7 @@ Its =pkg-plist= lists its files:
 @comment belong to root:wheel, with the mode set here.
 @mode 0644
 /usr/local/etc/claude-code/managed-settings.d/eat.json
+/usr/local/etc/claude-code/managed-settings.d/prefs.json
 /usr/local/etc/gitconfig
 @comment Claude Code reads its managed settings only from
 @comment /etc/claude-code, so point that at them.
@@ -173,6 +174,10 @@ Managed settings outrank the user's own, and their =env= outranks the
 environment. To try a session without screen-reader mode:
 
 : CLAUDE_AX_SCREEN_READER=0 claude
+
+=managed-settings.d/prefs.json= turns off =claude update=, which
+would replace the claude-code package's install with one that does
+not run on FreeBSD.
 
 Claude Code reads managed settings only from =/etc/claude-code=. The
 template keeps them in =/usr/local/etc/claude-code=, and its =dist/=
