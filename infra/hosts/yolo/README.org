@@ -123,7 +123,9 @@ installs whatever else it needs. Its conf,
 # it installs whatever else it needs. git is here because every jail
 # clones its repo from /git. claude-code is the agent itself, which
 # the template's settings configure. pkg and yolo-pkg-repos are here so
-# the jail can upgrade itself from the repositories.
+# the jail can upgrade itself from the repositories. FreeBSD-acpi
+# holds iasl, which bhyve runs to build a VM's ACPI tables, and which
+# FreeBSD-set-base-jail lacks.
 
 comment="Template for yolo's coding-agent jails"
 
@@ -133,6 +135,7 @@ yolo-pkg-repos
 git
 doas
 claude-code
+FreeBSD-acpi
 "
 
 users="
