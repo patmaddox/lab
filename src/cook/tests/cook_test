@@ -21,6 +21,7 @@ atf_init_test_cases() {
 	atf_add_test_case rejects_extra_fields
 	atf_add_test_case ignores_comments
 	atf_add_test_case reads_a_commented_cook_line
+	atf_add_test_case rejects_a_ref_naming_several_commits
 }
 
 # Make a jj repo in ./repo and enter it. It holds trunk, next on trunk,
@@ -200,9 +201,9 @@ dry_run_prints_commands_body() {
 	topics 'next a' 'seen c'
 	op=$(op_id)
 	atf_check -o inline:"\
-jj --quiet rebase -s next -o 'trunk()' -o a
+jj --quiet rebase -s next -o 'trunk()' -o 'exactly(a,1)'
 jj --quiet simplify-parents -r next
-jj --quiet rebase -s seen -o next -o c
+jj --quiet rebase -s seen -o next -o 'exactly(c,1)'
 jj --quiet simplify-parents -r seen
 " "${COOK}" -n
 	atf_check -o inline:"${op}" jj op log -n 1 --no-graph -T id
@@ -279,4 +280,14 @@ reads_a_commented_cook_line_body() {
 	describe next '' '[cook] # topics' 'next a'
 	atf_check "${COOK}"
 	assert_parents next a
+}
+
+atf_test_case rejects_a_ref_naming_several_commits
+rejects_a_ref_naming_several_commits_body() {
+	setup
+	commit a trunk
+	commit b trunk
+	topics 'next a|b'
+	atf_check -s exit:1 -e match:'more than the expected 1' "${COOK}"
+	assert_parents next trunk
 }

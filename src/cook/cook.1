@@ -41,6 +41,9 @@ runs, so a topic named by a bookmark follows the bookmark as it moves,
 and a topic named by a change id follows the change as it is
 rewritten.
 Name a topic by its commit id to keep merging exactly that commit.
+Since a
+.Ar ref
+is a revset, it must resolve to exactly one commit.
 .Pp
 A
 .Ql #
@@ -96,6 +99,7 @@ or
 .Li seen
 line with exactly one
 .Ar ref .
+It also fails if a topic does not name exactly one commit.
 .Sh EXAMPLES
 A description of
 .Sy next

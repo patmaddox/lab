@@ -48,13 +48,13 @@ run() {
 }
 
 # rebuild <branch> <base> <topic>...: make <branch> a merge of <base>
-# and each topic, in order.
+# and each topic, in order. A topic must name exactly one commit.
 rebuild() {
-	local branch="${1}" onto=
-	shift
+	local branch="${1}" onto="-o ${2}"
+	shift 2
 
-	for rev in "${@}"; do
-		onto="${onto} -o ${rev}"
+	for topic in "${@}"; do
+		onto="${onto} -o exactly(${topic},1)"
 	done
 	# shellcheck disable=SC2086 # onto is split on purpose
 	run jj --quiet rebase -s "${branch}" ${onto}
