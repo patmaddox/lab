@@ -372,6 +372,8 @@ should come from outside 10.200.0.0/16.
 The jails' networks:
 - lab-1, lab-2, and lab-3: 10.200.11.0/24 to 10.200.13.0/24
 - devops-1, devops-2, and devops-3: 10.200.21.0/24 to 10.200.23.0/24
+- freebsd-ports-1, freebsd-ports-2, and freebsd-ports-3: 10.200.31.0/24
+  to 10.200.33.0/24
 
 * Git
 

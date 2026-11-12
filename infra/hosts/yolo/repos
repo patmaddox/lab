@@ -3,3 +3,4 @@
 # checks out. just git-init makes them on yolo.
 patmaddox/lab trunk
 rxv/devops main
+freebsd/freebsd-ports main
