@@ -196,6 +196,13 @@ reads it through =/etc/profile=, as =jexec -l= starts one, and what runs
 from that shell inherits it. Claude Code ignores this variable in its
 settings' =env=, so it cannot go in managed settings.
 
+The agent's =~/.claude= outlives a reset, being a dataset of its own
+on yolo, but Claude Code keeps =.claude.json= beside it, in the home
+directory, which does not. So the same script sets the agent's
+=CLAUDE_CONFIG_DIR= to =/home/agent/.claude=, which puts
+=.claude.json= inside it. Should a process miss the variable, Claude
+Code still finds its settings and credentials at the usual place.
+
 Its Claude Code settings suit a session in Emacs's eat, which keeps
 the scrollback. =managed-settings.d/eat.json= turns on screen-reader
 mode, whose flat text copies cleanly, and the classic renderer, which
