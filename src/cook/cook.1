@@ -100,6 +100,13 @@ or
 line with exactly one
 .Ar ref .
 It also fails if a topic does not name exactly one commit.
+If any rebase fails,
+.Nm
+restores the repository to the operation it started from, so that
+.Sy next
+and
+.Sy seen
+move together or not at all.
 .Sh EXAMPLES
 A description of
 .Sy next

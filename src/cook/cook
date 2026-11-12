@@ -102,7 +102,15 @@ $(jj log --no-graph -r next -T description)
 EOF
 [ -n "${in_cook}" ] || die "next has no [cook] line"
 
+# Undo every rebase if any step fails, so that next and seen move together
+# or not at all.
+if [ -z "${dry_run}" ]; then
+	op=$(jj op log -n 1 --no-graph -T id)
+	trap 'jj --quiet op restore "${op}"; echo "${PROGNAME}: rolled back" >&2' EXIT
+fi
+
 # shellcheck disable=SC2086 # topic lists are split on purpose
 rebuild next 'trunk()' ${next_topics}
 # shellcheck disable=SC2086
 rebuild seen next ${seen_topics}
+trap - EXIT

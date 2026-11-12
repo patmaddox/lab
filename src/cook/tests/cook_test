@@ -22,6 +22,8 @@ atf_init_test_cases() {
 	atf_add_test_case ignores_comments
 	atf_add_test_case reads_a_commented_cook_line
 	atf_add_test_case rejects_a_ref_naming_several_commits
+	atf_add_test_case rolls_back_when_a_seen_ref_is_unknown
+	atf_add_test_case rolls_back_when_seen_would_cycle
 }
 
 # Make a jj repo in ./repo and enter it. It holds trunk, next on trunk,
@@ -289,5 +291,24 @@ rejects_a_ref_naming_several_commits_body() {
 	commit b trunk
 	topics 'next a|b'
 	atf_check -s exit:1 -e match:'more than the expected 1' "${COOK}"
+	assert_parents next trunk
+}
+
+atf_test_case rolls_back_when_a_seen_ref_is_unknown
+rolls_back_when_a_seen_ref_is_unknown_body() {
+	setup
+	commit a trunk
+	topics 'next a' 'seen nosuch'
+	atf_check -s exit:1 -e match:'rolled back' "${COOK}"
+	assert_parents next trunk
+}
+
+atf_test_case rolls_back_when_seen_would_cycle
+rolls_back_when_seen_would_cycle_body() {
+	setup
+	commit a trunk
+	commit top seen
+	topics 'next a' 'seen top'
+	atf_check -s exit:1 -e match:'rolled back' "${COOK}"
 	assert_parents next trunk
 }
