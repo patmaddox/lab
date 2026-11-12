@@ -216,7 +216,9 @@ environment. To try a session without screen-reader mode:
 
 =managed-settings.d/prefs.json= turns off =claude update=, which
 would replace the claude-code package's install with one that does
-not run on FreeBSD, and the =/usage-credits= command.
+not run on FreeBSD, and the =/usage-credits= command. Its
+=attribution= leaves the Co-Authored-By trailer out of a session's
+commits and the Claude Code footer out of its pull requests.
 
 Claude Code reads managed settings only from =/etc/claude-code=. The
 template keeps them in =/usr/local/etc/claude-code=, and its =dist/=
