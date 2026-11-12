@@ -149,13 +149,15 @@ Its =pkg-plist= lists its files:
 /usr/local/etc/claude-code/managed-settings.d/permissions.json
 /usr/local/etc/claude-code/managed-settings.d/prefs.json
 /usr/local/etc/gitconfig
+/usr/local/etc/profile.d/claude-code.sh
 @comment Claude Code reads its managed settings only from
 @comment /etc/claude-code, so point that at them.
 /etc/claude-code
-@comment The settings' directories, which pkg removes once they are
+@comment The directories of its files, which pkg removes once they are
 @comment empty. @mode does not suit them, so they set their own.
 @dir(root,wheel,0755) /usr/local/etc/claude-code/managed-settings.d
 @dir(root,wheel,0755) /usr/local/etc/claude-code
+@dir(root,wheel,0755) /usr/local/etc/profile.d
 #+end_src
 
 The package installs =dist/usr/local/etc/gitconfig= at
@@ -184,6 +186,15 @@ bypassPermissions for a mode that checks paths, such as plan mode.
 Claude Code refuses bypassPermissions to root unless =IS_SANDBOX= is
 =1=, so a session run as root, through =doas claude= or a plain
 =jexec=, would not start. Its =env= sets that.
+
+Claude Code also asks whether to trust a folder before a session
+starts there, whatever the mode. It never records the answer for the
+home folder, so it asks in =/home/agent= every time. The jail is the
+sandbox, so =/usr/local/etc/profile.d/claude-code.sh= sets
+=CLAUDE_CODE_SANDBOXED=1=, which trusts every folder. A login shell
+reads it through =/etc/profile=, as =jexec -l= starts one, and what runs
+from that shell inherits it. Claude Code ignores this variable in its
+settings' =env=, so it cannot go in managed settings.
 
 Its Claude Code settings suit a session in Emacs's eat, which keeps
 the scrollback. =managed-settings.d/eat.json= turns on screen-reader
