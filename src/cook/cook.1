@@ -1,0 +1,91 @@
+.Dd November 12, 2026
+.Dt COOK 1
+.Os
+.Sh NAME
+.Nm cook
+.Nd rebuild the next and seen merge branches
+.Sh SYNOPSIS
+.Nm
+.Op Fl n
+.Sh DESCRIPTION
+.Nm
+rebuilds two merge branches in a
+.Xr jj 1
+repository, in the style of git.git's integration branches.
+Topics flow from
+.Sy seen
+to
+.Sy next
+to trunk.
+.Pp
+The description of the
+.Sy next
+commit lists the topics of both branches, one per line:
+.Bd -literal -offset indent
+next <ref>
+seen <ref>
+.Ed
+.Pp
+A
+.Ar ref
+is any revision that names a topic: a local bookmark, a remote
+bookmark such as
+.Li foo@origin ,
+or a change id.
+It is resolved each time
+.Nm
+runs, so a topic follows its bookmark as the bookmark moves.
+.Pp
+.Nm
+rebases
+.Sy next
+onto
+.Li trunk()
+and each
+.Sy next
+topic, in the order listed.
+It then rebases
+.Sy seen
+onto
+.Sy next
+and each
+.Sy seen
+topic.
+A branch with no topics sits on its base alone.
+After each rebase,
+.Nm
+removes the branch's redundant parents.
+A topic that has landed on trunk is dropped, and so is a base that a
+topic already contains.
+A topic listed under both
+.Sy next
+and
+.Sy seen
+is merged into
+.Sy next
+only.
+.Pp
+The options are as follows:
+.Bl -tag -width Ds
+.It Fl n
+Print the
+.Xr jj 1
+commands instead of running them.
+.El
+.Sh EXIT STATUS
+.Ex -std
+.Sh EXAMPLES
+A description of
+.Sy next
+that merges one local and one remote topic, and stages a third topic
+in
+.Sy seen :
+.Bd -literal -offset indent
+next
+
+next fix-parser
+next feature@origin
+seen experiment
+.Ed
+.Sh SEE ALSO
+.Xr jj 1

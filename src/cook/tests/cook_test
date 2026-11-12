@@ -1,0 +1,171 @@
+#!/usr/bin/env atf-sh
+# shellcheck shell=sh
+# shellcheck disable=SC3043 # FreeBSD sh has local
+
+atf_init_test_cases() {
+	atf_add_test_case merges_next_topics_in_order
+	atf_add_test_case merges_seen_topics_on_next
+	atf_add_test_case leaves_empty_lists_on_their_base
+	atf_add_test_case follows_trunk
+	atf_add_test_case drops_landed_topics
+	atf_add_test_case follows_a_moved_bookmark
+	atf_add_test_case accepts_a_change_id
+	atf_add_test_case merges_a_shared_topic_into_next_only
+	atf_add_test_case dry_run_prints_commands
+}
+
+# Make a jj repo in ./repo and enter it. It holds trunk, next on trunk,
+# and seen on next. Each commit's description is its bookmark's name.
+setup() {
+	cat > jjconfig.toml <<-EOF
+	[user]
+	name = "Test"
+	email = "test@example.com"
+	EOF
+	export JJ_CONFIG="${PWD}/jjconfig.toml"
+	COOK="$(atf_get_srcdir)/../cook"
+
+	jj --quiet git init repo
+	cd repo || atf_fail "cannot enter repo"
+	jj --quiet describe -m trunk
+	jj --quiet bookmark create trunk -r @
+	jj config set --repo 'revset-aliases."trunk()"' trunk
+	commit next trunk
+	commit seen next
+}
+
+# commit <name> <parent>...: make a commit named <name> on the parents,
+# with a bookmark of the same name. Leave the working copy off it,
+# so that it never sits on a commit cook moves.
+commit() {
+	local name="${1}"
+	shift
+
+	jj --quiet new -m "${name}" "${@}"
+	jj --quiet bookmark create "${name}" -r @
+	jj --quiet new 'root()'
+}
+
+# topics <line>...: give next a description that lists the lines.
+topics() {
+	jj --quiet describe -r next -m "$(printf '%s\n' next '' "${@}")"
+}
+
+# assert_parents <rev> <name>...: check a commit's parents, in order.
+assert_parents() {
+	local rev="${1}"
+	shift
+
+	atf_check -o inline:"${*}" jj log --no-graph -r "${rev}" \
+	    -T 'parents.map(|c| c.description().first_line()).join(" ")'
+}
+
+# op_id: print the id of the repo's latest operation.
+op_id() {
+	jj op log -n 1 --no-graph -T id
+}
+
+atf_test_case merges_next_topics_in_order
+merges_next_topics_in_order_body() {
+	setup
+	commit a trunk
+	commit b trunk
+	topics 'next b' 'next a'
+	atf_check "${COOK}"
+	assert_parents next b a
+}
+
+atf_test_case merges_seen_topics_on_next
+merges_seen_topics_on_next_body() {
+	setup
+	commit a trunk
+	commit c trunk
+	topics 'next a' 'seen c'
+	atf_check "${COOK}"
+	assert_parents next a
+	assert_parents seen next c
+}
+
+atf_test_case leaves_empty_lists_on_their_base
+leaves_empty_lists_on_their_base_body() {
+	setup
+	commit a trunk
+	commit c trunk
+	topics 'next a' 'seen c'
+	atf_check "${COOK}"
+	topics
+	atf_check "${COOK}"
+	assert_parents next trunk
+	assert_parents seen next
+}
+
+atf_test_case follows_trunk
+follows_trunk_body() {
+	setup
+	commit a trunk
+	commit t2 trunk
+	topics 'next a'
+	jj --quiet bookmark set trunk -r t2
+	atf_check "${COOK}"
+	assert_parents next t2 a
+	assert_parents seen next
+}
+
+atf_test_case drops_landed_topics
+drops_landed_topics_body() {
+	setup
+	commit a trunk
+	commit b trunk
+	commit t2 a
+	topics 'next a' 'next b'
+	jj --quiet bookmark set trunk -r t2
+	atf_check "${COOK}"
+	assert_parents next t2 b
+}
+
+atf_test_case follows_a_moved_bookmark
+follows_a_moved_bookmark_body() {
+	setup
+	commit a trunk
+	topics 'next a'
+	atf_check "${COOK}"
+	commit a2 a
+	jj --quiet bookmark set a -r a2
+	atf_check "${COOK}"
+	assert_parents next a2
+}
+
+atf_test_case accepts_a_change_id
+accepts_a_change_id_body() {
+	setup
+	commit a trunk
+	topics "next $(jj log --no-graph -r a -T change_id)"
+	atf_check "${COOK}"
+	assert_parents next a
+}
+
+atf_test_case merges_a_shared_topic_into_next_only
+merges_a_shared_topic_into_next_only_body() {
+	setup
+	commit a trunk
+	topics 'next a' 'seen a'
+	atf_check "${COOK}"
+	assert_parents next a
+	assert_parents seen next
+}
+
+atf_test_case dry_run_prints_commands
+dry_run_prints_commands_body() {
+	setup
+	commit a trunk
+	commit c trunk
+	topics 'next a' 'seen c'
+	op=$(op_id)
+	atf_check -o inline:"\
+jj --quiet rebase -s next -o 'trunk()' -o a
+jj --quiet simplify-parents -r next
+jj --quiet rebase -s seen -o next -o c
+jj --quiet simplify-parents -r seen
+" "${COOK}" -n
+	atf_check -o inline:"${op}" jj op log -n 1 --no-graph -T id
+}
