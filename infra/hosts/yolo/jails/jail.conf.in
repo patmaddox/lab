@@ -29,6 +29,11 @@
   mount += "/git/%REPO%.git ${path}/git/%REPO%.git nullfs ro 0 0";
   mount += "/git/jails/${name} ${path}/git/agent nullfs rw 0 0";
 
+  # Its agent's Claude Code settings and credentials, read-write at
+  # ~/.claude, in a dataset outside the jail's, so a sign-in outlives a
+  # reset. yolo-jail-init makes it.
+  mount += "/jails/data/${name}/claude ${path}/home/agent/.claude nullfs rw 0 0";
+
   # Once it runs, give its agent a repo of its own to push its work to.
   exec.poststart += "/usr/local/libexec/yolo-jail-repo ${name} %REPO%";
 

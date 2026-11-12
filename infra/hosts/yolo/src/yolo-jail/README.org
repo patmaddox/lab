@@ -75,7 +75,8 @@ root that a jail has run in, so an upgrade goes through =jexec=.
 root, and each directory on the way that is missing, so that
 jail.conf can mount something there. =yolo-jail-init= runs it for
 every mount the jail's config makes: the repository at =pkg/yolo=, and
-the git repos at =git/<owner>/<repo>.git= and =git/agent=. The jail's
+the git repos at =git/<owner>/<repo>.git= and =git/agent=, and the
+agent's Claude Code settings at =home/agent/.claude=. The jail's
 root may have turned a directory on the way into a symlink, which
 mkdir would follow out of the jail, so it refuses those. It refuses a
 =<path>= that is absolute or has a =.= or =..= in it, though a part of
@@ -138,3 +139,10 @@ start makes it if it is missing.
 =yolo-jail-data= makes =zroot/jails/data/<name>=, if it is missing,
 under which go the datasets that hold what a jail keeps across resets.
 =zroot/jails/data= has =setuid=off=. =yolo-jail-init= runs it.
+
+It also makes =zroot/jails/data/<name>/claude=, if it is missing, the
+agent's Claude Code settings and credentials, which belongs to the
+agent, uid 15000. On every run it mounts it if it is not mounted, and
+gives it to the agent, as =yolo-jail-git= does.
+=yolo-jail-create-mountpoints= makes =/home/agent/.claude= in the
+jail, and a jail's config mounts it there read-write.

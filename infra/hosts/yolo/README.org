@@ -314,6 +314,10 @@ outlives a reset also belongs under =zroot/jails/data/<name>=, with
 =jailed=on=, and is given to the jail by adding it to its
 =zfs.dataset=.
 
+=claude= there is the agent's Claude Code settings and credentials,
+which the jail sees read-write at =/home/agent/.claude=, so a sign-in
+lasts until that dataset is destroyed.
+
 Each jail gets one git repo, which =jails/instances= names as
 =<owner>/<repo>=. yolo keeps it at =/git/<owner>/<repo>.git=, and the
 jail sees it there too, read-only. The jail's own repos are at

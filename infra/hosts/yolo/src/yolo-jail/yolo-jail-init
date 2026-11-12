@@ -52,7 +52,7 @@ ${libexec}/yolo-jail-git ${name} ${repo}
 ${libexec}/yolo-jail-data ${name}
 ${libexec}/yolo-jail-create ${name} ${template}
 ${libexec}/yolo-jail-create-mountpoints ${name} \
-    pkg/yolo git/${repo}.git git/agent
+    pkg/yolo git/${repo}.git git/agent home/agent/.claude
 
 # The ZFS dataset the jail runs itself, under its own, so a reset
 # destroys it. jailed is on, so yolo never mounts it.

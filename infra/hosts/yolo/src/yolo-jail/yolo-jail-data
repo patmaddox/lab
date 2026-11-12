@@ -4,9 +4,14 @@ set -eu
 # yolo-jail-data name: make the datasets that hold what a jail keeps
 # across resets, those that are missing. They are outside
 # zroot/jails/instances, so a reset keeps them. zroot/jails/data/<name>
-# holds the jail's. yolo-jail-init runs this.
+# holds the jail's; <name>/claude is its agent's Claude Code settings
+# and credentials, which jail.conf mounts at /home/agent/.claude.
+# yolo-jail-create-mountpoints makes the jail's mountpoint for it.
+# yolo-jail-init runs this.
 
 readonly zroot=zroot/jails/data
+# The agent user of the coding-agent template, from its conf.
+readonly agent=15000
 
 usage() {
 	echo "usage: yolo-jail-data name" >&2
@@ -29,3 +34,15 @@ exists() {
 # yolo never runs what is here, and the jail runs nothing setuid from it.
 exists ${zroot} || zfs create -o setuid=off ${zroot}
 exists ${zroot}/${name} || zfs create ${zroot}/${name}
+exists ${zroot}/${name}/claude || zfs create ${zroot}/${name}/claude
+
+# The jail mounts /jails/data/<name>/claude as the agent's ~/.claude.
+# Unless the dataset is mounted, that is the root-owned directory
+# beneath it, and the agent cannot write there. Check both on every run,
+# so running yolo-jail-init again repairs a dataset that was made but
+# never mounted or given to the agent. -h, so a symlink is never
+# followed.
+[ "$(zfs get -H -o value mounted ${zroot}/${name}/claude)" = yes ] ||
+    zfs mount ${zroot}/${name}/claude
+chown -h ${agent}:${agent} \
+    "$(zfs get -H -o value mountpoint ${zroot}/${name}/claude)"
