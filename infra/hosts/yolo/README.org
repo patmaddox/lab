@@ -144,6 +144,7 @@ Its =pkg-plist= lists its files:
 @comment Each file and symlink the package installs, from dist/. They
 @comment belong to root:wheel, with the mode set here.
 @mode 0644
+/usr/local/etc/claude-code/.claude/skills/code-sync/SKILL.md
 /usr/local/etc/claude-code/CLAUDE.md
 /usr/local/etc/claude-code/managed-settings.d/eat.json
 /usr/local/etc/claude-code/managed-settings.d/permissions.json
@@ -155,6 +156,9 @@ Its =pkg-plist= lists its files:
 /etc/claude-code
 @comment The directories of its files, which pkg removes once they are
 @comment empty. @mode does not suit them, so they set their own.
+@dir(root,wheel,0755) /usr/local/etc/claude-code/.claude/skills/code-sync
+@dir(root,wheel,0755) /usr/local/etc/claude-code/.claude/skills
+@dir(root,wheel,0755) /usr/local/etc/claude-code/.claude
 @dir(root,wheel,0755) /usr/local/etc/claude-code/managed-settings.d
 @dir(root,wheel,0755) /usr/local/etc/claude-code
 @dir(root,wheel,0755) /usr/local/etc/profile.d
@@ -219,6 +223,16 @@ would replace the claude-code package's install with one that does
 not run on FreeBSD, and the =/usage-credits= command. Its
 =attribution= leaves the Co-Authored-By trailer out of a session's
 commits and the Claude Code footer out of its pull requests.
+
+Claude Code loads managed skills from =.claude/skills= under the same
+folder, and offers them in every session. =code-sync= fetches a
+clone's remotes, deletes each branch whose work has landed on the
+default branch, and rebases each live branch that no longer merges
+cleanly, then pushes it again. It reads the upstream remote, the
+default branch, and each branch's push remote from the clone's own
+git config, so it works in any clone, not only in the layout that
+=CLAUDE.md= describes. To sync every clone in the home folder, run
+=/code-sync= from there.
 
 Claude Code reads managed settings only from =/etc/claude-code=. The
 template keeps them in =/usr/local/etc/claude-code=, and its =dist/=
