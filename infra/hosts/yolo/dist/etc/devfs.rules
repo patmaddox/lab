@@ -23,3 +23,6 @@ add path vmm.io unhide
 add path 'vmm.io/*' unhide
 add path 'nmdm*' unhide
 add path 'tap*' unhide
+# Linux emulation makes shm/, where Linux programs mount their
+# /dev/shm.
+add path shm unhide mode 1777

@@ -136,6 +136,9 @@ jails.
   nothing on stderr, where ocijail reports a mount it could not
   unmount. It skips a jail whose podman has no storage at
   =/var/db/containers= yet.
+- =linuxulator=: the Linux ABI is loaded, the jail mounts linprocfs
+  and linsysfs, and sees =/dev/shm=. With a Linux userland, such as
+  linux_base-rl9, Linux =uname= runs.
 
 * Repos
 

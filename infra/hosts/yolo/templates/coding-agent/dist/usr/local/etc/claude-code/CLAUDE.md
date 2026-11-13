@@ -157,6 +157,13 @@ a jail of its own, and use a bhyve VM when a jail won't do.
   `/usr/local/etc/containers/pf.conf.sample` to `/etc/pf.conf`, set its
   egress interface to `epairNb`, and enable and start pf. Linux images
   do not run.
+- Linux binaries: the Linuxulator works here. Install a Linux userland
+  with `pkg install linux_base-rl9`. `rc.d/linux` does not run in a
+  jail, so mount what it would yourself: `linprocfs` on
+  `/compat/linux/proc`, `linsysfs` on `/compat/linux/sys`, `devfs` on
+  `/compat/linux/dev`, `fdescfs` with `-o linrdlnk` on
+  `/compat/linux/dev/fd`, and `tmpfs` with `-o mode=1777` on
+  `/compat/linux/dev/shm`.
 
 ## Scripts
 

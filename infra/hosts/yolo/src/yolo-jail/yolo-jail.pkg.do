@@ -19,6 +19,7 @@ files="
 0555 yolo-jail-upgrade /usr/local/sbin/yolo-jail-upgrade
 0555 yolo-jail-check /usr/local/sbin/yolo-jail-check
 0444 checks/bhyve /usr/local/libexec/yolo-jail-check/bhyve
+0444 checks/linuxulator /usr/local/libexec/yolo-jail-check/linuxulator
 0444 checks/nested-jail /usr/local/libexec/yolo-jail-check/nested-jail
 0444 checks/podman /usr/local/libexec/yolo-jail-check/podman
 0555 yolo-git-init /usr/local/sbin/yolo-git-init

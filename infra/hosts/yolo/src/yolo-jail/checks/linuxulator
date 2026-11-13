@@ -1,0 +1,28 @@
+#!/bin/sh
+set -eu
+
+# The Linuxulator: the Linux ABI is loaded, the jail mounts linprocfs
+# and linsysfs, and its devfs shows shm/. With a Linux userland, a
+# Linux binary runs.
+
+if ! sysctl -n compat.linux.osrelease >/dev/null 2>&1; then
+	echo "the Linux ABI is not loaded"
+	exit 1
+fi
+d=$(mktemp -d /tmp/yolo-jail-check.XXXXXX)
+trap 'umount "${d}" 2>/dev/null || :; rmdir "${d}"' EXIT
+for fs in linprocfs linsysfs; do
+	mount -t ${fs} ${fs} "${d}"
+	umount "${d}"
+done
+if ! [ -d /dev/shm ]; then
+	echo "no /dev/shm"
+	exit 1
+fi
+if [ -x /compat/linux/bin/uname ]; then
+	out=$(/compat/linux/bin/uname -s)
+	if [ "${out}" != Linux ]; then
+		echo "Linux uname printed ${out}"
+		exit 1
+	fi
+fi

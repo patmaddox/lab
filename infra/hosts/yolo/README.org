@@ -549,6 +549,14 @@ Its =CLAUDE.md= tells the agent how. Linux images do not run. podman
 asks ocijail to add a devfs rule to a Linux container's =/dev=, and
 the kernel lets no jail change devfs rules.
 
+The jails may run Linux programs with the Linuxulator. A jail cannot
+load kernel modules or run =rc.d/linux=, so yolo sets
+=linux_enable=, which loads the Linux ABI, linprocfs, linsysfs, and
+pty, with =linux_mounts_enable=NO=, as yolo runs no Linux programs
+itself. The jails may mount linprocfs and linsysfs, and see =/dev/shm=,
+where Linux programs mount a tmpfs. A jail installs a Linux userland
+and mounts its filesystems itself, as its =CLAUDE.md= tells the agent.
+
 The jails' networks:
 - lab-1, lab-2, and lab-3: 10.200.11.0/24 to 10.200.13.0/24
 - devops-1, devops-2, and devops-3: 10.200.21.0/24 to 10.200.23.0/24

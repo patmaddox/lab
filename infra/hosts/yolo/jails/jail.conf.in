@@ -85,6 +85,8 @@
   allow.mount.devfs;
   allow.mount.fdescfs;
   allow.mount.fusefs;
+  allow.mount.linprocfs;
+  allow.mount.linsysfs;
   allow.mount.nullfs;
   allow.mount.procfs;
   allow.mount.tmpfs;
