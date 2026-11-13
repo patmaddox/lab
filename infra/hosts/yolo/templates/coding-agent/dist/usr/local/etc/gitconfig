@@ -2,3 +2,11 @@
 # to clone from a repo another user owns unless it is trusted here.
 [safe]
 	directory = /git/*
+
+# Commits are the agent's. git takes the email from the login and the
+# jail's hostname, as <user>@<host>, so leave it unset. It counts that
+# email as a guess and says so after every commit, unless told not to.
+[user]
+	name = Pat Agent
+[advice]
+	implicitIdentity = false
