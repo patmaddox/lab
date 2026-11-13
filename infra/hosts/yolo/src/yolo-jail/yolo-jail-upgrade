@@ -1,10 +1,16 @@
 #!/bin/sh
-set -eu
+set -euf
 
 # yolo-jail-upgrade [-a] name: upgrade the yolo- packages in a running
 # jail, and whatever their new versions need, or with -a all of its
 # packages, including FreeBSD's base. pkg runs in the jail, by jexec,
 # so nothing the jail has written runs on yolo.
+#
+# A jail's base must be no newer than yolo's. So it first asks pkg in
+# the jail what the upgrade would do, and refuses it if any FreeBSD-
+# package would end up newer than yolo's base: the version of yolo's
+# FreeBSD-runtime, which holds freebsd-version. Then it upgrades from
+# the same catalogue, without updating it.
 
 usage() {
 	echo "usage: yolo-jail-upgrade [-a] name" >&2
@@ -28,14 +34,59 @@ if ! jls -j ${name} jid >/dev/null 2>&1; then
 	exit 1
 fi
 
-if ${all}; then
-	exec jexec -l ${name} env ASSUME_ALWAYS_YES=yes pkg upgrade
+if ! base=$(pkg query %v FreeBSD-runtime); then
+	echo "E: yolo has no FreeBSD-runtime package" >&2
+	exit 1
 fi
-exec jexec -l ${name} sh -euc '
-	pkgs=$(pkg query -g %n "yolo-*")
+readonly base
+
+jpkg() {
+	jexec -l ${name} env ASSUME_ALWAYS_YES=yes pkg "${@}"
+}
+
+# The packages to upgrade: none named, for all of them, or the jail's
+# yolo- packages. -f keeps the shell from globbing the jail's names.
+pkgs=""
+if ! ${all}; then
+	pkgs=$(jpkg query -g %n 'yolo-*' || true)
 	if [ -z "${pkgs}" ]; then
 		echo "E: no yolo- packages installed" >&2
 		exit 1
 	fi
-	ASSUME_ALWAYS_YES=yes pkg upgrade ${pkgs}
-'
+fi
+readonly pkgs
+
+plan=$(jpkg upgrade -n ${pkgs})
+
+# Each FreeBSD- package the plan upgrades or installs, and the version
+# it would get, the last one on its line before the repository:
+#	FreeBSD-runtime: 15.1p5 -> 15.1p6 [FreeBSD-base]
+#	FreeBSD-foo: 15.1p6 [FreeBSD-base]
+# The plan comes from the jail, so a version that does not look like
+# one is refused, rather than handed to pkg version.
+newer=$(echo "${plan}" | awk '
+	/^\tFreeBSD-[^ ]*: / {
+		n = $1; sub(/:$/, "", n)
+		v = $NF; if (v ~ /^\[/) v = $(NF - 1)
+		print n, v
+	}' | while read -r n v; do
+		case ${v} in
+		[0-9]*) ;;
+		*) echo "${n} ${v}"; continue ;;
+		esac
+		case ${v} in
+		*[!0-9A-Za-z.,_+~-]*) echo "${n} ${v}"; continue ;;
+		esac
+		[ "$(pkg version -t "${v}" "${base}")" != ">" ] ||
+			echo "${n} ${v}"
+	done)
+
+if [ -n "${newer}" ]; then
+	echo "E: upgrading ${name} would make its base newer than yolo's," \
+	    "${base}:" >&2
+	echo "${newer}" | sed 's/^/E:   /' >&2
+	echo "E: upgrade yolo's BE first" >&2
+	exit 1
+fi
+
+exec jexec -l ${name} env ASSUME_ALWAYS_YES=yes pkg upgrade -U ${pkgs}

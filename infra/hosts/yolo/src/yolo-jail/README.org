@@ -92,6 +92,15 @@ the jail's packages, including FreeBSD's base. It runs pkg in the
 jail with =jexec=, so nothing the jail has written runs on yolo.
 Nothing runs it on its own.
 
+A jail's base must be no newer than yolo's. So it first has pkg in the
+jail work out the upgrade without doing it, and fails if any =FreeBSD-=
+package would end up newer than yolo's base, the version of yolo's own
+=FreeBSD-runtime=, which holds =freebsd-version=. It names each such
+package, and changes nothing. Otherwise it upgrades from the catalogue
+it checked, without updating it, so what it checked is what it
+installs. The check guards against upgrading too soon, not against the
+jail: the jail's root could change its own pkg.
+
 * Repos
 
 : doas yolo-git-init <owner>/<repo>:<branch> ...

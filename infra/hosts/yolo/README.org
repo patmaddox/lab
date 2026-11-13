@@ -359,6 +359,7 @@ Or as root on yolo:
 =just upgrade-jail <name> -a=, or =yolo-jail-upgrade -a <name>=,
 upgrades all of the jail's packages, including FreeBSD's base. A
 jail's base must be no newer than yolo's, so upgrade yolo's BE first.
+=yolo-jail-upgrade= refuses an upgrade that would make it newer.
 An upgrade replaces the template's files, so a change the agent made
 to one of them is lost.
 
