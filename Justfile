@@ -60,6 +60,9 @@ dev:
 jj-authorme revset:
   jj metaedit --update-author -r '{{revset}}'
 
+jj-pick revset:
+  jj metaedit --update-author --update-change-id --ignore-immutable -r '({{revset}}) ~mutable() ~::trunk'
+
 # apply the patches on stdin to a jj workspace, like git am
 [no-cd]
 am workspace='.':
