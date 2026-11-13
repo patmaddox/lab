@@ -1,0 +1,25 @@
+#!/bin/sh
+# From the yolo-coding-agent package. Edit lab's
+# infra/hosts/yolo/templates/coding-agent, not this file.
+#
+# A PreToolUse hook for Bash. It refuses a command that would commit
+# under an identity other than git's default, which the jail sets:
+# one that sets user.name or user.email, passes --author to a commit,
+# or sets GIT_AUTHOR_* or GIT_COMMITTER_*. Claude Code passes the call
+# as JSON on stdin, and exit status 2 blocks it and shows the agent
+# what this prints on stderr.
+
+command=$(jq -r '.tool_input.command // empty')
+
+identity='GIT_(AUTHOR|COMMITTER)_(NAME|EMAIL)=|commit[^;&|]*--author|user\.(name|email)=|user\.(name|email) +[^ ;&|<>2]'
+
+if printf '%s\n' "${command}" | grep -Eq -- "${identity}"; then
+	cat >&2 <<'MSG'
+Blocked: this command sets a commit identity. Commit with git's
+default identity, which the jail sets for you, and do not take one
+from the commit history. Your commits are meant to be told apart from
+the human's. Reading the identity, as `git config user.name`, is fine.
+MSG
+	exit 2
+fi
+exit 0

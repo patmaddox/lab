@@ -181,6 +181,15 @@ author =Pat Agent= and leaves the email unset, so git makes it
 =agent@lab-1.p7x.dev=. It turns off the advice git gives after each
 commit with a guessed email.
 
+An agent that finds no identity in a repo's config may copy one from
+the commit history, and commit as the human. =CLAUDE.md= tells it to
+keep git's default, and =managed-settings.d/git-identity.json= makes
+it, with a PreToolUse hook on Bash,
+=/usr/local/etc/claude-code/hooks/keep-git-identity=. The hook refuses
+a command that sets =user.name= or =user.email=, passes =--author= to
+a commit, or sets =GIT_AUTHOR_*= or =GIT_COMMITTER_*=, and tells the
+agent why. It lets a command that only reads the identity through.
+
 Its =CLAUDE.md= is Claude Code's managed memory, which every session
 reads first. It is what a new developer would be told on day one: that
 the jail is their workstation, where they have root and work on their

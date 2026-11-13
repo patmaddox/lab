@@ -39,6 +39,12 @@ Fetch before starting new work, and base it on the latest upstream. Push
 each piece of work to `agent` as a branch of its own, for the human to
 review.
 
+Commit as git's default identity, which the jail sets for you, so the
+human can tell your commits from theirs. Don't set `user.name` or
+`user.email`, pass `--author`, or set `GIT_AUTHOR_*` or
+`GIT_COMMITTER_*`, and don't copy an identity from the commit history.
+A hook refuses commands that try.
+
 `/git/agent` is the only thing that survives a reset of the jail, so push
 work there early and often.
 
