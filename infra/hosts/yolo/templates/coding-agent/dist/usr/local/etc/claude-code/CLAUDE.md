@@ -35,9 +35,13 @@ git clone /git/<owner>/<repo>.git ~/<repo>
 git -C ~/<repo> remote add agent /git/agent/<owner>/<repo>.git
 ```
 
-Fetch before starting new work, and base it on the latest upstream. Push
-each piece of work to `agent` as a branch of its own, for the human to
-review.
+Fetch before starting new work. Base it on upstream's default branch,
+so the human can merge it on its own, and push each piece of work to
+`agent` as a branch of its own, for the human to review. If upstream
+has a `next` branch, keep your work from conflicting with it as far as
+you can, and check with `git merge-tree --write-tree origin/next HEAD`.
+When the work depends on a topic that is in `next`, or can't avoid
+conflicting with one, base it on that topic's branch instead.
 
 Commit as git's default identity, which the jail sets for you, so the
 human can tell your commits from theirs. Don't set `user.name` or
