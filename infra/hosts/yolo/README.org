@@ -147,6 +147,7 @@ Its =pkg-plist= lists its files:
 @comment belong to root:wheel, with the mode set here.
 @mode 0644
 /usr/local/etc/claude-code/.claude/skills/code-sync/SKILL.md
+/usr/local/etc/claude-code/.claude/skills/commit-message/SKILL.md
 /usr/local/etc/claude-code/CLAUDE.md
 /usr/local/etc/claude-code/managed-settings.d/eat.json
 /usr/local/etc/claude-code/managed-settings.d/permissions.json
@@ -159,6 +160,7 @@ Its =pkg-plist= lists its files:
 @comment The directories of its files, which pkg removes once they are
 @comment empty. @mode does not suit them, so they set their own.
 @dir(root,wheel,0755) /usr/local/etc/claude-code/.claude/skills/code-sync
+@dir(root,wheel,0755) /usr/local/etc/claude-code/.claude/skills/commit-message
 @dir(root,wheel,0755) /usr/local/etc/claude-code/.claude/skills
 @dir(root,wheel,0755) /usr/local/etc/claude-code/.claude
 @dir(root,wheel,0755) /usr/local/etc/claude-code/managed-settings.d
@@ -273,6 +275,14 @@ default branch, and each branch's push remote from the clone's own
 git config, so it works in any clone, not only in the layout that
 =CLAUDE.md= describes. To sync every clone in the home folder, run
 =/code-sync= from there.
+
+=commit-message= writes commit messages in the house style, FreeBSD's
+subject on git.git's body, and keeps each message true to its diff
+after an amend, squash, split, or resolved conflict. It is lab's own
+=.claude/skills/commit-message=, made for git, since the jails have no
+jj. It rewrites only commits that neither upstream's default branch
+nor its =next= holds, and gives way to a repo's own documented
+conventions.
 
 Claude Code reads managed settings only from =/etc/claude-code=. The
 template keeps them in =/usr/local/etc/claude-code=, and its =dist/=

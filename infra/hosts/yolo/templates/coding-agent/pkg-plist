@@ -2,6 +2,7 @@
 @comment belong to root:wheel, with the mode set here.
 @mode 0644
 /usr/local/etc/claude-code/.claude/skills/code-sync/SKILL.md
+/usr/local/etc/claude-code/.claude/skills/commit-message/SKILL.md
 /usr/local/etc/claude-code/CLAUDE.md
 /usr/local/etc/claude-code/managed-settings.d/eat.json
 /usr/local/etc/claude-code/managed-settings.d/git-identity.json
@@ -17,6 +18,7 @@
 @comment The directories of its files, which pkg removes once they are
 @comment empty. @mode does not suit them, so they set their own.
 @dir(root,wheel,0755) /usr/local/etc/claude-code/.claude/skills/code-sync
+@dir(root,wheel,0755) /usr/local/etc/claude-code/.claude/skills/commit-message
 @dir(root,wheel,0755) /usr/local/etc/claude-code/.claude/skills
 @dir(root,wheel,0755) /usr/local/etc/claude-code/.claude
 @dir(root,wheel,0755) /usr/local/etc/claude-code/hooks
