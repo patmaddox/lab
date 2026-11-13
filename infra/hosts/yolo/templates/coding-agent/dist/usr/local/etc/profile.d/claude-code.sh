@@ -6,6 +6,13 @@
 # the environment, not from its settings' env.
 export CLAUDE_CODE_SANDBOXED=1
 
+# bypassPermissions mode still asks before an rm whose target it cannot
+# resolve, such as one in a shell variable, or a whole directory such
+# as home. With nobody to answer, the session stops. The jail holds
+# nothing to lose, so let them run. This too comes only from the
+# environment.
+export CLAUDE_CODE_EVEN_MORE_DANGEROUSLY_SKIP_PERMISSIONS=1
+
 # Claude Code keeps .claude.json beside ~/.claude, not in it, so it
 # would miss the dataset that yolo mounts there to outlive a reset.
 # Pointing CLAUDE_CONFIG_DIR at ~/.claude keeps it inside. Only the

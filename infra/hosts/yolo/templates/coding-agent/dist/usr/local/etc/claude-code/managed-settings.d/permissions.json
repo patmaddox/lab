@@ -4,6 +4,9 @@
     "additionalDirectories": ["/git", "/home/agent"]
   },
   "skipDangerousModePermissionPrompt": true,
+  "enabledPlugins": {
+    "cc-plugin-privacy@builtin": false
+  },
   "env": {
     "IS_SANDBOX": "1"
   }

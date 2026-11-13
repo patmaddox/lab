@@ -193,6 +193,14 @@ Claude Code refuses bypassPermissions to root unless =IS_SANDBOX= is
 =1=, so a session run as root, through =doas claude= or a plain
 =jexec=, would not start. Its =env= sets that.
 
+bypassPermissions mode still asks before a shell or web command that
+holds the signed-in account's email address and may reach the
+network, such as a =git commit= with the human's address in a command
+that also names =ssh= or =https=. The built-in plugin
+=cc-plugin-privacy= asks it, and =permissions.json= turns that plugin
+off in =enabledPlugins=. Claude Code takes that switch only from
+trusted settings, which managed settings are.
+
 Claude Code also asks whether to trust a folder before a session
 starts there, whatever the mode. It never records the answer for the
 home folder, so it asks in =/home/agent= every time. The jail is the
@@ -201,6 +209,16 @@ sandbox, so =/usr/local/etc/profile.d/claude-code.sh= sets
 reads it through =/etc/profile=, as =jexec -l= starts one, and what runs
 from that shell inherits it. Claude Code ignores this variable in its
 settings' =env=, so it cannot go in managed settings.
+
+bypassPermissions mode also still asks before an =rm= that could
+delete far more than meant: one whose target is a shell variable it
+cannot resolve, or a system, home, or workspace directory. The same
+script sets =CLAUDE_CODE_EVEN_MORE_DANGEROUSLY_SKIP_PERMISSIONS=1=,
+which lets such an =rm= run without asking in bypassPermissions mode.
+Claude Code ignores it in settings' =env= too, and in a session that
+another session started, such as =claude -p= run from a session's
+shell, so a test of it must start from a clean environment. A session
+with it set prints a warning that says so when it starts.
 
 The agent's =~/.claude= outlives a reset, being a dataset of its own
 on yolo, but Claude Code keeps =.claude.json= beside it, in the home
