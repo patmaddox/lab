@@ -24,6 +24,20 @@ and nothing else. No Co-Authored-By trailers.
 - Do not use double spaces anywhere (content or commit messages)
 - Prefer complete sentences over fragments using semicolons and dashes
 
+## Just recipes
+
+Keep a recipe to a few plain commands. Use judgment, but as a general
+rule, a recipe that needs a shebang such as `#!/bin/sh` belongs in a
+script of its own. Put the script in the `libexec/` beside the
+Justfile, or in the directory its other scripts already use, and have
+the recipe call it, as infra/hosts/beastie does:
+
+    verify-backups:
+      ./libexec/verify-backups.sh
+
+A script can be linted and run on its own, and its comment can say
+what it does.
+
 ## Dependencies
 
 - Do not install dependencies.
