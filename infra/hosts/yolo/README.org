@@ -504,12 +504,22 @@ and start it again.
 
 The jails may run bhyve. They see =/dev/vmmctl=, their VMs under
 =/dev/vmm= with their memory under =/dev/vmm.io=, =nmdm= consoles, and
-=tap= interfaces, by devfs ruleset 10
+=tap= interfaces, by devfs ruleset 4
 in =dist/etc/devfs.rules=. A VM's network is the jail's to arrange.
 To give VMs addresses from the jail's /24, make a bridge in the jail
 holding its epair and the VMs' taps, and give each VM an address in
 the /24 with yolo's .1 as its router. Networks a jail NATs for itself
 should come from outside 10.200.0.0/16.
+
+The jails' ruleset is 4, in place of FreeBSD's =devfsrules_jail=,
+because podman asks for ruleset 4 for its containers' devfs and their
+networks' jails, and the kernel lets a jail use only its own ruleset
+for either. It also makes plain =mount.devfs= work in a jail's child
+jails, as jail(8) mounts their devfs with ruleset 4 when they name
+none. A child jail that names any other ruleset fails to start, and
+one with =devfs_ruleset = 0= gets its jail's. FreeBSD's
+=devfsrules_jail_vnet=, ruleset 5, includes ruleset 4, so it shows
+bhyve's devices too, but nothing on yolo uses it.
 
 The jails' networks:
 - lab-1, lab-2, and lab-3: 10.200.11.0/24 to 10.200.13.0/24

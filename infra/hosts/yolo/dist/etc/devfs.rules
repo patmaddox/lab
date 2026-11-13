@@ -2,8 +2,20 @@
 # an agent can run VMs in its jail. vmmctl makes VMs, each of which
 # appears under vmm/, and their memory segments, such as the firmware
 # a VM boots, under vmm.io/. nmdm gives them consoles, and tap networks.
-[devfsrules_yolo_jail=10]
-add include $devfsrules_jail_vnet
+#
+# It is ruleset 4, in place of FreeBSD's devfsrules_jail. podman mounts
+# its containers' devfs with ruleset 4, and makes a jail for each
+# container's network with ruleset 4, and a jail may use only its own
+# ruleset for either. Its first six rules are those of
+# devfsrules_jail_vnet, ruleset 5, written out, as ruleset 5 includes
+# ruleset 4.
+[devfsrules_yolo_jail=4]
+add include $devfsrules_hide_all
+add include $devfsrules_unhide_basic
+add include $devfsrules_unhide_login
+add path fuse unhide
+add path zfs unhide
+add path pf unhide
 add path vmmctl unhide
 add path vmm unhide
 add path 'vmm/*' unhide

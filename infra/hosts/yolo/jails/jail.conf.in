@@ -69,10 +69,11 @@
   exec.stop = "/bin/sh /etc/rc.shutdown jail";
   exec.clean;
 
-  # Ruleset 10, from yolo's /etc/devfs.rules, shows a VNET jail's
-  # devices and bhyve's.
+  # Ruleset 4, from yolo's /etc/devfs.rules, shows a VNET jail's
+  # devices and bhyve's. It must be 4 for podman, which asks for ruleset
+  # 4, and a jail may use only its own.
   mount.devfs;
-  devfs_ruleset = 10;
+  devfs_ruleset = 4;
   allow.raw_sockets;
 
   # Each jail is an agent's workstation, where it has root, so it may do

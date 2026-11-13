@@ -2,21 +2,31 @@
 set -eu
 
 # A jail of the jail's own, as poudriere makes, mounting devfs, where it
-# sees the jail's devices. devfs_ruleset=0 gives it the jail's ruleset.
+# sees the jail's devices. It must start both with devfs_ruleset=0,
+# which gives it the jail's ruleset, and with no devfs_ruleset, which
+# jail(8) mounts with ruleset 4, the jail's own.
 
 d=$(mktemp -d /tmp/yolo-jail-check.XXXXXX)
 cleanup() {
 	jail -r yolo-jail-check 2>/dev/null || :
 	umount "${d}/dev" 2>/dev/null || :
-	rmdir "${d}/dev" "${d}"
 }
-trap cleanup EXIT
+trap 'cleanup; rmdir "${d}/dev" "${d}"' EXIT
 mkdir "${d}/dev"
-jail -c name=yolo-jail-check path="${d}" mount.devfs devfs_ruleset=0 \
-    persist
-for dev in null pf zfs vmmctl; do
-	if ! [ -e "${d}/dev/${dev}" ]; then
-		echo "a nested jail has no /dev/${dev}"
+nest() {
+	if ! jail -c name=yolo-jail-check path="${d}" mount.devfs "${@}" \
+	    persist; then
+		echo "a nested jail with ${*:-no devfs_ruleset} fails to start"
 		exit 1
 	fi
-done
+	for dev in null pf zfs vmmctl; do
+		if ! [ -e "${d}/dev/${dev}" ]; then
+			echo "a nested jail with ${*:-no devfs_ruleset} has" \
+			    "no /dev/${dev}"
+			exit 1
+		fi
+	done
+	cleanup
+}
+nest devfs_ruleset=0
+nest

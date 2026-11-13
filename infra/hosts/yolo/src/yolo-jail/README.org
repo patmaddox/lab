@@ -116,10 +116,11 @@ nothing the jail has written runs on yolo. It fails if any check fails. Nothing 
 on its own. Run it before and after a change to what yolo gives its
 jails.
 
-- =nested-jail=: the jail starts a jail of its own, with
-  =devfs_ruleset=0=, which gives it the jail's ruleset, and mounts
-  devfs there. The nested jail sees the jail's devices: =null=, =pf=,
-  =zfs=, and =vmmctl=.
+- =nested-jail=: the jail starts a jail of its own that mounts devfs,
+  once with =devfs_ruleset=0=, which gives it the jail's ruleset, and
+  once with no =devfs_ruleset=, which jail(8) mounts with ruleset 4,
+  the jail's own. The nested jail sees the jail's devices: =null=,
+  =pf=, =zfs=, and =vmmctl=.
 - =bhyve=: the jail makes a tap interface and an nmdm console, and with
   edk2-bhyve boots a VM's firmware on them, which must still run after
   five seconds. Without edk2-bhyve, it only makes the VM. It frees the
