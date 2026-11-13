@@ -136,7 +136,9 @@ a jail of its own, and use a bhyve VM when a jail won't do.
   `<jail>` is `hostname -s`. Put child jails' roots, VM disks, and
   poudriere there.
 - Jails: the jail may have child jails, with `vnet` or `ip4=inherit`.
-  Install a child's base with
+  Give a child that mounts devfs `devfs_ruleset = 0`, which gives it
+  this jail's ruleset, as a jail may use no other. Install a child's
+  base with
   `pkg --rootdir <root> install -r FreeBSD-base FreeBSD-set-base-jail`,
   after copying `/usr/share/keys` into the root.
 - poudriere: set `ZPOOL=zroot` and
