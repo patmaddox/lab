@@ -42,6 +42,21 @@ review.
 `/git/agent` is the only thing that survives a reset of the jail, so push
 work there early and often.
 
+### Published history
+
+A repo may have a `next` branch upstream, run the way git.git runs its
+own: the human merges topic branches into `next` to cook, and may
+still revise them there. Treat `next` as published, like the default
+branch. Never rewrite a commit that is an ancestor of upstream's
+default branch or of its `next`, unless the human tells you to. That
+rules out rebasing, amending, squashing, or dropping it. To change a
+topic that is already in `next`, add commits on top of the topic's
+branch instead.
+
+Any other commit is yours to rewrite. Find whether a commit is
+published with
+`git merge-base --is-ancestor <commit> origin/next`.
+
 ## Isolation
 
 Keep your workstation clean. Run what you build, test, or don't trust in

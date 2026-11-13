@@ -54,6 +54,10 @@ and call `<name>` `$main`, the local branch of the same name. If
 `refs/remotes/$up/HEAD` points elsewhere, run
 `git remote set-head "$up" --auto`.
 
+**Next branch.** If `$up` has a branch `next`, call `$up/next`
+`$next`. It is published, like `$base`: never rewrite a commit that
+is an ancestor of either, unless the user tells you to.
+
 **Fork remotes.** Every remote other than `$up` is a fork. Branches
 on a fork are ours to delete and rewrite.
 
@@ -147,6 +151,17 @@ and move on.
 
 ## 7. Rebase conflicting branches
 
+A rebase rewrites every commit on the branch since `$base`, so first
+check each conflicting branch against `$next`, if there is one. The
+branch is published if any of its commits are in `$next`, that is if
+these two counts differ:
+
+    git rev-list --count <tip> ^"$base"
+    git rev-list --count <tip> ^"$base" ^"$next"
+
+Do not rebase a published branch. Leave it as it is, and name it
+under "Your action" in the report, with the conflicting files.
+
 Launch a rebase subagent for each conflicting branch, all in one
 message so they run in parallel. Use the prompt in "Rebase subagent"
 below. Each works in a worktree of its own, so they do not touch the
@@ -189,7 +204,8 @@ each branch once.
 
 **Your action.** One line for each decision or command left to the
 user, with the reason in a few words: a diverged branch, a rebase
-given up, a partial integration, an error, a `$main` that cannot
+given up, a published branch that conflicts, a partial
+integration, an error, a `$main` that cannot
 fast-forward, or a checked-out branch to reset. If nothing is left,
 write "None."
 
