@@ -1,0 +1,40 @@
+#!/bin/sh
+set -eu
+
+# A bhyve VM, with a console on nmdm and a network on tap. With
+# edk2-bhyve, it boots the VM's firmware and checks it still runs after
+# five seconds. Without it, it only makes the VM.
+#
+# Looking up an nmdm name makes the pair, which lasts until something
+# opens and closes it, as stty -f does. An rm only hides the pair from
+# that /dev, which then can never make it again. So each run takes a
+# console name of its own, and frees it on exit.
+
+vm=yolo-jail-check
+con=/dev/nmdm-${vm}-$$A
+fw=/usr/local/share/uefi-firmware/BHYVE_UEFI.fd
+tap=""
+cleanup() {
+	bhyvectl --destroy --vm="${vm}" 2>/dev/null || :
+	[ -z "${tap}" ] || ifconfig "${tap}" destroy
+	[ ! -c "${con}" ] || stty -f "${con}" >/dev/null 2>&1 || :
+}
+trap cleanup EXIT
+bhyvectl --destroy --vm="${vm}" 2>/dev/null || :
+tap=$(ifconfig tap create)
+if ! [ -c "${con}" ]; then
+	echo "no nmdm console, ${con}"
+	exit 1
+fi
+if [ -e "${fw}" ]; then
+	rc=0
+	timeout 5 bhyve -c 1 -m 128M -H -s 0,hostbridge \
+	    -s 2,virtio-net,"${tap}" -s 31,lpc -l com1,"${con}" \
+	    -l bootrom,"${fw}" "${vm}" || rc=${?}
+	if [ ${rc} -ne 124 ]; then
+		echo "bhyve exited with ${rc} within five seconds"
+		exit 1
+	fi
+else
+	bhyvectl --create --vm="${vm}"
+fi
