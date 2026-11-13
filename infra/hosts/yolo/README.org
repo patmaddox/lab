@@ -356,8 +356,17 @@ Or as root on yolo:
 
 : yolo-jail-upgrade <name>
 
-=just upgrade-jail <name> -a=, or =yolo-jail-upgrade -a <name>=,
-upgrades all of the jail's packages, including FreeBSD's base. A
+To upgrade every running jail that =jails/instances= lists, one after
+another, from beastie:
+
+: just upgrade-jails
+
+It goes on past a jail that fails, and fails at the end, naming each.
+A jail that is stopped, or one a jail runs itself, it leaves alone.
+
+=just upgrade-jail <name> -a=, =just upgrade-jails -a=, or
+=yolo-jail-upgrade -a <name>=, upgrades all of the jail's packages,
+including FreeBSD's base. A
 jail's base must be no newer than yolo's, so upgrade yolo's BE first.
 =yolo-jail-upgrade= refuses an upgrade that would make it newer.
 An upgrade replaces the template's files, so a change the agent made

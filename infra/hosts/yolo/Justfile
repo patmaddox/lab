@@ -38,6 +38,10 @@ pkg-init: pkg && install-pkg
 upgrade-jail name *flags:
   ssh yolo.p7x.dev doas yolo-jail-upgrade {{flags}} {{name}}
 
+# Upgrade every running jail in jails/instances as upgrade-jail does
+upgrade-jails *flags:
+  ./tools/upgrade-jails.sh {{flags}}
+
 # Set up a stopped jail, or give it what a newer yolo-jail adds
 init-jail name:
   ssh yolo.p7x.dev doas yolo-jail-init {{name}}
