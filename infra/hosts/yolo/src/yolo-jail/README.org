@@ -147,7 +147,9 @@ each of the jail's repos, so every start makes those that are missing.
 
 =yolo-jail-data= makes =zroot/jails/data/<name>=, if it is missing,
 under which go the datasets that hold what a jail keeps across resets.
-=zroot/jails/data= has =setuid=off=. =yolo-jail-init= runs it.
+=zroot/jails/data= has =setuid=off=. =yolo-jail-init= runs it before
+=yolo-jail-create=, so on a new yolo it makes =zroot/jails= too,
+mounted at =/jails=, as =yolo-jail-create= would.
 
 It also makes =zroot/jails/data/<name>/claude=, if it is missing, the
 agent's Claude Code settings and credentials, which belongs to the

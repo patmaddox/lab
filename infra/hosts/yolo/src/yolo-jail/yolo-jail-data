@@ -31,6 +31,10 @@ exists() {
 	zfs list -H -o name ${1} >/dev/null 2>&1
 }
 
+# yolo-jail-init runs this before yolo-jail-create, so on a new yolo it
+# makes zroot/jails, as yolo-jail-create would, mounted at /jails.
+exists ${zroot%/*} || zfs create -o mountpoint=/jails ${zroot%/*}
+
 # yolo never runs what is here, and the jail runs nothing setuid from it.
 exists ${zroot} || zfs create -o setuid=off ${zroot}
 exists ${zroot}/${name} || zfs create ${zroot}/${name}
