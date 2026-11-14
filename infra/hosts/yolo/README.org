@@ -293,7 +293,7 @@ after an amend, squash, split, or resolved conflict. It is lab's own
 =.claude/skills/commit-message=, made for git, since the jails have no
 jj. It rewrites only commits that neither upstream's default branch
 nor its =next= holds, and gives way to a repo's own documented
-conventions.
+conventions. It carries a short form of =revise-prose='s rule.
 
 =repo-docs= writes and revises a repo's comments, READMEs, man pages,
 and other docs. It comes from a package of its own, claude-repo-docs,

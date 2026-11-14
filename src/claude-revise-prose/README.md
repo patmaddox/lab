@@ -49,6 +49,9 @@ users never see it and it cannot be corrected. Docs and comments are
 seen without digging, but every later commit must keep them true.
 The skill weighs who needs an idea against those costs.
 
+commit-message carries a short form of the rule, so the rule applies
+where revise-prose is not loaded. This skill holds the full rule.
+
 Reconciling a series is an agent rather than a skill because it is
 a loop: rewrite, review, and rewrite again until nothing moves. Its
 own context keeps the rebases and diffs out of the main session, and

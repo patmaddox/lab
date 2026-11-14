@@ -64,10 +64,12 @@ so its messages need no check.
    existing message and the diff.
 4. Check that the message is current and complete:
    - Keep every fact the old message states, unless the diff shows
-     it is wrong. Drop claims about code the diff no longer touches.
+     it is wrong, or the commit's docs or comments now carry it.
+     Drop claims about code the diff no longer touches.
    - Explain why for every part of the diff a reader would ask about.
-     A hunk the message does not account for is a sign the message
-     is stale, or that the commit should be split.
+     A reason the commit's docs or comments give needs a clause at
+     most. A hunk the message does not account for is a sign the
+     message is stale, or that the commit should be split.
 5. Write the new message to a temporary file and apply it. Skip any
    commit whose message already conforms. The working tree must be
    clean.
@@ -119,6 +121,24 @@ Follow git.git's order:
 
 Explain why, not what. Do not narrate the diff, and do not write
 "This patch" or "I changed".
+
+## Docs in the diff
+
+The diff includes the docs and comments the commit adds or changes,
+so the message must not restate them. Don't list the sections,
+options, or steps a new doc spells out, or explain how to use what
+the commit adds when its README does. Say what the diff cannot show,
+such as the status quo and its problem. If an idea in the docs or a
+comment would serve its reader better in the message, move it there.
+
+Docs and comments describe the tree as it stands, and the message
+describes the change. Neither ranks above the other. Put a reason
+where the reader who asks for it looks. A reason that users or
+maintainers of the tree will need belongs in the docs or a comment,
+and the message names it in a clause at most. The status quo, its
+problem, alternatives rejected for this change, and a reason only
+someone reviewing or tracing the change will ask about belong in the
+message. The revise-prose skill gives the full rule.
 
 ## Omit the body when it adds nothing
 
