@@ -76,3 +76,7 @@ claude-mail-purge:
 # take authorship of given revset
 reauthor *revset:
   jj metaedit --update-author "{{revset}}"
+
+# cook next and seen branches
+cook:
+  ./src/cook/cook
