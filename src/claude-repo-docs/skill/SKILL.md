@@ -119,6 +119,26 @@ fewest words that keep the meaning. Keep every fact, every warning
 about destructive or surprising behavior, and the author's terms.
 Expect a revision to leave a doc shorter, unless it fills a real gap.
 
+### Docs describe the tree, not the change
+
+Docs and comments say how things are, for a reader of the tree long
+after this change. Don't narrate change in them: "now supports",
+"was changed to", "no longer", "new in this version". That belongs
+in the commit message, which describes the status quo before the
+change and its problem. A change users must act on may also go in
+upgrade notes or a HISTORY section, where the repo keeps them.
+
+The docs, comments, and message must not repeat each other beyond a
+clause or a pointer, and no one of them ranks above the others. Put
+a design decision's reasons where the reader who would question it
+looks: in the docs or a comment if a user or maintainer would
+question it while reading the tree, even if the reasons also
+motivate the commit, and in the message if only someone reviewing
+or tracing the change would ask. Weigh a comment against the docs
+by scope: one piece of code, or the whole. If the revise-prose skill
+is available, it decides where each idea goes, and the prose-editor
+agent reconciles a series of commits by it.
+
 ### Man pages
 
 To write or revise a Unix manual page, follow `references/man-pages.md`.

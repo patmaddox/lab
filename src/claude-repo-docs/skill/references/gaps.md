@@ -40,6 +40,10 @@ For each item, decide whether it is:
   one, and link to it from the other. Say which you kept and why.
 - **Dead.** Docs for code that no longer exists. Delete them, or
   propose deletion if the request did not cover it.
+- **Narrated.** Docs that describe a change, such as "now" or "no
+  longer", rather than the tree. Restate them as how things are, or
+  cut them. The history belongs in commit messages, or in upgrade
+  notes where the repo keeps them and users must act on it.
 - **Excess.** Docs that tell a skilled operator what they already
   know, or take a paragraph for what a line would say. Cut or tighten
   them.

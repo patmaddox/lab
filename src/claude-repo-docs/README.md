@@ -29,7 +29,10 @@ The skill tells Claude to read the repo's conventions and the code
 before writing, and never to state a command, path, or option that
 the repo does not contain. It covers three jobs: comments, new docs,
 and revising docs to fill gaps. Comments explain why, and docstrings
-document interfaces at their declaration.
+document interfaces at their declaration. Docs describe the tree as
+it stands, and leave the story of a change to its commit message, so
+the two don't repeat each other. The skill carries a
+short form of revise-prose's rule.
 
 Docs are written for a skilled operator who is new to the project,
 unless the repo names other readers. Revising a doc means editing its
