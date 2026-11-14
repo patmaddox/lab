@@ -47,8 +47,9 @@ could not find.
 - `skill/SKILL.md` is the skill, which Claude reads when a request
   matches its description.
 - `skill/references/` holds the detail it loads as needed: Diátaxis
-  per section, comments, gap finding, a README outline, the
-  reviewer's brief, and the `.claude/docs.md` format.
+  per section, comments, gap finding, a README outline, man pages in
+  FreeBSD-style mdoc(7), the reviewer's brief, and the
+  `.claude/docs.md` format.
 - `claude-repo-docs.pkg.do` builds the package with redo.
 
 To try a change to the skill without a package, copy `skill/` to a

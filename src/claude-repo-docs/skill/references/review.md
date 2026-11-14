@@ -30,7 +30,10 @@ Report the following, in this order.
    still have after reading, and whether the doc answers them.
 5. **Comments**, if source comments changed. Name comments that
    restate the code, are wrong, or are missing on a public interface.
-6. **Excess.** Point out anything a reader does not need: padding,
+6. **Man pages**, if any changed. Run `mandoc -Tlint` on each and
+   report what it finds. Check that SYNOPSIS, the option list, and
+   the code all agree, and that every example would work.
+7. **Excess.** Point out anything a reader does not need: padding,
    repetition, and sections with nothing to say.
 
 End with the single change that would help readers most. Keep the

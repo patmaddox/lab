@@ -92,6 +92,14 @@ create empty sections to fill out a structure.
 For a new README, start from `references/readme.md`. Keep it to the
 minimum a newcomer needs, and link out for the rest.
 
+### Man pages
+
+To write or revise a Unix manual page, follow `references/man-pages.md`.
+It uses mdoc(7) in FreeBSD style. A man page is the reference for a
+command, so the README and other docs link to it rather than repeat
+its options. Offer to write one when a command-line tool has none
+and the repo's other tools have them.
+
 ### Gaps
 
 Follow `references/gaps.md` to compare what the docs say against
