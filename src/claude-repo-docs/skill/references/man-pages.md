@@ -15,6 +15,22 @@ SEE ALSO.
 
 - Look at the repo's other man pages. Match their header comment,
   license, date style, and section choices.
+- Read two or three installed pages for tools like the one you are
+  documenting. Choose them by the same manual section and the same
+  kind of tool: a network daemon, a file format, a driver, or a
+  command with subcommands. Find them with `apropos -s <section>
+  <keyword>`, through the SEE ALSO of a page you already know, or
+  through the pages for the tools your subject wraps or works with.
+  Learn from them which sections such pages use, how they word
+  recurring things, and which pages to refer to in SEE ALSO. Don't
+  copy their length or their structure. A page should be as long as
+  its own subject needs.
+- If you have no related page to go on, the FreeBSD documentation
+  primer recommends cp(1), crontab(5), vt(4), and gpart(8) as
+  well-written pages, and the templates in /usr/share/examples/mdoc/
+  show the skeleton of each manual section. A minimal system, such as
+  a jail, may lack some of these. Read them at https://man.freebsd.org
+  if so.
 - Learn the interface from the code: every option, argument,
   environment variable, file, exit status, and message. The SYNOPSIS
   and option list must match what the parser accepts, and nothing
@@ -39,10 +55,23 @@ it.
 ## Sections and their order
 
 Every page starts with the prologue `.Dd`, `.Dt`, `.Os`, in that order,
-then NAME. Use only the sections that have something true to say,
-in this order:
+then NAME, SYNOPSIS where it applies, and DESCRIPTION. Every other
+section is optional. Include a section only when it tells the reader
+something useful that the rest of the page does not. A short page
+with five sections is better than a long one padded to twenty.
+Never add a section to fill out the list. Signs of padding include:
 
-| Section | Use in | Contents |
+- BUGS that say there are none;
+- AUTHORS or HISTORY that the repo gives no facts for;
+- STANDARDS for a tool that implements none;
+- ENVIRONMENT or FILES that list nothing the tool actually reads;
+- EXAMPLES that only repeat the SYNOPSIS.
+
+The table lists the conventional sections in their order. The middle
+column names the manual sections each can apply to, not those that
+require it.
+
+| Section | Can apply to | Contents |
 |---|---|---|
 | NAME | all | `.Nm` names, then one `.Nd` |
 | LIBRARY | 2, 3, 9 on FreeBSD | `.Lb` (elsewhere, put `.Lb` first in SYNOPSIS) |
@@ -67,9 +96,8 @@ in this order:
 | HARDWARE | 4 | Supported devices (see Section 4 below) |
 
 HARDWARE sits between DESCRIPTION and the later sections in FreeBSD
-driver pages. The FreeBSD minimum for sections 1 and 8 is NAME,
-SYNOPSIS, DESCRIPTION, and SEE ALSO, and the minimum for section 5 is
-NAME, DESCRIPTION, and SEE ALSO.
+driver pages. Most pages also have a SEE ALSO, since there is nearly
+always a related page worth pointing to.
 
 ## Additional sections
 
@@ -256,8 +284,10 @@ The default is
 
 ## EXAMPLES
 
-Readers often turn to EXAMPLES first. Aim for about three: a minimal
-use, a typical real use, and one that shows non-obvious behavior.
+Readers often turn to EXAMPLES first, so most commands deserve one.
+Up to about three is a good range: a minimal use, a typical real use,
+and one that shows non-obvious behavior. Include only those that teach
+something the SYNOPSIS does not.
 Every example must be an invocation you have checked against the
 code, and run where that is safe. Give each a lead-in sentence.
 
