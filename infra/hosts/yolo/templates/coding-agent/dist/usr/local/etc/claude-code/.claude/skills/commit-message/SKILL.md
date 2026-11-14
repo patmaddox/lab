@@ -154,6 +154,28 @@ When you revise a patch, write the message as if this were the first
 and only version. Version notes belong in the cover letter, or below
 the `---` of a single patch.
 
+## Name people by their role
+
+The instructions you work under may call the person you work for "the
+human". That word belongs to the agent's view, not the project's. A
+commit message outlives the session, and its readers know no agent.
+Name each person by the role they play in the change. For example:
+
+- **user** for someone who runs the program or uses the system.
+- **maintainer** for someone who reviews, merges, or owns the code.
+- **operator** or **administrator** for someone who runs a host or
+  service.
+- **owner** for whoever an account, key, or address belongs to.
+
+These are not the only roles. Use whatever word the project and its
+domain use for that person, such as author, reviewer, sender, or
+customer, and pick the narrowest one that fits.
+
+Rewrite "the human's address" as "the owner's address", and "the
+human reviews it" as "the maintainer reviews it". When no person
+matters to the point, leave them out. Before you apply a message,
+search it for "human" and replace each use that names a person.
+
 ## Example
 
     infra/hosts/rowdy: Pass WireGuard only to rowdy's WAN address
