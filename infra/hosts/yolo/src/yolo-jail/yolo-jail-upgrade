@@ -11,6 +11,10 @@ set -euf
 # package would end up newer than yolo's base: the version of yolo's
 # FreeBSD-runtime, which holds freebsd-version. Then it upgrades from
 # the same catalogue, without updating it.
+#
+# Last, it reinstalls from yolo's repository each package the jail has
+# that yolo's repository offers in place of FreeBSD's, but that the
+# jail got from elsewhere.
 
 usage() {
 	echo "usage: yolo-jail-upgrade [-a] name" >&2
@@ -89,4 +93,24 @@ if [ -n "${newer}" ]; then
 	exit 1
 fi
 
-exec jexec -l ${name} env ASSUME_ALWAYS_YES=yes pkg upgrade -U ${pkgs}
+jpkg upgrade -U ${pkgs}
+
+# yolo's repository offers some packages in place of FreeBSD's, from
+# jail-pkgs/. A jail gets them when it first installs them, but pkg
+# upgrades a package only from the repository it came from, so one the
+# jail got from FreeBSD first stays FreeBSD's. Reinstall each such
+# package from yolo's repository. A name that does not look like one
+# is refused, rather than handed to pkg.
+switch=$(jpkg rquery -U -r yolo %n | grep -v '^yolo-' |
+    while read -r p; do
+	case ${p} in
+	*[!0-9A-Za-z._+-]*) echo "E: refusing package name ${p}" >&2; continue ;;
+	esac
+	jpkg query %n "${p}" </dev/null >/dev/null 2>&1 || continue
+	[ "$(jpkg annotate -Sq "${p}" repository </dev/null)" = yolo ] ||
+	    echo "${p}"
+    done)
+if [ -n "${switch}" ]; then
+	echo "Reinstalling from yolo's repository:" ${switch}
+	jpkg install -U -r yolo ${switch}
+fi

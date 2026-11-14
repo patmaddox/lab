@@ -104,6 +104,12 @@ it checked, without updating it, so what it checked is what it
 installs. The check guards against upgrading too soon, not against the
 jail: the jail's root could change its own pkg.
 
+Last, it reinstalls from =/pkg/yolo= each package that the jail has
+and that =/pkg/yolo= offers in place of FreeBSD's, from =jail-pkgs/=,
+if the jail got it from elsewhere. pkg upgrades a package only from
+the repository it came from, so without this, a jail that installed
+FreeBSD's first would keep it.
+
 * Check
 
 : yolo-jail-check <name>
