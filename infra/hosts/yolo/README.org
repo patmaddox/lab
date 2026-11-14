@@ -144,6 +144,9 @@ installs whatever else it needs. Its conf,
 # goredo is the redo that lab builds with. Unlike devel/redo, it runs
 # a .do script with sh even when the script is not executable, as
 # lab's are.
+# podman-suite is here so every jail can run containers, with ocijail,
+# its runtime, from yolo's repository, which fixes the mounts FreeBSD's
+# leaks in a jail.
 
 comment="Template for yolo's coding-agent jails"
 
@@ -160,6 +163,8 @@ FreeBSD-acpi
 FreeBSD-tests
 atf
 goredo
+podman-suite
+ocijail
 "
 
 users="
@@ -528,6 +533,21 @@ none. A child jail that names any other ruleset fails to start, and
 one with =devfs_ruleset = 0= gets its jail's. FreeBSD's
 =devfsrules_jail_vnet=, ruleset 5, includes ruleset 4, so it shows
 bhyve's devices too, but nothing on yolo uses it.
+
+The coding-agent jails come with podman, whose runtime, ocijail, runs
+each container as a jail of the jail's own. ocijail is yolo's own
+build, from =jail-pkgs/ocijail=, as FreeBSD's leaks mounts in a jail.
+Besides the ruleset, yolo sets =kern.chroot_allow_open_directories=2=,
+in =dist/etc/sysctl.conf=. A jail is chrooted, and podman unpacks an
+image by chrooting with directories open, which the default refuses in
+a chroot. The jail stays the boundary, as chroot(2) cannot reach above
+a jail's root.
+
+A jail sets up the rest itself: a ZFS dataset under its own for
+podman's storage, and pf, which podman's networks use for NAT.
+Its =CLAUDE.md= tells the agent how. Linux images do not run. podman
+asks ocijail to add a devfs rule to a Linux container's =/dev=, and
+the kernel lets no jail change devfs rules.
 
 The jails' networks:
 - lab-1, lab-2, and lab-3: 10.200.11.0/24 to 10.200.13.0/24

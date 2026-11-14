@@ -148,6 +148,15 @@ a jail of its own, and use a bhyve VM when a jail won't do.
   testing. The jail is 10.200.N.2/24 on `epairNb`, with yolo at
   10.200.N.1 as its router. Bridge VMs onto that /24, or NAT them from a
   network outside 10.200.0.0/16.
+- Containers: podman is installed, and runs FreeBSD images. Its
+  runtime, ocijail, is yolo's own build, from yolo's repository. Don't
+  replace it with FreeBSD's, which leaks mounts in a jail.
+  Give podman's storage a dataset with
+  `zfs create -o mountpoint=/var/db/containers
+  zroot/jails/instances/<jail>/data/containers`. Copy
+  `/usr/local/etc/containers/pf.conf.sample` to `/etc/pf.conf`, set its
+  egress interface to `epairNb`, and enable and start pf. Linux images
+  do not run.
 
 ## Scripts
 

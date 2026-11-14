@@ -131,6 +131,11 @@ jails.
   edk2-bhyve boots a VM's firmware on them, which must still run after
   five seconds. Without edk2-bhyve, it only makes the VM. It frees the
   console when it is done.
+- =podman=: ocijail is yolo's, and podman runs a FreeBSD container on
+  its default network, pulling =freebsd-runtime= the first time, with
+  nothing on stderr, where ocijail reports a mount it could not
+  unmount. It skips a jail whose podman has no storage at
+  =/var/db/containers= yet.
 
 * Repos
 
