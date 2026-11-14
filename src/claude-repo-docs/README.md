@@ -1,13 +1,28 @@
 # claude-repo-docs
 
-`repo-docs` is a Claude Code skill for documenting code repositories.
-With it installed, ask Claude to document some code, write or revise
-its comments, write a README, or revise existing docs and fill their
-gaps, and it follows the skill.
+A FreeBSD package that installs `repo-docs`, a Claude Code skill for
+documenting code repositories. With it installed, ask Claude to
+document some code, write or revise its comments, write a README, or
+revise existing docs and fill their gaps, and it follows the skill.
 
 The skill is not specific to any repo. It learns each repo's
 conventions from its `CLAUDE.md`, `AGENTS.md`, and existing docs, and
 from an optional `.claude/docs.md` that overrides them.
+
+## Install
+
+The package installs the skill as a managed skill, under
+`/usr/local/etc/claude-code/.claude/skills/repo-docs`. Claude Code
+reads managed skills only from `/etc/claude-code`, so that must link
+to `/usr/local/etc/claude-code`. yolo's coding-agent jails have the
+link already. On another host, make it first:
+
+    doas ln -s ../usr/local/etc/claude-code /etc/claude-code
+
+Then build and install the package:
+
+    just install
+
 ## How it works
 
 The skill tells Claude to read the repo's conventions and the code
@@ -34,6 +49,7 @@ could not find.
 - `skill/references/` holds the detail it loads as needed: Diátaxis
   per section, comments, gap finding, a README outline, the
   reviewer's brief, and the `.claude/docs.md` format.
+- `claude-repo-docs.pkg.do` builds the package with redo.
 
-To use the skill in a repo, copy `skill/` to its
-`.claude/skills/repo-docs`.
+To try a change to the skill without a package, copy `skill/` to a
+repo's `.claude/skills/repo-docs`.
