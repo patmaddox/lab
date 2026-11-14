@@ -274,9 +274,10 @@ is given.
 
 Claude Code loads managed skills from =.claude/skills= under the same
 folder, and offers them in every session. =code-sync= fetches a
-clone's remotes, deletes each branch whose work has landed on the
-default branch, and rebases each live branch that no longer merges
-cleanly, then pushes it again. It reads the upstream remote, the
+clone's remotes and drops from each branch the commits that have
+landed on the default branch. It deletes a branch whose commits have
+all landed, and rebases a branch that carries some, or that no longer
+merges cleanly, then pushes it again. It reads the upstream remote, the
 default branch, and each branch's push remote from the clone's own
 git config, so it works in any clone, not only in the layout that
 =CLAUDE.md= describes. To sync every clone in the home folder, run

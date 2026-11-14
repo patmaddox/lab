@@ -2,25 +2,34 @@
 name: code-sync
 description: >
   Bring git clones up to date with upstream and tidy their branches.
-  Fetch every remote, delete each branch whose work has landed on the
-  default branch, and rebase each live branch that no longer merges
-  cleanly with it, then push it again. Use on /code-sync, or when
-  asked to sync, refresh, or clean up branches.
+  Fetch every remote, find each branch's commits that have already
+  landed on the default branch, and drop them: delete a branch whose
+  commits have all landed, and rebase a branch that carries some, or
+  that no longer merges cleanly, then push it again. Use on
+  /code-sync, or when asked to sync, refresh, or clean up branches.
 argument-hint: "[branch...]"
 ---
 
 # code-sync
 
-Sync a git clone with its upstream. Every branch ends in one of three
-states: deleted because the default branch has its work, left alone
-because it still merges cleanly, or rebased onto the default branch
-and pushed again.
+Sync a git clone with its upstream, so that each branch carries only
+the commits the default branch does not have yet. A commit has landed
+when the default branch has its change, whether by merge,
+fast-forward, cherry-pick, squash, or by hand. Every landed commit is
+dropped from its branch, and every branch ends in one of three
+states:
+
+- Deleted, because all of its commits landed.
+- Rebased onto the default branch and pushed again, because some of
+  its commits landed, or because it no longer merges cleanly.
+- Left alone, because none of its commits landed and it still merges
+  cleanly.
 
 If the current directory is inside a clone, sync that clone. If not,
 sync each clone directly under the current directory, one after
 another. If arguments are given, sync only the branches they name.
 
-Checking integration and rebasing are slow and need judgment, so
+Finding landed commits and rebasing are slow and need judgment, so
 each runs in a subagent of its own. The main loop reads the clone's
 layout, fetches, gathers branches, makes the cheap checks, acts on
 the verdicts, and reports.
@@ -104,29 +113,36 @@ tips differ, find which contains the other with
 they have diverged, do not touch the branch. Report it as diverged
 with each tip, and move on.
 
-## 4. Check integration
+## 4. Find landed commits
 
-A branch is integrated when `$base` already has all of its changes,
-whether they landed by merge, fast-forward, cherry-pick, squash, or
-by hand.
+A branch's commits are those on its tip since `$base`:
 
-First make the cheap checks in the main loop. The branch is
-integrated if any holds:
+    git rev-list --reverse "$base"..<tip>
 
-- `git merge-base --is-ancestor <tip> "$base"` succeeds.
-- `git cherry "$base" <tip>` prints no line that starts with `+`.
-- `git merge-tree --write-tree "$base" <tip>` succeeds and prints
-  the same tree as `git rev-parse "$base^{tree}"`. Merging the branch
-  would change nothing, which catches most squash merges.
+Sort each into landed or not. First make the cheap checks in the
+main loop:
 
-Every other branch needs a closer look. Launch an integration
-subagent for each, all in one message so they run in parallel. Use
-the prompt in "Integration subagent" below. Wait for every verdict
-before you act on any.
+- If `git merge-base --is-ancestor <tip> "$base"` succeeds, the
+  branch has no commits of its own.
+- `git cherry "$base" <tip>` marks with `-` each commit whose patch
+  `$base` already has. Those have landed.
+- If `git merge-tree --write-tree "$base" <tip>` succeeds and prints
+  the same tree as `git rev-parse "$base^{tree}"`, merging the branch
+  would change nothing, so all of its commits have landed. This
+  catches most squash merges.
 
-## 5. Delete integrated branches
+A commit that `git cherry` marks with `+` may still have landed in
+another form. For each branch that the cheap checks leave with any
+`+` commit, launch an integration subagent, all in one message so
+they run in parallel. Use the prompt in "Integration subagent" below.
+Wait for every verdict before you act on any.
 
-For each integrated branch:
+A branch's landed commits are then those `git cherry` marked with
+`-`, and those its subagent listed as landed. The rest remain.
+
+## 5. Delete fully landed branches
+
+For each branch whose commits have all landed:
 
 1. If it is checked out in any worktree, switch that worktree to
    `$main` first. If that worktree has uncommitted changes, do not
@@ -134,14 +150,14 @@ For each integrated branch:
 2. `git branch -D <name>` for the local branch.
 3. `git push <fork> --delete <name>` for each fork that has it.
 
-Use `-D`, not `-d`, because a branch that landed as a squash or a
-cherry-pick is not an ancestor of `$base`, and `-d` refuses it. The
-verdict is what makes the delete safe.
+Use `-D`, not `-d`, because a branch whose commits landed as a squash
+or a cherry-pick is not an ancestor of `$base`, and `-d` refuses it.
+The verdict is what makes the delete safe.
 
-## 6. Test the merge for live branches
+## 6. Test the merge for branches with nothing landed
 
-For each branch that is not integrated, test a merge with `$base`.
-No worktree is needed:
+For each branch none of whose commits landed, test a merge with
+`$base`. No worktree is needed:
 
     git merge-tree --write-tree --quiet "$base" <tip>
 
@@ -149,10 +165,15 @@ Exit status 0 means it merges cleanly, so leave the branch as it is.
 Status 1 means a conflict. Any other status is an error. Report it
 and move on.
 
-## 7. Rebase conflicting branches
+## 7. Rebase branches
+
+Rebase each branch that has some landed commits, dropping them, and
+each branch that conflicts. Rebase the first kind even when it merges
+cleanly: a merge keeps a commit that landed in another form, such as
+one from a parent branch that landed reworded.
 
 A rebase rewrites every commit on the branch since `$base`, so first
-check each conflicting branch against `$next`, if there is one. The
+check each of these branches against `$next`, if there is one. The
 branch is published if any of its commits are in `$next`, that is if
 these two counts differ:
 
@@ -160,9 +181,10 @@ these two counts differ:
     git rev-list --count <tip> ^"$base" ^"$next"
 
 Do not rebase a published branch. Leave it as it is, and name it
-under "Your action" in the report, with the conflicting files.
+under "Your action" in the report, with its landed commits or its
+conflicting files.
 
-Launch a rebase subagent for each conflicting branch, all in one
+Launch a rebase subagent for each branch to rebase, all in one
 message so they run in parallel. Use the prompt in "Rebase subagent"
 below. Each works in a worktree of its own, so they do not touch the
 main checkout or each other. A local-only branch has no push remote,
@@ -193,8 +215,8 @@ Leave out a section that has nothing to report.
 - `$main` fast-forwarded, with old and new tips.
 - A branch deleted, with the `$base` commits that carry its work, and
   the forks it was deleted from.
-- A branch rebased, with old and new tips, and the remote it was
-  pushed to.
+- A branch rebased, with old and new tips, the remote it was pushed
+  to, and the landed commits it dropped.
 
 If the run changed nothing, write "No changes." in place of the list.
 
@@ -204,17 +226,16 @@ each branch once.
 
 **Your action.** One line for each decision or command left to the
 user, with the reason in a few words: a diverged branch, a rebase
-given up, a published branch that conflicts, a partial
-integration, an error, a `$main` that cannot
-fast-forward, or a checked-out branch to reset. If nothing is left,
-write "None."
+given up, a published branch with landed commits or conflicts, an
+error, a `$main` that cannot fast-forward, or a checked-out branch
+to reset. If nothing is left, write "None."
 
 ## Integration subagent
 
 Fill in the angle-bracketed fields:
 
-> Decide whether the work on git branch `<name>` has already landed
-> on `<base>`, in the clone at `<path>`. Do not modify any ref, the
+> Decide which commits on git branch `<name>` have already landed on
+> `<base>`, in the clone at `<path>`. Do not modify any ref, the
 > index, or the working tree. Read-only git commands only.
 >
 > The branch tip is `<tip>`, and it forks from `<base>` at
@@ -228,28 +249,20 @@ Fill in the angle-bracketed fields:
 > (`git log <merge-base>..<base> -- <paths>`), and by its content
 > (`git log -S` or `-G`). Then compare the diffs.
 >
-> Also try `git merge-tree --write-tree <base> <tip>`. If the merge
-> succeeds and its tree equals `git rev-parse <base>^{tree}`, the
-> branch adds nothing.
+> A commit has landed when `<base>` has its whole effect, even if
+> later commits changed the same lines again. A commit that `<base>`
+> deliberately reverted, or made unnecessary, has not landed. Report
+> it as such.
 >
-> A commit counts as landed when `<base>` has its whole effect, even
-> if later commits changed the same lines again. A commit that
-> `<base>` deliberately reverted, or made unnecessary, is not landed.
-> Report it as such.
+> End your reply with exactly one verdict line, listing the commits
+> that landed, each with the `<base>` commits that carry it:
 >
-> End your reply with exactly one verdict line:
+>     LANDED: <commit>=<base commits> <commit>=<base commits> ...
+>     LANDED: none
 >
->     VERDICT: integrated <base commits carrying the work>
->     VERDICT: live
->     VERDICT: partial <commits not landed>
->
-> Then give a few lines of evidence for each commit. Say `live`
-> when you are not sure. A wrong `integrated` loses work, and a wrong
-> `live` costs only a rebase.
-
-Act on `integrated` by deleting the branch. Treat `live` and
-`partial` as live. Name a partial branch under "Your action" in
-the report, since a rebase would drop its landed commits.
+> Then give a few lines of evidence for each commit. Leave a commit
+> out when you are not sure it landed. Dropping a commit that has not
+> landed loses work, and keeping one that has costs only a rebase.
 
 ## Rebase subagent
 
@@ -258,8 +271,10 @@ local-only branch, and tell the subagent to move the local branch
 with `git branch -f <name> HEAD` instead, unless it is checked out.
 
 > Rebase git branch `<name>` onto `<base>` and push it to the remote
-> `<remote>`, in the clone at `<path>`. The branch tip is `<tip>`. A
-> trial merge with `<base>` conflicts in: `<files>`.
+> `<remote>`, in the clone at `<path>`. The branch tip is `<tip>`.
+> These commits on it have already landed on `<base>`, so drop them:
+> `<landed commits, or none>`. A trial merge with `<base>` conflicts
+> in: `<files, or none>`.
 >
 > 1. Make a worktree of your own, so the main checkout stays as it
 >    is:
@@ -267,27 +282,40 @@ with `git branch -f <name> HEAD` instead, unless it is checked out.
 >        wt="$(mktemp -d)/<name>"
 >        git worktree add --detach "$wt" <tip>
 >
-> 2. In `$wt`, run `git rebase <base>`. When a commit conflicts, read
->    it with `git show`, read the `<base>` commits that touch the same
->    files, and resolve the conflict so the commit keeps its intent
->    on top of what `<base>` now does. If `<base>` already made a
->    commit's change, let the rebase drop it.
-> 3. If a resolution changes what a commit does, and not just where
+> 2. In `$wt`, rebase onto `<base>`. Drop the landed commits in the
+>    same rebase, by marking each `drop` in the todo list with a
+>    script as the sequence editor, so that no editor opens:
+>
+>        GIT_SEQUENCE_EDITOR='sed -i.bak -E "s/^pick (<sha>|<sha>) /drop \\1 /"' \
+>            git rebase -i <base>
+>
+>    Give each sha as its first seven characters, which every todo
+>    line's abbreviation starts with. With no landed commits, run
+>    `git rebase <base>`.
+> 3. When a commit conflicts, read it with `git show`, read the
+>    `<base>` commits that touch the same files, and resolve the
+>    conflict so the commit keeps its intent on top of what `<base>`
+>    now does. If `<base>` already made a commit's change, let the
+>    rebase drop it.
+> 4. If a resolution changes what a commit does, and not just where
 >    its lines sit, check that its message still describes its diff.
 >    Follow the repo's own commit message rules, from its CLAUDE.md
 >    or a skill, if it has any.
-> 4. If the repo has tests or a build that the conflicting files
->    touch, run them in `$wt`.
-> 5. Push only when the rebase finished and you are confident in
+> 5. Check that the landed commits are gone and every other commit
+>    remains, by comparing `git log --oneline <base>..HEAD` with the
+>    branch's commits.
+> 6. If the repo has tests or a build that the rebase touched, run
+>    them in `$wt`.
+> 7. Push only when the rebase finished and you are confident in
 >    every resolution. Pin the push to the old tip, so it fails if
 >    anyone moved the branch in the meantime:
 >
 >        git push --force-with-lease=<name>:<tip> <remote> HEAD:refs/heads/<name>
 >
 >    Push to no other remote.
-> 6. If you cannot resolve a conflict with confidence, run
+> 8. If you cannot resolve a conflict with confidence, run
 >    `git rebase --abort` and push nothing.
-> 7. Remove the worktree with `git worktree remove --force "$wt"`
+> 9. Remove the worktree with `git worktree remove --force "$wt"`
 >    whatever the outcome.
 >
 > End your reply with exactly one result line:
@@ -295,5 +323,6 @@ with `git branch -f <name> HEAD` instead, unless it is checked out.
 >     RESULT: pushed <old tip> -> <new tip>
 >     RESULT: gave-up <reason>
 >
-> Then list each conflict and how you resolved it, any commit that
-> dropped out, and any message you changed.
+> Then list each landed commit dropped, each conflict and how you
+> resolved it, any other commit that dropped out, and any message
+> you changed.
