@@ -123,10 +123,12 @@ installs whatever else it needs. Its conf,
 # it installs whatever else it needs. git is here because every jail
 # clones its repo from /git. claude-code is the agent itself, which
 # the template's settings configure, and jq reads the JSON its hooks
-# get. claude-repo-docs adds a managed skill for writing docs. pkg and
-# yolo-pkg-repos are here so the jail can upgrade itself from the
-# repositories. FreeBSD-acpi holds iasl, which bhyve runs to build a
-# VM's ACPI tables, and which FreeBSD-set-base-jail lacks.
+# get. claude-repo-docs adds a managed skill for writing docs, and
+# claude-revise-prose a skill and agent for placing a commit's prose.
+# pkg and yolo-pkg-repos are here so the jail can upgrade itself
+# from the repositories. FreeBSD-acpi holds iasl, which bhyve runs
+# to build a VM's ACPI tables, and which FreeBSD-set-base-jail
+# lacks.
 
 comment="Template for yolo's coding-agent jails"
 
@@ -137,6 +139,7 @@ git
 doas
 claude-code
 claude-repo-docs
+claude-revise-prose
 jq
 FreeBSD-acpi
 "
@@ -297,6 +300,14 @@ and other docs. It comes from a package of its own, claude-repo-docs,
 which the template depends on, because it is meant for any host, not
 only yolo's jails. lab builds it in =src/claude-repo-docs=, and
 =just push-pkg= adds it to yolo's repository with the templates.
+
+=revise-prose= decides whether an idea belongs in a commit message,
+the docs, or a comment, so that each is written once, where its
+reader looks. The =prose-editor= agent applies it to a finished
+branch. =CLAUDE.md= tells the jail's agent to run it before the final
+push, since the agent's description alone does not get it run
+reliably. Both come from claude-revise-prose, built in
+=src/claude-revise-prose=, for the same reason as repo-docs.
 
 Claude Code reads managed settings only from =/etc/claude-code=. The
 template keeps them in =/usr/local/etc/claude-code=, and its =dist/=

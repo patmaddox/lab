@@ -7,7 +7,10 @@ pkg:
   redo-ifchange $(ls src/*/all.do | sed 's/\.do$//') jails/all
 
 # Packages from elsewhere in lab that the templates depend on
-template_deps := "../../../src/claude-repo-docs/claude-repo-docs.pkg"
+template_deps := (
+  "../../../src/claude-repo-docs/claude-repo-docs.pkg" +
+  " ../../../src/claude-revise-prose/claude-revise-prose.pkg"
+)
 
 # Build all packages, templates and their deps too, and sync them to
 # /pkg/yolo on yolo

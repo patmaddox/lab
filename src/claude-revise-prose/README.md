@@ -32,7 +32,8 @@ the commits in place, has a fresh subagent review them, and repeats
 until the review finds nothing, for three rounds at most. Then it
 reports what moved in each commit. Asking Claude to run the agent on
 a range does the same. The agent's description also invites Claude
-to hand it a finished branch unasked.
+to hand it a finished branch unasked, and yolo's coding-agent jails
+tell Claude to.
 
 ## Design
 

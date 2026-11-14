@@ -56,6 +56,11 @@ A hook refuses commands that try.
 `/git/agent` is the only thing that survives a reset of the jail, so push
 work there early and often.
 
+When a branch is finished and its commits explain anything in message
+bodies, docs, or comments, have the prose-editor agent reconcile them
+before the final push, so that each idea is written once, where its
+reader looks.
+
 ### Published history
 
 A repo may have a `next` branch upstream, run the way git.git runs its
