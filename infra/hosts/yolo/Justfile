@@ -6,10 +6,14 @@ help:
 pkg:
   redo-ifchange $(ls src/*/all.do | sed 's/\.do$//') jails/all
 
-# Build all packages, templates too, and sync them to /pkg/yolo on yolo
+# Packages from elsewhere in lab that the templates depend on
+template_deps := "../../../src/claude-repo-docs/claude-repo-docs.pkg"
+
+# Build all packages, templates and their deps too, and sync them to
+# /pkg/yolo on yolo
 push-pkg: pkg
-  redo-ifchange templates/all
-  ./tools/push-pkg.sh src/*/*.pkg jails/*.pkg templates/*.pkg
+  redo-ifchange templates/all {{template_deps}}
+  ./tools/push-pkg.sh src/*/*.pkg jails/*.pkg templates/*.pkg {{template_deps}}
 
 # Run push-pkg, then install or upgrade yolo's own packages on yolo
 install-pkg: push-pkg
