@@ -157,9 +157,12 @@ the `---` of a single patch.
 ## Name people by their role
 
 The instructions you work under may call the person you work for "the
-human". That word belongs to the agent's view, not the project's. A
-commit message outlives the session, and its readers know no agent.
-Name each person by the role they play in the change. For example:
+human", or name them. Neither belongs in a commit message. "The
+human" is the agent's view, not the project's, and its readers know
+no agent. A personal name, such as "Pat's conventions", says who but
+not what part they play, and it goes stale when someone else takes
+that part. Name each person by the role they play in the change. For
+example:
 
 - **user** for someone who runs the program or uses the system.
 - **maintainer** for someone who reviews, merges, or owns the code.
@@ -174,7 +177,13 @@ customer, and pick the narrowest one that fits.
 Rewrite "the human's address" as "the owner's address", and "the
 human reviews it" as "the maintainer reviews it". When no person
 matters to the point, leave them out. Before you apply a message,
-search it for "human" and replace each use that names a person.
+search it for "human" and for the names of people in your
+instructions, and replace each use that names a person.
+
+A name may stay where it is a fact about the change rather than a
+way to refer to someone: a trailer that credits a person, such as
+`Reported by:`, or a name the diff itself sets, such as an account's
+full name.
 
 ## Example
 
