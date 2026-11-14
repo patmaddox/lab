@@ -15,7 +15,9 @@ argument-hint: "[branch...]"
 Sync a git clone with its upstream, so that each branch carries only
 the commits the default branch does not have yet. A commit has landed
 when the default branch has its change, whether by merge,
-fast-forward, cherry-pick, squash, or by hand. Every landed commit is
+fast-forward, cherry-pick, squash, or by hand. An earlier version
+of a change has landed too, once a later version of it has: when v3
+of a topic lands, its v1 and v2 are obsolete. Every landed commit is
 dropped from its branch, and every branch ends in one of three
 states:
 
@@ -170,7 +172,8 @@ and move on.
 Rebase each branch that has some landed commits, dropping them, and
 each branch that conflicts. Rebase the first kind even when it merges
 cleanly: a merge keeps a commit that landed in another form, such as
-one from a parent branch that landed reworded.
+one from a parent branch that landed reworded, or an earlier version
+of a change whose later version landed.
 
 A rebase rewrites every commit on the branch since `$base`, so first
 check each of these branches against `$next`, if there is one. The
@@ -250,15 +253,23 @@ Fill in the angle-bracketed fields:
 > (`git log -S` or `-G`). Then compare the diffs.
 >
 > A commit has landed when `<base>` has its whole effect, even if
-> later commits changed the same lines again. A commit that `<base>`
-> deliberately reverted, or made unnecessary, has not landed. Report
-> it as such.
+> later commits changed the same lines again. An earlier version of
+> a change has also landed when `<base>` has a later version of the
+> same change, such as a reroll of the same topic, even if its code
+> differs: the later version supersedes it. Look for the same intent
+> and subject in `<base>`. Another branch of ours with a later version
+> that matches `<base>` more closely is good evidence. A commit that
+> `<base>` deliberately reverted, or made unnecessary by unrelated
+> work, has not landed. Report it as such.
 >
 > End your reply with exactly one verdict line, listing the commits
 > that landed, each with the `<base>` commits that carry it:
 >
 >     LANDED: <commit>=<base commits> <commit>=<base commits> ...
 >     LANDED: none
+>
+> For an earlier version, name the `<base>` commits of the version
+> that supersedes it.
 >
 > Then give a few lines of evidence for each commit. Leave a commit
 > out when you are not sure it landed. Dropping a commit that has not
@@ -296,7 +307,10 @@ with `git branch -f <name> HEAD` instead, unless it is checked out.
 >    `<base>` commits that touch the same files, and resolve the
 >    conflict so the commit keeps its intent on top of what `<base>`
 >    now does. If `<base>` already made a commit's change, let the
->    rebase drop it.
+>    rebase drop it. A commit that built on a dropped earlier version
+>    now builds on the version in `<base>`. Keep the commit's own
+>    change, and take the dropped version's lines as `<base>` has
+>    them.
 > 4. If a resolution changes what a commit does, and not just where
 >    its lines sit, check that its message still describes its diff.
 >    Follow the repo's own commit message rules, from its CLAUDE.md
