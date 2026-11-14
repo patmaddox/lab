@@ -33,8 +33,9 @@ Report the following, in this order.
 5. **Comments**, if source comments changed. Name comments that
    restate the code, are wrong, or are missing on a public interface.
 6. **Man pages**, if any changed. Run `mandoc -Tlint -Wstyle` and
-   `igor -D` on each, and report what they find. Check that SYNOPSIS, the option list, and
-   the code all agree, and that every example would work.
+   `igor -D` on each, and report what they find. Check that SYNOPSIS,
+   the option list, and the code all agree, and that every example
+   would work.
 7. **Sentences.** Quote each sentence that gives one thing two names,
    hides who acts behind a noun or a trailing ", making…" clause, or
    must be read twice, and give a rewrite. Compare each changed file

@@ -29,8 +29,8 @@ SEE ALSO.
   primer recommends cp(1), crontab(5), vt(4), and gpart(8) as
   well-written pages, and the templates in /usr/share/examples/mdoc/
   show the skeleton of each manual section. A minimal system, such as
-  a jail, may lack some of these. Read them at https://man.freebsd.org
-  if so.
+  a jail, may lack some of these. If it does, read them at
+  https://man.freebsd.org.
 - Learn the interface from the code: every option, argument,
   environment variable, file, exit status, and message. The SYNOPSIS
   and option list must match what the parser accepts, and nothing
@@ -61,10 +61,10 @@ something useful that the rest of the page does not. A short page
 with five sections is better than a long one padded to twenty.
 Never add a section to fill out the list. Signs of padding include:
 
-- BUGS that say there are none;
-- AUTHORS or HISTORY that the repo gives no facts for;
-- STANDARDS for a tool that implements none;
-- ENVIRONMENT or FILES that list nothing the tool actually reads;
+- BUGS that say there are none.
+- AUTHORS or HISTORY that the repo gives no facts for.
+- STANDARDS for a tool that implements none.
+- ENVIRONMENT or FILES that list nothing the tool reads.
 - EXAMPLES that only repeat the SYNOPSIS.
 
 The table lists the conventional sections in their order. The middle
@@ -380,9 +380,11 @@ tool checks that.
 
 ## Sources
 
-FreeBSD mdoc(7), style.mdoc(5), roff(7), and mandoc(1), and
-/usr/share/examples/mdoc/;
-https://docs.freebsd.org/en/books/fdp-primer/manual-pages/;
-https://man.openbsd.org/mdoc.7; https://mandoc.bsd.lv/mdoc/;
-https://manpages.bsd.lv/; https://netbsd.org/developers/manpages.html;
-https://man7.org/linux/man-pages/man7/man-pages.7.html.
+- FreeBSD mdoc(7), style.mdoc(5), roff(7), and mandoc(1), and
+  /usr/share/examples/mdoc/
+- https://docs.freebsd.org/en/books/fdp-primer/manual-pages/
+- https://man.openbsd.org/mdoc.7
+- https://mandoc.bsd.lv/mdoc/
+- https://manpages.bsd.lv/
+- https://netbsd.org/developers/manpages.html
+- https://man7.org/linux/man-pages/man7/man-pages.7.html

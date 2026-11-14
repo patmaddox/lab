@@ -28,7 +28,7 @@ against advanced. A how-to can cover a basic task.
 
 **Tutorial.** A lesson the reader follows to gain skill. Every step
 works as written and shows a visible result. It takes one path, with
-no choices or branches, and explains only in a clause, linking out
+no choices or branches, and explains only in a clause, with a link
 for more. Most small repos need none. Don't write one unless asked or
 the project is for newcomers.
 

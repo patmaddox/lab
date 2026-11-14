@@ -28,10 +28,10 @@ a reading of the rendered page.
    - In FreeBSD src, also run `mandoc -Tlint page.1` without
      `-Wstyle`, which adds the base system's own conventions.
    - `-Wstyle` looks up `Xr` targets in the system's manuals and in
-     the man path. If the repo keeps its pages in a `man1/`, `man8/`,
-     and so on layout, add `-m <dir>` so that references to the repo's
-     own pages resolve. Otherwise, expect "referenced manual not
-     found" for them, and check those references by hand.
+     the man path. If the repo keeps its pages in section directories
+     such as `man1/` and `man8/`, add `-m <dir>` so that references to
+     the repo's own pages resolve. Otherwise, expect "referenced manual
+     not found" for them, and check those references by hand.
 
 2. **igor.** Run this:
 

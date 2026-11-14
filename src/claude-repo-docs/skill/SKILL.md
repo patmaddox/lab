@@ -26,8 +26,8 @@ request:
   what has drifted from the code, and add what readers need but cannot
   find.
 
-The request names the paths, or `$ARGUMENTS` does. When it names
-none, work on the current directory and say so.
+The request names the paths, or `$ARGUMENTS` does. If neither
+names a path, work on the current directory and say so.
 
 ## 1. Learn the repo's conventions
 
@@ -44,8 +44,8 @@ Before writing anything, read:
 Then settle these, and write down any you had to guess:
 
 - **Where reference lives.** Man pages, generated API docs, or
-  docstrings may already be the reference. Don't duplicate it in a
-  README; link to it.
+  docstrings may already be the reference. Link to it from a README
+  rather than duplicate it.
 - **What not to restructure.** Specs, decision records, ADRs, RFCs,
   changelogs, generated files, vendored code, and agent instruction
   files are records, not living docs. Fix a broken link or a typo in
@@ -135,13 +135,13 @@ upgrade notes or a HISTORY section, where the repo keeps them.
 The docs, comments, and message must not repeat each other beyond a
 clause or a pointer, and no one of them ranks above the others. Put
 a design decision's reasons where the reader who would question it
-looks: in the docs or a comment if a user or maintainer would
-question it while reading the tree, even if the reasons also
-motivate the commit, and in the message if only someone reviewing
-or tracing the change would ask. Weigh a comment against the docs
+looks. If a user or maintainer would question it while reading the
+tree, put the reasons in the docs or a comment, even if they also
+motivate the commit. If only someone reviewing or tracing the change
+would ask, put them in the message. Weigh a comment against the docs
 by scope: one piece of code, or the whole. If the revise-prose skill
 is available, it decides where each idea goes, and the prose-editor
-agent reconciles a series of commits by it.
+agent reconciles a series of commits by its rules.
 
 ### Man pages
 

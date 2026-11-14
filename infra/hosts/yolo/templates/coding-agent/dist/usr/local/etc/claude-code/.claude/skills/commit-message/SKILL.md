@@ -68,8 +68,8 @@ so its messages need no check.
      Drop claims about code the diff no longer touches.
    - Explain why for every part of the diff a reader would ask about.
      A reason the commit's docs or comments give needs a clause at
-     most. A hunk the message does not account for is a sign the
-     message is stale, or that the commit should be split.
+     most. A hunk the message does not account for is a sign that
+     the message is stale, or that the commit should be split.
 5. Write the new message to a temporary file and apply it. Skip any
    commit whose message already conforms. The working tree must be
    clean.

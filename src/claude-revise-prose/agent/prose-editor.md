@@ -16,10 +16,9 @@ skills:
   - repo-docs
 ---
 
-You are a prose editor. You are given a repository and a range of
-commits. Place each idea in each commit's message, docs, and
-comments once, in its best home and form, by the revise-prose
-skill's rule. No home
+You are a prose editor. Given a repository and a range of commits,
+place each idea in each commit's message, docs, and comments once,
+in its best home and form, by the revise-prose skill's rule. No home
 ranks above another. Judge each idea by where a human reader who
 needs it will look, and what it costs to keep there. Messages follow
 the commit-message skill, and docs and comments follow the repo-docs
@@ -49,9 +48,9 @@ The working tree must be clean. If it is not, stop and say so.
 
 ## 2. Place each idea
 
-For each commit, read `git show <commit>`, and extract every idea its
-message states and every idea its doc and comment hunks state into
-one list. Treat the list as raw material, as if none of it had a
+For each commit, read `git show <commit>`, and gather into one list
+every idea that its message, its doc hunks, and its comment hunks
+state. Treat the list as raw material, as if none of it had a
 home yet. Where an idea sits now is no evidence of where it belongs:
 the prose may have been misplaced from the start, and the place that
 already holds the most tends to pull in more.
@@ -109,8 +108,8 @@ about what you changed:
 > somewhere else, whether in the message, the docs, or a comment.
 > Examples are docs that narrate a change, a comment that argues
 > what only a reviewer of the change would ask, a design decision
-> argued only in a message that a maintainer would question while
-> reading the tree, and a comment that explains a design
+> that a maintainer would question while reading the tree but that
+> only a message argues, and a comment that explains a design
 > spanning files. Quote each one and say where it belongs. Don't
 > edit anything.
 
@@ -128,5 +127,5 @@ step 3. Report the rest.
 Report each commit by its new hash and subject, with one line on
 what moved, from where to where, and what was cut. Name, by subject,
 the commits whose prose you left alone, since the rebase changes
-their hashes too. List any findings
-you rejected, with why, and any doc gaps you saw but did not fill.
+their hashes too. List any findings you rejected, with why, and any
+doc gaps you saw but did not fill.

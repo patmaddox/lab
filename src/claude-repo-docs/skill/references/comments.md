@@ -52,5 +52,6 @@ the two differ, follow the file.
 
 A docstring and a README or reference page should not repeat each
 other. Let the docstring be the reference for an interface, and let
-external docs explain and guide, linking to it. If the repo generates
-docs from comments, the comments are the source, so fix them there.
+external docs explain, guide, and link to it. If the repo generates
+docs from comments, the comments are the source, so fix the comments,
+not the generated docs.

@@ -13,9 +13,9 @@ from an optional `.claude/docs.md` that overrides them.
 
 The package installs the skill as a managed skill, under
 `/usr/local/etc/claude-code/.claude/skills/repo-docs`. Claude Code
-reads managed skills only from `/etc/claude-code`, so that must link
-to `/usr/local/etc/claude-code`. yolo's coding-agent jails have the
-link already. On another host, make it first:
+reads managed skills only from `/etc/claude-code`, so that directory
+must be a link to `/usr/local/etc/claude-code`. yolo's coding-agent
+jails have the link already. On another host, make it first:
 
     doas ln -s ../usr/local/etc/claude-code /etc/claude-code
 
@@ -31,13 +31,13 @@ the repo does not contain. It covers three jobs: comments, new docs,
 and revising docs to fill gaps. Comments explain why, and docstrings
 document interfaces at their declaration. Docs describe the tree as
 it stands, and leave the story of a change to its commit message, so
-the two don't repeat each other. The skill carries a
-short form of revise-prose's rule.
+the two don't repeat each other. The skill carries a short form of
+the revise-prose skill's rule for where each idea goes.
 
 Docs are written for a skilled operator who is new to the project,
 unless the repo names other readers. Revising a doc means editing its
-existing text as well as adding to it: the skill cuts what that
-reader already knows, along with filler and repetition, and tightens
+existing text as well as adding to it. The skill cuts what that
+reader already knows, along with filler and repetition. It tightens
 what remains by sentence rules taken from Simplified Technical
 English and plain-language guides. yolo's commit-message skill carries
 a short form of these rules, which must change with them.
@@ -52,9 +52,9 @@ Claude checks what it changed with the tools the FreeBSD
 Documentation Project uses: mandoc -Tlint and igor for man pages,
 aspell for spelling, Vale for prose, and codespell for comments. The
 package depends on all of them. After a substantial change, a
-subagent with fresh context also reviews the docs against the code. Claude edits files in place for you to review
-as a diff, and reports what it changed, what it guessed, and what it
-could not find.
+subagent with fresh context also reviews the docs against the code.
+Claude edits files in place, so its changes are a diff to review, and
+reports what it changed, what it guessed, and what it could not find.
 
 ## Layout
 

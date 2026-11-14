@@ -1,8 +1,8 @@
 # .claude/docs.md
 
 A repo may keep a `.claude/docs.md` to state its documentation
-conventions. It is optional. When it exists, it overrides what the
-skill would otherwise infer. When the skill has to guess a convention,
+conventions. When it exists, it overrides what the skill would
+otherwise infer. When the skill has to guess a convention,
 it says so in its report, so the user can record the answer here.
 
 It is plain Markdown. Use only the sections that apply:

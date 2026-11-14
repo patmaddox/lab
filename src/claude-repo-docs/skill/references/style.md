@@ -2,8 +2,8 @@
 
 These rules shape each sentence once its idea has a home. They take
 the sentence rules of Simplified Technical English (ASD-STE100) and
-of plain-language guides, and leave out its fixed dictionary and
-hard limits, which cost facts in prose about code. They also target
+of plain-language guides, but not STE's fixed dictionary and hard
+limits, which cost facts in prose about code. They also target
 habits that mark text written by a language model. The repo's own
 conventions win where they differ. Apply the rules as judgment: a
 sentence that breaks one and reads well stays.

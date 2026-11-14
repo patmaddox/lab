@@ -16,9 +16,9 @@ argument-hint: "[revision-range]"
 
 Each idea gets one home. A commit message, a doc, and a comment each
 reach different readers at different times, and each costs something
-to keep. No home ranks above another. For each idea, use judgment to
-find the place where the human reader who needs it will find it, and
-write it there, in the form that serves that reader best.
+to keep. No home ranks above another. For each idea, judge where the
+human reader who needs it will look, and write it there, in the form
+that serves that reader best.
 
 When invoked by hand with a revision range, such as
 `/revise-prose origin/trunk..HEAD`, hand the range to the
@@ -32,22 +32,23 @@ itself ignores this paragraph.
 - **Commit message.** Read by a reviewer judging the change, and
   later by someone who traces a line with blame or reads the log. It
   is fixed to one change, so it never goes stale, and it costs no
-  other reader anything. But users never see it, it cannot be
-  corrected once published, and only a reader who digs finds it,
-  through blame that moves and reformatting can obscure. It suits
-  what makes sense only against the tree before the patch: the status
-  quo and its problem, why to change it now, alternatives rejected
-  for this change, and what the change leaves unaffected. It also
-  suits the reason for a small choice that only someone tracing that
-  line would ask about.
+  other reader anything. But users never see it, and it cannot be
+  corrected once published. Only a reader who digs finds it, through
+  blame, and moving or reformatting the code can hide it from blame.
+  It suits what makes sense only against the tree before the change:
+  the status quo and its problem, why to change it now, alternatives
+  rejected for this change, and what the change leaves unaffected. It
+  also suits the reason for a small choice that only someone tracing
+  that line would ask about.
 - **Docs.** Read by someone using, learning, or maintaining the tree
   as it stands: READMEs, man pages, guides. A reader finds them
   without opening the code or the log. Every later commit must keep
   them true, and every reader pays for their length. They suit what a
   thing is, how to use it, facts to look up, how the parts fit
-  together, design decisions a user or maintainer would question,
-  and, where the repo keeps them, notes on changes that users must
-  act on, such as a man page's HISTORY section or upgrade notes.
+  together, and design decisions a user or maintainer would question.
+  Where the repo keeps them, they also suit notes on changes that
+  users must act on, such as upgrade notes or a man page's HISTORY
+  section.
 - **Comments.** Read by everyone who edits that code, at the line in
   front of them. Like docs, they must be kept true, and they crowd
   the code they sit in. A docstring is the reference for an interface
@@ -71,17 +72,18 @@ form its new home needs, rather than carrying its old wording over.
 Weigh each idea against all three homes, and against cutting it.
 These questions help, in any order. None of them decides alone.
 
-- **Who needs it, and what are they doing then?** A reviewer judging
-  the change, a user of the tree, a maintainer learning how it fits
-  together, someone editing one function, and someone tracing why a
-  line changed each look in a different place.
+- **Who needs it, and what are they doing then?** Each of these
+  readers looks in a different place: a reviewer judging the change,
+  a user of the tree, a maintainer learning how it fits together,
+  someone editing one function, and someone tracing why a line
+  changed.
 - **Is it the story of this change?** An account of how the tree got
   here, which makes sense only against the tree before it, suits the
   message. Docs and comments describe the tree as it stands. Words
   like "no longer", "now", "previously", and "instead of" often mark
   such a story, but check the idea, not the word: "uses kqueue
-  instead of select, which caps descriptors" describes the tree, and
-  a removed flag that users must stop passing may also belong in the
+  instead of select, which caps descriptors" describes the tree. A
+  removed flag that users must stop passing may also belong in the
   docs' upgrade notes, if the repo keeps them.
 - **How many readers need it?** An idea that most readers of the tree
   need belongs where they look without digging, in the docs or a
@@ -135,7 +137,7 @@ there, or cut it.
   cannot show, such as the status quo and its problem.
 - Docs or comments that narrate change: "now supports", "was changed
   to", "no longer", "new in this version", "fixed bug". Move it to
-  the message, or drop it. A change users must act on may stay in
+  the message, or cut it. A change users must act on may stay in
   upgrade notes or a HISTORY section, where the repo keeps them.
 - Docs or comments that argue what only a reviewer of this change
   would ask about: why it was done now, what it leaves unaffected, or
@@ -144,9 +146,9 @@ there, or cut it.
   would question. Cut it, or move it to the message.
 - A design decision argued in full in two places. Keep the full
   argument where its reader looks, and shrink the other to a clause.
-- A design decision argued only in a message, that a user or
-  maintainer would question while reading the tree. Move it to the
-  docs or a comment, and leave a clause in the message.
+- A design decision that a user or maintainer would question while
+  reading the tree, argued only in a message. Move it to the docs or
+  a comment, and leave a clause in the message.
 - A message that explains a quirk of the code, a constraint, or a
   trap that an editor needs at the line. Move it to a comment.
 - A message that explains how to use what the commit adds, when the
