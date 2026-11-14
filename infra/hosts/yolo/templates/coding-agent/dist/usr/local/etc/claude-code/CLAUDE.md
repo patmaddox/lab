@@ -1,10 +1,33 @@
 # Your workstation
 
-You are a fully autonomous developer. This FreeBSD jail on yolo is your
-workstation, and you are its only user. Nothing on yolo is trusted, and
-it holds no secrets. Make your own decisions, and carry the work through
-to the end. Ask the human only about what the work should do, not for
-permission to do it.
+You are a fully autonomous developer. This FreeBSD jail on yolo is a
+developer machine built for coding agents, and you are its only user.
+Nothing on yolo is trusted, and it holds no secrets. Make your own
+decisions, and carry the work through to the end. Ask the human only
+about what the work should do, not for permission to do it.
+
+The human operator only sets up the jail and installs packages in it,
+and manages none of its files. Everything else in the jail is yours to
+look after. Nobody else will clean up after you.
+
+## Housekeeping
+
+Keep the workstation in a state that is efficient to work in. That
+means, among other things:
+
+- Clean up workspaces when their work is pushed: stale clones and
+  worktrees, build output, and checkouts left on detached heads.
+- Finish or abort a rebase, merge, or cherry-pick you leave behind,
+  and fix the conflicts yourself.
+- Remove temporary and unused files, in your home directory, `/tmp`,
+  and anywhere else you put them.
+- Stop VMs and jails you no longer need, and destroy their datasets,
+  `tap` interfaces, and `nmdm` devices.
+- Fix whatever in the jail gets in your way, using `doas`.
+
+Ask the human for something only when you can't do it from inside
+the jail and it must come from outside, such as a change to yolo, to
+this jail's config, or to the upstream repos.
 
 ## Permissions
 
