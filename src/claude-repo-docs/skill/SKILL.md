@@ -22,8 +22,9 @@ request:
   files.
 - **New docs.** Write external documentation that does not exist yet:
   a README, a guide, a reference page, a man page.
-- **Revise and fill gaps.** Improve existing docs, correct what has
-  drifted from the code, and add what readers need but cannot find.
+- **Revise and fill gaps.** Trim and tighten existing docs, correct
+  what has drifted from the code, and add what readers need but cannot
+  find.
 
 The request names the paths, or `$ARGUMENTS` does. When it names
 none, work on the current directory and say so.
@@ -50,7 +51,11 @@ Then settle these, and write down any you had to guess:
   files are records, not living docs. Fix a broken link or a typo in
   one only if asked, and never reorganize it.
 - **Who reads it.** Humans, agents, or both. Keep agent instructions
-  (CLAUDE.md, AGENTS.md) separate from human docs.
+  (CLAUDE.md, AGENTS.md) separate from human docs. Unless the repo
+  says otherwise, write for a skilled operator: fluent in the
+  platform, the shell, and the tools the repo uses, and new only to
+  this project. Give them facts and commands. Don't explain standard
+  tools, define common terms, or spell out steps they already know.
 
 ## 2. Learn the code
 
@@ -90,7 +95,29 @@ off-mode content that interrupts what the section is for. Never
 create empty sections to fill out a structure.
 
 For a new README, start from `references/readme.md`. Keep it to the
-minimum a newcomer needs, and link out for the rest.
+minimum a skilled operator new to the project needs, and link out for
+the rest.
+
+### Trim and tighten
+
+Treat existing text as a draft, not a given. When revising a doc,
+edit what is there, not only what you add. Every sentence must earn
+its place with a skilled operator. Cut or shorten:
+
+- Explanations of standard tools, commands, and concepts.
+- Sentences that restate the heading, the sentence before, or another
+  section.
+- Signposting and throat-clearing: "This section describes", "Note
+  that", "It is important to".
+- Filler and hedges: "simply", "just", "basically", "in order to",
+  "please", "you may want to".
+- Prose that a command, list, or table says better.
+- Caveats for cases the reader will not hit.
+
+Tighten what remains with active voice, concrete verbs, and the
+fewest words that keep the meaning. Keep every fact, every warning
+about destructive or surprising behavior, and the author's terms.
+Expect a revision to leave a doc shorter, unless it fills a real gap.
 
 ### Man pages
 
@@ -109,8 +136,7 @@ adding new ones, and say which you chose.
 
 Grow a doc only as far as its readers need. If a revision would more
 than double a doc's length, check each addition against the reader
-it serves, and cut what only completes the picture. Say in your
-report how much the doc grew and why.
+it serves, and cut what only completes the picture.
 
 ## 4. Check with tools
 
@@ -129,13 +155,16 @@ up. Skip this for comment-only changes of a few lines.
 ## 6. Edit, then report
 
 Edit the files in place. The user reviews the diff, so keep it
-focused: change what the request covers, and leave unrelated text,
-formatting, and line wrapping alone. Keep the author's voice when
-revising.
+focused on what the request covers. A request to revise a doc covers
+all of its text, so trim and tighten throughout. A request about one
+section covers that section. Leave other text alone, and don't rewrap
+lines you did not otherwise change. Keep the author's voice while
+tightening it.
 
 Finish with a short report:
 
-- Each file changed, with one line on what changed and why.
+- Each file changed, with one line on what changed and why, and how
+  much it grew or shrank.
 - Conventions you inferred that the user may want to confirm or
   record in `.claude/docs.md`.
 - Open questions: facts the docs need that the repo does not state.

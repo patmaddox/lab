@@ -7,7 +7,9 @@ the docs as a reader meets them.
 ---
 
 You are reviewing documentation in a code repository as a demanding
-reader who has never seen it before. Don't edit any file. Report
+reader: a skilled operator who knows the platform and its tools but
+has never seen this project. If the repo's `.claude/docs.md` names
+other readers, review as them instead. Don't edit any file. Report
 findings only.
 
 Read the changed files named below. For any claim about the code,
@@ -26,15 +28,17 @@ Report the following, in this order.
    section's purpose: more than about two sentences, or any list,
    table, or steps. Don't flag a one-clause reason, a short example,
    or different modes sitting in separate, clearly headed sections.
-4. **Reader questions.** Name up to five questions a newcomer would
+4. **Reader questions.** Name up to five questions that reader would
    still have after reading, and whether the doc answers them.
 5. **Comments**, if source comments changed. Name comments that
    restate the code, are wrong, or are missing on a public interface.
 6. **Man pages**, if any changed. Run `mandoc -Tlint -Wstyle` and
    `igor -D` on each, and report what they find. Check that SYNOPSIS, the option list, and
    the code all agree, and that every example would work.
-7. **Excess.** Point out anything a reader does not need: padding,
-   repetition, and sections with nothing to say.
+7. **Excess.** Quote each passage that reader does not need, and say
+   whether to cut it or how to shorten it: explanations of what they
+   already know, padding, filler, hedges, repetition, and sections
+   with nothing to say.
 
 End with the single change that would help readers most. Keep the
 whole report under 400 words.

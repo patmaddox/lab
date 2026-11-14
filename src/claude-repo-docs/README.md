@@ -31,6 +31,12 @@ the repo does not contain. It covers three jobs: comments, new docs,
 and revising docs to fill gaps. Comments explain why, and docstrings
 document interfaces at their declaration.
 
+Docs are written for a skilled operator who is new to the project,
+unless the repo names other readers. Revising a doc means editing its
+existing text as well as adding to it: the skill cuts what that
+reader already knows, along with filler and repetition, and tightens
+what remains.
+
 External docs follow Diátaxis per section, not per page. Each section
 serves one need, as a tutorial, how-to, reference, or explanation,
 and a page may mix sections of different kinds. The skill fixes blur,

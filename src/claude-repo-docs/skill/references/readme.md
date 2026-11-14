@@ -19,5 +19,7 @@ section with nothing true to say, and never leave a placeholder.
 7. **Layout**, for a directory that holds several things: one line per
    subdirectory or file that a reader would open.
 
-Don't add badges, license boilerplate, contribution templates, or a
-table of contents unless the repo's other READMEs have them.
+Write for a skilled operator new to the project. Don't explain how to
+install common tools, use git, or run a shell. Don't add badges,
+license boilerplate, contribution templates, or a table of contents
+unless the repo's other READMEs have them.

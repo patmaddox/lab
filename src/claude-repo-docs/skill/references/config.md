@@ -30,5 +30,8 @@ Complete sentences. No double spaces. Second person in how-tos.
 Contributors on FreeBSD who know make and jails.
 ```
 
+Without a Readers section, the skill writes for a skilled operator new
+to the project.
+
 Keep it short. Anything here applies to every doc the skill touches
 in the repo. Don't repeat rules that CLAUDE.md already states.

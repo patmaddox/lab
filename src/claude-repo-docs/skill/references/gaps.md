@@ -40,6 +40,9 @@ For each item, decide whether it is:
   one, and link to it from the other. Say which you kept and why.
 - **Dead.** Docs for code that no longer exists. Delete them, or
   propose deletion if the request did not cover it.
+- **Excess.** Docs that tell a skilled operator what they already
+  know, or take a paragraph for what a line would say. Cut or tighten
+  them.
 
 Also check:
 
@@ -59,5 +62,6 @@ Fill gaps in this order, and stop when the request is served:
 4. Missing explanation of decisions a reader would question.
 5. Tutorials, only if asked.
 
-Minimum viable docs beat complete docs that go stale. Report the gaps
-you left alone.
+Correct drift, and cut dead and excess text, throughout what the
+request covers, whether or not you fill anything. Minimum viable docs
+beat complete docs that go stale. Report the gaps you left alone.
