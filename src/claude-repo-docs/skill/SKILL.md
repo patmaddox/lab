@@ -73,6 +73,10 @@ only when that is safe and cheap.
 
 ## 3. Do the job
 
+Write every sentence, in docs and comments, by `references/style.md`:
+one name per thing, actors as subjects and actions as verbs, old
+information before new, and no fact lost in tightening.
+
 ### Comments
 
 Follow `references/comments.md`. In short, explain why rather than
@@ -114,9 +118,9 @@ its place with a skilled operator. Cut or shorten:
 - Prose that a command, list, or table says better.
 - Caveats for cases the reader will not hit.
 
-Tighten what remains with active voice, concrete verbs, and the
-fewest words that keep the meaning. Keep every fact, every warning
-about destructive or surprising behavior, and the author's terms.
+Tighten what remains by `references/style.md`, with the fewest words
+that keep the meaning. Keep every fact, every warning about
+destructive or surprising behavior, and the author's terms.
 Expect a revision to leave a doc shorter, unless it fills a real gap.
 
 ### Docs describe the tree, not the change

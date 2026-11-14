@@ -1,0 +1,9 @@
+# A general ", \w+ing" pattern matched mostly sound text, so the token
+# names the verbs that tack on a consequence.
+extends: existence
+message: "'%s' tacks on a consequence. Say what it does to whom, with 'so' or 'because'."
+level: warning
+ignorecase: false
+nonword: true
+tokens:
+  - ', (?:making|resulting in|leaving|allowing|enabling|ensuring|avoiding|causing|giving|letting|highlighting|reflecting|underscoring|preventing|reducing|improving)\b'

@@ -1,0 +1,16 @@
+# Bare "now" and "new" matched mostly sound text, so only phrases that
+# date the text are listed.
+extends: existence
+message: "'%s' dates the text. Describe the tree as it stands."
+level: warning
+ignorecase: true
+tokens:
+  - currently
+  - recently
+  - at present
+  - at the moment
+  - as of this writing
+  - going forward
+  - now supports
+  - was changed to
+  - new in this version

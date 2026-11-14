@@ -1,0 +1,6 @@
+extends: existence
+message: "Split the sentence at the semicolon, or make it a list."
+level: warning
+nonword: true
+tokens:
+  - ';'

@@ -112,12 +112,13 @@ Follow git.git's order:
 
 1. **Status quo.** Describe how things work now and why that is a
    problem. Use the present tense, as a fact about the tree before
-   the patch.
+   the patch, without "Currently".
 2. **Change.** Say what the patch does, in the imperative, as an
    order to the codebase: "Name it as the rule's destination." Keep
    this short, because the diff carries the detail.
 3. **Consequences**, only when needed. Cover side effects, what is
-   unaffected and why, or alternatives you rejected.
+   unaffected and why, or alternatives you rejected. Give an
+   optimization's gain and its cost in numbers.
 
 Explain why, not what. Do not narrate the diff, and do not write
 "This patch" or "I changed".
@@ -155,8 +156,17 @@ that restates the subject is worse than none.
 
 - Prefer short declarative sentences to clauses joined with
   semicolons.
-- Cut hedges, filler, and sentences that restate the diff.
+- Make the actor the subject and the action the verb. Rewrite a
+  trailing ", making…" or ", resulting in…" clause with "so" or
+  "because", and name whom it affects.
+- Call each thing by one name throughout, the name the code uses.
+- Keep "that" and articles. A body is prose, not notes.
+- Cut hedges, filler, and sentences that restate the diff. Check
+  that a rewrite keeps every fact and condition.
 - If the body sprawls, the commit probably does too much. Split it.
+
+The repo-docs skill's `references/style.md` gives the full rules for
+sentences.
 
 ## Describe the patch, not its history
 

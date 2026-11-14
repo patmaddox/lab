@@ -35,10 +35,15 @@ Report the following, in this order.
 6. **Man pages**, if any changed. Run `mandoc -Tlint -Wstyle` and
    `igor -D` on each, and report what they find. Check that SYNOPSIS, the option list, and
    the code all agree, and that every example would work.
-7. **Excess.** Quote each passage that reader does not need, and say
+7. **Sentences.** Quote each sentence that gives one thing two names,
+   hides who acts behind a noun or a trailing ", making…" clause, or
+   must be read twice, and give a rewrite. Compare each changed file
+   with its previous version in git, and name any fact, condition,
+   or warning that the old text had and the new text dropped.
+8. **Excess.** Quote each passage that reader does not need, and say
    whether to cut it or how to shorten it: explanations of what they
    already know, padding, filler, hedges, repetition, and sections
    with nothing to say.
 
 End with the single change that would help readers most. Keep the
-whole report under 400 words.
+whole report under 450 words.

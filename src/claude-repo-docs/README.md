@@ -38,7 +38,9 @@ Docs are written for a skilled operator who is new to the project,
 unless the repo names other readers. Revising a doc means editing its
 existing text as well as adding to it: the skill cuts what that
 reader already knows, along with filler and repetition, and tightens
-what remains.
+what remains by sentence rules taken from Simplified Technical
+English and plain-language guides. yolo's commit-message skill carries
+a short form of these rules, which must change with them.
 
 External docs follow Diátaxis per section, not per page. Each section
 serves one need, as a tutorial, how-to, reference, or explanation,
@@ -60,10 +62,10 @@ could not find.
   matches its description.
 - `skill/references/` holds the detail it loads as needed: Diátaxis
   per section, comments, gap finding, a README outline, man pages in
-  FreeBSD-style mdoc(7), the checking tools, the reviewer's brief, and
-  the `.claude/docs.md` format.
-- `skill/vale.ini` is the Vale config the skill uses in a repo that
-  has none.
+  FreeBSD-style mdoc(7), sentence style, the checking tools, the
+  reviewer's brief, and the `.claude/docs.md` format.
+- `skill/vale.ini` is the Vale config the skill runs, and
+  `skill/styles/Plain` its rules for sentence faults.
 - `claude-repo-docs.pkg.do` builds the package with redo.
 
 To try a change to the skill without a package, copy `skill/` to a

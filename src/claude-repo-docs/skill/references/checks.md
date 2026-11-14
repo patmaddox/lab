@@ -52,11 +52,10 @@ a reading of the rendered page.
    It prints each word it doesn't know. Expect names, commands, and
    terms, and look only for real misspellings.
 
-4. **Prose.** Run Vale on the rendered text. Add
-   `--config <skill dir>/vale.ini` when the repo has no
-   `.vale.ini`, as described under Other docs:
+4. **Prose.** Run Vale on the rendered text, with the configs
+   described under Other docs:
 
-       mandoc -Tutf8 page.1 | col -b | vale --ext=.txt
+       mandoc -Tutf8 page.1 | col -b | vale --config <skill dir>/vale.ini --ext=.txt
 
 5. **Links between pages**, in a tree built with bsd.man.mk: run
    `make manlint`. It runs mandoc and checks that each `MLINKS` name
@@ -71,13 +70,18 @@ a reading of the rendered page.
 1. **Vale** checks prose in Markdown, org, AsciiDoc, reStructuredText,
    plain text, and the comments in source files.
 
-   - If the repo has a `.vale.ini`, run `vale <files>` from the repo
-     root, so its rules apply.
-   - Otherwise, use the default config that ships with this skill, in
-     the directory that holds its SKILL.md. It enables Vale's built-in
-     check for repeated words, and leaves spelling to codespell:
+   - Run the config that ships with this skill, in the directory that
+     holds its SKILL.md. It checks for repeated words and for the
+     sentence faults in `style.md` that a pattern can find, and leaves
+     spelling to codespell:
 
          vale --config <skill dir>/vale.ini <files>
+
+     Its Plain style also flags quoted examples and some legitimate
+     uses, such as "what the code actually does". Fix the sentences
+     that `style.md` would rewrite, and leave the rest.
+   - If the repo has a `.vale.ini`, also run `vale <files>` from the
+     repo root, so its rules apply.
 
    Vale exits 1 when it finds errors. A repo's own config may enable
    spelling, which flags technical terms, so judge each finding.

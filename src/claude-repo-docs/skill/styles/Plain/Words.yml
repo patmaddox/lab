@@ -1,0 +1,23 @@
+extends: existence
+message: "LLMs overuse '%s'. Use a plainer word, or cut it."
+level: warning
+ignorecase: true
+tokens:
+  - delve
+  - leverage
+  - utilize
+  - robust
+  - seamless(?:ly)?
+  - streamline
+  - pivotal
+  - intricate
+  - underscores?
+  - showcases?
+  - comprehensive
+  - crucial
+  - vital
+  - meticulous(?:ly)?
+  - serves as
+  - in order to
+  - it is important to note
+  - note that

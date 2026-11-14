@@ -1,0 +1,15 @@
+# "just" and "might" are left out, because they matched mostly
+# sound text.
+extends: existence
+message: "'%s' hedges or pads. Cut it, or state the uncertainty once."
+level: warning
+ignorecase: true
+tokens:
+  - perhaps
+  - probably
+  - simply
+  - basically
+  - truly
+  - really
+  - actually
+  - quite
