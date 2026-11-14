@@ -37,11 +37,15 @@ git -C ~/<repo> remote add agent /git/agent/<owner>/<repo>.git
 
 Fetch before starting new work. Base it on upstream's default branch,
 so the human can merge it on its own, and push each piece of work to
-`agent` as a branch of its own, for the human to review. If upstream
-has a `next` branch, keep your work from conflicting with it as far as
-you can, and check with `git merge-tree --write-tree origin/next HEAD`.
-When the work depends on a topic that is in `next`, or can't avoid
-conflicting with one, base it on that topic's branch instead.
+`agent` as a branch of its own, for the human to review. Base it on
+another branch only when the work needs that branch's changes, such as
+a topic in `next` or another branch of yours that it builds on. Then
+base it directly on that branch, without merges.
+
+Don't shape a branch around other branches it merely conflicts with,
+`next` and its topics included. Don't rebase onto them, merge them in,
+or rearrange your changes to dodge them. The human resolves conflicts
+when merging, or asks you to reroll the branch.
 
 Commit as git's default identity, which the jail sets for you, so the
 human can tell your commits from theirs. Don't set `user.name` or
