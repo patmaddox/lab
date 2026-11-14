@@ -1,0 +1,9 @@
+help:
+  just -l
+
+pkg:
+  redo-ifchange claude-revise-prose.pkg
+
+# install as a managed skill and agent, read through /etc/claude-code
+install: pkg
+  doas pkg add -f claude-revise-prose.pkg
