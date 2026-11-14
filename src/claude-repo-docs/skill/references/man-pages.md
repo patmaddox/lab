@@ -69,9 +69,45 @@ in this order:
 HARDWARE sits between DESCRIPTION and the later sections in FreeBSD
 driver pages. The FreeBSD minimum for sections 1 and 8 is NAME,
 SYNOPSIS, DESCRIPTION, and SEE ALSO, and the minimum for section 5 is
-NAME, DESCRIPTION, and SEE ALSO. In a very long page, DESCRIPTION may
-be split with `.Ss` subsections, or into extra `.Sh` sections with
-names of their own.
+NAME, DESCRIPTION, and SEE ALSO.
+
+## Additional sections
+
+The list above is the conventional set, not a closed one. Many
+FreeBSD pages add sections of their own. For example, make(1) has
+SHELL COMMANDS and SPECIAL TARGETS, zfs(8) has SUBCOMMANDS, and
+ifconfig(8) has PARAMETERS. mandoc accepts any section name. It warns
+only when the sections it knows are out of their conventional order.
+
+Sections that recur in FreeBSD's own pages:
+
+| Section | Holds | Place it |
+|---|---|---|
+| OPTIONS, COMMANDS, SUBCOMMANDS, PARAMETERS | An option or command list too long to sit well in DESCRIPTION | Right after DESCRIPTION |
+| Topic sections, such as a grammar, file format, or protocol | Parts of a long DESCRIPTION, each large enough to look up on its own | Right after DESCRIPTION, in the order a reader needs them |
+| SYSCTL VARIABLES, LOADER TUNABLES | A driver's or subsystem's sysctl(8) variables and loader.conf(5) tunables, each in a tagged list with `Va` | After DESCRIPTION and HARDWARE |
+| COMPATIBILITY | Differences from other implementations or from earlier versions | After DIAGNOSTICS, before ERRORS and SEE ALSO |
+| NOTES | Remarks that fit no other section | Prefer CAVEATS, BUGS, or IMPLEMENTATION NOTES. mdoc(7) does not define NOTES |
+
+When writing a page:
+
+- Use the standard sections first. Add a section of your own only when
+  no standard section fits the content and the content is large
+  enough to need its own heading. Otherwise, use an `.Ss` subsection
+  within DESCRIPTION.
+- Name it in capitals, with the words a reader would look for, such
+  as SYSCTL VARIABLES rather than TUNING. Make each name unique on the
+  page, so that `Sx` can refer to it.
+- Place it where it leaves the standard sections in their order.
+  Topic sections almost always follow DESCRIPTION directly.
+- Follow the precedent of the repo's other pages, and of related
+  system pages. If they use an OPTIONS section, use one too.
+
+When revising a page, keep its additional sections, their names, and
+their order, unless the request covers restructuring. A section that
+seems out of place may be a deliberate choice. Check the repo's docs
+and history, such as a decisions file or commit messages, before you
+move or rename one, and report what you found.
 
 ## Source conventions
 
