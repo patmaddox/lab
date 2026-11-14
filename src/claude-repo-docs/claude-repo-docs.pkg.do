@@ -53,6 +53,10 @@ following Diataxis per section. See src/${name}/README.md.
 EOD
 deps: {
   claude-code: { origin: "misc/claude-code", version: "0" }
+  igor: { origin: "textproc/igor", version: "0" }
+  en-aspell: { origin: "textproc/en-aspell", version: "0" }
+  codespell: { origin: "textproc/codespell", version: "0" }
+  vale: { origin: "textproc/vale", version: "0" }
 }
 EOM
 

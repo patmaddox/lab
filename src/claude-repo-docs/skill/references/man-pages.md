@@ -151,8 +151,12 @@ move or rename one, and report what you found.
   `.Xr geom 4 ,` and not `.Xr geom 4,`.
 - Use `.Dd` for the date of the last change that affects content, as
   `Month day, year`. Set it to today's date when writing or changing
-  the substance of a page, and leave it alone for typo fixes. Use
-  `$Mdocdate$` only in an OpenBSD tree.
+  the substance of a page, and leave it alone for typo fixes. Follow
+  the repo's own rule where it has one. FreeBSD src's CONTRIBUTING.md
+  says "Proposed changes to manual pages should not bump the document
+  date until merged," so there, leave `.Dd` alone and say in your
+  report that it needs a bump on merge. Use `$Mdocdate$` only in an
+  OpenBSD tree.
 - Write `.Dt` as the name in capitals and the section number, as
   `.Dt LINKCHECK 1`. Give `.Os` no argument.
 - Use no roff requests and almost no escapes. `\&`, `\e`, and `\(em`
@@ -351,20 +355,10 @@ RFCs follow, in `.Rs` blocks, and websites go in `.Lk`.
 
 ## Checking
 
-Run all of these, and fix what they report before you finish:
-
-1. `mandoc -Tlint page.1` reports structure, macro, and style
-   problems. Use `mandoc -Tlint -W style` to hide the base-system
-   conventions that apply only to an operating system's own pages.
-2. `igor page.1` (textproc/igor), if installed, checks FreeBSD
-   conventions such as one sentence per line and repeated words.
-3. `man ./page.1`, or `mandoc -a page.1`, shows the page as readers
-   will see it. Read it rendered at least once.
-4. Check every option in SYNOPSIS against the option list and the
-   code.
-
-If mandoc is not installed, say so in your report rather than
-skipping the check silently.
+Run the man page checks in `checks.md`: mandoc, igor, spelling on the
+rendered text, Vale, and a read of the rendered page. Then check
+every option in SYNOPSIS against the option list and the code. No
+tool checks that.
 
 ## Common mistakes
 

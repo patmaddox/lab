@@ -37,8 +37,11 @@ and a page may mix sections of different kinds. The skill fixes blur,
 where off-mode content interrupts a section, rather than splitting
 pages into four.
 
-After a substantial change, a subagent with fresh context reviews the
-docs against the code. Claude edits files in place for you to review
+Claude checks what it changed with the tools the FreeBSD
+Documentation Project uses: mandoc -Tlint and igor for man pages,
+aspell for spelling, Vale for prose, and codespell for comments. The
+package depends on all of them. After a substantial change, a
+subagent with fresh context also reviews the docs against the code. Claude edits files in place for you to review
 as a diff, and reports what it changed, what it guessed, and what it
 could not find.
 
@@ -48,8 +51,10 @@ could not find.
   matches its description.
 - `skill/references/` holds the detail it loads as needed: Diátaxis
   per section, comments, gap finding, a README outline, man pages in
-  FreeBSD-style mdoc(7), the reviewer's brief, and the
-  `.claude/docs.md` format.
+  FreeBSD-style mdoc(7), the checking tools, the reviewer's brief, and
+  the `.claude/docs.md` format.
+- `skill/vale.ini` is the Vale config the skill uses in a repo that
+  has none.
 - `claude-repo-docs.pkg.do` builds the package with redo.
 
 To try a change to the skill without a package, copy `skill/` to a

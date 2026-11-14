@@ -112,7 +112,13 @@ than double a doc's length, check each addition against the reader
 it serves, and cut what only completes the picture. Say in your
 report how much the doc grew and why.
 
-## 4. Review with fresh eyes
+## 4. Check with tools
+
+Run the checks in `references/checks.md` on the files you changed:
+mandoc and igor for man pages, and Vale, codespell, and aspell for
+prose and comments. Fix what is real, and judge the rest.
+
+## 5. Review with fresh eyes
 
 When you have written or changed more than a few lines of prose,
 start a subagent with no context from this session to review it.
@@ -120,7 +126,7 @@ Give it the brief in `references/review.md`, the paths you changed,
 and nothing about your intentions. Apply what it finds that holds
 up. Skip this for comment-only changes of a few lines.
 
-## 5. Edit, then report
+## 6. Edit, then report
 
 Edit the files in place. The user reviews the diff, so keep it
 focused: change what the request covers, and leave unrelated text,
