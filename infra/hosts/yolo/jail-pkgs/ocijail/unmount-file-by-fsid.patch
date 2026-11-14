@@ -1,0 +1,84 @@
+Unmount a jail's nullfs file mounts by fsid when their path fails.
+
+On FreeBSD 15.1, a nullfs mount whose mount point is a regular file,
+made inside a jail, is recorded under a jail-relative path, so
+unmount(2) by path fails with EINVAL and the mount leaks. podman makes
+three such mounts for each container: /etc/hosts, /etc/resolv.conf,
+and .containerenv. The kernel fix is https://reviews.freebsd.org/D59464.
+Until it ships, find the mount's fsid from the file and unmount it by
+that. On a fixed kernel, or outside a jail, unmount by path succeeds
+and this never runs.
+
+diff --git a/ocijail/mount.cpp b/ocijail/mount.cpp
+index 28283d7..1b5b668 100644
+--- a/ocijail/mount.cpp
++++ b/ocijail/mount.cpp
+@@ -2,6 +2,7 @@
+ 
+ #include <spawn.h>
+ #include <sys/mount.h>
++#include <sys/stat.h>
+ #include <sys/uio.h>
+ #include <sys/wait.h>
+ #include <iostream>
+@@ -459,6 +460,27 @@ retry:
+     return file_mount_supported;
+ }
+ 
++// On kernels without https://reviews.freebsd.org/D59464, a nullfs mount whose
++// mount point is a regular file, made from inside a jail, is recorded under a
++// jail-relative path, so unmount() by path fails with EINVAL and the mount
++// leaks. Name it by fsid instead. nullfs gets its fsid from vfs_getnewfsid(),
++// which is { val[0], vfc_typenum }, and reports val[0] as st_dev for every
++// vnode it serves, so both halves can be recovered from inside the jail. The
++// st_dev comparison with the parent directory makes sure there is a mount on
++// the file at all, so we never pick the filesystem the file lives in.
++static bool unmount_file_by_fsid(const fs::path& destination) {
++    struct stat sb, psb;
++    struct xvfsconf vfc;
++    if (::stat(destination.c_str(), &sb) < 0 ||
++        ::stat(destination.parent_path().c_str(), &psb) < 0 ||
++        sb.st_dev == psb.st_dev || ::getvfsbyname("nullfs", &vfc) < 0) {
++        return false;
++    }
++    auto fsid = "FSID:"s + std::to_string(int32_t(sb.st_dev)) + ":" +
++                std::to_string(vfc.vfc_typenum);
++    return ::unmount(fsid.c_str(), MNT_BYFSID | MNT_FORCE) == 0;
++}
++
+ static void unmount_volume(main_app& app,
+                            bool file_mount_supported,
+                            runtime_state& state,
+@@ -485,20 +507,25 @@ static void unmount_volume(main_app& app,
+             // path that does not match the one we can name. A nullfs file
+             // mount created inside a jail is the known case: vfs_domount()
+             // records it relative to the jail root rather than as a global
+-            // path, so no path in any namespace resolves to it and it can
+-            // only be removed with "umount -f <fsid>" from the host.
++            // path, so no path in any namespace resolves to it. For a file
++            // mount, try to find and unmount it by fsid instead.
+             //
+-            // We cannot tell the two apart here, so carry on with the
+-            // teardown but leave a trace, because in the second case we have
+-            // just leaked a mount.
+-            if (errno == EINVAL) {
++            // Otherwise we cannot tell the two apart here, so carry on with
++            // the teardown but leave a trace, because in the second case we
++            // have just leaked a mount.
++            int error = errno;
++            if (error == EINVAL && is_file_mount &&
++                unmount_file_by_fsid(destination)) {
++                return;
++            }
++            if (error == EINVAL) {
+                 app.log() << "unmounting " << destination
+                           << ": not a known mount point; if a mount is still "
+                              "present here it has been leaked";
+                 return;
+             }
+             throw std::system_error{
+-                errno,
++                error,
+                 std::system_category(),
+                 "unmounting " + mount["destination"].get<std::string>()};
+         }

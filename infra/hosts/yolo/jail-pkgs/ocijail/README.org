@@ -1,0 +1,43 @@
+#+TITLE: ocijail - podman's runtime, for yolo's jails
+
+yolo's jails run podman, whose runtime is ocijail. FreeBSD's package
+of it, 0.6.1, leaks four mounts for each container a jail runs: an
+fdescfs on the container's =/dev/fd=, and nullfs mounts on its
+=/etc/hosts=, =/etc/resolv.conf=, and =.containerenv=. The jail can
+neither see nor unmount the nullfs ones, and they pile up until yolo
+removes them with =umount -f <fsid>=.
+
+This package replaces it, built from:
+
+- upstream's main at d7a2e71, "Fix container volume teardown leaking
+  mounts", which unmounts in the reverse order of mounting, so the
+  fdescfs no longer leaks. No release has it yet.
+- =unmount-file-by-fsid.patch=, ours. 15.1's kernel records a nullfs
+  mount on a file, made in a jail, under a jail-relative path, so
+  ocijail cannot unmount it by path. The patch unmounts it by its fsid
+  instead. The kernel fix is https://reviews.freebsd.org/D59464.
+
+* Build
+
+On beastie, which must run FreeBSD 15, as the jails do:
+
+: redo ocijail.pkg
+
+It fetches upstream's source at the pinned commit, checks its SHA256,
+patches it, and compiles it with the base system's c++. Its
+dependencies are header-only and come in its =distfiles/=, so it needs
+no bazel.
+
+* Install
+
+=just push-pkg= puts it in =/pkg/yolo=. Its version carries the epoch
+=,1=, which puts it above any of FreeBSD's, so a jail's pkg installs it
+rather than FreeBSD's, and upgrades it only from =/pkg/yolo= after
+that.
+
+* Retire
+
+Once FreeBSD's package has d7a2e71 and its kernel has D59464, delete
+this directory, and the jails go back to FreeBSD's ocijail. A kernel
+with D59464 alone makes the patch a no-op, as ocijail then unmounts by
+path. Until then, bump =version= in =ocijail.pkg.do= with each change.

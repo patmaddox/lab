@@ -114,6 +114,14 @@ holds the jails' pkg repository configs: FreeBSD's, as yolo has them,
 and one for =yolo=. Every template depends on it, so an upgrade
 updates them too.
 
+=jail-pkgs/= holds packages that yolo's jails install in place of
+FreeBSD's, one directory each, and =jail-pkgs/<name>= builds
+=<name>.pkg=. Each carries a fix FreeBSD's package lacks, and its
+README says what, and when to drop it. =just push-pkg= puts them in
+=/pkg/yolo=. Their versions carry an epoch, so a jail's pkg prefers
+them to FreeBSD's. =jail-pkgs/ocijail= is podman's runtime, which
+leaks mounts in a jail as FreeBSD packages it.
+
 The =coding-agent= template is for jails that coding agents run in.
 It has an =agent= user with unrestricted =doas=, so the agent
 installs whatever else it needs. Its conf,

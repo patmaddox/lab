@@ -12,11 +12,11 @@ template_deps := (
   " ../../../src/claude-revise-prose/claude-revise-prose.pkg"
 )
 
-# Build all packages, templates and their deps too, and sync them to
-# /pkg/yolo on yolo
+# Build all packages, templates and their deps, and the jails' own
+# too, and sync them to /pkg/yolo on yolo
 push-pkg: pkg
-  redo-ifchange templates/all {{template_deps}}
-  ./tools/push-pkg.sh src/*/*.pkg jails/*.pkg templates/*.pkg {{template_deps}}
+  redo-ifchange templates/all jail-pkgs/all {{template_deps}}
+  ./tools/push-pkg.sh src/*/*.pkg jails/*.pkg templates/*.pkg jail-pkgs/*/*.pkg {{template_deps}}
 
 # Run push-pkg, then install or upgrade yolo's own packages on yolo
 install-pkg: push-pkg
