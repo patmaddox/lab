@@ -10,6 +10,7 @@ atf_init_test_cases() {
 	atf_add_test_case drops_landed_topics
 	atf_add_test_case follows_a_moved_bookmark
 	atf_add_test_case accepts_a_change_id
+	atf_add_test_case accepts_a_commit_id
 	atf_add_test_case merges_a_shared_topic_into_next_only
 	atf_add_test_case dry_run_prints_commands
 	atf_add_test_case reads_topics_below_the_cook_line
@@ -18,6 +19,8 @@ atf_init_test_cases() {
 	atf_add_test_case rejects_an_unknown_keyword
 	atf_add_test_case rejects_a_topic_without_a_ref
 	atf_add_test_case rejects_extra_fields
+	atf_add_test_case ignores_comments
+	atf_add_test_case reads_a_commented_cook_line
 }
 
 # Make a jj repo in ./repo and enter it. It holds trunk, next on trunk,
@@ -168,6 +171,17 @@ accepts_a_change_id_body() {
 	assert_parents next a
 }
 
+atf_test_case accepts_a_commit_id
+accepts_a_commit_id_body() {
+	setup
+	commit a trunk
+	topics "next $(jj log --no-graph -r a -T commit_id)"
+	commit a2 a
+	jj --quiet bookmark set a -r a2
+	atf_check "${COOK}"
+	assert_parents next a
+}
+
 atf_test_case merges_a_shared_topic_into_next_only
 merges_a_shared_topic_into_next_only_body() {
 	setup
@@ -243,5 +257,26 @@ atf_test_case rejects_extra_fields
 rejects_extra_fields_body() {
 	setup
 	commit a trunk
-	assert_rejects 'line 5: too many fields' 'next a' 'next a b c'
+	assert_rejects 'line 5: too many fields' 'next a' 'next a b'
+}
+
+atf_test_case ignores_comments
+ignores_comments_body() {
+	setup
+	commit a trunk
+	commit b trunk
+	commit c trunk
+	topics '# next b' 'next a # a@origin' '  # seen b' 'seen c#'
+	atf_check "${COOK}"
+	assert_parents next a
+	assert_parents seen next c
+}
+
+atf_test_case reads_a_commented_cook_line
+reads_a_commented_cook_line_body() {
+	setup
+	commit a trunk
+	describe next '' '[cook] # topics' 'next a'
+	atf_check "${COOK}"
+	assert_parents next a
 }

@@ -34,10 +34,19 @@ A
 is any revision that names a topic: a local bookmark, a remote
 bookmark such as
 .Li foo@origin ,
-or a change id.
+a commit id, or a change id.
 It is resolved each time
 .Nm
-runs, so a topic follows its bookmark as the bookmark moves.
+runs, so a topic named by a bookmark follows the bookmark as it moves,
+and a topic named by a change id follows the change as it is
+rewritten.
+Name a topic by its commit id to keep merging exactly that commit.
+.Pp
+A
+.Ql #
+starts a comment, which runs to the end of the line.
+A comment can label a topic named by an id, such as with the bookmark
+it came from.
 .Pp
 .Nm
 rebases
@@ -81,7 +90,7 @@ It fails, and changes nothing, if the description of
 .Sy next
 has no
 .Li [cook]
-line, or if a line below it is not blank and is not a
+line, or if a line below it, less any comment, is not blank and is not a
 .Li next
 or
 .Li seen
@@ -90,8 +99,8 @@ line with exactly one
 .Sh EXAMPLES
 A description of
 .Sy next
-that merges one local and one remote topic, and stages a third topic
-in
+that merges one local topic, one remote topic, and one topic pinned to
+a commit, and stages a fourth topic in
 .Sy seen :
 .Bd -literal -offset indent
 next
@@ -99,7 +108,8 @@ next
 [cook]
 next fix-parser
 next feature@origin
-seen experiment
+next 3f1c2a9e # other-feature@origin
+seen experiment  # needs tests
 .Ed
 .Sh SEE ALSO
 .Xr jj 1
