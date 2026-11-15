@@ -6,7 +6,7 @@
 .Nd rebuild the next, seen, and hold merge branches
 .Sh SYNOPSIS
 .Nm
-.Op Fl n
+.Op Fl nv
 .Sh DESCRIPTION
 .Nm
 rebuilds up to three merge branches in a
@@ -101,6 +101,38 @@ The options are as follows:
 Print the
 .Xr jj 1
 commands instead of running them.
+.It Fl v
+After rebuilding, try merging each
+.Sy seen
+topic into
+.Sy next
+by itself, and print one line for each:
+.Li M
+and the topic if the merge has no conflicts, or
+.Li C
+and the topic if it conflicts.
+The
+.Li M
+lines come first, then the
+.Li C
+lines, each sorted by topic.
+A topic that
+.Sy next
+already contains is skipped.
+Promote one clean topic to
+.Sy next
+and run
+.Nm Fl v
+again, since a topic that merges cleanly by itself may conflict with
+another.
+.Nm
+removes the trial merges, so they leave nothing behind but entries in
+the operation log.
+With
+.Fl n ,
+the topics are tried against
+.Sy next
+as it stands.
 .El
 .Sh EXIT STATUS
 .Ex -std
@@ -158,6 +190,21 @@ Leave the working copy off it, so that its edits stay out of
 jj new -m hold 'trunk()'
 jj bookmark create hold -r @
 jj new 'trunk()'
+.Ed
+.Pp
+Rebuild the branches, and see which
+.Sy seen
+topics would merge into
+.Sy next .
+Here
+.Li parser-rework
+conflicts with
+.Sy next :
+.Bd -literal -offset indent
+$ cook -v
+M docs-typos
+M experiment
+C parser-rework
 .Ed
 .Sh SEE ALSO
 .Xr jj 1

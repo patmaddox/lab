@@ -15,7 +15,7 @@ die() {
 }
 
 usage() {
-	echo "usage: ${PROGNAME} [-n]" >&2
+	echo "usage: ${PROGNAME} [-nv]" >&2
 	exit 2
 }
 
@@ -61,10 +61,33 @@ rebuild() {
 	run jj --quiet simplify-parents -r "${branch}"
 }
 
+# check <topic>...: print each topic that next does not contain, marked
+# M if it merges into next by itself and C if it conflicts, one per
+# line in no order. The trial merges are jj commits, which the caller
+# drops. They are not made with git merge-tree, which needs a .git
+# directory that a jj workspace lacks.
+check() {
+	local n=0 rev trial
+
+	for topic in "${@}"; do
+		rev="exactly(${topic},1)"
+		[ -z "$(jj log --no-graph -r "${rev} & ::next" -T '"1"')" ] ||
+			continue
+		n=$((n + 1))
+		jj --quiet new --no-edit -m "cook: trial ${n}" next "${rev}"
+		trial="children(next) & description(exact:\"cook: trial ${n}\n\")"
+		jj log --no-graph -r "${trial}" \
+		    -T 'if(conflict, "C", "M") ++ " "'
+		printf '%s\n' "${topic}"
+	done
+}
+
 dry_run=
-while getopts n opt; do
+verbose=
+while getopts nv opt; do
 	case "${opt}" in
 	n) dry_run=1 ;;
+	v) verbose=1 ;;
 	*) usage ;;
 	esac
 done
@@ -124,3 +147,14 @@ if [ -n "${has_hold}" ]; then
 	rebuild hold 'trunk()' ${hold_topics}
 fi
 trap - EXIT
+
+# The trial merges are only for show, so drop them by restoring the
+# operation from before them, which keeps the rebuild.
+if [ -n "${verbose}" ]; then
+	op=$(jj op log -n 1 --no-graph -T id)
+	trap 'jj --quiet op restore "${op}"' EXIT
+	# shellcheck disable=SC2086
+	lines=$(check ${seen_topics})
+	# M sorts after C, so reverse the first field to list M first.
+	[ -z "${lines}" ] || printf '%s\n' "${lines}" | sort -k1,1r -k2
+fi

@@ -29,6 +29,8 @@ atf_init_test_cases() {
 	atf_add_test_case leaves_an_empty_hold_on_trunk
 	atf_add_test_case rejects_hold_topics_without_a_hold_bookmark
 	atf_add_test_case rolls_back_when_a_hold_ref_is_unknown
+	atf_add_test_case verbose_sorts_seen_topics_by_result
+	atf_add_test_case verbose_skips_topics_in_next
 }
 
 # Make a jj repo in ./repo and enter it. It holds trunk, next on trunk,
@@ -371,4 +373,43 @@ rolls_back_when_a_hold_ref_is_unknown_body() {
 	topics 'next a' 'hold nosuch'
 	atf_check -s exit:1 -e match:'rolled back' "${COOK}"
 	assert_parents next trunk
+}
+
+atf_test_case verbose_sorts_seen_topics_by_result
+verbose_sorts_seen_topics_by_result_body() {
+	setup
+	commit a trunk
+	jj --quiet new -m b trunk
+	echo b > f
+	jj --quiet bookmark create b -r @
+	jj --quiet new -m c trunk
+	echo c > f
+	jj --quiet bookmark create c -r @
+	jj --quiet new -m d trunk
+	echo d > g
+	jj --quiet bookmark create d -r @
+	jj --quiet new -m e trunk
+	echo e > f
+	jj --quiet bookmark create e -r @
+	jj --quiet new 'root()'
+	topics 'next b' 'seen d' 'seen e' 'seen c' 'seen a'
+	atf_check -o inline:"\
+M a
+M d
+C c
+C e
+" "${COOK}" -v
+	assert_parents next b
+	assert_parents seen next d e c a
+	atf_check -o empty jj log --no-graph \
+	    -r 'description(glob:"cook: trial*")' -T commit_id
+}
+
+atf_test_case verbose_skips_topics_in_next
+verbose_skips_topics_in_next_body() {
+	setup
+	commit a trunk
+	commit c trunk
+	topics 'next a' 'seen a' 'seen c'
+	atf_check -o inline:"M c\n" "${COOK}" -v
 }
