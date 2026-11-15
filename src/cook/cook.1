@@ -107,10 +107,14 @@ After rebuilding, try merging each
 topic into
 .Sy next
 by itself, and print one line for each:
-.Li M
-and the topic if the merge has no conflicts, or
+.Li M ,
+the topic, and its short commit ID if the merge has no conflicts, or
 .Li C
 and the topic if it conflicts.
+Paste the ID into a
+.Ic next
+line to promote the commit that was tried, even if the topic's ref
+moves on.
 The
 .Li M
 lines come first, then the
@@ -202,8 +206,8 @@ conflicts with
 .Sy next :
 .Bd -literal -offset indent
 $ cook -v
-M docs-typos
-M experiment
+M docs-typos 3f9c2a1e
+M experiment 8b04d7c2
 C parser-rework
 .Ed
 .Sh SEE ALSO

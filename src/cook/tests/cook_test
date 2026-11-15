@@ -76,6 +76,11 @@ topics() {
 	describe next '' '[cook]' "${@}"
 }
 
+# short <rev>: print a commit's short ID, as cook -v prints it.
+short() {
+	jj log --no-graph -r "${1}" -T 'commit_id.short(8)'
+}
+
 # assert_parents <rev> <name>...: check a commit's parents, in order.
 assert_parents() {
 	local rev="${1}"
@@ -394,8 +399,8 @@ verbose_sorts_seen_topics_by_result_body() {
 	jj --quiet new 'root()'
 	topics 'next b' 'seen d' 'seen e' 'seen c' 'seen a'
 	atf_check -o inline:"\
-M a
-M d
+M a $(short a)
+M d $(short d)
 C c
 C e
 " "${COOK}" -v
@@ -411,5 +416,5 @@ verbose_skips_topics_in_next_body() {
 	commit a trunk
 	commit c trunk
 	topics 'next a' 'seen a' 'seen c'
-	atf_check -o inline:"M c\n" "${COOK}" -v
+	atf_check -o inline:"M c $(short c)\n" "${COOK}" -v
 }

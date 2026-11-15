@@ -63,11 +63,11 @@ rebuild() {
 
 # check <topic>...: print each topic that next does not contain, marked
 # M if it merges into next by itself and C if it conflicts, one per
-# line in no order. The trial merges are jj commits, which the caller
+# line in no order. An M line ends with the topic's short commit ID. The trial merges are jj commits, which the caller
 # drops. They are not made with git merge-tree, which needs a .git
 # directory that a jj workspace lacks.
 check() {
-	local n=0 rev trial
+	local n=0 rev trial result
 
 	for topic in "${@}"; do
 		rev="exactly(${topic},1)"
@@ -76,9 +76,14 @@ check() {
 		n=$((n + 1))
 		jj --quiet new --no-edit -m "cook: trial ${n}" next "${rev}"
 		trial="children(next) & description(exact:\"cook: trial ${n}\n\")"
-		jj log --no-graph -r "${trial}" \
-		    -T 'if(conflict, "C", "M") ++ " "'
-		printf '%s\n' "${topic}"
+		result=$(jj log --no-graph -r "${trial}" \
+		    -T 'if(conflict, "C", "M")')
+		if [ "${result}" = C ]; then
+			printf 'C %s\n' "${topic}"
+		else
+			printf 'M %s %s\n' "${topic}" "$(jj log --no-graph \
+			    -r "${rev}" -T 'commit_id.short(8)')"
+		fi
 	done
 }
 
