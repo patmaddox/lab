@@ -37,9 +37,3 @@ the recipe call it, as infra/hosts/beastie does:
 
 A script can be linted and run on its own, and its comment can say
 what it does.
-
-## Dependencies
-
-- Do not install dependencies.
-- If you get blocked on a missing dependency, report to user the
-  dependencies that need to be installed.
