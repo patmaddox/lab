@@ -128,7 +128,10 @@ installs whatever else it needs. Its conf,
 # pkg and yolo-pkg-repos are here so the jail can upgrade itself
 # from the repositories. FreeBSD-acpi holds iasl, which bhyve runs
 # to build a VM's ACPI tables, and which FreeBSD-set-base-jail
-# lacks.
+# lacks. FreeBSD-tests and atf let the agent run kyua tests. The base
+# set has kyua, but kyua's store schema ships only in FreeBSD-tests.
+# atf puts atf-sh on PATH for test programs that start with
+# "#!/usr/bin/env atf-sh", since base installs it in /usr/libexec.
 
 comment="Template for yolo's coding-agent jails"
 
@@ -142,6 +145,8 @@ claude-repo-docs
 claude-revise-prose
 jq
 FreeBSD-acpi
+FreeBSD-tests
+atf
 "
 
 users="
