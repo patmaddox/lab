@@ -60,6 +60,10 @@ dev:
 jj-authorme revset:
   jj metaedit --update-author -r '{{revset}}'
 
+# take the revset completely - make it mutable and reauthor
+take revset:
+  jj metaedit --update-author --update-change-id --ignore-immutable -r '({{revset}}) ~mutable() ~::trunk'
+
 # convert immutable commits to mutable
 jj-pick revset:
   jj metaedit --update-change-id --ignore-immutable -r '({{revset}}) ~mutable() ~::trunk'
