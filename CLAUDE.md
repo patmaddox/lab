@@ -19,6 +19,10 @@ split, absorb, diffedit, resolve, or editing files in a described
 change. A message must describe its diff as it stands now, all of it
 and nothing else. No Co-Authored-By trailers.
 
+A subject's area is the name of the component, not its path. Drop
+the `src/` and `dotfiles/` that group components, as in `cook:` and
+`emacs:`, and keep the path elsewhere, as in `infra/hosts/yolo:`.
+
 ## Writing style
 
 - Do not use double spaces anywhere (content or commit messages)
