@@ -317,8 +317,11 @@ exact match. Commands written for one shape of clone also break in
 others. It works out upstream and the forks from each clone, so it is
 not tied to the layout that =CLAUDE.md= describes. It runs
 unattended, so it never asks, and it never pushes to or deletes from
-upstream. What it cannot decide or must not touch, it lists under
-"Your action" in its report. To sync every clone in the home folder,
+upstream. It finishes every job inside the jail itself, such as
+resetting a checked-out branch or saving uncommitted changes on a
+branch of their own. It lists under "Your action" only the changes
+that must be made from outside the jail, such as to upstream's
+repos. To sync every clone in the home folder,
 run =/code-sync= from there.
 
 =commit-message= writes commit messages in the house style, FreeBSD's

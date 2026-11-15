@@ -19,15 +19,19 @@ If the current directory is inside a clone, sync that clone. If not,
 sync each clone directly under the current directory, one after
 another. If arguments are given, sync only the branches they name.
 
-The skill runs unattended, so it never stops to ask the user. What it
-cannot decide, or must not touch, it leaves alone and reports under
-"Your action".
+The skill runs unattended, so it never stops to ask the user. The
+clone, its worktrees, and its forks are ours, so finish every job in
+them yourself, including the ones that touch a checked-out branch or
+uncommitted changes. Hand back only a change that must be made from
+outside, where you cannot reach, such as one to upstream's repos, and
+list it under "Your action".
 
 ## The clone
 
 Upstream is the remote that the default branch comes from, usually
 `origin`. Every other remote is a fork of ours, usually `agent`. Work
-out which is which from the clone's remotes and config. If you cannot
+out which is which from the clone's remotes and config, and from any
+CLAUDE.md that says where upstream repos live. If you cannot
 tell which remote is upstream, sync nothing in the clone, and report
 its remotes with their URLs.
 
@@ -48,12 +52,16 @@ out, and leave out trunk itself.
     that has not loses work, and keeping one that has costs only a
     rebase.
   - Force-push only with a lease on the tip you saw on that remote.
-  - Leave alone a branch whose local and fork copies have diverged.
-  - Do not move or delete a branch that is checked out in a
-    worktree. Report the command that would finish the job.
-- Leave the clone as you found it, apart from its branches. Do your
-  work in temporary worktrees, and remove them and their directories
-  whatever the outcome.
+  - Before you move a branch that a worktree has checked out, or
+    switch that worktree, commit the worktree's uncommitted changes,
+    untracked files included, to a new branch `wip/<branch>`, and
+    push it to the branch's fork. Later runs sync it like any other
+    branch.
+- Leave the clone as you found it, apart from its branches. A
+  worktree follows its branch: when you rebase the branch, reset the
+  worktree to the new tip, and when you delete the branch, switch the
+  worktree to trunk. Do the rest of your work in temporary worktrees,
+  and remove them and their directories whatever the outcome.
 
 Report each branch that a rule stops you from finishing.
 
@@ -78,9 +86,15 @@ and compare the changes.
 ## Each branch
 
 1. Fetch every remote with `--prune`, and fast-forward the local
-   trunk if it exists.
+   trunk if it exists. If it cannot fast-forward, move its own
+   commits to a new branch, named for what they do, and point the
+   local trunk at upstream's.
 2. For each branch of ours, take its newest copy, local or on a fork,
-   and find which of its commits since trunk have landed.
+   and find which of its commits since trunk have landed. If the
+   copies have diverged, reconcile them first: take the copy with the
+   newer tip as the base, drop the other copy's commits that have
+   landed on it, rebase the rest onto it, and push the result to
+   each fork that has the branch.
 3. If all of them have, delete the branch locally and from each fork.
 4. If some have, or the branch no longer merges cleanly with trunk,
    rebase it onto trunk, dropping the landed commits. Resolve each
@@ -90,8 +104,9 @@ and compare the changes.
    commit message rules, if it has any. Run the repo's tests or build
    if the rebase touched them. Then push the branch to the fork it is
    on, if any, and move the local branch to match. If you cannot
-   resolve a conflict with confidence, give up on the branch and
-   report it.
+   resolve a conflict with confidence, or `next` has the branch's
+   commits, leave the branch as it was. The maintainer resolves its
+   conflicts when merging it, or asks for a reroll.
 5. Otherwise, leave the branch alone.
 
 Judging and rebasing take time. When several branches need them, do
@@ -105,10 +120,12 @@ Keep the report short. Write one block per clone, headed by its path,
 in three sections, and leave out a section that has nothing in it:
 
 - **Actions.** Each change the run made: trunk fast-forwarded,
-  branches deleted, with the trunk commits that carry their work, and
-  branches rebased, with old and new tips and the commits dropped.
-  Write "No changes." if there were none.
+  branches deleted, with the trunk commits that carry their work,
+  branches rebased or reconciled, with old and new tips and the
+  commits dropped, uncommitted changes saved, and worktrees reset or
+  switched. Write "No changes." if there were none.
 - **Branches.** Each branch left in place, with its tip and whether
-  it merges cleanly.
-- **Your action.** Each decision or command left to the user, with
+  it merges cleanly. For one that conflicts, name the files and why
+  it was not rebased.
+- **Your action.** Each change that must be made from outside, with
   the reason in a few words.
