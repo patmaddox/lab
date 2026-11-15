@@ -44,9 +44,10 @@ screen, and run:
 disk again, then lays out the disk as Auto (ZFS) on GPT (UEFI) does,
 with no swap, as =stick.conf= asks. =dist/etc/fstab= finds the EFI
 partition by the label bsdinstall gives it, efiboot0. Then it imports
-the stream as yolo-<release>-<date>, e.g. yolo-15.1-2026-11-09, where
-the date is the day the stream was built. It activates that BE and
-destroys the stock default boot environment.
+the stream as yolo-<release>-<version>, e.g. yolo-15.1-2026.11.09.143005,
+where the version is the time the stream was built, in UTC, as yolo's
+packages are versioned. It activates that BE and destroys the stock
+default boot environment.
 
 Remove the stick and reboot. Then wipe the stick, and delete
 =yolo-installer.img= and =yolo.be.zfs=.
@@ -67,7 +68,7 @@ On beastie, signed in to 1Password:
 
 It builds the stream if needed, sends it over ssh to =bectl import= on
 yolo, so it never lands on yolo's disk, and names the BE as the
-installer does, with =-new= appended, e.g. =yolo-15.1-2026-11-09-new=.
+installer does, with =-new= appended, e.g. =yolo-15.1-2026.11.09.143005-new=.
 Then it runs =bectl activate -t= on it. Reboot yolo as root:
 
 : shutdown -r now

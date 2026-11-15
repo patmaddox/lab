@@ -3,10 +3,11 @@
 # deploy-be.sh <config> <stream>
 #
 # Import a boot environment stream on yolo as
-# <name>-<release>-<date>-new, e.g. yolo-15.1-2026-11-09-new, and
-# activate it for the next boot only. <config> sets name and release,
-# and the date is the day the stream was built. The stream goes over
-# ssh straight into bectl import, so it never lands on yolo's disk.
+# <name>-<release>-<version>-new, e.g. yolo-15.1-2026.11.09.143005-new,
+# and activate it for the next boot only. <config> sets name and
+# release, and the version is the time the stream was built, in UTC.
+# The stream goes over ssh straight into bectl import, so it never
+# lands on yolo's disk.
 # Run it as just deploy-be.
 set -eu
 
@@ -24,7 +25,7 @@ stream=${2}
 . ${config}
 : ${name:?} ${release:?}
 
-be=${name}-${release}-$(stat -f %Sm -t %Y-%m-%d ${stream})-new
+be=${name}-${release}-$(TZ=UTC stat -f %Sm -t %Y.%m.%d.%H%M%S ${stream})-new
 
 ssh ${host} bectl import ${be} < ${stream}
 ssh ${host} bectl activate -t ${be}

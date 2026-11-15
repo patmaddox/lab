@@ -19,8 +19,9 @@
 #   stream           the boot environment stream, relative to <config>
 #   swap_size        the swap partition's size, or 0 for none
 #
-# The stick imports the stream as <name>-<release>-<date>, the date
-# being the day the stream was built, e.g. yolo-15.1-2026-11-09.
+# The stick imports the stream as <name>-<release>-<version>, the
+# version being the time the stream was built, in UTC, as the host's
+# packages are versioned, e.g. yolo-15.1-2026.11.09.143005.
 set -eu
 set -o pipefail
 
@@ -60,7 +61,7 @@ mounted=""
 
 redo-ifchange ${stream} ${tooldir}/install.sh ${tooldir}/installerconfig
 
-be=${name}-${release}-$(stat -f %Sm -t %Y-%m-%d ${stream})
+be=${name}-${release}-$(TZ=UTC stat -f %Sm -t %Y.%m.%d.%H%M%S ${stream})
 
 main() {
     trap 'exit 1' INT TERM
