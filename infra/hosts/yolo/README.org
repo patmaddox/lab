@@ -310,13 +310,16 @@ clone's remotes and drops from each branch the commits that have
 landed on the default branch, including earlier versions of a change
 whose later version landed. It deletes a branch whose commits have
 all landed, and rebases a branch that carries some, or that no longer
-merges cleanly, then pushes it again. It reads the upstream remote, the
-default branch, and each branch's push remote from the clone's own
-git config, so it works in any clone, not only in the layout that
-=CLAUDE.md= describes. It runs unattended, so it never asks, and it
-never pushes to or deletes from upstream. What it cannot decide or
-must not touch, it lists under "Your action" in its report. To sync
-every clone in the home folder, run =/code-sync= from there.
+merges cleanly, then pushes it again. The skill gives the model goals
+and rules to keep, not commands. Which commits have landed is a
+judgment call, because a squash, a reword, or a reroll leaves no
+exact match. Commands written for one shape of clone also break in
+others. It works out upstream and the forks from each clone, so it is
+not tied to the layout that =CLAUDE.md= describes. It runs
+unattended, so it never asks, and it never pushes to or deletes from
+upstream. What it cannot decide or must not touch, it lists under
+"Your action" in its report. To sync every clone in the home folder,
+run =/code-sync= from there.
 
 =commit-message= writes commit messages in the house style, FreeBSD's
 subject on git.git's body, and keeps each message true to its diff
