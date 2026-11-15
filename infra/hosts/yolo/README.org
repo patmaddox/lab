@@ -474,7 +474,11 @@ instance, get =rxv/devops= and =rxv/rxv_phx_example=. yolo keeps each
 at =/git/<owner>/<repo>.git=, and the jail sees it there too,
 read-only. The jail's own repos are at =/git/agent= in the jail and
 =/git/jails/<name>= on yolo, read-write. Both are outside
-=zroot/jails/instances=, so a reset keeps them. =yolo-jail-init=
+=zroot/jails/instances=, so a reset keeps them. Its peers, the other
+jails that share a repo with it, are read-only at
+=/git/peers/<peer>=, so an agent can take over a peer's branch, and
+push a new version of it to its own repo. A jail sees all of a peer's
+own repos, those for repos it does not share too. =yolo-jail-init=
 refuses to set a jail up until all of its repos exist.
 
 =repos= lists the repos, each with its default branch, which a clone

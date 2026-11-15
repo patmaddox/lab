@@ -3,7 +3,7 @@ set -eu
 
 # Build the package of yolo's jail configs, one in /etc/jail.conf.d
 # for each line of instances, made from jail.conf.in, and instances
-# itself, which yolo-jail-init reads.
+# itself and peers, which yolo-jail-init reads.
 # yolo's BE carries it, and just install-pkg installs a newer one
 # from the repository on yolo.
 
@@ -18,15 +18,52 @@ redo-ifchange instances jail.conf.in
 stagedir=$(mktemp -d)
 trap "rm -rf ${stagedir}" EXIT
 
-mkdir -p "${stagedir}/etc/jail.conf.d"
+share="${stagedir}/usr/local/share/yolo-jails"
+mkdir -p "${stagedir}/etc/jail.conf.d" "${share}"
+
+# A jail's peers are the other jails that share a repo with it. Write
+# one line for each jail: the jail, then its peers, if any.
+awk '!/^#/ && NF {
+	n++
+	jail[n] = $1
+	nrepos[n] = NF - 3
+	for (i = 4; i <= NF; i++) {
+		repo[n, i - 3] = $i
+		has[$1, $i] = 1
+	}
+}
+END {
+	for (a = 1; a <= n; a++) {
+		line = jail[a]
+		for (b = 1; b <= n; b++) {
+			if (b == a)
+				continue
+			for (k = 1; k <= nrepos[a]; k++) {
+				if ((jail[b], repo[a, k]) in has) {
+					line = line " " jail[b]
+					break
+				}
+			}
+		}
+		print line
+	}
+}' instances > "${share}/peers"
+chmod 0444 "${share}/peers"
+
 # Print jail.conf.in, with each line that names %REPO% repeated once
-# for each of the jail's repos.
-repeat_repo_lines() {
+# for each of the jail's repos, and each that names %PEER% once for
+# each of its peers.
+repeat_lines() {
 	while IFS= read -r line; do
 		case ${line} in
 		*%REPO%*)
 			for repo in ${repos}; do
 				printf '%s\n' "${line}" | sed "s|%REPO%|${repo}|g"
+			done
+			;;
+		*%PEER%*)
+			for peer in ${peers}; do
+				printf '%s\n' "${line}" | sed "s|%PEER%|${peer}|g"
 			done
 			;;
 		*)
@@ -42,14 +79,14 @@ grep -v -e '^#' -e '^$' instances | while read -r jail template host repos; do
 		echo "E: jail ${jail} has no repo in instances" >&2
 		exit 1
 	fi
-	repeat_repo_lines |
+	peers=$(awk -v jail=${jail} '$1 == jail { $1 = ""; print }' "${share}/peers")
+	repeat_lines |
 	    sed -e "s/%NAME%/${jail}/g" -e "s/%TEMPLATE%/${template}/g" \
 	    -e "s/%HOST%/${host}/g" > "${stagedir}/etc/jail.conf.d/${jail}.conf"
 done
 
-# yolo-jail-init finds each jail's template and repo here.
-mkdir -p "${stagedir}/usr/local/share/yolo-jails"
-install -m 0444 instances "${stagedir}/usr/local/share/yolo-jails/instances"
+# yolo-jail-init finds each jail's template, repos, and peers here.
+install -m 0444 instances "${share}"
 
 flatsize=$(find "${stagedir}" -type f -exec stat -f%z {} + | awk '{s+=$1} END {print s}')
 paths=$(cd "${stagedir}" && find . -type f | sed 's/^\.//' | sort)

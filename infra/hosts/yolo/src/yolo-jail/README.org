@@ -25,8 +25,10 @@ installs it from there. A yolo without yolo-pkg needs
 
 =yolo-jail-init= sets a jail up, so that starting it makes nothing.
 It looks the jail's template and repos up in
-=/usr/local/share/yolo-jails/instances=, from the yolo-jails package.
-Then it runs =yolo-jail-git=, =yolo-jail-data=, =yolo-jail-create=,
+=/usr/local/share/yolo-jails/instances=, and its peers, the other
+jails that share a repo with it, in =/usr/local/share/yolo-jails/peers=,
+both from the yolo-jails package. Then it runs =yolo-jail-git=, for
+the jail and each of its peers, =yolo-jail-data=, =yolo-jail-create=,
 and =yolo-jail-create-mountpoints=, below, and makes
 =zroot/jails/instances/<name>/data=, the dataset the jail runs itself,
 with =jailed=on=. Each makes only what is missing, so running it again
@@ -74,9 +76,10 @@ root that a jail has run in, so an upgrade goes through =jexec=.
 =yolo-jail-create-mountpoints= makes each =<path>= under the jail's
 root, and each directory on the way that is missing, so that
 jail.conf can mount something there. =yolo-jail-init= runs it for
-every mount the jail's config makes: the repository at =pkg/yolo=, and
-each git repo at =git/<owner>/<repo>.git= and =git/agent=, and the
-agent's Claude Code settings at =home/agent/.claude=. The jail's
+every mount the jail's config makes: the repository at =pkg/yolo=,
+each git repo at =git/<owner>/<repo>.git=, =git/agent=, each peer's
+own repos at =git/peers/<peer>=, and the agent's Claude Code settings
+at =home/agent/.claude=. The jail's
 root may have turned a directory on the way into a symlink, which
 mkdir would follow out of the jail, so it refuses those. It refuses a
 =<path>= that is absolute or has a =.= or =..= in it, though a part of
@@ -132,6 +135,10 @@ again. It refuses if any of the jail's upstream repos,
 =/git/<owner>/<repo>.git=, is missing; =yolo-git-init= makes them.
 =yolo-jail-init= runs it, and =yolo-jail-create-mountpoints= makes
 the repos' mountpoints in the jail.
+
+=yolo-jail-init= runs it for each of the jail's peers too, since the
+jail's config mounts their datasets read-only at =/git/peers/<peer>=,
+and a jail cannot start while a dataset it mounts is missing.
 
 : yolo-jail-repo <name> <owner>/<repo>
 

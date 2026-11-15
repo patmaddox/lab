@@ -30,6 +30,13 @@
   mount += "/git/%REPO%.git ${path}/git/%REPO%.git nullfs ro 0 0";
   mount += "/git/jails/${name} ${path}/git/agent nullfs rw 0 0";
 
+  # Its peers' own repos, read-only at /git/peers/<peer>, one line for
+  # each jail that shares a repo with it, so it can take over a peer's
+  # branch. Each mounts the peer's whole dataset, whose mountpoint yolo
+  # controls. A path inside it is the peer's to write, and could be a
+  # symlink, which jail(8) would follow on yolo as a mount's source.
+  mount += "/git/jails/%PEER% ${path}/git/peers/%PEER% nullfs ro 0 0";
+
   # Its agent's Claude Code settings and credentials, read-write at
   # ~/.claude, in a dataset outside the jail's, so a sign-in outlives a
   # reset. yolo-jail-init makes it.
