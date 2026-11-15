@@ -96,8 +96,12 @@ so its messages need no check.
 
     <area>: <Imperative summary>
 
-- `<area>` is the subdirectory the change lives in, e.g.
-  `infra/hosts/rowdy` or `src/lab-process-mail`.
+- `<area>` names the part of the tree the change belongs to, as the
+  repo's history already names it. Take it from the subjects of
+  earlier commits to the same files, with
+  `git log --format=%s -- <path>`, not from the path. A repo may
+  drop a directory that only groups its parts, so that a change to
+  `src/cook` is `cook:`, while `infra/hosts/rowdy` keeps its path.
 - Capitalize the first word after the colon.
 - Use the imperative mood: "Add", "Drop", "Block", not "Added" or
   "Adds".
