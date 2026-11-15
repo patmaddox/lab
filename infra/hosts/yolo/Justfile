@@ -52,3 +52,7 @@ upgrade-jails *flags:
 # Set up a stopped jail, or give it what a newer yolo-jail adds
 init-jail name:
   ssh yolo.p7x.dev doas yolo-jail-init {{name}}
+
+# Set up every jail in jails/instances, or give them what a newer yolo-jail adds
+init-jails:
+  ./tools/init-jails.sh

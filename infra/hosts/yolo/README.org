@@ -396,6 +396,14 @@ so it starts quickly. =yolo-jail-init= makes only what is missing, so
 running it again on a stopped jail gives it whatever a newer
 yolo-jail adds.
 
+To run it on every jail that =jails/instances= lists, one after
+another, from beastie:
+
+: just init-jails
+
+Stop the jails first, since it fails on one that runs. It goes on past
+a jail that fails, and fails at the end, naming each.
+
 Jails run no sshd. To use one, sign in to yolo, and as root:
 
 : service jail onestart <name>
