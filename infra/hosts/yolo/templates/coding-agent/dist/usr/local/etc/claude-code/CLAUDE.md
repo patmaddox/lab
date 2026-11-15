@@ -49,6 +49,10 @@ this jail's config, or to the upstream repos.
 - `/git/agent` is yours, and read-write. `/git/agent/<owner>/<repo>.git`
   is your fork of that upstream repo. Push your work there, and the human
   fetches it from there. You may make more bare repos under `/git/agent`.
+- `/git/peers/<jail>` holds your peers' forks, read-only. A peer is
+  another jail on the same upstream repos, with a fork of its own at
+  `/git/peers/<jail>/<owner>/<repo>.git`. Run
+  `ls -d /git/peers/*/<owner>/<repo>.git` to find them.
 
 Keep clones in your home directory, with upstream as `origin` and your
 fork as `agent`:
@@ -78,6 +82,30 @@ A hook refuses commands that try.
 
 `/git/agent` is the only thing that survives a reset of the jail, so push
 work there early and often.
+
+### Branches and takeovers
+
+Jails are stateless workers, so a branch is tied to no jail, and any
+agent may continue it. You own the branches in your fork, and you may
+rewrite and force-push those. A branch in a peer's fork is the peer's.
+
+To continue a peer's branch, take it over: push it to your fork as a
+new version, even before you change anything. A new version is the
+branch's name with the next number on it, `<topic>-v2` after `<topic>`
+and `<topic>-v3` after `<topic>-v2`. Find the highest version in
+every fork, your own and your peers', and take the number after it,
+so no two forks ever have the same version. Fetch the branch by its
+path, without adding the peer as a remote, since a remote reads as a
+fork you push to:
+
+```
+git fetch /git/peers/<jail>/<owner>/<repo>.git <topic>:<topic>-v2
+git push agent <topic>-v2
+```
+
+The new version is yours from then on. When a peer has pushed a later
+version of one of your branches, it has taken that branch over. Stop
+working on yours, and delete it from your fork.
 
 When a branch is finished and its commits explain anything in message
 bodies, docs, or comments, have the prose-editor agent reconcile them
