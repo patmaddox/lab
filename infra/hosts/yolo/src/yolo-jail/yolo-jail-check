@@ -1,0 +1,53 @@
+#!/bin/sh
+set -euf
+
+# yolo-jail-check name: check that a running jail can do what yolo lets
+# its jails do, and print pass, fail, or skip for each. Each check is a
+# script in /usr/local/libexec/yolo-jail-check that sh runs in the
+# jail, by jexec, so nothing the jail has written runs on yolo. It fails if any check fails.
+
+readonly checks=/usr/local/libexec/yolo-jail-check
+
+usage() {
+	echo "usage: yolo-jail-check name" >&2
+	exit 64
+}
+
+[ ${#} -eq 1 ] || usage
+readonly name=${1}
+
+if ! jls -j "${name}" jid >/dev/null 2>&1; then
+	echo "E: jail ${name} is not running" >&2
+	exit 1
+fi
+
+failed=""
+
+# check label file: run the script in file in the jail. It exits 0 to
+# pass, or 3 to skip, saying why, and anything else fails, saying why.
+check() {
+	rc=0
+	out=$(jexec -l "${name}" /bin/sh -c "$(cat "${2}")" 2>&1) || rc=${?}
+	case ${rc} in
+	0)
+		echo "pass: ${1}"
+		;;
+	3)
+		echo "skip: ${1}: ${out}"
+		;;
+	*)
+		echo "fail: ${1}"
+		[ -z "${out}" ] || echo "${out}" | sed 's/^/  /'
+		failed="${failed} ${1}"
+		;;
+	esac
+}
+
+for c in $(ls "${checks}" 2>/dev/null); do
+	check "${c}" "${checks}/${c}"
+done
+
+if [ -n "${failed}" ]; then
+	echo "E: ${name} failed:${failed}" >&2
+	exit 1
+fi

@@ -1,7 +1,7 @@
 #+TITLE: yolo-jail - jails for agents on yolo
 
-yolo-jail creates yolo's jails from their templates' packages, and
-upgrades them.
+yolo-jail creates yolo's jails from their templates' packages,
+upgrades them, and checks what they can do.
 
 * Build
 
@@ -103,6 +103,18 @@ package, and changes nothing. Otherwise it upgrades from the catalogue
 it checked, without updating it, so what it checked is what it
 installs. The check guards against upgrading too soon, not against the
 jail: the jail's root could change its own pkg.
+
+* Check
+
+: yolo-jail-check <name>
+
+=yolo-jail-check= checks that a running jail can do what yolo lets its
+jails do, and prints =pass=, =fail=, or =skip= for each check. A
+check skips what the jail has not set up, and says so. Each check is
+a script in =checks/=, which sh runs in the jail, with =jexec=, so
+nothing the jail has written runs on yolo. It fails if any check fails. Nothing runs it
+on its own. Run it before and after a change to what yolo gives its
+jails.
 
 * Repos
 
