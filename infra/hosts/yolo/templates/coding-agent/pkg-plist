@@ -13,6 +13,26 @@
 @comment Claude Code reads its managed settings only from
 @comment /etc/claude-code, so point that at them.
 /etc/claude-code
+@comment goredo installs only itself, and runs as each redo command
+@comment through a symlink of that name. Listing the links that
+@comment goredo -symlinks makes here, rather than running it from a
+@comment script, has pkg remove them with the package.
+/usr/local/bin/redo
+/usr/local/bin/redo-affects
+/usr/local/bin/redo-always
+/usr/local/bin/redo-cleanup
+/usr/local/bin/redo-dep2rec
+/usr/local/bin/redo-depfix
+/usr/local/bin/redo-dot
+/usr/local/bin/redo-ifchange
+/usr/local/bin/redo-ifcreate
+/usr/local/bin/redo-inode
+/usr/local/bin/redo-log
+/usr/local/bin/redo-ood
+/usr/local/bin/redo-sources
+/usr/local/bin/redo-stamp
+/usr/local/bin/redo-targets
+/usr/local/bin/redo-whichdo
 @comment The hook runs, so it needs the execute bit.
 @(root,wheel,0755) /usr/local/etc/claude-code/hooks/keep-git-identity
 @comment The directories of its files, which pkg removes once they are

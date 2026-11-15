@@ -132,6 +132,9 @@ installs whatever else it needs. Its conf,
 # set has kyua, but kyua's store schema ships only in FreeBSD-tests.
 # atf puts atf-sh on PATH for test programs that start with
 # "#!/usr/bin/env atf-sh", since base installs it in /usr/libexec.
+# goredo is the redo that lab builds with. Unlike devel/redo, it runs
+# a .do script with sh even when the script is not executable, as
+# lab's are.
 
 comment="Template for yolo's coding-agent jails"
 
@@ -147,6 +150,7 @@ jq
 FreeBSD-acpi
 FreeBSD-tests
 atf
+goredo
 "
 
 users="
@@ -171,6 +175,26 @@ Its =pkg-plist= lists its files:
 @comment Claude Code reads its managed settings only from
 @comment /etc/claude-code, so point that at them.
 /etc/claude-code
+@comment goredo installs only itself, and runs as each redo command
+@comment through a symlink of that name. Listing the links that
+@comment goredo -symlinks makes here, rather than running it from a
+@comment script, has pkg remove them with the package.
+/usr/local/bin/redo
+/usr/local/bin/redo-affects
+/usr/local/bin/redo-always
+/usr/local/bin/redo-cleanup
+/usr/local/bin/redo-dep2rec
+/usr/local/bin/redo-depfix
+/usr/local/bin/redo-dot
+/usr/local/bin/redo-ifchange
+/usr/local/bin/redo-ifcreate
+/usr/local/bin/redo-inode
+/usr/local/bin/redo-log
+/usr/local/bin/redo-ood
+/usr/local/bin/redo-sources
+/usr/local/bin/redo-stamp
+/usr/local/bin/redo-targets
+/usr/local/bin/redo-whichdo
 @comment The directories of its files, which pkg removes once they are
 @comment empty. @mode does not suit them, so they set their own.
 @dir(root,wheel,0755) /usr/local/etc/claude-code/.claude/skills/code-sync
