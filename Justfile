@@ -78,5 +78,5 @@ reauthor *revset:
   jj metaedit --update-author "{{revset}} & mutable()"
 
 # cook next and seen branches
-cook:
-  ./src/cook/cook
+cook *flags:
+  ./src/cook/cook {{flags}}
