@@ -24,6 +24,11 @@ atf_init_test_cases() {
 	atf_add_test_case rejects_a_ref_naming_several_commits
 	atf_add_test_case rolls_back_when_a_seen_ref_is_unknown
 	atf_add_test_case rolls_back_when_seen_would_cycle
+	atf_add_test_case merges_hold_topics_on_trunk
+	atf_add_test_case follows_trunk_with_hold
+	atf_add_test_case leaves_an_empty_hold_on_trunk
+	atf_add_test_case rejects_hold_topics_without_a_hold_bookmark
+	atf_add_test_case rolls_back_when_a_hold_ref_is_unknown
 }
 
 # Make a jj repo in ./repo and enter it. It holds trunk, next on trunk,
@@ -309,6 +314,61 @@ rolls_back_when_seen_would_cycle_body() {
 	commit a trunk
 	commit top seen
 	topics 'next a' 'seen top'
+	atf_check -s exit:1 -e match:'rolled back' "${COOK}"
+	assert_parents next trunk
+}
+
+atf_test_case merges_hold_topics_on_trunk
+merges_hold_topics_on_trunk_body() {
+	setup
+	commit hold trunk
+	commit a trunk
+	commit h trunk
+	topics 'next a' 'hold h'
+	atf_check "${COOK}"
+	assert_parents next a
+	assert_parents seen next
+	assert_parents hold h
+}
+
+atf_test_case follows_trunk_with_hold
+follows_trunk_with_hold_body() {
+	setup
+	commit hold trunk
+	commit h trunk
+	commit t2 trunk
+	topics 'hold h'
+	atf_check "${COOK}"
+	jj --quiet bookmark set trunk -r t2
+	atf_check "${COOK}"
+	assert_parents hold t2 h
+}
+
+atf_test_case leaves_an_empty_hold_on_trunk
+leaves_an_empty_hold_on_trunk_body() {
+	setup
+	commit hold trunk
+	commit h trunk
+	topics 'hold h'
+	atf_check "${COOK}"
+	topics
+	atf_check "${COOK}"
+	assert_parents hold trunk
+}
+
+atf_test_case rejects_hold_topics_without_a_hold_bookmark
+rejects_hold_topics_without_a_hold_bookmark_body() {
+	setup
+	commit h trunk
+	assert_rejects 'hold topics need a hold bookmark' 'hold h'
+}
+
+atf_test_case rolls_back_when_a_hold_ref_is_unknown
+rolls_back_when_a_hold_ref_is_unknown_body() {
+	setup
+	commit hold trunk
+	commit a trunk
+	topics 'next a' 'hold nosuch'
 	atf_check -s exit:1 -e match:'rolled back' "${COOK}"
 	assert_parents next trunk
 }

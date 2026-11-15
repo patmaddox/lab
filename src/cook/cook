@@ -1,6 +1,6 @@
 #!/bin/sh
 # shellcheck disable=SC3043 # FreeBSD sh has local
-# cook: rebuild the next and seen merge branches from the topics
+# cook: rebuild the next, seen, and hold merge branches from the topics
 # listed in next's description. See cook(1).
 
 set -eu
@@ -73,6 +73,7 @@ shift $((OPTIND - 1))
 
 next_topics=
 seen_topics=
+hold_topics=
 in_cook=
 line=0
 while IFS= read -r text; do
@@ -88,7 +89,7 @@ while IFS= read -r text; do
 	fi
 	case "${keyword}" in
 	"") continue ;;
-	next | seen) ;;
+	next | seen | hold) ;;
 	*) die "line ${line}: unknown keyword: ${keyword}" ;;
 	esac
 	[ -n "${ref}" ] || die "line ${line}: ${keyword} needs a ref"
@@ -96,13 +97,18 @@ while IFS= read -r text; do
 	case "${keyword}" in
 	next) next_topics="${next_topics} ${ref}" ;;
 	seen) seen_topics="${seen_topics} ${ref}" ;;
+	hold) hold_topics="${hold_topics} ${ref}" ;;
 	esac
 done <<-EOF
 $(jj log --no-graph -r next -T description)
 EOF
 [ -n "${in_cook}" ] || die "next has no [cook] line"
 
-# Undo every rebase if any step fails, so that next and seen move together
+has_hold=$(jj log --no-graph -r 'bookmarks(exact:"hold")' -T '"1"')
+[ -n "${has_hold}" ] || [ -z "${hold_topics}" ] ||
+	die "hold topics need a hold bookmark"
+
+# Undo every rebase if any step fails, so that the branches move together
 # or not at all.
 if [ -z "${dry_run}" ]; then
 	op=$(jj op log -n 1 --no-graph -T id)
@@ -113,4 +119,8 @@ fi
 rebuild next 'trunk()' ${next_topics}
 # shellcheck disable=SC2086
 rebuild seen next ${seen_topics}
+if [ -n "${has_hold}" ]; then
+	# shellcheck disable=SC2086
+	rebuild hold 'trunk()' ${hold_topics}
+fi
 trap - EXIT
