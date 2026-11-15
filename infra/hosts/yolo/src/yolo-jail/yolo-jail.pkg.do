@@ -18,6 +18,7 @@ files="
 0555 yolo-jail-create-mountpoints /usr/local/libexec/yolo-jail-create-mountpoints
 0555 yolo-jail-upgrade /usr/local/sbin/yolo-jail-upgrade
 0555 yolo-jail-check /usr/local/sbin/yolo-jail-check
+0444 checks/nested-jail /usr/local/libexec/yolo-jail-check/nested-jail
 0555 yolo-git-init /usr/local/sbin/yolo-git-init
 0555 yolo-jail-git /usr/local/libexec/yolo-jail-git
 0555 yolo-jail-repo /usr/local/libexec/yolo-jail-repo

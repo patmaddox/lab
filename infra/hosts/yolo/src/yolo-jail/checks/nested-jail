@@ -1,0 +1,22 @@
+#!/bin/sh
+set -eu
+
+# A jail of the jail's own, as poudriere makes, mounting devfs, where it
+# sees the jail's devices. devfs_ruleset=0 gives it the jail's ruleset.
+
+d=$(mktemp -d /tmp/yolo-jail-check.XXXXXX)
+cleanup() {
+	jail -r yolo-jail-check 2>/dev/null || :
+	umount "${d}/dev" 2>/dev/null || :
+	rmdir "${d}/dev" "${d}"
+}
+trap cleanup EXIT
+mkdir "${d}/dev"
+jail -c name=yolo-jail-check path="${d}" mount.devfs devfs_ruleset=0 \
+    persist
+for dev in null pf zfs vmmctl; do
+	if ! [ -e "${d}/dev/${dev}" ]; then
+		echo "a nested jail has no /dev/${dev}"
+		exit 1
+	fi
+done

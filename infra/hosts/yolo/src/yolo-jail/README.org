@@ -116,6 +116,11 @@ nothing the jail has written runs on yolo. It fails if any check fails. Nothing 
 on its own. Run it before and after a change to what yolo gives its
 jails.
 
+- =nested-jail=: the jail starts a jail of its own, with
+  =devfs_ruleset=0=, which gives it the jail's ruleset, and mounts
+  devfs there. The nested jail sees the jail's devices: =null=, =pf=,
+  =zfs=, and =vmmctl=.
+
 * Repos
 
 : doas yolo-git-init <owner>/<repo>:<branch> ...
