@@ -146,3 +146,13 @@ a jail of its own, and use a bhyve VM when a jail won't do.
   testing. The jail is 10.200.N.2/24 on `epairNb`, with yolo at
   10.200.N.1 as its router. Bridge VMs onto that /24, or NAT them from a
   network outside 10.200.0.0/16.
+
+## Scripts
+
+Don't embed a whole script as a string in another file, such as a
+heredoc passed to `sh -c`, `jexec`, or `ssh`, a Makefile rule, or a
+Justfile recipe with a shebang. Put the script in a file of its own,
+and run that file, or pass its contents where a command wants a
+string. A script in its own file can be read, linted, diffed, and run
+on its own. A one-line command is fine inline, and so is a heredoc of
+data, such as a config file or a manifest.
