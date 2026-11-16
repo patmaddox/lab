@@ -503,7 +503,8 @@ to the jail's line in =jails/instances=, run =just git-init= and
 and start it again.
 
 The jails may run bhyve. They see =/dev/vmmctl=, their VMs under
-=/dev/vmm=, =nmdm= consoles, and =tap= interfaces, by devfs ruleset 10
+=/dev/vmm= with their memory under =/dev/vmm.io=, =nmdm= consoles, and
+=tap= interfaces, by devfs ruleset 10
 in =dist/etc/devfs.rules=. A VM's network is the jail's to arrange.
 To give VMs addresses from the jail's /24, make a bridge in the jail
 holding its epair and the VMs' taps, and give each VM an address in
